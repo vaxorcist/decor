@@ -1,0 +1,20 @@
+<div class="max-w-md mx-auto">
+  <h1 class="text-2xl font-semibold mb-4">Invite Owner</h1>
+
+  <p class="mb-5 text-sm text-stone-600">Send an invitation to create an owner account. They'll receive an email with a link to set up their profile and password. The invitation will be valid for 30 days.</p>
+
+  <%= form_with model: @invite, url: admin_invites_path, class: "space-y-4" do |f| %>
+    <%= render "common/record_errors", record: @invite %>
+
+    <div>
+      <%= f.label :email, class: "block text-sm font-medium text-stone-700" %>
+      <%= f.email_field :email, required: true, autofocus: true, class: field_classes %>
+      <p class="mt-1 text-xs text-stone-500">An invitation email will be sent to this address.</p>
+    </div>
+
+    <div class="flex gap-3">
+      <%= f.submit "Send Invitation", class: button_classes(style: :primary) %>
+      <%= link_to "Cancel", admin_invites_path, class: button_classes(style: :secondary) %>
+    </div>
+  <% end %>
+</div>

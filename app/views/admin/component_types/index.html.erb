@@ -1,0 +1,38 @@
+<div class="max-w-7xl mx-auto">
+  <div class="flex justify-between items-center mb-4">
+    <h1 class="text-2xl font-semibold">Component Types</h1>
+    <%= link_to "Add Component Type", new_admin_component_type_path, class: button_classes(style: :primary) %>
+  </div>
+
+  <% if @component_types.any? %>
+    <div class="bg-white border border-stone-200 rounded">
+      <table class="min-w-full divide-y divide-stone-200">
+        <thead class="bg-stone-50">
+          <tr>
+            <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Name</th>
+            <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Components</th>
+            <th class="px-4 py-2"></th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-stone-200 text-sm">
+          <% @component_types.each do |component_type| %>
+            <tr>
+              <td class="px-4 py-3 whitespace-nowrap font-medium text-stone-900"><%= component_type.name %></td>
+              <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component_type.components.size %></td>
+              <td class="px-4 py-3 whitespace-nowrap text-right space-x-2">
+                <%= link_to "Edit", edit_admin_component_type_path(component_type), class: "text-stone-700 hover:text-stone-900 text-sm" %>
+                <% if component_type.components.empty? %>
+                  <%= button_to "Delete", admin_component_type_path(component_type), method: :delete, data: { turbo_confirm: "Delete this component type?" }, class: "text-stone-700 hover:text-stone-900 text-sm" %>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="bg-white border border-stone-200 rounded p-4 text-center text-sm text-stone-500">
+      No component types yet.
+    </div>
+  <% end %>
+</div>

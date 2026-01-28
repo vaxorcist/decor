@@ -1,0 +1,13 @@
+<%= form_with model: [:admin, condition], class: "space-y-4" do |f| %>
+  <%= render "common/record_errors", record: condition %>
+
+  <div>
+    <%= f.label :name, class: "block text-sm font-medium text-stone-700" %>
+    <%= f.text_field :name, required: true, autofocus: true, class: field_classes %>
+  </div>
+
+  <div class="flex gap-3">
+    <%= f.submit class: button_classes(style: :primary) %>
+    <%= link_to "Cancel", admin_conditions_path, class: button_classes(style: :secondary) %>
+  </div>
+<% end %>

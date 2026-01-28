@@ -1,0 +1,39 @@
+<div class="max-w-7xl mx-auto">
+  <div class="flex justify-between items-start mb-4">
+    <div>
+      <h1 class="text-2xl font-semibold"><%= @component.component_type.name %></h1>
+      <p class="text-sm text-stone-600">Owned by <%= link_to @component.owner.user_name, @component.owner, class: "font-medium underline text-stone-700 hover:text-stone-900" %></p>
+    </div>
+    <% if Current.owner == @component.owner || admin? %>
+      <div class="flex gap-2">
+        <%= link_to "Edit", edit_component_path(@component), class: button_classes(style: :primary) %>
+        <%= button_to "Delete", component_path(@component), method: :delete, data: { turbo_confirm: "Are you sure?" }, class: button_classes(style: :secondary) %>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="bg-white border border-stone-200 rounded p-4 mb-6">
+    <dl class="space-y-3 text-sm">
+      <div>
+        <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider">Computer</dt>
+        <dd class="mt-1">
+          <% if @component.computer %>
+            <%= link_to @component.computer.computer_model.name, computer_path(@component.computer), class: "text-stone-700 hover:text-stone-900" %>
+          <% else %>
+            <span class="text-stone-400">Spare (not attached to a computer)</span>
+          <% end %>
+        </dd>
+      </div>
+      <% if @component.description.present? %>
+        <div>
+          <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider">Description</dt>
+          <dd class="mt-1 whitespace-pre-wrap"><%= @component.description %></dd>
+        </div>
+      <% end %>
+    </dl>
+  </div>
+
+  <div class="mt-6">
+    <%= link_to "← Back to #{@component.owner.user_name}", @component.owner, class: "text-sm text-stone-700 hover:text-stone-900" %>
+  </div>
+</div>

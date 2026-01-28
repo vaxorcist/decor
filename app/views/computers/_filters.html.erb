@@ -1,0 +1,34 @@
+<%= form_with url: computers_path, method: :get, local: true, class: "col-span-1 self-start flex flex-col gap-4 mb-4 p-4 bg-stone-100" do |form| %>
+  <div class="-mb-2 font-medium">Filters</div>
+
+  <div>
+    <%= form.label :query, "Search", class: "text-sm text-stone-600 font-medium" %>
+    <%= form.search_field :query, value: params[:query], placeholder: "Search...", class: field_classes %>
+    <p class="text-xs text-stone-500 mt-1">⚠︎ Search doesn't work for computers yet.</p>
+  </div>
+
+  <div class="flex flex-col">
+    <%= form.label :sort, "Sort", class: "text-sm text-stone-600 font-medium" %>
+    <%= form.select :sort, computer_sort_options, { selected: computer_sort_selected }, { class: field_classes } %>
+  </div>
+
+  <div class="flex flex-col">
+    <%= form.label :model, "Model", class: "text-sm text-stone-600 font-medium" %>
+    <%= form.select :model, computer_filter_models_options, { selected: computer_filter_models_selected, include_blank: "Any" }, { class: field_classes } %>
+  </div>
+
+  <div class="flex flex-col">
+    <%= form.label :condition_id, "Condition", class: "text-sm text-stone-600 font-medium" %>
+    <%= form.select :condition_id, computer_filter_conditions_options, { selected: computer_filter_conditions_selected, include_blank: "Any" }, { class: field_classes } %>
+  </div>
+
+  <div class="flex flex-col">
+    <%= form.label :run_status_id, "Run Status", class: "text-sm text-stone-600 font-medium" %>
+    <%= form.select :run_status_id, computer_filter_run_statuses_options, { selected: computer_filter_run_statuses_selected, include_blank: "Any" }, { class: field_classes } %>
+  </div>
+
+  <div class="flex justify-end gap-2">
+    <%= link_to "Reset", computers_path, class: button_classes(style: :secondary) %>
+    <%= form.submit "Apply", class: button_classes(style: :secondary) %>
+  </div>
+<% end %>

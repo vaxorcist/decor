@@ -1,0 +1,44 @@
+<%= form_with model: computer, class: "space-y-4" do |f| %>
+  <%= render "common/record_errors", record: computer %>
+
+  <div>
+    <%= f.label :computer_model_id, "Model", class: "block text-sm font-medium text-stone-700" %>
+    <%= f.collection_select :computer_model_id, ComputerModel.order(:name), :id, :name, { prompt: "Select a model" }, class: field_classes %>
+  </div>
+
+  <div>
+    <%= f.label :serial_number, class: "block text-sm font-medium text-stone-700" %>
+    <%= f.text_field :serial_number, class: field_classes %>
+  </div>
+
+  <div class="grid grid-cols-2 gap-4">
+    <div>
+      <%= f.label :condition_id, "Condition", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.collection_select :condition_id, Condition.order(:name), :id, :name, {}, class: field_classes %>
+    </div>
+
+    <div>
+      <%= f.label :run_status_id, "Run Status", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.collection_select :run_status_id, RunStatus.order(:name), :id, :name, {}, class: field_classes %>
+    </div>
+  </div>
+
+  <div>
+    <%= f.label :description, class: "block text-sm font-medium text-stone-700" %>
+    <%= f.text_area :description, rows: 4, class: field_classes %>
+  </div>
+
+  <div>
+    <%= f.label :history, class: "block text-sm font-medium text-stone-700" %>
+    <%= f.text_area :history, rows: 4, class: field_classes %>
+    <p class="mt-1 text-xs text-stone-500">Provenance, previous owners, how you acquired it, etc.</p>
+  </div>
+
+  <div class="flex gap-3">
+    <%= f.submit class: button_classes(style: :primary) %>
+    <% unless computer.persisted? %>
+      <%= f.submit "Create and add another", name: "add_another", class: button_classes(style: :secondary) %>
+    <% end %>
+    <%= link_to "Cancel", (computer.persisted? ? computer_path(computer) : computers_path), class: button_classes(style: :secondary) %>
+  </div>
+<% end %>

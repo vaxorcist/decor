@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= content_for(:title) || "Admin - DEC Owner's Registry" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Decor">
+    <meta name="mobile-web-app-capable" content="yes">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= yield :head %>
+
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.png">
+
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body class="bg-stone-100 min-h-screen text-stone-900">
+    <nav class="bg-white border-b border-stone-200">
+      <div class="mx-auto max-w-7xl px-6">
+        <div class="flex justify-between h-14">
+          <div class="flex items-center space-x-6 text-sm">
+            <%= link_to "Owners", admin_owners_path, class: "font-medium text-stone-700 hover:text-stone-900" %>
+            <%= link_to "Invites", admin_invites_path, class: "font-medium text-stone-700 hover:text-stone-900" %>
+            <%= link_to "Component Types", admin_component_types_path, class: "font-medium text-stone-700 hover:text-stone-900" %>
+            <%= link_to "Computer Models", admin_computer_models_path, class: "font-medium text-stone-700 hover:text-stone-900" %>
+            <%= link_to "Conditions", admin_conditions_path, class: "font-medium text-stone-700 hover:text-stone-900" %>
+            <%= link_to "Run Statuses", admin_run_statuses_path, class: "font-medium text-stone-700 hover:text-stone-900" %>
+            <%= link_to "Bulk Import", new_admin_bulk_upload_path, class: "font-medium text-stone-700 hover:text-stone-900" %>
+          </div>
+          <div class="flex items-center text-sm">
+            <%= link_to "Exit Admin", root_path, class: "font-medium text-stone-700 hover:text-stone-900" %>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <% if flash[:notice] %>
+      <div class="bg-stone-50 border-b border-stone-200">
+        <div class="mx-auto max-w-7xl px-6 py-3 text-sm text-stone-700 border-l-2 border-stone-400">
+          <%= flash[:notice] %>
+        </div>
+      </div>
+    <% end %>
+
+    <% if flash[:alert] %>
+      <div class="bg-stone-50 border-b border-stone-200">
+        <div class="mx-auto max-w-7xl px-6 py-3 text-sm text-stone-700 border-l-2 border-stone-600">
+          <%= flash[:alert] %>
+        </div>
+      </div>
+    <% end %>
+
+    <main class="mx-auto max-w-7xl px-6 py-6">
+      <%= yield %>
+    </main>
+  </body>
+</html>

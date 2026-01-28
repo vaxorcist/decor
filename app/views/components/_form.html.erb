@@ -1,0 +1,27 @@
+<%= form_with model: component, class: "space-y-4" do |f| %>
+  <%= render "common/record_errors", record: component %>
+
+  <div>
+    <%= f.label :component_type_id, "Type", class: "block text-sm font-medium text-stone-700" %>
+    <%= f.collection_select :component_type_id, ComponentType.order(:name), :id, :name, { prompt: "Select a type" }, class: field_classes %>
+  </div>
+
+  <div>
+    <%= f.label :computer_id, "Computer", class: "block text-sm font-medium text-stone-700" %>
+    <%= f.collection_select :computer_id, Current.owner.computers.includes(:computer_model), :id, ->(c) { c.computer_model.name }, { include_blank: "Spare (not attached)" }, class: field_classes %>
+    <p class="mt-1 text-xs text-stone-500">Leave blank if this is a spare component not attached to a computer.</p>
+  </div>
+
+  <div>
+    <%= f.label :description, class: "block text-sm font-medium text-stone-700" %>
+    <%= f.text_area :description, rows: 4, class: field_classes %>
+  </div>
+
+  <div class="flex gap-3">
+    <%= f.submit class: button_classes(style: :primary) %>
+    <% unless component.persisted? %>
+      <%= f.submit "Create and add another", name: "add_another", class: button_classes(style: :secondary) %>
+    <% end %>
+    <%= link_to "Cancel", (component.persisted? ? component_path(component) : components_path), class: button_classes(style: :secondary) %>
+  </div>
+<% end %>

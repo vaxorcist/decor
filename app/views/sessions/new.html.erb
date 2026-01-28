@@ -1,0 +1,20 @@
+<div class="max-w-md mx-auto">
+  <h1 class="text-2xl font-semibold mb-4">Log In</h1>
+
+  <%= form_with url: session_path, class: "space-y-4" do |f| %>
+    <div>
+      <%= f.label :user_name, "Username", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.text_field :user_name, required: true, autofocus: true, class: field_classes %>
+    </div>
+
+    <div>
+      <%= f.label :password, class: "block text-sm font-medium text-stone-700" %>
+      <%= f.password_field :password, required: true, class: field_classes %>
+    </div>
+
+    <div class="flex items-center justify-between">
+      <%= f.submit "Log In", class: button_classes(style: :primary) %>
+      <%= link_to "Forgot password?", new_password_reset_path, class: "text-sm text-stone-600 hover:text-stone-900" %>
+    </div>
+  <% end %>
+</div>

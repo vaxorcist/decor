@@ -1,0 +1,21 @@
+<div class="max-w-7xl mx-auto">
+  <h1 class="text-2xl font-semibold mb-4">Computers</h1>
+
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <%= render "filters" %>
+
+    <div id="computers" class="col-span-3 self-start grid grid-cols-1 md:grid-cols-3 gap-4">
+      <% if @page.records.any? %>
+        <% @page.records.each do |computer| %>
+          <%= render "computer", computer: %>
+        <% end %>
+      <% else %>
+        <%= empty_state("No computers found matching your search") %>
+      <% end %>
+    </div>
+
+    <%= render "shared/load_more", id: :load_more_computers, page: @page, path: computers_path %>
+  </div>
+
+</div>
+
