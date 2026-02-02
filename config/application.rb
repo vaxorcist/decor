@@ -30,15 +30,14 @@ module Decor
       protocol: Decor::Routes.protocol
     }
     config.action_mailer.asset_host = Decor::Routes.host_with_protocol
-   
-   # these settings are for Postmark - from the online instructions RMP
-   #
+
+    # these settings are for Postmark - from the online instructions RMP
+    #
 
     config.action_mailer.delivery_method = :postmark
 
     config.action_mailer.postmark_settings = {
       api_token: Rails.application.credentials.postmark_api_token
     }
-
   end
 end
