@@ -1,21 +1,44 @@
-<%= link_to computer_path(computer), class: "flex flex-col gap-1 h-64 p-4 border border-stone-200 hover:border-stone-300" do %>
-  <div class="font-medium"><%= computer.computer_model.name %></div>
-  <div class="mb-4 text-sm text-stone-500 line-clamp-2"><%= computer.description %></div>
+<%# decor/app/views/computers/_computer.html.erb - version 1.2 %>
+<%# Updated column order: MODEL, DESCRIPTION, SERIAL NUMBER, CONDITION, RUN STATUS, OWNER %>
 
-  <div class="flex-1"></div>
-
-  <div class="flex flex-col gap-2 text-xs">
-    <% {
-      "Owner" => computer.owner.user_name,
-      "Serial" => computer.serial_number.presence || "--",
-      "Condition" => computer.condition.name,
-      "Run Status" => computer.run_status.name
-    }.each do |key, value| %>
-      <div class="w-full flex items-start gap-2 text-stone-700">
-        <span class="text-stone-500"><%= key %></span>
-        <div class="flex-1 min-w-4 mt-2 border-t border-stone-300"></div>
-        <span class="font-medium text-right line-clamp-1"><%= value %></span>
-      </div>
+<tr id="<%= dom_id computer %>" class="hover:bg-stone-50">
+  <!-- Model -->
+  <td class="px-4 py-3 whitespace-nowrap font-medium text-stone-900">
+    <%= link_to computer.computer_model.name, computer, class: "text-indigo-600 hover:text-indigo-900" %>
+  </td>
+  
+  <!-- Description - with max-width to prevent layout breaking -->
+  <td class="px-4 py-3 text-stone-600" style="max-width: 300px;">
+    <div class="truncate">
+      <%= computer.description.presence || "—" %>
+    </div>
+  </td>
+  
+  <!-- Serial Number -->
+  <td class="px-4 py-3 whitespace-nowrap text-stone-600">
+    <%= computer.serial_number.presence || "—" %>
+  </td>
+  
+  <!-- Condition -->
+  <td class="px-4 py-3 whitespace-nowrap text-stone-600">
+    <%= computer.condition&.name || "—" %>
+  </td>
+  
+  <!-- Run Status -->
+  <td class="px-4 py-3 whitespace-nowrap text-stone-600">
+    <%= computer.run_status&.name || "—" %>
+  </td>
+  
+  <!-- Owner -->
+  <td class="px-4 py-3 whitespace-nowrap text-stone-600">
+    <%= link_to computer.owner.user_name, computer.owner, class: "text-stone-700 hover:text-stone-900" %>
+  </td>
+  
+  <!-- Actions -->
+  <td class="px-4 py-3 whitespace-nowrap text-right">
+    <%= link_to "View", computer, class: "text-stone-700 hover:text-stone-900 mr-4" %>
+    <% if Current.owner == computer.owner %>
+      <%= link_to "Edit", edit_computer_path(computer), class: "text-stone-700 hover:text-stone-900" %>
     <% end %>
-  </div>
-<% end %>
+  </td>
+</tr>

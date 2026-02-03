@@ -1,15 +1,57 @@
-<%= link_to owner_path(owner), class: "flex flex-col gap-2 min-h-32 p-4 border border-stone-200 hover:border-stone-300" do %>
-  <div class="flex-1 flex items-start gap-2">
-    <div class="flex-1 font-medium">
-      <%= owner.user_name %>
-    </div>
+<%# decor/app/views/owners/_owner.html.erb - version 2.2 %>
+<%# Updated to render owner as table row with actual Owner model fields %>
+<%# Respects visibility settings for real_name, email, and country %>
 
-    <div class="text-stone-500 text-right text-sm">
-      <%= visible_field(owner, :country) { owner.country_emoji } %>
-    </div>
-  </div>
-
-  <div class="text-sm text-stone-500">
-    <%= pluralize(owner.computers.count, "Computer") %> &bull; <%= pluralize(owner.components.count, "Component") %>
-  </div>
-<% end %>
+<tr id="<%= dom_id owner %>" class="hover:bg-gray-50">
+  <!-- User Name (always visible) -->
+  <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-0">
+    <%= link_to owner.user_name, owner, class: "text-indigo-600 hover:text-indigo-900" %>
+  </td>
+  
+  <!-- Real Name (respects visibility) -->
+  <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+    <% if owner.real_name_visibility_public? || (owner.real_name_visibility_members_only? && Current.owner.present?) %>
+      <%= owner.real_name %>
+    <% else %>
+      <span class="text-gray-400 italic">Private</span>
+    <% end %>
+  </td>
+  
+  <!-- Email (respects visibility) -->
+  <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+    <% if owner.email_visibility_public? || (owner.email_visibility_members_only? && Current.owner.present?) %>
+      <%= owner.email %>
+    <% else %>
+      <span class="text-gray-400 italic">Private</span>
+    <% end %>
+  </td>
+  
+  <!-- Country (respects visibility) -->
+  <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+    <% if owner.country.present? && (owner.country_visibility_public? || (owner.country_visibility_members_only? && Current.owner.present?)) %>
+      <%= owner.country_emoji %> <%= owner.country_name %>
+    <% elsif owner.country.present? %>
+      <span class="text-gray-400 italic">Private</span>
+    <% end %>
+  </td>
+  
+  <!-- Website -->
+  <td class="px-3 py-4 text-sm text-gray-500">
+    <% if owner.website.present? %>
+      <%= link_to owner.website, owner.website, target: "_blank", rel: "noopener noreferrer", class: "text-indigo-600 hover:text-indigo-900" %>
+    <% end %>
+  </td>
+  
+  <!-- Components Count -->
+  <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+    <%= owner.components.count %>
+  </td>
+  
+  <!-- Actions -->
+  <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
+    <%= link_to "Show", owner, class: "text-indigo-600 hover:text-indigo-900 mr-4" %>
+    <% if Current.owner == owner %>
+      <%= link_to "Edit", edit_owner_path(owner), class: "text-indigo-600 hover:text-indigo-900 mr-4" %>
+    <% end %>
+  </td>
+</tr>

@@ -1,3 +1,6 @@
+<%# decor/app/views/computers/index.turbo_stream.erb - version 1.0 %>
+<%# Fixed: Appends to tbody#computers instead of div#computers %>
+
 <%= turbo_stream.append :computers do %>
   <% @page.records.each do |computer| %>
     <%= render "computer", computer: %>
