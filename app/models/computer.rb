@@ -15,8 +15,8 @@ class Computer < ApplicationRecord
     return all if query.blank?
 
     # SQL LIKE pattern - user can include their own wildcards or we wrap the whole thing
-    pattern = query.include?('%') || query.include?('_') ? query : "%#{query}%"
-    
+    pattern = query.include?("%") || query.include?("_") ? query : "%#{query}%"
+
     # Search in: computer model name, owner username, serial number, description, history
     joins(:owner, :computer_model)
       .left_outer_joins(:condition, :run_status)
