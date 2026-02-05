@@ -1,9 +1,12 @@
+# decor/app/controllers/computers_controller.rb - version 1.0
+# Added search functionality using Computer.search scope
+
 class ComputersController < ApplicationController
   before_action :set_computer, only: %i[show edit update destroy]
   before_action :ensure_computer_belongs_to_current_owner, only: %i[edit update destroy]
 
   def index
-    computers = Computer.includes(:owner, :computer_model, :condition, :run_status)
+    computers = Computer.includes(:owner, :computer_model, :condition, :run_status).search(params[:query])
 
     if params[:model].present?
       model = ComputerModel.find(params[:model])
