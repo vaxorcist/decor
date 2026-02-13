@@ -1,3 +1,6 @@
+<%# decor/app/views/computers/show.html.erb - version 1.0 %>
+<%# Fixed: Added safe navigation for optional condition and run_status fields %>
+
 <div class="max-w-7xl mx-auto">
   <div class="flex justify-between items-start mb-4">
     <div>
@@ -14,19 +17,17 @@
 
   <div class="bg-white border border-stone-200 rounded p-4 mb-6">
     <dl class="grid grid-cols-2 gap-3 text-sm">
-      <% if @computer.serial_number.present? %>
-        <div>
-          <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider">Serial Number</dt>
-          <dd class="mt-1"><%= @computer.serial_number %></dd>
-        </div>
-      <% end %>
+      <div>
+        <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider">Serial Number</dt>
+        <dd class="mt-1"><%= @computer.serial_number %></dd>
+      </div>
       <div>
         <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider">Condition</dt>
-        <dd class="mt-1"><%= @computer.condition.name %></dd>
+        <dd class="mt-1"><%= @computer.condition&.name || "—" %></dd>
       </div>
       <div>
         <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider">Run Status</dt>
-        <dd class="mt-1"><%= @computer.run_status.name %></dd>
+        <dd class="mt-1"><%= @computer.run_status&.name || "—" %></dd>
       </div>
       <% if @computer.description.present? %>
         <div class="col-span-2">

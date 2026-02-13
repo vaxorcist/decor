@@ -1,25 +1,30 @@
+<%# decor/app/views/computers/_form.html.erb - version 1.0 %>
+<%# Updated: Added prompts for Condition and Run Status, added required indicators %>
+
 <%= form_with model: computer, class: "space-y-4" do |f| %>
   <%= render "common/record_errors", record: computer %>
 
   <div>
     <%= f.label :computer_model_id, "Model", class: "block text-sm font-medium text-stone-700" %>
+    <span class="text-red-600">*</span>
     <%= f.collection_select :computer_model_id, ComputerModel.order(:name), :id, :name, { prompt: "Select a model" }, class: field_classes %>
   </div>
 
   <div>
     <%= f.label :serial_number, class: "block text-sm font-medium text-stone-700" %>
+    <span class="text-red-600">*</span>
     <%= f.text_field :serial_number, class: field_classes %>
   </div>
 
   <div class="grid grid-cols-2 gap-4">
     <div>
       <%= f.label :condition_id, "Condition", class: "block text-sm font-medium text-stone-700" %>
-      <%= f.collection_select :condition_id, Condition.order(:name), :id, :name, {}, class: field_classes %>
+      <%= f.collection_select :condition_id, Condition.order(:name), :id, :name, { prompt: "Select a condition" }, class: field_classes %>
     </div>
 
     <div>
       <%= f.label :run_status_id, "Run Status", class: "block text-sm font-medium text-stone-700" %>
-      <%= f.collection_select :run_status_id, RunStatus.order(:name), :id, :name, {}, class: field_classes %>
+      <%= f.collection_select :run_status_id, RunStatus.order(:name), :id, :name, { prompt: "Select a run status" }, class: field_classes %>
     </div>
   </div>
 

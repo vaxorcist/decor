@@ -1,3 +1,6 @@
+<%# decor/app/views/components/index.turbo_stream.erb - version 1.0 %>
+<%# Appends to tbody#components for proper table structure %>
+
 <%= turbo_stream.append :components do %>
   <% @page.records.each do |component| %>
     <%= render "component", component: %>

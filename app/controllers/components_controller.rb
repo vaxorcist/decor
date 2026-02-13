@@ -1,9 +1,12 @@
+# decor/app/controllers/components_controller.rb - version 1.0
+# Added search functionality and fixed typo on line 24 (computers -> components)
+
 class ComponentsController < ApplicationController
   before_action :set_component, only: %i[show edit update destroy]
   before_action :ensure_component_belongs_to_current_owner, only: %i[edit update destroy]
 
   def index
-    components = Component.includes(:owner, :component_type, :computer)
+    components = Component.includes(:owner, :component_type, :computer).search(params[:query])
 
     if params[:component_type].present?
       component_type = ComponentType.find(params[:component_type])
@@ -19,14 +22,14 @@ class ComponentsController < ApplicationController
       end
     end
 
-    computers = case params[:sort]
+    components = case params[:sort]
     when "added_asc" then components.order(created_at: :asc)
     when "added_desc" then components.order(created_at: :desc)
     else
       components.order(created_at: :desc)
     end
 
-    paginate computers
+    paginate components
   end
 
   def show

@@ -1,10 +1,13 @@
+<%# decor/app/views/components/_filters.html.erb - version 1.0 %>
+<%# Updated: Added wildcard usage tips for search functionality %>
+
 <%= form_with url: components_path, method: :get, local: true, class: "col-span-1 self-start flex flex-col gap-4 mb-4 p-4 bg-stone-100" do |form| %>
   <div class="-mb-2 font-medium">Filters</div>
 
   <div>
     <%= form.label :query, "Search", class: "text-sm text-stone-600 font-medium" %>
     <%= form.search_field :query, value: params[:query], placeholder: "Search...", class: field_classes %>
-    <p class="text-xs text-stone-500 mt-1">⚠︎ Search doesn't work for components yet.</p>
+    <p class="text-xs text-stone-500 mt-1">Use % for any characters, _ for single character. Case-insensitive.</p>
   </div>
 
   <div class="flex flex-col">

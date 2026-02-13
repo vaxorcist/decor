@@ -1,5 +1,5 @@
-# decor/app/models/computer.rb - version 1.0
-# Added search scope to search across all relevant fields
+# decor/app/models/computer.rb - version 1.1
+# Added serial_number validation (required field)
 
 class Computer < ApplicationRecord
   belongs_to :owner
@@ -7,6 +7,9 @@ class Computer < ApplicationRecord
   belongs_to :condition, optional: true
   belongs_to :run_status, optional: true
   has_many :components, dependent: :nullify
+
+  # Validations
+  validates :serial_number, presence: true
 
   # Search scope that searches across model name, owner name, serial number, description, and history
   # Supports SQL wildcards (% for any characters, _ for single character)

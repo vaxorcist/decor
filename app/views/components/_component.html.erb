@@ -1,19 +1,43 @@
-<%= link_to component_path(component), class: "flex flex-col gap-1 min-h-48 p-4 border border-stone-200 hover:border-stone-300" do %>
-  <div class="font-medium"><%= component.component_type.name %></div>
-  <div class="mb-4 text-sm text-stone-500 line-clamp-2"><%= component.description %></div>
+<%# decor/app/views/components/_component.html.erb - version 1.2 %>
+<%# Updated: Added Serial Number as second column (from computer) %>
 
-  <div class="flex-1"></div>
-
-  <div class="flex flex-col gap-2 text-xs">
-    <% {
-      "Owner" => component.owner.user_name,
-      "Computer" => component.computer&.computer_model&.name || "Spare",
-    }.each do |key, value| %>
-      <div class="w-full flex items-start gap-2 text-stone-700">
-        <span class="text-stone-500"><%= key %></span>
-        <div class="flex-1 min-w-4 mt-2 border-t border-stone-300"></div>
-        <span class="font-medium text-right line-clamp-1"><%= value %></span>
-      </div>
+<tr id="<%= dom_id component %>" class="hover:bg-stone-50">
+  <!-- Computer -->
+  <td class="px-4 py-3 whitespace-nowrap text-stone-600">
+    <% if component.computer %>
+      <%= link_to component.computer.computer_model.name, component.computer, class: "text-stone-700 hover:text-stone-900" %>
+    <% else %>
+      <span class="text-stone-400">Spare</span>
     <% end %>
-  </div>
-<% end %>
+  </td>
+  
+  <!-- Serial Number (from computer) -->
+  <td class="px-4 py-3 whitespace-nowrap text-stone-600">
+    <%= component.computer&.serial_number.presence || "—" %>
+  </td>
+  
+  <!-- Type -->
+  <td class="px-4 py-3 whitespace-nowrap font-medium text-stone-900">
+    <%= link_to component.component_type.name, component, class: "text-indigo-600 hover:text-indigo-900" %>
+  </td>
+  
+  <!-- Description - with max-width to prevent layout breaking -->
+  <td class="px-4 py-3 text-stone-600" style="max-width: 300px;">
+    <div class="truncate">
+      <%= component.description.presence || "—" %>
+    </div>
+  </td>
+  
+  <!-- Owner -->
+  <td class="px-4 py-3 whitespace-nowrap text-stone-600">
+    <%= link_to component.owner.user_name, component.owner, class: "text-stone-700 hover:text-stone-900" %>
+  </td>
+  
+  <!-- Actions -->
+  <td class="px-4 py-3 whitespace-nowrap text-right">
+    <%= link_to "View", component, class: "text-stone-700 hover:text-stone-900 mr-4" %>
+    <% if Current.owner == component.owner %>
+      <%= link_to "Edit", edit_component_path(component), class: "text-stone-700 hover:text-stone-900" %>
+    <% end %>
+  </td>
+</tr>
