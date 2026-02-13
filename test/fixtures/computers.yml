@@ -1,3 +1,7 @@
+# decor/test/fixtures/computers.yml - version 1.1
+# Test fixtures for Computer model
+# Fixed: Added serial_number to alice_vax to satisfy NOT NULL constraint
+
 alice_pdp11:
   owner: one
   computer_model: pdp11_70
@@ -10,7 +14,7 @@ alice_pdp11:
 alice_vax:
   owner: one
   computer_model: vax11_780
-  serial_number:
+  serial_number: VAX-780-001
   description: VAX system under restoration
   condition: original_repaired
   run_status: repair
