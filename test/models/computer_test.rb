@@ -1,3 +1,6 @@
+# decor/test/models/computer_test.rb - version 1.1
+# Fixed: Added serial_number to all Computer.new() calls to satisfy NOT NULL constraint
+
 require "test_helper"
 
 class ComputerTest < ActiveSupport::TestCase
@@ -5,6 +8,7 @@ class ComputerTest < ActiveSupport::TestCase
     computer = Computer.new(
       owner: owners(:one),
       computer_model: computer_models(:pdp11_70),
+      serial_number: "TEST-SN-001",
       condition: conditions(:original),
       run_status: run_statuses(:unknown)
     )
@@ -14,6 +18,7 @@ class ComputerTest < ActiveSupport::TestCase
   test "invalid without owner" do
     computer = Computer.new(
       computer_model: computer_models(:pdp11_70),
+      serial_number: "TEST-SN-002",
       condition: conditions(:original),
       run_status: run_statuses(:unknown)
     )
@@ -24,6 +29,7 @@ class ComputerTest < ActiveSupport::TestCase
   test "invalid without computer_model" do
     computer = Computer.new(
       owner: owners(:one),
+      serial_number: "TEST-SN-003",
       condition: conditions(:original),
       run_status: run_statuses(:unknown)
     )
@@ -35,6 +41,7 @@ class ComputerTest < ActiveSupport::TestCase
     computer = Computer.new(
       owner: owners(:one),
       computer_model: computer_models(:pdp11_70),
+      serial_number: "TEST-SN-004",
       run_status: run_statuses(:unknown)
     )
     assert computer.valid?
@@ -44,6 +51,7 @@ class ComputerTest < ActiveSupport::TestCase
     computer = Computer.new(
       owner: owners(:one),
       computer_model: computer_models(:pdp11_70),
+      serial_number: "TEST-SN-005",
       condition: conditions(:original)
     )
     assert computer.valid?

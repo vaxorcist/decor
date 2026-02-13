@@ -1,5 +1,6 @@
-# decor/app/models/component.rb - version 1.0
+# decor/app/models/component.rb - version 1.1
 # Added search scope to search across all relevant fields
+# Fixed: Changed single quotes to double quotes, removed trailing whitespace
 
 class Component < ApplicationRecord
   belongs_to :owner
@@ -14,8 +15,8 @@ class Component < ApplicationRecord
     return all if query.blank?
 
     # SQL LIKE pattern - user can include their own wildcards or we wrap the whole thing
-    pattern = query.include?('%') || query.include?('_') ? query : "%#{query}%"
-    
+    pattern = query.include?("%") || query.include?("_") ? query : "%#{query}%"
+
     # Search in: component type name, owner username, computer model name, description
     joins(:owner, :component_type)
       .left_outer_joins(computer: :computer_model)
