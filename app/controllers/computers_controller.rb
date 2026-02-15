@@ -1,5 +1,5 @@
-# decor/app/controllers/computers_controller.rb - version 1.0
-# Added search functionality using Computer.search scope
+# decor/app/controllers/computers_controller.rb - version 1.1
+# Added owner_id filtering to support linking from owners page
 
 class ComputersController < ApplicationController
   before_action :set_computer, only: %i[show edit update destroy]
@@ -7,6 +7,11 @@ class ComputersController < ApplicationController
 
   def index
     computers = Computer.includes(:owner, :computer_model, :condition, :run_status).search(params[:query])
+
+    # Filter by owner if owner_id parameter is present (e.g., from owners page)
+    if params[:owner_id].present?
+      computers = computers.where(owner_id: params[:owner_id])
+    end
 
     if params[:model].present?
       model = ComputerModel.find(params[:model])
