@@ -1,9 +1,9 @@
+<%# decor/app/views/owners/index.turbo_stream.erb - version 1.0 %>
+<%# Handles turbo stream pagination - appends new rows to tbody %>
+<%# CRITICAL: Appends to tbody#owners, not outer div, to avoid border issues %>
+
 <%= turbo_stream.append :owners do %>
   <% @page.records.each do |owner| %>
-    <%= render "owner", owner: %>
+    <%= render "owner", owner: owner %>
   <% end %>
-<% end %>
-
-<%= turbo_stream.replace :load_more_owners do %>
-  <%= render "shared/load_more", id: :load_more_owners, page: @page, path: owners_path %>
 <% end %>

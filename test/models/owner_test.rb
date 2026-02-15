@@ -1,3 +1,6 @@
+# decor/test/models/owner_test.rb - version 1.1
+# Added tests for user_name length validation (max 15 characters)
+
 require "test_helper"
 
 class OwnerTest < ActiveSupport::TestCase
@@ -41,6 +44,17 @@ class OwnerTest < ActiveSupport::TestCase
     duplicate = Owner.new(valid_attributes.merge(user_name: "TESTUSER", email: "other@example.com"))
     assert_not duplicate.valid?
     assert_includes duplicate.errors[:user_name], "has already been taken"
+  end
+
+  test "user_name must be 15 characters or less" do
+    owner = Owner.new(valid_attributes.merge(user_name: "a" * 16))
+    assert_not owner.valid?
+    assert_includes owner.errors[:user_name], "is too long (maximum is 15 characters)"
+  end
+
+  test "user_name accepts 15 characters" do
+    owner = Owner.new(valid_attributes.merge(user_name: "a" * 15))
+    assert owner.valid?
   end
 
   # Email validations

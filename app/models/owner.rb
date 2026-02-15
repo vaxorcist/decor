@@ -1,3 +1,6 @@
+# decor/app/models/owner.rb - version 1.1
+# Added user_name length validation (max 15 characters)
+
 class Owner < ApplicationRecord
   has_secure_password
 
@@ -10,7 +13,9 @@ class Owner < ApplicationRecord
   enum :country_visibility, { public: "public", members_only: "members_only", private: "private" }, prefix: true
   enum :email_visibility, { public: "public", members_only: "members_only", private: "private" }, prefix: true
 
-  validates :user_name, presence: true, uniqueness: { case_sensitive: false }
+  validates :user_name, presence: true,
+                        uniqueness: { case_sensitive: false },
+                        length: { maximum: 15 }
   validates :email, presence: true,
                     uniqueness: { case_sensitive: false },
                     format: { with: URI::MailTo::EMAIL_REGEXP }

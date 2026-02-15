@@ -1,57 +1,60 @@
-<%# decor/app/views/owners/_owner.html.erb - version 2.2 %>
-<%# Updated to render owner as table row with actual Owner model fields %>
-<%# Respects visibility settings for real_name, email, and country %>
+<%# decor/app/views/owners/_owner.html.erb - version 3.1 %>
+<%# Fixed to match computers pattern exactly %>
+<%# Computers column clickable (links to filtered computers), all links in indigo %>
+<%# Real name max-width 25 characters, respects visibility settings %>
 
-<tr id="<%= dom_id owner %>" class="hover:bg-gray-50">
-  <!-- User Name (always visible) -->
-  <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-0">
+<tr id="<%= dom_id owner %>" class="hover:bg-stone-50">
+  <!-- Computers Count (clickable - links to filtered computers) -->
+  <td class="px-4 py-3 whitespace-nowrap font-medium text-stone-900">
+    <%= link_to owner.computers.count, computers_path(owner_id: owner.id), class: "text-indigo-600 hover:text-indigo-900" %>
+  </td>
+
+  <!-- User Name (clickable) -->
+  <td class="px-4 py-3 whitespace-nowrap font-medium text-stone-900">
     <%= link_to owner.user_name, owner, class: "text-indigo-600 hover:text-indigo-900" %>
   </td>
   
-  <!-- Real Name (respects visibility) -->
-  <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-    <% if owner.real_name_visibility_public? || (owner.real_name_visibility_members_only? && Current.owner.present?) %>
-      <%= owner.real_name %>
-    <% else %>
-      <span class="text-gray-400 italic">Private</span>
-    <% end %>
+  <!-- Real Name (respects visibility, max-width 25 characters) -->
+  <td class="px-4 py-3 text-stone-600" style="max-width: 25ch;">
+    <div class="truncate">
+      <% if owner.real_name_visibility_public? || (owner.real_name_visibility_members_only? && Current.owner.present?) %>
+        <%= owner.real_name.presence || "—" %>
+      <% else %>
+        <span class="text-stone-400 italic">Private</span>
+      <% end %>
+    </div>
   </td>
   
   <!-- Email (respects visibility) -->
-  <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+  <td class="px-4 py-3 whitespace-nowrap text-stone-600">
     <% if owner.email_visibility_public? || (owner.email_visibility_members_only? && Current.owner.present?) %>
       <%= owner.email %>
     <% else %>
-      <span class="text-gray-400 italic">Private</span>
+      <span class="text-stone-400 italic">Private</span>
     <% end %>
   </td>
   
   <!-- Country (respects visibility) -->
-  <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+  <td class="px-4 py-3 whitespace-nowrap text-stone-600">
     <% if owner.country.present? && (owner.country_visibility_public? || (owner.country_visibility_members_only? && Current.owner.present?)) %>
       <%= owner.country_emoji %> <%= owner.country_name %>
     <% elsif owner.country.present? %>
-      <span class="text-gray-400 italic">Private</span>
+      <span class="text-stone-400 italic">Private</span>
     <% end %>
   </td>
   
   <!-- Website -->
-  <td class="px-3 py-4 text-sm text-gray-500">
+  <td class="px-4 py-3 text-stone-600">
     <% if owner.website.present? %>
       <%= link_to owner.website, owner.website, target: "_blank", rel: "noopener noreferrer", class: "text-indigo-600 hover:text-indigo-900" %>
     <% end %>
   </td>
   
-  <!-- Components Count -->
-  <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-    <%= owner.components.count %>
-  </td>
-  
   <!-- Actions -->
-  <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
-    <%= link_to "Show", owner, class: "text-indigo-600 hover:text-indigo-900 mr-4" %>
+  <td class="px-4 py-3 whitespace-nowrap text-right">
+    <%= link_to "View", owner, class: "text-indigo-600 hover:text-indigo-900 mr-4" %>
     <% if Current.owner == owner %>
-      <%= link_to "Edit", edit_owner_path(owner), class: "text-indigo-600 hover:text-indigo-900 mr-4" %>
+      <%= link_to "Edit", edit_owner_path(owner), class: "text-indigo-600 hover:text-indigo-900" %>
     <% end %>
   </td>
 </tr>
