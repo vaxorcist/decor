@@ -1,3 +1,8 @@
+<%# decor/app/views/owners/_form.html.erb - version 1.1 %>
+<%# Added password change section (lines 50-71) %>
+<%# Requires current password verification for security %>
+<%# Password fields are optional - leave blank to skip password change %>
+
 <%= form_with model: owner, class: "space-y-4" do |f| %>
   <%= render "common/record_errors", record: owner %>
 
@@ -42,6 +47,30 @@
   <div>
     <%= f.label :website, class: "block text-sm font-medium text-stone-700" %>
     <%= f.url_field :website, placeholder: "https://example.com", class: field_classes %>
+  </div>
+
+  <%# Password Change Section - Optional %>
+  <%# User must provide current password to change to new password %>
+  <%# Leave all password fields blank to update profile without changing password %>
+  <div class="border-t border-stone-200 pt-4 mt-6">
+    <h2 class="text-lg font-medium text-stone-900 mb-4">Change Password</h2>
+    <p class="text-sm text-stone-600 mb-4">Leave blank if you don't want to change your password.</p>
+    
+    <div>
+      <%= f.label :current_password, "Current Password", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.password_field :current_password, autocomplete: "current-password", class: field_classes %>
+      <p class="text-xs text-stone-500 mt-1">Required to change your password</p>
+    </div>
+
+    <div>
+      <%= f.label :password, "New Password", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.password_field :password, autocomplete: "new-password", class: field_classes %>
+    </div>
+
+    <div>
+      <%= f.label :password_confirmation, "Confirm New Password", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.password_field :password_confirmation, autocomplete: "new-password", class: field_classes %>
+    </div>
   </div>
 
   <div class="flex gap-3">
