@@ -7,7 +7,7 @@ module Admin
       @condition = conditions(:original)
     end
 
-    def log_in_as(owner, password: "password123")
+    def log_in_as(owner, password: "password12345")
       post session_url, params: { user_name: owner.user_name, password: password }
       follow_redirect!
     end
@@ -148,7 +148,7 @@ module Admin
     # Authorization
     test "non-admin cannot access conditions" do
       non_admin = owners(:two)
-      log_in_as(non_admin, password: "password456")
+      log_in_as(non_admin, password: "password45678")
 
       get admin_conditions_url
 
@@ -157,7 +157,7 @@ module Admin
 
     test "non-admin cannot manage conditions" do
       non_admin = owners(:two)
-      log_in_as(non_admin, password: "password456")
+      log_in_as(non_admin, password: "password45678")
       condition = conditions(:original)
 
       get new_admin_condition_url

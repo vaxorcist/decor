@@ -1,3 +1,8 @@
+# decor/test/controllers/admin/invites_controller_test.rb - version 1.1
+# Refactored to use centralized AuthenticationHelper
+# Removed local log_in_as method - now inherited from test/support/authentication_helper.rb
+# All login_as() calls use auto-detection for correct password
+
 require "test_helper"
 
 module Admin
@@ -6,14 +11,9 @@ module Admin
       @admin = owners(:one)
     end
 
-    def log_in_as(owner, password: "password123")
-      post session_url, params: { user_name: owner.user_name, password: password }
-      follow_redirect!
-    end
-
     # Index
     test "index displays pending invites" do
-      log_in_as(@admin)
+      login_as(@admin)
       Invite.create!(email: "pending@example.com")
 
       get admin_invites_url
@@ -23,7 +23,7 @@ module Admin
     end
 
     test "index hides accepted invites" do
-      log_in_as(@admin)
+      login_as(@admin)
       pending = Invite.create!(email: "pending@example.com")
       accepted = Invite.create!(email: "accepted@example.com")
       accepted.accept!
@@ -36,7 +36,7 @@ module Admin
 
     # Invite creation flow
     test "new displays invite form" do
-      log_in_as(@admin)
+      login_as(@admin)
       get new_admin_invite_url
 
       assert_response :success
@@ -45,7 +45,7 @@ module Admin
     end
 
     test "create sends invitation email" do
-      log_in_as(@admin)
+      login_as(@admin)
       assert_difference "Invite.count", 1 do
         perform_enqueued_jobs do
           post admin_invites_url, params: {
@@ -72,7 +72,7 @@ module Admin
     end
 
     test "create fails with invalid email" do
-      log_in_as(@admin)
+      login_as(@admin)
       initial_delivery_count = ActionMailer::Base.deliveries.size
 
       assert_no_difference "Invite.count" do
@@ -89,7 +89,7 @@ module Admin
     end
 
     test "create fails with duplicate pending invite" do
-      log_in_as(@admin)
+      login_as(@admin)
       Invite.create!(email: "duplicate@example.com")
 
       assert_no_difference "Invite.count" do
@@ -105,7 +105,7 @@ module Admin
     end
 
     test "create allows new invite after previous was accepted" do
-      log_in_as(@admin)
+      login_as(@admin)
       first_invite = Invite.create!(email: "reusable@example.com")
       first_invite.accept!
 
@@ -121,7 +121,7 @@ module Admin
     end
 
     test "destroy deletes invite" do
-      log_in_as(@admin)
+      login_as(@admin)
       invite = Invite.create!(email: "deleteme@example.com")
 
       assert_difference "Invite.count", -1 do
@@ -150,7 +150,7 @@ module Admin
     # Authorization tests
     test "non-admin cannot access index" do
       non_admin = owners(:two)
-      log_in_as(non_admin, password: "password456")
+      login_as(non_admin)  # Auto-detects bob's password
 
       get admin_invites_url
 
@@ -159,7 +159,7 @@ module Admin
 
     test "non-admin cannot access new invite page" do
       non_admin = owners(:two)
-      log_in_as(non_admin, password: "password456")
+      login_as(non_admin)  # Auto-detects bob's password
 
       get new_admin_invite_url
 
@@ -168,7 +168,7 @@ module Admin
 
     test "non-admin cannot create invite" do
       non_admin = owners(:two)
-      log_in_as(non_admin, password: "password456")
+      login_as(non_admin)  # Auto-detects bob's password
 
       assert_no_difference "Invite.count" do
         post admin_invites_url, params: {
@@ -183,7 +183,7 @@ module Admin
 
     test "non-admin cannot delete invite" do
       non_admin = owners(:two)
-      log_in_as(non_admin, password: "password456")
+      login_as(non_admin)  # Auto-detects bob's password
       invite = Invite.create!(email: "delete-blocked@example.com")
 
       assert_no_difference "Invite.count" do

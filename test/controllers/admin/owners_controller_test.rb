@@ -6,7 +6,7 @@ module Admin
       @admin = owners(:one)
     end
 
-    def log_in_as(owner, password: "password123")
+    def log_in_as(owner, password: "password12345")
       post session_url, params: { user_name: owner.user_name, password: password }
       follow_redirect!
     end
@@ -103,7 +103,7 @@ module Admin
     # Authorization tests
     test "non-admin cannot access admin owners index" do
       non_admin = owners(:two)
-      log_in_as(non_admin, password: "password456")
+      log_in_as(non_admin, password: "password45678")
 
       get admin_owners_url
 

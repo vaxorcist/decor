@@ -1,10 +1,13 @@
-# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+# decor/test/fixtures/owners.yml - version 1.1
+# Test passwords centralized in test/support/authentication_helper.rb
+# Alice (one): TEST_PASSWORD_ALICE = "password12345"
+# Bob (two): TEST_PASSWORD_BOB = "password45678"
 
 one:
   user_name: alice
   real_name: Alice Smith
   website: https://alice.example.com
-  password_digest: <%= BCrypt::Password.create('password123') %>
+  password_digest: <%= BCrypt::Password.create('password12345', cost: 4) %>
   real_name_visibility: public
   country: US
   country_visibility: public
@@ -16,7 +19,7 @@ two:
   user_name: bob
   real_name: Bob Jones
   website:
-  password_digest: <%= BCrypt::Password.create('password456') %>
+  password_digest: <%= BCrypt::Password.create('password45678', cost: 4) %>
   real_name_visibility: private
   country: GB
   country_visibility: members_only
