@@ -130,7 +130,7 @@ class OwnerTest < ActiveSupport::TestCase
   test "password length validation only applies when password is being set" do
     # Create owner with valid password
     owner = Owner.create!(valid_attributes)
-    
+
     # Update other attributes without touching password - should be valid
     owner.real_name = "Updated Name"
     assert owner.valid?, "Should be valid when not changing password: #{owner.errors.full_messages}"

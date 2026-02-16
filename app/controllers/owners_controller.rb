@@ -63,13 +63,13 @@ class OwnersController < ApplicationController
         render :edit, status: :unprocessable_entity
         return
       end
-      
+
       if owner_params[:password].blank?
         @owner.errors.add(:password, "can't be blank when changing password")
         render :edit, status: :unprocessable_entity
         return
       end
-      
+
       # Verify current password is correct using BCrypt authentication
       unless @owner.authenticate(owner_params[:current_password])
         @owner.errors.add(:current_password, "is incorrect")
