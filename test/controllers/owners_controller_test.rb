@@ -1,3 +1,7 @@
+# decor/test/controllers/owners_controller_test.rb - version 1.2
+# Refactored to use centralized AuthenticationHelper constants
+# All password references use TEST_PASSWORD_VALID constant
+
 require "test_helper"
 
 class OwnersControllerTest < ActionDispatch::IntegrationTest
@@ -47,8 +51,8 @@ class OwnersControllerTest < ActionDispatch::IntegrationTest
         owner: {
           user_name: "newuser",
           email: invite.email,
-          password: "password123",
-          password_confirmation: "password123",
+          password: TEST_PASSWORD_VALID,
+          password_confirmation: TEST_PASSWORD_VALID,
           real_name: "New User",
           country: "US"
         }
@@ -81,8 +85,8 @@ class OwnersControllerTest < ActionDispatch::IntegrationTest
         owner: {
           user_name: "", # Invalid: blank username
           email: invite.email,
-          password: "password123",
-          password_confirmation: "password123"
+          password: TEST_PASSWORD_VALID,
+          password_confirmation: TEST_PASSWORD_VALID
         }
       }
     end
@@ -103,7 +107,7 @@ class OwnersControllerTest < ActionDispatch::IntegrationTest
         owner: {
           user_name: "newuser",
           email: invite.email,
-          password: "password123",
+          password: TEST_PASSWORD_VALID,
           password_confirmation: "different"
         }
       }
@@ -121,8 +125,8 @@ class OwnersControllerTest < ActionDispatch::IntegrationTest
         owner: {
           user_name: "newuser",
           email: invite.email,
-          password: "password123",
-          password_confirmation: "password123"
+          password: TEST_PASSWORD_VALID,
+          password_confirmation: TEST_PASSWORD_VALID
         }
       }
     end
@@ -140,8 +144,8 @@ class OwnersControllerTest < ActionDispatch::IntegrationTest
         owner: {
           user_name: "newuser",
           email: invite.email,
-          password: "password123",
-          password_confirmation: "password123"
+          password: TEST_PASSWORD_VALID,
+          password_confirmation: TEST_PASSWORD_VALID
         }
       }
     end

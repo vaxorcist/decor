@@ -1,5 +1,6 @@
-# decor/app/models/owner.rb - version 1.1
-# Added user_name length validation (max 15 characters)
+# decor/app/models/owner.rb - version 1.2
+# Added password length validation (minimum 12 characters)
+# Password validation only applies when password is being set (create or update with password change)
 
 class Owner < ApplicationRecord
   has_secure_password
@@ -21,6 +22,11 @@ class Owner < ApplicationRecord
                     format: { with: URI::MailTo::EMAIL_REGEXP }
   validates :country, inclusion: { in: ISO3166::Country.codes }, allow_blank: true
   validates :website, format: { with: URI::DEFAULT_PARSER.make_regexp(%w[http https]) }, allow_blank: true
+  
+  # Password length validation
+  # Minimum 12 characters for security (length-based approach per NIST/OWASP guidance)
+  # No complexity requirements - research shows length matters more than forced patterns
+  validates :password, length: { minimum: 12 }, if: :password_digest_changed?
 
   scope :search, ->(query) do
     return all if query.blank?

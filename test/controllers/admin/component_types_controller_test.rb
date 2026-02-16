@@ -1,3 +1,8 @@
+# decor/test/controllers/admin/component_types_controller_test.rb - version 1.1
+# Refactored to use centralized AuthenticationHelper
+# Removed local log_in_as method - now inherited from test/support/authentication_helper.rb
+# All login_as() calls use auto-detection for correct password
+
 require "test_helper"
 
 module Admin
@@ -7,14 +12,9 @@ module Admin
       @component_type = component_types(:memory_board)
     end
 
-    def log_in_as(owner, password: "password123")
-      post session_url, params: { user_name: owner.user_name, password: password }
-      follow_redirect!
-    end
-
     # Index
     test "index displays component types" do
-      log_in_as(@admin)
+      login_as(@admin)
 
       get admin_component_types_url
 
@@ -25,7 +25,7 @@ module Admin
 
     # New
     test "new displays form" do
-      log_in_as(@admin)
+      login_as(@admin)
 
       get new_admin_component_type_url
 
@@ -36,7 +36,7 @@ module Admin
 
     # Create
     test "create adds new component type" do
-      log_in_as(@admin)
+      login_as(@admin)
 
       assert_difference "ComponentType.count", 1 do
         post admin_component_types_url, params: {
@@ -49,7 +49,7 @@ module Admin
     end
 
     test "create fails with blank name" do
-      log_in_as(@admin)
+      login_as(@admin)
 
       assert_no_difference "ComponentType.count" do
         post admin_component_types_url, params: {
@@ -61,7 +61,7 @@ module Admin
     end
 
     test "create fails with duplicate name" do
-      log_in_as(@admin)
+      login_as(@admin)
 
       assert_no_difference "ComponentType.count" do
         post admin_component_types_url, params: {
@@ -74,7 +74,7 @@ module Admin
 
     # Edit
     test "edit displays form" do
-      log_in_as(@admin)
+      login_as(@admin)
 
       get edit_admin_component_type_url(@component_type)
 
@@ -85,7 +85,7 @@ module Admin
 
     # Update
     test "update changes component type" do
-      log_in_as(@admin)
+      login_as(@admin)
 
       patch admin_component_type_url(@component_type), params: {
         component_type: { name: "Updated Name" }
@@ -97,7 +97,7 @@ module Admin
     end
 
     test "update fails with blank name" do
-      log_in_as(@admin)
+      login_as(@admin)
       original_name = @component_type.name
 
       patch admin_component_type_url(@component_type), params: {
@@ -110,7 +110,7 @@ module Admin
     end
 
     test "update fails with duplicate name" do
-      log_in_as(@admin)
+      login_as(@admin)
       other = ComponentType.create!(name: "Other Type")
 
       patch admin_component_type_url(other), params: {
@@ -124,7 +124,7 @@ module Admin
 
     # Destroy
     test "destroy deletes component type without components" do
-      log_in_as(@admin)
+      login_as(@admin)
       component_type = ComponentType.create!(name: "Deletable")
 
       assert_difference "ComponentType.count", -1 do
@@ -135,7 +135,7 @@ module Admin
     end
 
     test "destroy fails when component type has components" do
-      log_in_as(@admin)
+      login_as(@admin)
       # @component_type has components via fixtures
 
       assert_no_difference "ComponentType.count" do
@@ -148,7 +148,7 @@ module Admin
     # Authorization
     test "non-admin cannot access component types" do
       non_admin = owners(:two)
-      log_in_as(non_admin, password: "password456")
+      login_as(non_admin)  # Auto-detects bob's password
 
       get admin_component_types_url
 
@@ -157,7 +157,7 @@ module Admin
 
     test "non-admin cannot manage component types" do
       non_admin = owners(:two)
-      log_in_as(non_admin, password: "password456")
+      login_as(non_admin)  # Auto-detects bob's password
       component_type = component_types(:memory_board)
 
       get new_admin_component_type_url

@@ -1,9 +1,13 @@
+<%# decor/app/views/owners/new.html.erb - version 1.1 %>
+<%# Added password generator button (line 26-29) %>
+<%# Password generator uses Stimulus controller to create secure 16-character password %>
+
 <div class="max-w-2xl mx-auto">
   <h1 class="text-2xl font-semibold mb-4">Create Your Account</h1>
 
   <p class="mb-5 text-sm text-stone-600">Welcome to DEC Owner's Registry! Please fill in the information below to create your account.</p>
 
-  <%= form_with model: @owner, url: owners_path(token: @invite.token), class: "space-y-4" do |f| %>
+  <%= form_with model: @owner, url: owners_path(token: @invite.token), class: "space-y-4", data: { controller: "password-generator" } do |f| %>
     <%= render "common/record_errors", record: @owner %>
 
     <div>
@@ -20,12 +24,16 @@
 
     <div>
       <%= f.label :password, class: "block text-sm font-medium text-stone-700" %>
-      <%= f.password_field :password, required: true, class: field_classes %>
+      <%= f.password_field :password, required: true, class: field_classes, data: { password_generator_target: "password" } %>
+      <button type="button" data-action="password-generator#generate" class="mt-2 text-sm text-indigo-600 hover:text-indigo-900 font-medium">
+        Generate Secure Password
+      </button>
+      <p class="text-xs text-stone-500 mt-1">Minimum 12 characters. Using a generated password is recommended for security.</p>
     </div>
 
     <div>
       <%= f.label :password_confirmation, class: "block text-sm font-medium text-stone-700" %>
-      <%= f.password_field :password_confirmation, required: true, class: field_classes %>
+      <%= f.password_field :password_confirmation, required: true, class: field_classes, data: { password_generator_target: "confirmation" } %>
     </div>
 
     <hr class="my-5 border-stone-200">

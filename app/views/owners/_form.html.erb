@@ -1,5 +1,6 @@
-<%# decor/app/views/owners/_form.html.erb - version 1.1 %>
-<%# Added password change section (lines 50-71) %>
+<%# decor/app/views/owners/_form.html.erb - version 1.2 %>
+<%# Added password generator button (line 69-72) %>
+<%# Password generator uses Stimulus controller to create secure 16-character password %>
 <%# Requires current password verification for security %>
 <%# Password fields are optional - leave blank to skip password change %>
 
@@ -52,7 +53,7 @@
   <%# Password Change Section - Optional %>
   <%# User must provide current password to change to new password %>
   <%# Leave all password fields blank to update profile without changing password %>
-  <div class="border-t border-stone-200 pt-4 mt-6">
+  <div class="border-t border-stone-200 pt-4 mt-6" data-controller="password-generator">
     <h2 class="text-lg font-medium text-stone-900 mb-4">Change Password</h2>
     <p class="text-sm text-stone-600 mb-4">Leave blank if you don't want to change your password.</p>
     
@@ -64,12 +65,16 @@
 
     <div>
       <%= f.label :password, "New Password", class: "block text-sm font-medium text-stone-700" %>
-      <%= f.password_field :password, autocomplete: "new-password", class: field_classes %>
+      <%= f.password_field :password, autocomplete: "new-password", class: field_classes, data: { password_generator_target: "password" } %>
+      <button type="button" data-action="password-generator#generate" class="mt-2 text-sm text-indigo-600 hover:text-indigo-900 font-medium">
+        Generate Secure Password
+      </button>
+      <p class="text-xs text-stone-500 mt-1">Minimum 12 characters. Using a generated password is recommended for security.</p>
     </div>
 
     <div>
       <%= f.label :password_confirmation, "Confirm New Password", class: "block text-sm font-medium text-stone-700" %>
-      <%= f.password_field :password_confirmation, autocomplete: "new-password", class: field_classes %>
+      <%= f.password_field :password_confirmation, autocomplete: "new-password", class: field_classes, data: { password_generator_target: "confirmation" } %>
     </div>
   </div>
 

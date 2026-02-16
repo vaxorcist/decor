@@ -1,5 +1,6 @@
-# decor/test/models/owner_test.rb - version 1.1
-# Added tests for user_name length validation (max 15 characters)
+# decor/test/models/owner_test.rb - version 1.3
+# Refactored to use centralized AuthenticationHelper constants
+# All password references use TEST_PASSWORD_VALID constant
 
 require "test_helper"
 
@@ -8,7 +9,8 @@ class OwnerTest < ActiveSupport::TestCase
     {
       user_name: "testuser",
       email: "test@example.com",
-      password: "password123"
+      password: TEST_PASSWORD_VALID,
+      password_confirmation: TEST_PASSWORD_VALID
     }
   end
 
@@ -94,10 +96,44 @@ class OwnerTest < ActiveSupport::TestCase
     assert_includes owner.errors[:password], "can't be blank"
   end
 
+  test "password must be at least 12 characters" do
+    owner = Owner.new(valid_attributes.merge(password: "short", password_confirmation: "short"))
+    assert_not owner.valid?
+    assert_includes owner.errors[:password], "is too short (minimum is 12 characters)"
+  end
+
+  test "password with 11 characters is invalid" do
+    password = "a" * 11
+    owner = Owner.new(valid_attributes.merge(password: password, password_confirmation: password))
+    assert_not owner.valid?
+    assert_includes owner.errors[:password], "is too short (minimum is 12 characters)"
+  end
+
+  test "password with exactly 12 characters is valid" do
+    password = "a" * 12
+    owner = Owner.new(valid_attributes.merge(password: password, password_confirmation: password))
+    assert owner.valid?
+  end
+
+  test "password with 16 characters is valid" do
+    password = "a" * 16
+    owner = Owner.new(valid_attributes.merge(password: password, password_confirmation: password))
+    assert owner.valid?
+  end
+
   test "password authentication works" do
     owner = Owner.create!(valid_attributes)
-    assert owner.authenticate("password123")
+    assert owner.authenticate(TEST_PASSWORD_VALID)
     assert_not owner.authenticate("wrongpassword")
+  end
+
+  test "password length validation only applies when password is being set" do
+    # Create owner with valid password
+    owner = Owner.create!(valid_attributes)
+    
+    # Update other attributes without touching password - should be valid
+    owner.real_name = "Updated Name"
+    assert owner.valid?, "Should be valid when not changing password: #{owner.errors.full_messages}"
   end
 
   # Country validations

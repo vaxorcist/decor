@@ -1,0 +1,167 @@
+$ bin/rails test 
+≈ tailwindcss v4.1.18
+
+Done in 84ms
+Running 206 tests in parallel using 8 processes
+Run options: --seed 11162
+
+# Running:
+
+...E
+
+Error:
+Admin::RunStatusesControllerTest#test_non-admin_cannot_manage_run_statuses:
+RuntimeError: not a redirect! 422 Unprocessable Content
+    test/controllers/admin/run_statuses_controller_test.rb:12:in 'Admin::RunStatusesControllerTest#log_in_as'
+    test/controllers/admin/run_statuses_controller_test.rb:160:in 'block in <class:RunStatusesControllerTest>'
+
+
+bin/rails test test/controllers/admin/run_statuses_controller_test.rb:158
+
+............E
+
+Error:
+Admin::RunStatusesControllerTest#test_non-admin_cannot_access_run_statuses:
+RuntimeError: not a redirect! 422 Unprocessable Content
+    test/controllers/admin/run_statuses_controller_test.rb:12:in 'Admin::RunStatusesControllerTest#log_in_as'
+    test/controllers/admin/run_statuses_controller_test.rb:151:in 'block in <class:RunStatusesControllerTest>'
+
+
+bin/rails test test/controllers/admin/run_statuses_controller_test.rb:149
+
+...............E
+
+Error:
+Admin::OwnersControllerTest#test_non-admin_cannot_access_admin_owners_index:
+RuntimeError: not a redirect! 422 Unprocessable Content
+    test/controllers/admin/owners_controller_test.rb:11:in 'Admin::OwnersControllerTest#log_in_as'
+    test/controllers/admin/owners_controller_test.rb:106:in 'block in <class:OwnersControllerTest>'
+
+
+bin/rails test test/controllers/admin/owners_controller_test.rb:104
+
+....E
+
+Error:
+Admin::ComponentTypesControllerTest#test_non-admin_cannot_manage_component_types:
+RuntimeError: not a redirect! 422 Unprocessable Content
+    test/controllers/admin/component_types_controller_test.rb:12:in 'Admin::ComponentTypesControllerTest#log_in_as'
+    test/controllers/admin/component_types_controller_test.rb:160:in 'block in <class:ComponentTypesControllerTest>'
+
+
+bin/rails test test/controllers/admin/component_types_controller_test.rb:158
+
+...E
+
+Error:
+Admin::ComponentTypesControllerTest#test_non-admin_cannot_access_component_types:
+RuntimeError: not a redirect! 422 Unprocessable Content
+    test/controllers/admin/component_types_controller_test.rb:12:in 'Admin::ComponentTypesControllerTest#log_in_as'
+    test/controllers/admin/component_types_controller_test.rb:151:in 'block in <class:ComponentTypesControllerTest>'
+
+
+bin/rails test test/controllers/admin/component_types_controller_test.rb:149
+
+................E
+
+Error:
+Admin::ConditionsControllerTest#test_non-admin_cannot_manage_conditions:
+RuntimeError: not a redirect! 422 Unprocessable Content
+    test/controllers/admin/conditions_controller_test.rb:12:in 'Admin::ConditionsControllerTest#log_in_as'
+    test/controllers/admin/conditions_controller_test.rb:160:in 'block in <class:ConditionsControllerTest>'
+
+
+bin/rails test test/controllers/admin/conditions_controller_test.rb:158
+
+...E
+
+Error:
+Admin::ConditionsControllerTest#test_non-admin_cannot_access_conditions:
+RuntimeError: not a redirect! 422 Unprocessable Content
+    test/controllers/admin/conditions_controller_test.rb:12:in 'Admin::ConditionsControllerTest#log_in_as'
+    test/controllers/admin/conditions_controller_test.rb:151:in 'block in <class:ConditionsControllerTest>'
+
+
+bin/rails test test/controllers/admin/conditions_controller_test.rb:149
+
+...............................................................................E
+
+Error:
+Admin::ComputerModelsControllerTest#test_non-admin_cannot_manage_computer_models:
+RuntimeError: not a redirect! 422 Unprocessable Content
+    test/controllers/admin/computer_models_controller_test.rb:12:in 'Admin::ComputerModelsControllerTest#log_in_as'
+    test/controllers/admin/computer_models_controller_test.rb:160:in 'block in <class:ComputerModelsControllerTest>'
+
+
+bin/rails test test/controllers/admin/computer_models_controller_test.rb:158
+
+..E
+
+Error:
+Admin::ComputerModelsControllerTest#test_non-admin_cannot_access_computer_models:
+RuntimeError: not a redirect! 422 Unprocessable Content
+    test/controllers/admin/computer_models_controller_test.rb:12:in 'Admin::ComputerModelsControllerTest#log_in_as'
+    test/controllers/admin/computer_models_controller_test.rb:151:in 'block in <class:ComputerModelsControllerTest>'
+
+
+bin/rails test test/controllers/admin/computer_models_controller_test.rb:149
+
+.....F
+
+Failure:
+OwnersControllerTest#test_create_accepts_invite_and_creates_owner_account [test/controllers/owners_controller_test.rb:45]:
+`Owner.count` didn't change by 1, but by 0.
+Expected: 3
+  Actual: 2
+
+
+bin/rails test test/controllers/owners_controller_test.rb:42
+
+...................................E
+
+Error:
+Admin::InvitesControllerTest#test_non-admin_cannot_create_invite:
+RuntimeError: not a redirect! 422 Unprocessable Content
+    test/controllers/admin/invites_controller_test.rb:11:in 'Admin::InvitesControllerTest#log_in_as'
+    test/controllers/admin/invites_controller_test.rb:171:in 'block in <class:InvitesControllerTest>'
+
+
+bin/rails test test/controllers/admin/invites_controller_test.rb:169
+
+E
+
+Error:
+Admin::InvitesControllerTest#test_non-admin_cannot_access_index:
+RuntimeError: not a redirect! 422 Unprocessable Content
+    test/controllers/admin/invites_controller_test.rb:11:in 'Admin::InvitesControllerTest#log_in_as'
+    test/controllers/admin/invites_controller_test.rb:153:in 'block in <class:InvitesControllerTest>'
+
+
+bin/rails test test/controllers/admin/invites_controller_test.rb:151
+
+.E
+
+Error:
+Admin::InvitesControllerTest#test_non-admin_cannot_access_new_invite_page:
+RuntimeError: not a redirect! 422 Unprocessable Content
+    test/controllers/admin/invites_controller_test.rb:11:in 'Admin::InvitesControllerTest#log_in_as'
+    test/controllers/admin/invites_controller_test.rb:162:in 'block in <class:InvitesControllerTest>'
+
+
+bin/rails test test/controllers/admin/invites_controller_test.rb:160
+
+......E
+
+Error:
+Admin::InvitesControllerTest#test_non-admin_cannot_delete_invite:
+RuntimeError: not a redirect! 422 Unprocessable Content
+    test/controllers/admin/invites_controller_test.rb:11:in 'Admin::InvitesControllerTest#log_in_as'
+    test/controllers/admin/invites_controller_test.rb:186:in 'block in <class:InvitesControllerTest>'
+
+
+bin/rails test test/controllers/admin/invites_controller_test.rb:184
+
+........
+
+Finished in 5.059149s, 40.7183 runs/s, 107.9233 assertions/s.
+206 runs, 546 assertions, 1 failures, 13 errors, 0 skips
