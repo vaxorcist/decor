@@ -22,7 +22,7 @@ class Owner < ApplicationRecord
                     format: { with: URI::MailTo::EMAIL_REGEXP }
   validates :country, inclusion: { in: ISO3166::Country.codes }, allow_blank: true
   validates :website, format: { with: URI::DEFAULT_PARSER.make_regexp(%w[http https]) }, allow_blank: true
-  
+
   # Password length validation
   # Minimum 12 characters for security (length-based approach per NIST/OWASP guidance)
   # No complexity requirements - research shows length matters more than forced patterns
