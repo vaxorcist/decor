@@ -1,11 +1,11 @@
-# decor/app/controllers/owners_controller.rb - version 1.2
-# Fixed password change validation (lines 57-76)
-# Now requires BOTH current_password AND password when attempting password change
-# This prevents illogical scenarios like providing current_password without new password
+# app/controllers/owners_controller.rb - version 1.3
+# Added destroy action for account self-deletion
+# User can only delete their own account, requires password confirmation
+# Automatically logs out user and destroys all associated computers and components
 
 class OwnersController < ApplicationController
-  before_action :set_owner, only: %i[show edit update]
-  before_action -> { require_owner(@owner) }, only: %i[edit update]
+  before_action :set_owner, only: %i[show edit update destroy]
+  before_action -> { require_owner(@owner) }, only: %i[edit update destroy]
   before_action :load_invite, only: %i[new create]
 
   def index
@@ -57,7 +57,6 @@ class OwnersController < ApplicationController
     # Check if user is attempting to change password
     # Password change requires current password verification for security
     if password_change_attempted?
-      # Both current_password and new password must be provided when changing password
       if owner_params[:current_password].blank?
         @owner.errors.add(:current_password, "is required when changing password")
         render :edit, status: :unprocessable_entity
@@ -70,7 +69,6 @@ class OwnersController < ApplicationController
         return
       end
 
-      # Verify current password is correct using BCrypt authentication
       unless @owner.authenticate(owner_params[:current_password])
         @owner.errors.add(:current_password, "is incorrect")
         render :edit, status: :unprocessable_entity
@@ -89,6 +87,24 @@ class OwnersController < ApplicationController
     end
   end
 
+  # Account self-deletion
+  # User can only delete their own account (enforced by require_owner before_action)
+  # Requires password confirmation for security
+  # Automatically destroys all associated computers and components (dependent: :destroy)
+  # Logs out user and redirects to home page
+  def destroy
+    unless params[:password].present? && @owner.authenticate(params[:password])
+      redirect_to edit_owner_path(@owner), alert: "Incorrect password. Account was not deleted."
+      return
+    end
+
+    user_name = @owner.user_name
+    @owner.destroy
+    log_out
+
+    redirect_to root_path, notice: "Account '#{user_name}' and all associated data have been permanently deleted."
+  end
+
   private
 
   def set_owner
@@ -99,15 +115,10 @@ class OwnersController < ApplicationController
     @invite = Invite.find_by(token: params[:token]) if params[:token].present?
   end
 
-  # Check if user is trying to change password
-  # Password change is attempted if either current_password or password fields are present
-  # This allows profile updates without requiring password change
   def password_change_attempted?
     owner_params[:current_password].present? || owner_params[:password].present?
   end
 
-  # Permitted parameters for updating existing owner
-  # Includes password fields for optional password change
   def owner_params
     params.require(:owner).permit(
       :user_name, :real_name, :email, :country, :website,
@@ -116,8 +127,6 @@ class OwnersController < ApplicationController
     )
   end
 
-  # Permitted parameters for creating new owner via invitation
-  # Does not include current_password (not needed for new accounts)
   def create_owner_params
     params.require(:owner).permit(
       :user_name, :real_name, :email, :country, :website, :password, :password_confirmation,

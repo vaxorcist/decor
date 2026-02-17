@@ -1,5 +1,15 @@
+<%# app/views/common/_flashes.html.erb - version 1.1 %>
+<%# Added flash[:alert] display with red styling %>
+<%# Previous version only showed flash[:notice] - alerts were silently ignored %>
+
 <% if flash[:notice] %>
   <div class="mx-auto max-w-7xl p-4 text-sm text-stone-700 bg-stone-100">
     <%= flash[:notice] %>
+  </div>
+<% end %>
+
+<% if flash[:alert] %>
+  <div class="mx-auto max-w-7xl p-4 text-sm text-red-700 bg-red-100">
+    <%= flash[:alert] %>
   </div>
 <% end %>
