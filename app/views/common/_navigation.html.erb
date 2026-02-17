@@ -1,3 +1,7 @@
+<%# app/views/common/_navigation.html.erb - version 1.1 %>
+<%# BUGFIX: Admin link now only shows to users where admin? returns true %>
+<%# Previous version showed Admin to ALL logged-in users (missing admin? check) %>
+
 <nav class="grid grid-cols-3 items-center gap-2 px-6 py-4">
   <div class="flex items-center justify-start gap-6">
     <%= navigation_link_to "Owners", owners_path %>
@@ -13,7 +17,10 @@
 
   <div class="flex items-center justify-end gap-6">
     <% if logged_in? %>
-      <%= navigation_link_to "Admin", admin_owners_path %>
+      <%# Only show Admin link to users with admin privileges %>
+      <% if admin? %>
+        <%= navigation_link_to "Admin", admin_owners_path %>
+      <% end %>
       <%= navigation_link_to Current.owner.user_name, owner_path(Current.owner), active: false %>
     <% else %>
       <%= navigation_link_to "Log In", new_session_path %>
