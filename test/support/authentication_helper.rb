@@ -1,18 +1,18 @@
-# decor/test/support/authentication_helper.rb - version 1.0
-# Centralized test authentication constants and helper methods
-# Eliminates hardcoded passwords scattered across test files
-# Single source of truth for all test authentication
+# decor/test/support/authentication_helper.rb - version 2.0
+# Updated test passwords to meet zxcvbn strength requirements (score >= 3)
+# New passwords: 14-15 characters, mixed case, numbers, special chars
+# All passwords score >= 3 on zxcvbn strength meter
 
 module AuthenticationHelper
   # Test password constants - match fixtures in test/fixtures/owners.yml
   # Alice (owners(:one)) - admin user
-  TEST_PASSWORD_ALICE = "password12345".freeze
+  TEST_PASSWORD_ALICE = "DecorAdmin2026!".freeze
 
   # Bob (owners(:two)) - non-admin user
-  TEST_PASSWORD_BOB = "password45678".freeze
+  TEST_PASSWORD_BOB = "DecorUser2026!".freeze
 
   # Generic valid password for new owner creation
-  TEST_PASSWORD_VALID = "password12345".freeze
+  TEST_PASSWORD_VALID = "ValidTest2026!".freeze
 
   # Centralized login helper for integration tests
   # Usage: login_as(@owner) or login_as(@owner, password: custom_password)

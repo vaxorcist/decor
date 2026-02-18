@@ -1,3 +1,8 @@
+# decor/test/controllers/admin/conditions_controller_test.rb - version 1.1
+# Refactored to use centralized AuthenticationHelper
+# Removed local log_in_as method - now inherited from test/support/authentication_helper.rb
+# All login_as() calls use auto-detection for correct password
+
 require "test_helper"
 
 module Admin
@@ -7,14 +12,9 @@ module Admin
       @condition = conditions(:original)
     end
 
-    def log_in_as(owner, password: "password12345")
-      post session_url, params: { user_name: owner.user_name, password: password }
-      follow_redirect!
-    end
-
     # Index
     test "index displays conditions" do
-      log_in_as(@admin)
+      login_as(@admin)
 
       get admin_conditions_url
 
@@ -25,7 +25,7 @@ module Admin
 
     # New
     test "new displays form" do
-      log_in_as(@admin)
+      login_as(@admin)
 
       get new_admin_condition_url
 
@@ -36,7 +36,7 @@ module Admin
 
     # Create
     test "create adds new condition" do
-      log_in_as(@admin)
+      login_as(@admin)
 
       assert_difference "Condition.count", 1 do
         post admin_conditions_url, params: {
@@ -49,7 +49,7 @@ module Admin
     end
 
     test "create fails with blank name" do
-      log_in_as(@admin)
+      login_as(@admin)
 
       assert_no_difference "Condition.count" do
         post admin_conditions_url, params: {
@@ -61,7 +61,7 @@ module Admin
     end
 
     test "create fails with duplicate name" do
-      log_in_as(@admin)
+      login_as(@admin)
 
       assert_no_difference "Condition.count" do
         post admin_conditions_url, params: {
@@ -74,7 +74,7 @@ module Admin
 
     # Edit
     test "edit displays form" do
-      log_in_as(@admin)
+      login_as(@admin)
 
       get edit_admin_condition_url(@condition)
 
@@ -85,7 +85,7 @@ module Admin
 
     # Update
     test "update changes condition" do
-      log_in_as(@admin)
+      login_as(@admin)
 
       patch admin_condition_url(@condition), params: {
         condition: { name: "Updated Name" }
@@ -97,7 +97,7 @@ module Admin
     end
 
     test "update fails with blank name" do
-      log_in_as(@admin)
+      login_as(@admin)
       original_name = @condition.name
 
       patch admin_condition_url(@condition), params: {
@@ -110,7 +110,7 @@ module Admin
     end
 
     test "update fails with duplicate name" do
-      log_in_as(@admin)
+      login_as(@admin)
       other = Condition.create!(name: "Other Condition")
 
       patch admin_condition_url(other), params: {
@@ -124,7 +124,7 @@ module Admin
 
     # Destroy
     test "destroy deletes condition without computers" do
-      log_in_as(@admin)
+      login_as(@admin)
       condition = Condition.create!(name: "Deletable")
 
       assert_difference "Condition.count", -1 do
@@ -135,7 +135,7 @@ module Admin
     end
 
     test "destroy fails when condition has computers" do
-      log_in_as(@admin)
+      login_as(@admin)
       # @condition has computers via fixtures
 
       assert_no_difference "Condition.count" do
@@ -148,7 +148,7 @@ module Admin
     # Authorization
     test "non-admin cannot access conditions" do
       non_admin = owners(:two)
-      log_in_as(non_admin, password: "password45678")
+      login_as(non_admin)
 
       get admin_conditions_url
 
@@ -157,7 +157,7 @@ module Admin
 
     test "non-admin cannot manage conditions" do
       non_admin = owners(:two)
-      log_in_as(non_admin, password: "password45678")
+      login_as(non_admin)
       condition = conditions(:original)
 
       get new_admin_condition_url

@@ -1,5 +1,6 @@
-# decor/app/models/owner.rb - version 1.2
-# Added password length validation (minimum 12 characters)
+# decor/app/models/owner.rb - version 1.3
+# Added password strength validation using zxcvbn (minimum score 3)
+# Password validation: minimum 12 characters + strength check
 # Password validation only applies when password is being set (create or update with password change)
 
 class Owner < ApplicationRecord
@@ -25,8 +26,12 @@ class Owner < ApplicationRecord
 
   # Password length validation
   # Minimum 12 characters for security (length-based approach per NIST/OWASP guidance)
-  # No complexity requirements - research shows length matters more than forced patterns
   validates :password, length: { minimum: 12 }, if: :password_digest_changed?
+
+  # Password strength validation using zxcvbn
+  # Requires score >= 3 (0=very weak, 4=very strong)
+  # zxcvbn checks against dictionary words, common patterns, keyboard patterns, etc.
+  validate :password_strength, if: :password_digest_changed?
 
   scope :search, ->(query) do
     return all if query.blank?
@@ -65,5 +70,25 @@ class Owner < ApplicationRecord
 
   def clear_password_reset_token!
     update!(reset_password_token: nil, reset_password_sent_at: nil)
+  end
+
+  private
+
+  # Validate password strength using zxcvbn
+  # Score 0-2: weak/very weak - rejected
+  # Score 3-4: strong/very strong - accepted
+  def password_strength
+    return if password.blank? # presence is validated by has_secure_password
+
+    require "zxcvbn"
+    result = Zxcvbn.test(password)
+
+    if result.score < 3
+      # Provide helpful feedback from zxcvbn
+      message = "is too weak"
+      message += ": #{result.feedback.warning}" if result.feedback.warning.present?
+      message += ". #{result.feedback.suggestions.first}" if result.feedback.suggestions.any?
+      errors.add(:password, message)
+    end
   end
 end

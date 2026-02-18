@@ -1,3 +1,7 @@
+# decor/test/controllers/password_resets_controller_test.rb - version 1.1
+# Updated test passwords to pass zxcvbn strength validation (score >= 3)
+# Uses "NewSecurePass2026!" instead of "newpassword123"
+
 require "test_helper"
 
 class PasswordResetsControllerTest < ActionDispatch::IntegrationTest
@@ -79,8 +83,8 @@ class PasswordResetsControllerTest < ActionDispatch::IntegrationTest
 
     patch password_reset_url(token), params: {
       owner: {
-        password: "newpassword123",
-        password_confirmation: "newpassword123"
+        password: "NewSecurePass2026!",
+        password_confirmation: "NewSecurePass2026!"
       }
     }
 
@@ -90,7 +94,7 @@ class PasswordResetsControllerTest < ActionDispatch::IntegrationTest
     # Verify password was changed
     @owner.reload
     assert_not_equal old_password_digest, @owner.password_digest
-    assert @owner.authenticate("newpassword123")
+    assert @owner.authenticate("NewSecurePass2026!")
 
     # Verify token was cleared
     assert_nil @owner.reset_password_token
@@ -104,7 +108,7 @@ class PasswordResetsControllerTest < ActionDispatch::IntegrationTest
 
     patch password_reset_url(token), params: {
       owner: {
-        password: "newpassword123",
+        password: "NewSecurePass2026!",
         password_confirmation: "different"
       }
     }
@@ -120,8 +124,8 @@ class PasswordResetsControllerTest < ActionDispatch::IntegrationTest
   test "update fails with invalid token" do
     patch password_reset_url("invalid-token"), params: {
       owner: {
-        password: "newpassword123",
-        password_confirmation: "newpassword123"
+        password: "NewSecurePass2026!",
+        password_confirmation: "NewSecurePass2026!"
       }
     }
 
@@ -136,8 +140,8 @@ class PasswordResetsControllerTest < ActionDispatch::IntegrationTest
 
     patch password_reset_url(token), params: {
       owner: {
-        password: "newpassword123",
-        password_confirmation: "newpassword123"
+        password: "NewSecurePass2026!",
+        password_confirmation: "NewSecurePass2026!"
       }
     }
 
