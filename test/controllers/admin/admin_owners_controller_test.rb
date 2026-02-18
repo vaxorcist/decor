@@ -1,3 +1,8 @@
+# decor/test/controllers/admin/owners_controller_test.rb - version 1.1
+# Refactored to use centralized AuthenticationHelper
+# Removed local log_in_as method - now inherited from test/support/authentication_helper.rb
+# All login_as() calls use auto-detection for correct password
+
 require "test_helper"
 
 module Admin
@@ -6,13 +11,8 @@ module Admin
       @admin = owners(:one)
     end
 
-    def log_in_as(owner, password: "password12345")
-      post session_url, params: { user_name: owner.user_name, password: password }
-      follow_redirect!
-    end
-
     test "index lists owners" do
-      log_in_as(@admin)
+      login_as(@admin)
       owner = owners(:two)
 
       get admin_owners_url
@@ -24,7 +24,7 @@ module Admin
 
     # Password reset flow for existing owners
     test "send_password_reset sends email to owner" do
-      log_in_as(@admin)
+      login_as(@admin)
       owner = owners(:two)
 
       perform_enqueued_jobs do
@@ -45,7 +45,7 @@ module Admin
 
     # Edit/Update admin status
     test "edit displays owner admin form" do
-      log_in_as(@admin)
+      login_as(@admin)
       other_owner = owners(:two)
 
       get edit_admin_owner_url(other_owner)
@@ -56,7 +56,7 @@ module Admin
     end
 
     test "can grant admin to another owner" do
-      log_in_as(@admin)
+      login_as(@admin)
       other_owner = owners(:two)
       assert_not other_owner.admin?
 
@@ -68,7 +68,7 @@ module Admin
     end
 
     test "can revoke admin from another owner" do
-      log_in_as(@admin)
+      login_as(@admin)
       other_admin = owners(:two)
       other_admin.update!(admin: true)
 
@@ -80,7 +80,7 @@ module Admin
     end
 
     test "cannot remove own admin privileges" do
-      log_in_as(@admin)
+      login_as(@admin)
 
       patch admin_owner_url(@admin), params: { owner: { admin: false } }
 
@@ -91,7 +91,7 @@ module Admin
     end
 
     test "can edit own profile but admin stays true" do
-      log_in_as(@admin)
+      login_as(@admin)
 
       patch admin_owner_url(@admin), params: { owner: { admin: true } }
 
@@ -103,7 +103,7 @@ module Admin
     # Authorization tests
     test "non-admin cannot access admin owners index" do
       non_admin = owners(:two)
-      log_in_as(non_admin, password: "password45678")
+      login_as(non_admin)
 
       get admin_owners_url
 

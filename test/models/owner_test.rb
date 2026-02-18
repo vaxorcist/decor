@@ -1,6 +1,7 @@
-# decor/test/models/owner_test.rb - version 1.3
-# Refactored to use centralized AuthenticationHelper constants
-# All password references use TEST_PASSWORD_VALID constant
+# decor/test/models/owner_test.rb - version 1.4
+# Updated to use strong test passwords that pass zxcvbn validation
+# Added password strength validation tests
+# All password references use TEST_PASSWORD_VALID constant from AuthenticationHelper
 
 require "test_helper"
 
@@ -109,22 +110,64 @@ class OwnerTest < ActiveSupport::TestCase
     assert_includes owner.errors[:password], "is too short (minimum is 12 characters)"
   end
 
-  test "password with exactly 12 characters is valid" do
-    password = "a" * 12
+  test "password with exactly 12 characters is valid if strong" do
+    # 12 characters with good strength
+    password = "Strong12!@#*"
     owner = Owner.new(valid_attributes.merge(password: password, password_confirmation: password))
-    assert owner.valid?
+    assert owner.valid?, "Should be valid: #{owner.errors.full_messages}"
   end
 
-  test "password with 16 characters is valid" do
-    password = "a" * 16
+  test "password with 16 characters is valid if strong" do
+    # 16 characters with good strength
+    password = "VeryStrong16!@#*"
     owner = Owner.new(valid_attributes.merge(password: password, password_confirmation: password))
-    assert owner.valid?
+    assert owner.valid?, "Should be valid: #{owner.errors.full_messages}"
   end
 
   test "password authentication works" do
     owner = Owner.create!(valid_attributes)
     assert owner.authenticate(TEST_PASSWORD_VALID)
     assert_not owner.authenticate("wrongpassword")
+  end
+
+  # Password strength validations (zxcvbn)
+  test "password must have sufficient strength (score >= 3)" do
+    weak_passwords = [
+      "password12345",      # dictionary word + sequential
+      "123456789012",       # sequential numbers
+      "aaaaaaaaaaaa",       # repeated characters
+      "qwertyuiop12"        # keyboard pattern
+    ]
+
+    weak_passwords.each do |password|
+      owner = Owner.new(valid_attributes.merge(password: password, password_confirmation: password))
+      assert_not owner.valid?, "#{password} should be invalid (too weak)"
+      assert owner.errors[:password].any? { |msg| msg.include?("too weak") },
+             "Should have 'too weak' error for #{password}"
+    end
+  end
+
+  test "password with good strength passes validation" do
+    strong_passwords = [
+      "DecorAdmin2026!",        # mixed case, numbers, special (our test password)
+      "VeryStrongPass2026!",    # mixed case, numbers, special
+      "correct-horse-battery"   # passphrase style (xkcd classic)
+    ]
+
+    strong_passwords.each do |password|
+      owner = Owner.new(valid_attributes.merge(password: password, password_confirmation: password))
+      assert owner.valid?, "#{password} should be valid: #{owner.errors.full_messages}"
+    end
+  end
+
+  test "password strength validation provides helpful feedback" do
+    owner = Owner.new(valid_attributes.merge(password: "password12345", password_confirmation: "password12345"))
+    assert_not owner.valid?
+
+    error_message = owner.errors[:password].first
+    assert_not_nil error_message
+    # zxcvbn provides suggestions in the error message
+    assert error_message.length > 15, "Error should include feedback: #{error_message}"
   end
 
   test "password length validation only applies when password is being set" do

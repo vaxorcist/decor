@@ -1,5 +1,5 @@
-<%# decor/app/views/owners/new.html.erb - version 1.1 %>
-<%# Added password generator button (line 26-29) %>
+<%# decor/app/views/owners/new.html.erb - version 1.2 %>
+<%# Added password strength indicator display %>
 <%# Password generator uses Stimulus controller to create secure 16-character password %>
 
 <div class="max-w-2xl mx-auto">
@@ -28,7 +28,8 @@
       <button type="button" data-action="password-generator#generate" class="mt-2 text-sm text-indigo-600 hover:text-indigo-900 font-medium">
         Generate Secure Password
       </button>
-      <p class="text-xs text-stone-500 mt-1">Minimum 12 characters. Using a generated password is recommended for security.</p>
+      <div data-password-generator-target="strength" class="mt-2 text-sm hidden"></div>
+      <p class="text-xs text-stone-500 mt-1">Minimum 12 characters with good strength. Using a generated password is recommended for security.</p>
     </div>
 
     <div>

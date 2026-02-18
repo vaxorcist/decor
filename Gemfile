@@ -11,6 +11,7 @@ gem "stimulus-rails"
 gem "tailwindcss-rails"
 gem "jbuilder"
 gem "bcrypt"
+gem "zxcvbn-ruby", require: "zxcvbn"
 gem "countries"
 gem "geared_pagination"
 gem "tzinfo-data", platforms: %i[ windows jruby ]
