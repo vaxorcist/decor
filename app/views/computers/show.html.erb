@@ -1,5 +1,5 @@
-<%# decor/app/views/computers/show.html.erb - version 1.0 %>
-<%# Fixed: Added safe navigation for optional condition and run_status fields %>
+<%# decor/app/views/computers/show.html.erb - version 1.1 %>
+<%# Renamed description field to order_number; changed to single-line display (no whitespace-pre-wrap) %>
 
 <div class="max-w-7xl mx-auto">
   <div class="flex justify-between items-start mb-4">
@@ -29,10 +29,11 @@
         <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider">Run Status</dt>
         <dd class="mt-1"><%= @computer.run_status&.name || "—" %></dd>
       </div>
-      <% if @computer.description.present? %>
-        <div class="col-span-2">
-          <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider">Description</dt>
-          <dd class="mt-1 whitespace-pre-wrap"><%= @computer.description %></dd>
+      <% if @computer.order_number.present? %>
+        <div>
+          <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider">Order Number</dt>
+          <!-- Single-line display — order numbers are short (max 20 chars) -->
+          <dd class="mt-1"><%= @computer.order_number %></dd>
         </div>
       <% end %>
       <% if @computer.history.present? %>

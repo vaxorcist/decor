@@ -1,5 +1,5 @@
-<%# decor/app/views/computers/_form.html.erb - version 1.0 %>
-<%# Updated: Added prompts for Condition and Run Status, added required indicators %>
+<%# decor/app/views/computers/_form.html.erb - version 1.1 %>
+<%# Renamed description to order_number; changed text_area to text_field (short field, max 20 chars) %>
 
 <%= form_with model: computer, class: "space-y-4" do |f| %>
   <%= render "common/record_errors", record: computer %>
@@ -28,9 +28,11 @@
     </div>
   </div>
 
+  <!-- Order number is a short identifier (max 20 chars) — text_field is appropriate -->
   <div>
-    <%= f.label :description, class: "block text-sm font-medium text-stone-700" %>
-    <%= f.text_area :description, rows: 4, class: field_classes %>
+    <%= f.label :order_number, "Order Number", class: "block text-sm font-medium text-stone-700" %>
+    <%= f.text_field :order_number, maxlength: 20, class: field_classes %>
+    <p class="mt-1 text-xs text-stone-500">Maximum 20 characters.</p>
   </div>
 
   <div>

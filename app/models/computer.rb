@@ -1,5 +1,6 @@
-# decor/app/models/computer.rb - version 1.1
-# Added serial_number validation (required field)
+# decor/app/models/computer.rb - version 1.2
+# Renamed description to order_number
+# Added length validation for order_number (max 20 characters)
 
 class Computer < ApplicationRecord
   belongs_to :owner
@@ -10,8 +11,9 @@ class Computer < ApplicationRecord
 
   # Validations
   validates :serial_number, presence: true
+  validates :order_number, length: { maximum: 20 }, allow_blank: true
 
-  # Search scope that searches across model name, owner name, serial number, description, and history
+  # Search scope that searches across model name, owner name, serial number, order_number, and history
   # Supports SQL wildcards (% for any characters, _ for single character)
   # Case-insensitive search
   scope :search, ->(query) do
@@ -20,14 +22,14 @@ class Computer < ApplicationRecord
     # SQL LIKE pattern - user can include their own wildcards or we wrap the whole thing
     pattern = query.include?("%") || query.include?("_") ? query : "%#{query}%"
 
-    # Search in: computer model name, owner username, serial number, description, history
+    # Search in: computer model name, owner username, serial number, order_number, history
     joins(:owner, :computer_model)
       .left_outer_joins(:condition, :run_status)
       .where(
         "LOWER(computer_models.name) LIKE LOWER(?) OR
          LOWER(owners.user_name) LIKE LOWER(?) OR
          LOWER(computers.serial_number) LIKE LOWER(?) OR
-         LOWER(computers.description) LIKE LOWER(?) OR
+         LOWER(computers.order_number) LIKE LOWER(?) OR
          LOWER(computers.history) LIKE LOWER(?) OR
          LOWER(conditions.name) LIKE LOWER(?) OR
          LOWER(run_statuses.name) LIKE LOWER(?)",
