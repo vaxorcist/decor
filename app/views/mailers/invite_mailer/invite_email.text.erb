@@ -1,3 +1,16 @@
-Invite#invite_email
+<%# decor/app/views/mailers/invite_mailer/invite_email.text.erb - version 1.1 %>
+<%# Plain-text version of the initial invite email. %>
+<%# v1.0 was a Rails generator placeholder — replaced with actual content. %>
+Hello,
 
-<%= @greeting %>, find me in app/views/invite_mailer/invite_email.text.erb
+You've been invited to join the DEC Owner's Registry! Use the link below to
+create your account and set up your profile:
+
+<%= @accept_url %>
+
+This invitation will expire in 30 days.
+
+If you have any questions, please contact the administrator.
+
+Welcome,
+DEC Owner's Registry
