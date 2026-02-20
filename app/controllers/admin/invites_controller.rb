@@ -1,3 +1,12 @@
+# decor/app/controllers/admin/invites_controller.rb - version 1.1
+# Changes from v1.0:
+# - deliver_later → deliver_now for invite_email
+#   Rationale: this is a single admin-triggered email, not a bulk operation.
+#   deliver_later required a running Solid Queue worker to process, which meant
+#   letter_opener never fired in development and failures were silent in production.
+#   deliver_now is synchronous, works with letter_opener, and gives the admin
+#   immediate feedback if delivery fails (raise_delivery_errors = true in production).
+
 module Admin
   class InvitesController < BaseController
     def index
@@ -12,7 +21,7 @@ module Admin
       @invite = Invite.new(invite_params)
 
       if @invite.save
-        InviteMailer.invite_email(@invite).deliver_later
+        InviteMailer.invite_email(@invite).deliver_now
         redirect_to admin_invites_path, notice: "Invitation sent to #{@invite.email}."
       else
         render :new, status: :unprocessable_entity

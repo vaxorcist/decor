@@ -1,3 +1,9 @@
+# decor/config/recurring.yml - version 1.1
+# Solid Queue recurring job configuration.
+# Changes from v1.0:
+# - Added send_invite_reminders: runs InviteReminderJob daily at 8am
+#   to send one-time reminder emails to invitees past the 20-day threshold.
+
 # examples:
 #   periodic_cleanup:
 #     class: CleanSoftDeletedRecordsJob
@@ -13,3 +19,10 @@ production:
   clear_solid_queue_finished_jobs:
     command: "SolidQueue::Job.clear_finished_in_batches(sleep_between_batches: 0.3)"
     schedule: every hour at minute 12
+
+  # Send one-time reminder emails to invitees who have not registered after 20 days.
+  # InviteReminderJob is idempotent — each invite only ever receives one reminder.
+  send_invite_reminders:
+    class: InviteReminderJob
+    queue: default
+    schedule: every day at 8am
