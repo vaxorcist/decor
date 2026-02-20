@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_12_135907) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_20_093615) do
   create_table "component_types", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "name", null: false
@@ -44,8 +44,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_12_135907) do
     t.integer "computer_model_id", null: false
     t.integer "condition_id"
     t.datetime "created_at", null: false
-    t.text "description"
     t.text "history"
+    t.text "order_number"
     t.integer "owner_id", null: false
     t.integer "run_status_id"
     t.string "serial_number", null: false

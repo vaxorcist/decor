@@ -1,5 +1,5 @@
-# decor/app/controllers/computers_controller.rb - version 1.1
-# Added owner_id filtering to support linking from owners page
+# decor/app/controllers/computers_controller.rb - version 1.2
+# Renamed permitted param :description to :order_number
 
 class ComputersController < ApplicationController
   before_action :set_computer, only: %i[show edit update destroy]
@@ -87,6 +87,6 @@ class ComputersController < ApplicationController
   end
 
   def computer_params
-    params.require(:computer).permit(:computer_model_id, :serial_number, :condition_id, :run_status_id, :description, :history)
+    params.require(:computer).permit(:computer_model_id, :serial_number, :condition_id, :run_status_id, :order_number, :history)
   end
 end

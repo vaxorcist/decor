@@ -1,8 +1,8 @@
-<%# decor/app/views/computers/_computer.html.erb - version 1.3 %>
-<%# Changed: Owner column moved to first position; Owner/View/Edit links changed to indigo blue %>
+<%# decor/app/views/computers/_computer.html.erb - version 1.4 %>
+<%# Renamed description column to order_number; updated label accordingly %>
 
 <tr id="<%= dom_id computer %>" class="hover:bg-stone-50">
-  <!-- Owner - moved to first column; blue link consistent with Model -->
+  <!-- Owner - first column; blue link consistent with Model -->
   <td class="px-4 py-3 whitespace-nowrap text-stone-600">
     <%= link_to computer.owner.user_name, computer.owner, class: "text-indigo-600 hover:text-indigo-900" %>
   </td>
@@ -12,11 +12,9 @@
     <%= link_to computer.computer_model.name, computer, class: "text-indigo-600 hover:text-indigo-900" %>
   </td>
 
-  <!-- Description - with max-width to prevent layout breaking -->
-  <td class="px-4 py-3 text-stone-600" style="max-width: 300px;">
-    <div class="truncate">
-      <%= computer.description.presence || "—" %>
-    </div>
+  <!-- Order Number - short field, no truncation needed -->
+  <td class="px-4 py-3 whitespace-nowrap text-stone-600">
+    <%= computer.order_number.presence || "—" %>
   </td>
 
   <!-- Serial Number -->

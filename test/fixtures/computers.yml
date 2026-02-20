@@ -1,12 +1,12 @@
-# decor/test/fixtures/computers.yml - version 1.1
-# Test fixtures for Computer model
-# Fixed: Added serial_number to alice_vax to satisfy NOT NULL constraint
+# decor/test/fixtures/computers.yml - version 1.2
+# Renamed description to order_number with realistic short values (max 20 chars)
+# Test passwords defined in test/support/authentication_helper.rb
 
 alice_pdp11:
   owner: one
   computer_model: pdp11_70
   serial_number: SN12345
-  description: My first PDP-11, acquired in 1985 from a university surplus sale.
+  order_number: ORD-1985-001
   condition: original
   run_status: working
   history: Originally used at MIT for student labs.
@@ -15,7 +15,7 @@ alice_vax:
   owner: one
   computer_model: vax11_780
   serial_number: VAX-780-001
-  description: VAX system under restoration
+  order_number: ORD-VAX-002
   condition: original_repaired
   run_status: repair
   history:
@@ -24,7 +24,7 @@ bob_pdp8:
   owner: two
   computer_model: pdp8
   serial_number: PDP8-7891
-  description: Classic PDP-8 minicomputer
+  order_number: ORD-2010-008
   condition: modified
   run_status: working_problems
   history: Purchased from a collector in 2010. Some expansion cards replaced.
@@ -33,7 +33,7 @@ bob_vt100:
   owner: two
   computer_model: vt100
   serial_number: VT100-5432
-  description: Terminal in excellent condition
+  order_number: ORD-VT-004
   condition: original
   run_status: working
   history:
@@ -43,7 +43,7 @@ unassigned_condition_test:
   owner: one
   computer_model: pdp11_70
   serial_number: TEST-001
-  description: Test computer
+  order_number: TEST-ORD-001
   condition: built
   run_status: defective
   history:
