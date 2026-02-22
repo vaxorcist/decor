@@ -1,11 +1,13 @@
-<%# decor/app/views/computers/new.html.erb - version 1.0 %>
-<%# Added note about required fields %>
+<%# decor/app/views/computers/new.html.erb - version 1.2 %>
+<%# Widened container to max-w-5xl to match edit page %>
+<%# Added note that components can be added after the computer is saved %>
 
-<div class="max-w-2xl mx-auto">
+<div class="max-w-5xl mx-auto">
   <h1 class="text-2xl font-semibold mb-4">Add Computer</h1>
-  
+
   <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
-    <strong>Required fields:</strong> Model and Serial Number
+    <strong>Required fields:</strong> Model and Serial Number.
+    Components can be added after saving.
   </div>
 
   <%= render "form", computer: @computer %>

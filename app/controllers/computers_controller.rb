@@ -1,5 +1,8 @@
-# decor/app/controllers/computers_controller.rb - version 1.2
-# Renamed permitted param :description to :order_number
+# decor/app/controllers/computers_controller.rb - version 1.4
+# create action: after successful save, redirect to edit_computer_path (not show)
+#   so the user can immediately add components without an extra click
+# edit action: sets @new_component and optionally @edit_component for embedded component sub-form
+# update action: re-populates @new_component on failure so edit page renders correctly
 
 class ComputersController < ApplicationController
   before_action :set_computer, only: %i[show edit update destroy]
@@ -27,9 +30,9 @@ class ComputersController < ApplicationController
     end
 
     computers = case params[:sort]
-    when "added_asc" then computers.order(created_at: :asc)
+    when "added_asc"  then computers.order(created_at: :asc)
     when "added_desc" then computers.order(created_at: :desc)
-    when "model_asc" then computers.joins(:computer_model).order("computer_models.name ASC")
+    when "model_asc"  then computers.joins(:computer_model).order("computer_models.name ASC")
     when "model_desc" then computers.joins(:computer_model).order("computer_models.name DESC")
     else
       computers.order(created_at: :desc)
@@ -51,9 +54,11 @@ class ComputersController < ApplicationController
 
     if @computer.save
       if params[:add_another]
+        # "Create and add another" still goes to new computer form
         redirect_to new_computer_path, notice: "Computer was successfully created. Add another!"
       else
-        redirect_to computer_path(@computer), notice: "Computer was successfully created."
+        # Go directly to edit page so the user can add components immediately
+        redirect_to edit_computer_path(@computer), notice: "Computer was successfully created. You can now add components below."
       end
     else
       render :new, status: :unprocessable_entity
@@ -61,12 +66,22 @@ class ComputersController < ApplicationController
   end
 
   def edit
+    # Blank component pre-assigned to this computer — used by the Add sub-form
+    @new_component = Current.owner.components.new(computer_id: @computer.id)
+
+    # If component_id param is present, load that component for inline editing.
+    # Scoped to this computer's components so users cannot edit other computers' components.
+    if params[:component_id].present?
+      @edit_component = @computer.components.find_by(id: params[:component_id])
+    end
   end
 
   def update
     if @computer.update(computer_params)
       redirect_to computer_path(@computer), notice: "Computer was successfully updated."
     else
+      # Re-populate sub-form instance variables so the edit page renders correctly on failure
+      @new_component = Current.owner.components.new(computer_id: @computer.id)
       render :edit, status: :unprocessable_entity
     end
   end

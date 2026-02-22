@@ -1,21 +1,39 @@
-<%# decor/app/views/computers/_form.html.erb - version 1.1 %>
-<%# Renamed description to order_number; changed text_area to text_field (short field, max 20 chars) %>
+<%# decor/app/views/computers/_form.html.erb - version 1.7 %>
+<%# Reordered fields: Line 1 = Model / Order Number / Serial Number (3-col) %>
+<%#                   Line 2 = Condition / Run Status (2-col) %>
+<%#                   Line 3 = History (3 rows) %>
+<%# "Cancel" renamed to "Done" — clearer intent, no implication of reverting actions %>
+<%# Component section: Add/Edit form above list; full width; Edit+Delete side by side %>
 
-<%= form_with model: computer, class: "space-y-4" do |f| %>
+<%= form_with model: computer, class: "space-y-4", style: "width: 80%;" do |f| %>
   <%= render "common/record_errors", record: computer %>
 
-  <div>
-    <%= f.label :computer_model_id, "Model", class: "block text-sm font-medium text-stone-700" %>
-    <span class="text-red-600">*</span>
-    <%= f.collection_select :computer_model_id, ComputerModel.order(:name), :id, :name, { prompt: "Select a model" }, class: field_classes %>
+  <!-- Line 1: Model | Order Number | Serial Number -->
+  <div class="grid grid-cols-3 gap-4">
+    <div>
+      <%= f.label :computer_model_id, class: "block text-sm font-medium text-stone-700" do %>
+        Model <span class="text-red-600">*</span>
+      <% end %>
+      <%= f.collection_select :computer_model_id, ComputerModel.order(:name), :id, :name, { prompt: "Select a model" }, class: field_classes %>
+      <p class="mt-1 text-xs text-stone-500">Select from list.</p>
+    </div>
+
+    <div>
+      <%= f.label :order_number, "Order Number", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.text_field :order_number, maxlength: 20, class: field_classes %>
+      <p class="mt-1 text-xs text-stone-500">Maximum 20 characters.</p>
+    </div>
+
+    <div>
+      <%= f.label :serial_number, class: "block text-sm font-medium text-stone-700" do %>
+        Serial Number <span class="text-red-600">*</span>
+      <% end %>
+      <%= f.text_field :serial_number, maxlength: 20, class: field_classes %>
+      <p class="mt-1 text-xs text-stone-500">Maximum 20 characters.</p>
+    </div>
   </div>
 
-  <div>
-    <%= f.label :serial_number, class: "block text-sm font-medium text-stone-700" %>
-    <span class="text-red-600">*</span>
-    <%= f.text_field :serial_number, class: field_classes %>
-  </div>
-
+  <!-- Line 2: Condition | Run Status -->
   <div class="grid grid-cols-2 gap-4">
     <div>
       <%= f.label :condition_id, "Condition", class: "block text-sm font-medium text-stone-700" %>
@@ -28,16 +46,10 @@
     </div>
   </div>
 
-  <!-- Order number is a short identifier (max 20 chars) — text_field is appropriate -->
-  <div>
-    <%= f.label :order_number, "Order Number", class: "block text-sm font-medium text-stone-700" %>
-    <%= f.text_field :order_number, maxlength: 20, class: field_classes %>
-    <p class="mt-1 text-xs text-stone-500">Maximum 20 characters.</p>
-  </div>
-
+  <!-- Line 3: History — 3 rows -->
   <div>
     <%= f.label :history, class: "block text-sm font-medium text-stone-700" %>
-    <%= f.text_area :history, rows: 4, class: field_classes %>
+    <%= f.text_area :history, rows: 3, style: "min-height: 4.5rem;", class: field_classes %>
     <p class="mt-1 text-xs text-stone-500">Provenance, previous owners, how you acquired it, etc.</p>
   </div>
 
@@ -46,6 +58,70 @@
     <% unless computer.persisted? %>
       <%= f.submit "Create and add another", name: "add_another", class: button_classes(style: :secondary) %>
     <% end %>
-    <%= link_to "Cancel", (computer.persisted? ? computer_path(computer) : computers_path), class: button_classes(style: :secondary) %>
+    <%# "Done" instead of "Cancel" — no implication of reverting a prior action %>
+    <%= link_to "Done", (computer.persisted? ? computer_path(computer) : computers_path), class: button_classes(style: :secondary) %>
+  </div>
+<% end %>
+
+<%# ─────────────────────────────────────────────────────────────────────────── %>
+<%# Component section — outside the computer form (nested forms are invalid HTML) %>
+<%# Only shown for existing computers (new computer has no id yet) %>
+<%# Full width: inherits max-w-5xl from the edit.html.erb container %>
+<%# ─────────────────────────────────────────────────────────────────────────── %>
+<% if computer.persisted? %>
+  <hr class="my-8 border-stone-200" />
+
+  <%# Add / Edit Computer's Component — shown ABOVE the component list %>
+  <div class="mb-8">
+    <% if @edit_component %>
+      <h2 class="text-xl font-semibold mb-4">Edit Computer's Component</h2>
+      <%= render "computer_component_form", component: @edit_component, computer: computer %>
+    <% else %>
+      <h2 class="text-xl font-semibold mb-4">Add Computer's Component</h2>
+      <%= render "computer_component_form", component: @new_component, computer: computer %>
+    <% end %>
+  </div>
+
+  <%# Computer's Components list — below the add/edit form %>
+  <div>
+    <h2 class="text-xl font-semibold mb-4">Computer's Components</h2>
+
+    <% if computer.components.any? %>
+      <div class="bg-white border border-stone-200 rounded overflow-auto">
+        <table class="min-w-full divide-y divide-stone-200">
+          <thead class="bg-stone-50">
+            <tr>
+              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Type</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Description</th>
+              <th class="px-4 py-2"></th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-stone-200 text-sm">
+            <% computer.components.includes(:component_type).each do |component| %>
+              <tr class="hover:bg-stone-50">
+                <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.component_type.name %></td>
+                <td class="px-4 py-3 text-stone-600"><%= component.description %></td>
+                <%# Edit and Delete side by side %>
+                <td class="px-4 py-3 whitespace-nowrap text-right">
+                  <div class="flex justify-end gap-4">
+                    <%= link_to "Edit",
+                          edit_computer_path(computer, component_id: component.id),
+                          class: "text-indigo-600 hover:text-indigo-900" %>
+                    <%= button_to "Delete",
+                          component_path(component),
+                          method: :delete,
+                          params: { source: "computer" },
+                          form: { data: { turbo_confirm: "Delete this component? This cannot be undone." } },
+                          class: "text-red-600 hover:text-red-900 bg-transparent border-0 cursor-pointer p-0" %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <p class="text-stone-500 text-sm">No components added yet.</p>
+    <% end %>
   </div>
 <% end %>
