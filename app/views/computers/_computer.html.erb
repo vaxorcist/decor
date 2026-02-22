@@ -1,5 +1,6 @@
-<%# decor/app/views/computers/_computer.html.erb - version 1.4 %>
-<%# Renamed description column to order_number; updated label accordingly %>
+<%# decor/app/views/computers/_computer.html.erb - version 1.5 %>
+<%# Removed redundant "View" link from actions column %>
+<%# "Edit" link retained, shown only for the logged-in owner %>
 
 <tr id="<%= dom_id computer %>" class="hover:bg-stone-50">
   <!-- Owner - first column; blue link consistent with Model -->
@@ -34,7 +35,6 @@
 
   <!-- Actions - blue links consistent with other clickable values -->
   <td class="px-4 py-3 whitespace-nowrap text-right">
-    <%= link_to "View", computer, class: "text-indigo-600 hover:text-indigo-900 mr-4" %>
     <% if Current.owner == computer.owner %>
       <%= link_to "Edit", edit_computer_path(computer), class: "text-indigo-600 hover:text-indigo-900" %>
     <% end %>

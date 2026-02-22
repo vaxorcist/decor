@@ -1,5 +1,6 @@
-<%# decor/app/views/components/_component.html.erb - version 1.3 %>
-<%# Changed: Computer, Owner, View, Edit links changed to indigo blue (consistent with Type) %>
+<%# decor/app/views/components/_component.html.erb - version 1.4 %>
+<%# Removed redundant "View" link from actions column %>
+<%# "Edit" link retained, shown only for the logged-in owner %>
 
 <tr id="<%= dom_id component %>" class="hover:bg-stone-50">
   <!-- Computer - blue link consistent with Type -->
@@ -35,7 +36,6 @@
 
   <!-- Actions - blue links consistent with other clickable values -->
   <td class="px-4 py-3 whitespace-nowrap text-right">
-    <%= link_to "View", component, class: "text-indigo-600 hover:text-indigo-900 mr-4" %>
     <% if Current.owner == component.owner %>
       <%= link_to "Edit", edit_component_path(component), class: "text-indigo-600 hover:text-indigo-900" %>
     <% end %>
