@@ -1,7 +1,6 @@
-<%# decor/app/views/owners/_owner.html.erb - version 3.1 %>
-<%# Fixed to match computers pattern exactly %>
-<%# Computers column clickable (links to filtered computers), all links in indigo %>
-<%# Real name max-width 25 characters, respects visibility settings %>
+<%# decor/app/views/owners/_owner.html.erb - version 3.2 %>
+<%# Removed redundant "View" link from actions column — user_name already links to owner page %>
+<%# "Edit" link retained, shown only for the logged-in owner %>
 
 <tr id="<%= dom_id owner %>" class="hover:bg-stone-50">
   <!-- Computers Count (clickable - links to filtered computers) -->
@@ -52,7 +51,6 @@
   
   <!-- Actions -->
   <td class="px-4 py-3 whitespace-nowrap text-right">
-    <%= link_to "View", owner, class: "text-indigo-600 hover:text-indigo-900 mr-4" %>
     <% if Current.owner == owner %>
       <%= link_to "Edit", edit_owner_path(owner), class: "text-indigo-600 hover:text-indigo-900" %>
     <% end %>
