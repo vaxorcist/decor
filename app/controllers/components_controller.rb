@@ -1,5 +1,7 @@
-# decor/app/controllers/components_controller.rb - version 1.1
-# Added sort by owner (A-Z) and sort by type (A-Z)
+# decor/app/controllers/components_controller.rb - version 1.2
+# Added source=computer redirect handling in create, update, and destroy
+# When a component is added/edited/deleted from the computer edit page,
+# the source param is set to "computer" and we redirect back to that computer's edit page
 
 class ComponentsController < ApplicationController
   before_action :set_component, only: %i[show edit update destroy]
@@ -48,7 +50,10 @@ class ComponentsController < ApplicationController
     @component = Current.owner.components.build(component_params)
 
     if @component.save
-      if params[:add_another]
+      if params[:source] == "computer" && @component.computer_id.present?
+        # Redirect back to the computer edit page when adding from embedded form
+        redirect_to edit_computer_path(@component.computer), notice: "Component was successfully created."
+      elsif params[:add_another]
         redirect_to new_component_path(computer_id: @component.computer_id), notice: "Component was successfully created. Add another!"
       else
         redirect_to component_path(@component), notice: "Component was successfully created."
@@ -63,15 +68,29 @@ class ComponentsController < ApplicationController
 
   def update
     if @component.update(component_params)
-      redirect_to component_path(@component), notice: "Component was successfully updated."
+      if params[:source] == "computer" && @component.computer_id.present?
+        # Redirect back to the computer edit page when editing from embedded form
+        redirect_to edit_computer_path(@component.computer), notice: "Component was successfully updated."
+      else
+        redirect_to component_path(@component), notice: "Component was successfully updated."
+      end
     else
       render :edit, status: :unprocessable_entity
     end
   end
 
   def destroy
+    # Capture computer before destroy in case we need to redirect to its edit page
+    computer = @component.computer
+
     @component.destroy
-    redirect_to components_path, notice: "Component was successfully deleted."
+
+    if params[:source] == "computer" && computer.present?
+      # Redirect back to the computer edit page when deleting from embedded form
+      redirect_to edit_computer_path(computer), notice: "Component was successfully deleted."
+    else
+      redirect_to components_path, notice: "Component was successfully deleted."
+    end
   end
 
   private
