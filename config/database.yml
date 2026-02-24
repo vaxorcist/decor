@@ -1,3 +1,9 @@
+# decor/config/database.yml - version 1.1
+# Added foreign_keys: true to default section (inherited by all environments).
+# This enables SQLite PRAGMA foreign_keys = ON per connection, ensuring that
+# all FK constraints defined in migrations are actually enforced at the DB level.
+# Without this, SQLite silently accepts invalid FK values despite FK definitions.
+#
 # SQLite. Versions 3.8.0 and up are supported.
 #   gem install sqlite3
 #
@@ -6,6 +12,7 @@
 #
 default: &default
   adapter: sqlite3
+  foreign_keys: true
   max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
   timeout: 5000
 
