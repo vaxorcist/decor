@@ -1,9 +1,9 @@
 # PROGRAMMING_GENERAL.md
-# version 1.4
+# version 1.5
 
 **General Programming Rules for All Technical Projects**
 
-**Last Updated:** February 24, 2026 (Overhauled git workflow: explicit branch start, local checks before commit, correct PR/merge/cleanup order)
+**Last Updated:** February 24, 2026 (v1.5: --merge flag required on gh pr merge to avoid interactive prompt)
 
 ---
 
@@ -457,8 +457,10 @@ Step                              Command
 12. Wait for CI checks            gh pr checks feature/<branch-name>
     (BEFORE merging)
 
-13. Merge PR (regular merge)      gh pr merge feature/<branch-name>
-    (NOT --squash, see below)
+13. Merge PR (regular merge)      gh pr merge --merge feature/<branch-name>
+    (NOT --squash, see below)         (--merge flag REQUIRED — omitting it
+                                       triggers an interactive prompt asking
+                                       which merge strategy to use)
 
 14. Switch back to main           git switch main
     and sync                      git pull origin main
