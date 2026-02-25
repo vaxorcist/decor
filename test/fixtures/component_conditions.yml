@@ -1,0 +1,10 @@
+# decor/test/fixtures/component_conditions.yml
+# version 1.0
+# Two entries to enable test coverage of the new component_condition association.
+# Note: the value column is "condition" (not "name") — intentional design.
+
+working:
+  condition: Working
+
+defective:
+  condition: Defective

@@ -1,7 +1,11 @@
-# decor/test/controllers/admin/conditions_controller_test.rb - version 1.1
-# Refactored to use centralized AuthenticationHelper
-# Removed local log_in_as method - now inherited from test/support/authentication_helper.rb
-# All login_as() calls use auto-detection for correct password
+# decor/test/controllers/admin/conditions_controller_test.rb
+# version 1.2
+# Updated all references following the conditions → computer_conditions rename:
+#   conditions(:label)   → computer_conditions(:label)
+#   Condition.count      → ComputerCondition.count
+#   Condition.create!    → ComputerCondition.create!
+# Route helpers (admin_conditions_url etc.) are UNCHANGED — routes.rb still
+# declares resources :conditions, so all URL helpers retain their original names.
 
 require "test_helper"
 
@@ -9,7 +13,7 @@ module Admin
   class ConditionsControllerTest < ActionDispatch::IntegrationTest
     def setup
       @admin = owners(:one)
-      @condition = conditions(:original)
+      @condition = computer_conditions(:original)
     end
 
     # Index
@@ -38,20 +42,20 @@ module Admin
     test "create adds new condition" do
       login_as(@admin)
 
-      assert_difference "Condition.count", 1 do
+      assert_difference "ComputerCondition.count", 1 do
         post admin_conditions_url, params: {
           condition: { name: "New Condition" }
         }
       end
 
       assert_redirected_to admin_conditions_path
-      assert_match /successfully created/i, flash[:notice]
+      assert_match(/successfully created/i, flash[:notice])
     end
 
     test "create fails with blank name" do
       login_as(@admin)
 
-      assert_no_difference "Condition.count" do
+      assert_no_difference "ComputerCondition.count" do
         post admin_conditions_url, params: {
           condition: { name: "" }
         }
@@ -63,7 +67,7 @@ module Admin
     test "create fails with duplicate name" do
       login_as(@admin)
 
-      assert_no_difference "Condition.count" do
+      assert_no_difference "ComputerCondition.count" do
         post admin_conditions_url, params: {
           condition: { name: @condition.name }
         }
@@ -111,7 +115,7 @@ module Admin
 
     test "update fails with duplicate name" do
       login_as(@admin)
-      other = Condition.create!(name: "Other Condition")
+      other = ComputerCondition.create!(name: "Other Condition")
 
       patch admin_condition_url(other), params: {
         condition: { name: @condition.name }
@@ -125,9 +129,9 @@ module Admin
     # Destroy
     test "destroy deletes condition without computers" do
       login_as(@admin)
-      condition = Condition.create!(name: "Deletable")
+      condition = ComputerCondition.create!(name: "Deletable")
 
-      assert_difference "Condition.count", -1 do
+      assert_difference "ComputerCondition.count", -1 do
         delete admin_condition_url(condition)
       end
 
@@ -138,7 +142,7 @@ module Admin
       login_as(@admin)
       # @condition has computers via fixtures
 
-      assert_no_difference "Condition.count" do
+      assert_no_difference "ComputerCondition.count" do
         delete admin_condition_url(@condition)
       end
 
@@ -158,12 +162,12 @@ module Admin
     test "non-admin cannot manage conditions" do
       non_admin = owners(:two)
       login_as(non_admin)
-      condition = conditions(:original)
+      condition = computer_conditions(:original)
 
       get new_admin_condition_url
       assert_redirected_to root_path
 
-      assert_no_difference "Condition.count" do
+      assert_no_difference "ComputerCondition.count" do
         post admin_conditions_url, params: { condition: { name: "Blocked" } }
       end
       assert_redirected_to root_path
@@ -174,7 +178,7 @@ module Admin
       patch admin_condition_url(condition), params: { condition: { name: "Blocked" } }
       assert_redirected_to root_path
 
-      assert_no_difference "Condition.count" do
+      assert_no_difference "ComputerCondition.count" do
         delete admin_condition_url(condition)
       end
       assert_redirected_to root_path
