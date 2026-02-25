@@ -1,10 +1,10 @@
 # COMMON_BEHAVIOR.md
-# version 1.3
-# Added: Always present new/updated files for download (February 24, 2026)
+# version 1.4
+# Added: "Key insight" communication pattern (February 24, 2026)
 
 **Universal Rules for All Interactions with This User**
 
-**Last Updated:** February 24, 2026 (Added: Always present new/updated files for download)
+**Last Updated:** February 24, 2026 (v1.3: mandatory file download rule; v1.4: Key insight communication pattern)
 
 ---
 
@@ -190,6 +190,30 @@ bundle exec rubocop              Verify clean           Locally
 ---
 
 ## Communication Style
+
+### Key insight Pattern
+
+When explaining a step or solution, if there is an underlying principle that
+makes the mechanic clearer or more memorable, highlight it explicitly:
+
+**Format:** `**Key insight:** <the principle in one or two sentences>`
+
+**When to use:**
+- ✅ When a behaviour that might seem surprising has a simple explanation
+- ✅ When knowing the principle helps the user apply it in future situations
+- ✅ When the insight is more useful than just repeating the mechanical steps
+
+**Example:**
+```
+**Key insight:** `git switch -c` creates a new branch from your current state,
+including any uncommitted changes — so the file you already replaced is already
+on the new branch when you create it.
+```
+
+- ❌ Do NOT use it for every response — only when a genuine insight adds value
+- ❌ Do NOT pad with obvious observations
+
+---
 
 ### Core Principles
 - ✅ Keep responses concise and focused
