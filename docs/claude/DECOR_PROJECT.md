@@ -1,10 +1,10 @@
 # DECOR_PROJECT.md
-# version 2.3
+# version 2.4
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** February 22, 2026 (Session 5: Duplicate View links removed; Computer edit page redesigned; component sub-form embedded)
-**Current Status:** Production-ready; session 5 changes pending commit/deploy
+**Last Updated:** February 24, 2026 (Session 6: FK enforcement enabled; gem security updates; docs/claude/ directory added; git workflow overhauled)
+**Current Status:** Production-ready; session 6 changes fully committed and deployed
 
 ---
 
@@ -254,36 +254,125 @@ edit page without navigating away.
 
 ---
 
-## Pending — Ready to Commit (Start of Next Session)
+## Work Completed - Session 6
 
-```bash
-bin/rails test
-bundle exec rubocop -A && bundle exec rubocop
-git add -A
-git commit -m "Computer edit page: redesigned form, embedded component sub-form
+### 1. SQLite Foreign Key Enforcement Enabled
 
-- Reorder fields: Model/OrderNumber/SerialNumber, Condition/RunStatus, History
-- Widen form to 80% / max-w-5xl; add hint texts; inline asterisks for alignment
-- Remove duplicate View links from all three index page partials
-- Embed Add/Edit/Delete component sub-form on computer edit page
-- Redirect to edit page after Create Computer (skip intermediate show page)
-- Rename Cancel to Done on computer and component sub-forms"
+Added `foreign_keys: true` to `decor/config/database.yml` default section.
+Enables `PRAGMA foreign_keys = ON` per connection — SQLite was silently ignoring
+FK constraints defined in the schema. All 8 FK relationships verified clean
+(0 orphaned records) in both development and production before enabling.
 
-git push
-gh pr create --title "Computer edit page: redesigned form and embedded component sub-form"
-gh pr checks
-gh pr merge --merge --delete-branch
-git pull
-kamal deploy
-```
+Also added missing `has_many :components, dependent: :restrict_with_error` to
+`decor/app/models/condition.rb` — this association is temporary and will be
+removed when the upcoming migration drops `condition_id` from `components`.
+
+**Files modified:**
+
+    decor/config/database.yml (v1.1)
+    decor/app/models/condition.rb (v1.1)
+
+### 2. Gem Security Updates
+
+Updated vulnerable gems flagged by `bundler-audit` in CI:
+- nokogiri 1.19.0 → 1.19.1 (GHSA-wx95-c6cv-8532, Medium)
+- rack 3.2.4 → 3.2.5 (CVE-2026-22860 directory traversal High; CVE-2026-25500 XSS Medium)
+
+**Files modified:**
+
+    decor/Gemfile.lock
+
+### 3. docs/claude/ Directory Created
+
+Added `decor/docs/claude/` to store rule set and session handover documents.
+All five documents committed to this directory and versioned with the project.
+
+    decor/docs/claude/COMMON_BEHAVIOR.md (v1.4)
+    decor/docs/claude/PROGRAMMING_GENERAL.md (v1.5)
+    decor/docs/claude/RAILS_SPECIFICS.md (v1.4)
+    decor/docs/claude/DECOR_PROJECT.md (v2.4)
+    decor/docs/claude/SESSION_HANDOVER.md (v7.0)
+
+### 4. Rule Set Updates
+
+**COMMON_BEHAVIOR.md v1.3 → v1.4:**
+- Added: mandatory file download rule (always present files via present_files tool)
+- Added: Key insight communication pattern
+
+**PROGRAMMING_GENERAL.md v1.4 → v1.5:**
+- Overhauled git workflow: explicit branch start, local checks before commit
+- Added `bin/brakeman --no-pager` as mandatory pre-commit step
+- Added `gh pr create --fill` pattern
+- Fixed `gh pr merge --merge` — flag is required, omitting triggers interactive prompt
+- Correct PR/merge/cleanup order with explicit local branch deletion
+- Production data verification before deploy added to FK enforcement section
+
+**RAILS_SPECIFICS.md v1.3 → v1.4:**
+- Added: full SQLite FK enforcement section with pre-enable verification
+- Added: production data verification must happen BEFORE deploying
+- Corrected: .yml files DO render in context window (previously listed as requiring view tool)
+
+---
+
+## Pending — Next Session
+
+### Component Changes (NOT YET STARTED)
+
+The following changes are fully planned but not yet implemented.
+Requires all model, fixture, and controller files to be provided at session start.
+
+#### 1. New table: component_conditions
+- Field: `condition` VARCHAR(40) UNIQUE NOT NULL
+- Managed via admin UI (to be built later)
+- Seed values: unknown, working, probably working, defective, probably defective, incomplete
+
+#### 2. Changes to components table
+- DROP `condition_id` FK → `conditions` (replaces old association)
+- ADD `component_condition_id` FK → `component_conditions` (optional, plain FK, no cascade)
+- ADD `serial_number` VARCHAR(20) with CHECK constraint
+- ADD `order_number` VARCHAR(20) with CHECK constraint
+
+#### 3. Database type cleanup (bundled with above migration)
+Tighten VARCHAR lengths with CHECK constraints across multiple tables:
+
+    computers.order_number      TEXT        → VARCHAR(20)
+    computers.serial_number     VARCHAR     → VARCHAR(20)  (was unlimited)
+    component_types.name        VARCHAR     → VARCHAR(40)
+    computer_models.name        VARCHAR     → VARCHAR(40)
+    conditions.name             VARCHAR     → VARCHAR(40)
+    owners.country_visibility   VARCHAR     → VARCHAR(20)
+    owners.email_visibility     VARCHAR     → VARCHAR(20)
+    owners.real_name            VARCHAR     → VARCHAR(40)
+    owners.real_name_visibility VARCHAR     → VARCHAR(20)
+    owners.user_name            VARCHAR     → VARCHAR(15)  (matches model validation)
+    run_statuses.name           VARCHAR     → VARCHAR(40)
+
+#### 4. After migration: model and view updates
+- `component.rb` — swap association, add serial_number/order_number validations
+- `condition.rb` — remove temporary `has_many :components` (no longer needed)
+- `components_controller.rb` — add new fields to strong params
+- Component form views — add serial_number, order_number, condition fields
+- Embedded component sub-form on computer edit page — same additions
+
+### Files needed at start of next session
+- `decor/app/models/computer.rb`
+- `decor/app/models/component.rb`
+- `decor/app/models/owner.rb`
+- `decor/app/controllers/components_controller.rb`
+- `decor/test/fixtures/computers.yml`
+- `decor/test/fixtures/components.yml`
+- `decor/test/fixtures/owners.yml`
+- `decor/test/fixtures/conditions.yml`
+- `decor/test/fixtures/component_types.yml`
+- `decor/test/fixtures/computer_models.yml`
+- `decor/test/fixtures/run_statuses.yml`
 
 ---
 
 ## Current Deployment Status
 
-**Production Version:** Up to date through Session 5 part 1 (View link removal)
-**Pending commit:** Session 5 parts 2 and 3 (form redesign + component sub-form)
-**All Tests:** Expected passing — run to confirm before commit
+**Production Version:** Fully up to date through Session 6
+**Pending:** Component changes and database type cleanup (next session)
 
 ---
 
@@ -345,7 +434,14 @@ Line 3:     full width textarea      (history, 3 rows)
 ## Known Issues & Solutions
 
 ### SQLite ALTER TABLE Limitations
-Cannot add named CHECK constraints. Use model validation only.
+Cannot add named CHECK constraints to existing tables — requires full table recreation.
+Rails handles recreation automatically via `change_table`. Use backup-in-migration pattern.
+See RAILS_SPECIFICS.md for full details.
+
+### SQLite FK Enforcement
+Must be explicitly enabled via `foreign_keys: true` in `database.yml`.
+Without it, FK constraints in schema are decorative only.
+Enabled in this project as of Session 6 (February 24, 2026).
 
 ### Squash Merge Git Divergence
 Use `gh pr merge --merge` (not `--squash`).
@@ -379,10 +475,12 @@ This keeps the user on the computer edit page throughout.
 ### Technical Improvements (Optional)
 - System tests: `test/system/` still empty — priority: account deletion, password change
 - Dependabot PR #10: minitest 5.27.0 → 6.0.1
+- conditions table rename: `conditions` → `computer_conditions` (deferred, planned)
 - Image upload (if added: AWS Rekognition for moderation)
 - Migrate SQLite → PostgreSQL (better constraint support)
 - Account deletion (GDPR), data export (GDPR)
 - Spam / Postmark DNS fix (awaiting Rob's dashboard findings)
+- Admin UI for component_conditions table (after migration is done)
 
 ---
 

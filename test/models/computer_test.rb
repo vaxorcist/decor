@@ -1,5 +1,12 @@
-# decor/test/models/computer_test.rb - version 1.1
-# Fixed: Added serial_number to all Computer.new() calls to satisfy NOT NULL constraint
+# decor/test/models/computer_test.rb
+# version 1.2
+# Updated all references following the conditions → computer_conditions rename:
+#   conditions(:label)        → computer_conditions(:label)
+#   condition: ...            → computer_condition: ...
+#   computer.condition        → computer.computer_condition
+#   Condition class           → ComputerCondition class
+#   "belongs to condition"    → "belongs to computer_condition"
+#   "condition returns name"  → "computer_condition returns name"
 
 require "test_helper"
 
@@ -9,7 +16,7 @@ class ComputerTest < ActiveSupport::TestCase
       owner: owners(:one),
       computer_model: computer_models(:pdp11_70),
       serial_number: "TEST-SN-001",
-      condition: conditions(:original),
+      computer_condition: computer_conditions(:original),
       run_status: run_statuses(:unknown)
     )
     assert computer.valid?
@@ -19,7 +26,7 @@ class ComputerTest < ActiveSupport::TestCase
     computer = Computer.new(
       computer_model: computer_models(:pdp11_70),
       serial_number: "TEST-SN-002",
-      condition: conditions(:original),
+      computer_condition: computer_conditions(:original),
       run_status: run_statuses(:unknown)
     )
     assert_not computer.valid?
@@ -30,7 +37,7 @@ class ComputerTest < ActiveSupport::TestCase
     computer = Computer.new(
       owner: owners(:one),
       serial_number: "TEST-SN-003",
-      condition: conditions(:original),
+      computer_condition: computer_conditions(:original),
       run_status: run_statuses(:unknown)
     )
     assert_not computer.valid?
@@ -52,14 +59,14 @@ class ComputerTest < ActiveSupport::TestCase
       owner: owners(:one),
       computer_model: computer_models(:pdp11_70),
       serial_number: "TEST-SN-005",
-      condition: conditions(:original)
+      computer_condition: computer_conditions(:original)
     )
     assert computer.valid?
   end
 
-  test "condition returns name" do
+  test "computer_condition returns name" do
     computer = computers(:alice_pdp11)
-    assert_equal "Completely original", computer.condition.name
+    assert_equal "Completely original", computer.computer_condition.name
   end
 
   test "run_status returns name" do
@@ -72,10 +79,10 @@ class ComputerTest < ActiveSupport::TestCase
     assert_respond_to computer, :components
   end
 
-  test "belongs to condition" do
+  test "belongs to computer_condition" do
     computer = computers(:alice_pdp11)
-    assert_respond_to computer, :condition
-    assert_instance_of Condition, computer.condition
+    assert_respond_to computer, :computer_condition
+    assert_instance_of ComputerCondition, computer.computer_condition
   end
 
   test "belongs to run_status" do

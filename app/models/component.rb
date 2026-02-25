@@ -1,12 +1,14 @@
-# decor/app/models/component.rb - version 1.1
-# Added search scope to search across all relevant fields
-# Fixed: Changed single quotes to double quotes, removed trailing whitespace
+# decor/app/models/component.rb
+# version 1.2
+# Updated association: belongs_to :condition (→ conditions table) removed.
+# Replaced with belongs_to :component_condition (→ component_conditions table).
+# The new association is optional — existing components have no condition set.
 
 class Component < ApplicationRecord
   belongs_to :owner
   belongs_to :computer, optional: true
   belongs_to :component_type
-  belongs_to :condition, optional: true
+  belongs_to :component_condition, optional: true
 
   # Search scope that searches across component type, owner name, computer model, and description
   # Supports SQL wildcards (% for any characters, _ for single character)

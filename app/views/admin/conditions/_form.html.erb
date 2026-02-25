@@ -1,4 +1,14 @@
-<%= form_with model: [:admin, condition], class: "space-y-4" do |f| %>
+<%# decor/app/views/admin/conditions/_form.html.erb %>
+<%# version 1.1 %>
+<%# Fixed: form_with now uses explicit url: instead of model: [:admin, condition]. %>
+<%# Rails infers route names from the model class name. With the rename to      %>
+<%# ComputerCondition, model: [:admin, condition] would try to resolve           %>
+<%# admin_computer_condition_path — which does not exist. The route resource     %>
+<%# is intentionally kept as :conditions, so we must specify the URL explicitly. %>
+<%= form_with model: condition,
+              url: condition.persisted? ? admin_condition_path(condition) : admin_conditions_path,
+              scope: :condition,
+              class: "space-y-4" do |f| %>
   <%= render "common/record_errors", record: condition %>
 
   <div>

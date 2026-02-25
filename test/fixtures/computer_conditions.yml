@@ -1,0 +1,22 @@
+# decor/test/fixtures/computer_conditions.yml
+# version 1.0
+# Renamed from conditions.yml as part of the conditions → computer_conditions
+# table rename (Session 7, February 25, 2026).
+#
+# Replaces: decor/test/fixtures/conditions.yml (delete that file)
+#
+# Fixture labels (original, original_repaired, modified, built) are unchanged
+# so that computers.yml references continue to work without any label changes —
+# computers.yml only needs condition: → computer_condition: key rename.
+
+original:
+  name: Completely original
+
+original_repaired:
+  name: Completely original with small repairs
+
+modified:
+  name: Original with options replaced or removed
+
+built:
+  name: Built from parts
