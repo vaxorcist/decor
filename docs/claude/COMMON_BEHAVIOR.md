@@ -1,10 +1,12 @@
 # COMMON_BEHAVIOR.md
-# version 1.4
-# Added: "Key insight" communication pattern (February 24, 2026)
+# version 1.5
+# Moved Rails-specific test/implementation checklist content to RAILS_SPECIFICS.md
+# Pre-Implementation Verification now contains generic principles only
+# Rails-specific elaboration lives in RAILS_SPECIFICS.md
 
 **Universal Rules for All Interactions with This User**
 
-**Last Updated:** February 24, 2026 (v1.3: mandatory file download rule; v1.4: Key insight communication pattern)
+**Last Updated:** February 25, 2026 (v1.5: moved Rails-specific verification content to RAILS_SPECIFICS.md; kept generic principles here)
 
 ---
 
@@ -105,31 +107,31 @@ WRONG: [silent / omitted]
 
 ## Pre-Implementation Verification (MANDATORY)
 
-**BEFORE implementing ANY solution, Claude MUST explicitly verify and state the following:**
+**BEFORE implementing ANY solution, Claude MUST explicitly verify and state the following.**
 
-### For Writing Tests:
-- [ ] **I have requested and reviewed relevant fixture files**
-  - Don't assume fixture names - verify actual names
-  - Don't assume data - verify what each test record contains
-  - Request: `test/fixtures/[model]s.yml` for all referenced models
-- [ ] **I know the exact fixture references to use**
-  - Example: `computer_models(:pdp11_70)` not guessed `(:pdp11)`
-  - Example: Bob has 2 computers, not assumed 0
+### General Principle
+
+Have all relevant files in hand before writing a single line of code. The specific
+files needed depend on the framework and task type. See the appropriate framework
+document for detailed checklists (e.g. RAILS_SPECIFICS.md for Ruby on Rails).
+
+### For Writing Tests (generic):
+- [ ] **I have seen the actual test data / fixtures used by this project**
+      Do not assume fixture names, record counts, or data values.
 - [ ] **I have seen existing test patterns to follow**
-  - Check similar test files for established patterns
-  - Use centralized test helpers (authentication, constants)
+      Use the project's established patterns — do not invent new ones.
 
-### For Implementing Features:
-- [ ] **I have all controller/model/view files involved**
-  - Not just the main file - also related concerns, helpers, partials
-  - Request files to understand existing patterns
-- [ ] **I have seen similar working examples**
-  - Don't invent patterns - follow established ones
-  - Check existing code for styling, structure, naming
-- [ ] **I understand the project's conventions**
-  - Naming conventions (file names, variable names)
-  - Styling patterns (CSS classes, button styles)
-  - Authentication/authorization patterns
+### For Implementing Features (generic):
+- [ ] **I have all files involved in this change**
+      Not just the main file — also related helpers, partials, and supporting files.
+- [ ] **I have seen similar working examples in this codebase**
+      Follow established patterns; do not invent structure.
+- [ ] **I understand this project's conventions**
+      Naming, styling, auth patterns, etc.
+
+**For Rails projects:** See RAILS_SPECIFICS.md — Pre-Implementation Verification
+section for the full Rails-specific checklist including fixture verification,
+controller/view/helper coverage, and grep sweeps.
 
 ### Communication Protocol:
 
@@ -151,21 +153,7 @@ Status: [READY to implement | WAITING for files]
 ### User Intervention Point:
 
 **If Claude presents code without stating verification:**
-User should ask: "Did you verify everything first? Did you check the fixtures?"
-
-**This creates a forcing function to prevent assumption-based mistakes.**
-
-### Why This Matters:
-
-Real example from a prior session:
-- ❌ Assumed fixture name `computer_models(:pdp11)` → Should be `(:pdp11_70)`
-- ❌ Assumed `bob.computers.count = 0` → Actually = 2
-- ❌ Caused 5 test failures that were 100% preventable
-- ✅ Could have been avoided by requesting fixtures first
-
-**Result:** Wasted iteration, unnecessary token usage, preventable errors.
-
-**Prevention:** This mandatory checkpoint catches violations BEFORE they happen.
+User should ask: "Did you verify everything first?"
 
 ### Table Formatting
 
