@@ -1,15 +1,16 @@
-# decor/app/controllers/computers_controller.rb - version 1.4
-# create action: after successful save, redirect to edit_computer_path (not show)
-#   so the user can immediately add components without an extra click
-# edit action: sets @new_component and optionally @edit_component for embedded component sub-form
-# update action: re-populates @new_component on failure so edit page renders correctly
+# decor/app/controllers/computers_controller.rb - version 1.5
+# Updated all condition_id references → computer_condition_id following the
+# conditions → computer_conditions table/model rename (Session 7, Feb 25, 2026):
+#   - includes(:condition)           → includes(:computer_condition)
+#   - params[:condition_id]          → params[:computer_condition_id]
+#   - permit(:condition_id)          → permit(:computer_condition_id)
 
 class ComputersController < ApplicationController
   before_action :set_computer, only: %i[show edit update destroy]
   before_action :ensure_computer_belongs_to_current_owner, only: %i[edit update destroy]
 
   def index
-    computers = Computer.includes(:owner, :computer_model, :condition, :run_status).search(params[:query])
+    computers = Computer.includes(:owner, :computer_model, :computer_condition, :run_status).search(params[:query])
 
     # Filter by owner if owner_id parameter is present (e.g., from owners page)
     if params[:owner_id].present?
@@ -21,8 +22,8 @@ class ComputersController < ApplicationController
       computers = computers.where(computer_model: model)
     end
 
-    if params[:condition_id].present?
-      computers = computers.where(condition_id: params[:condition_id])
+    if params[:computer_condition_id].present?
+      computers = computers.where(computer_condition_id: params[:computer_condition_id])
     end
 
     if params[:run_status_id].present?
@@ -102,6 +103,6 @@ class ComputersController < ApplicationController
   end
 
   def computer_params
-    params.require(:computer).permit(:computer_model_id, :serial_number, :condition_id, :run_status_id, :order_number, :history)
+    params.require(:computer).permit(:computer_model_id, :serial_number, :computer_condition_id, :run_status_id, :order_number, :history)
   end
 end

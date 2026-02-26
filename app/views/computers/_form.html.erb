@@ -1,9 +1,7 @@
-<%# decor/app/views/computers/_form.html.erb - version 1.7 %>
-<%# Reordered fields: Line 1 = Model / Order Number / Serial Number (3-col) %>
-<%#                   Line 2 = Condition / Run Status (2-col) %>
-<%#                   Line 3 = History (3 rows) %>
-<%# "Cancel" renamed to "Done" — clearer intent, no implication of reverting actions %>
-<%# Component section: Add/Edit form above list; full width; Edit+Delete side by side %>
+<%# decor/app/views/computers/_form.html.erb - version 1.8 %>
+<%# Fixed: condition_id → computer_condition_id, Condition → ComputerCondition %>
+<%# following the conditions → computer_conditions table/model rename. %>
+<%# Added Condition and Serial Number columns to the embedded components list. %>
 
 <%= form_with model: computer, class: "space-y-4", style: "width: 80%;" do |f| %>
   <%= render "common/record_errors", record: computer %>
@@ -34,10 +32,11 @@
   </div>
 
   <!-- Line 2: Condition | Run Status -->
+  <%# computer_condition_id references the computer_conditions table (renamed from conditions) %>
   <div class="grid grid-cols-2 gap-4">
     <div>
-      <%= f.label :condition_id, "Condition", class: "block text-sm font-medium text-stone-700" %>
-      <%= f.collection_select :condition_id, Condition.order(:name), :id, :name, { prompt: "Select a condition" }, class: field_classes %>
+      <%= f.label :computer_condition_id, "Condition", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.collection_select :computer_condition_id, ComputerCondition.order(:name), :id, :name, { prompt: "Select a condition" }, class: field_classes %>
     </div>
 
     <div>
@@ -92,14 +91,18 @@
           <thead class="bg-stone-50">
             <tr>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Type</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Condition</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Serial Number</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Description</th>
               <th class="px-4 py-2"></th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-stone-200 text-sm">
-            <% computer.components.includes(:component_type).each do |component| %>
+            <% computer.components.includes(:component_type, :component_condition).each do |component| %>
               <tr class="hover:bg-stone-50">
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.component_type.name %></td>
+                <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.component_condition&.condition %></td>
+                <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.serial_number %></td>
                 <td class="px-4 py-3 text-stone-600"><%= component.description %></td>
                 <%# Edit and Delete side by side %>
                 <td class="px-4 py-3 whitespace-nowrap text-right">
