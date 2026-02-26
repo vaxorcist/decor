@@ -1,0 +1,55 @@
+<%# decor/app/views/computers/_computer_component_form.html.erb - version 1.2 %>
+<%# Added: serial_number, order_number, component_condition_id fields %>
+<%# Layout: Row 1 = Type | Condition (2-col) %>
+<%#          Row 2 = Serial Number | Order Number (2-col) %>
+<%#          Row 3 = Description (full-width) %>
+
+<%= form_with model: component, class: "space-y-4" do |f| %>
+  <%= render "common/record_errors", record: component %>
+
+  <%# computer_id is pre-set — not shown to user, passed as hidden field %>
+  <%= f.hidden_field :computer_id, value: computer.id %>
+
+  <%# source param tells components_controller to redirect back to this computer's edit page %>
+  <%= hidden_field_tag :source, "computer" %>
+
+  <!-- Row 1: Type | Condition -->
+  <div class="grid grid-cols-2 gap-4">
+    <div>
+      <%= f.label :component_type_id, "Type", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.collection_select :component_type_id, ComponentType.order(:name), :id, :name, { prompt: "Select a type" }, class: field_classes %>
+    </div>
+
+    <div>
+      <%= f.label :component_condition_id, "Condition", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.collection_select :component_condition_id, ComponentCondition.order(:condition), :id, :condition, { include_blank: "Unknown" }, class: field_classes %>
+    </div>
+  </div>
+
+  <!-- Row 2: Serial Number | Order Number -->
+  <div class="grid grid-cols-2 gap-4">
+    <div>
+      <%= f.label :serial_number, "Serial Number", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.text_field :serial_number, maxlength: 20, class: field_classes %>
+      <p class="mt-1 text-xs text-stone-500">Maximum 20 characters.</p>
+    </div>
+
+    <div>
+      <%= f.label :order_number, "Order Number", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.text_field :order_number, maxlength: 20, class: field_classes %>
+      <p class="mt-1 text-xs text-stone-500">Maximum 20 characters.</p>
+    </div>
+  </div>
+
+  <!-- Row 3: Description (full-width) -->
+  <div>
+    <%= f.label :description, class: "block text-sm font-medium text-stone-700" %>
+    <%= f.text_area :description, rows: 3, class: field_classes %>
+  </div>
+
+  <div class="flex gap-3">
+    <%= f.submit class: button_classes(style: :primary) %>
+    <%# "Done" instead of "Cancel" — returns to this computer's edit page, clears edit state %>
+    <%= link_to "Done", edit_computer_path(computer), class: button_classes(style: :secondary) %>
+  </div>
+<% end %>

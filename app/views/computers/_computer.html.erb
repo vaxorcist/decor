@@ -1,6 +1,6 @@
-<%# decor/app/views/computers/_computer.html.erb - version 1.5 %>
-<%# Removed redundant "View" link from actions column %>
-<%# "Edit" link retained, shown only for the logged-in owner %>
+<%# decor/app/views/computers/_computer.html.erb - version 1.6 %>
+<%# Updated: computer.condition → computer.computer_condition following the %>
+<%# conditions → computer_conditions table/model rename (Session 7, Feb 25, 2026). %>
 
 <tr id="<%= dom_id computer %>" class="hover:bg-stone-50">
   <!-- Owner - first column; blue link consistent with Model -->
@@ -25,7 +25,7 @@
 
   <!-- Condition -->
   <td class="px-4 py-3 whitespace-nowrap text-stone-600">
-    <%= computer.condition&.name || "—" %>
+    <%= computer.computer_condition&.name || "—" %>
   </td>
 
   <!-- Run Status -->

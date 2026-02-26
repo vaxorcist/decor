@@ -1,7 +1,6 @@
-# decor/app/controllers/components_controller.rb - version 1.2
-# Added source=computer redirect handling in create, update, and destroy
-# When a component is added/edited/deleted from the computer edit page,
-# the source param is set to "computer" and we redirect back to that computer's edit page
+# decor/app/controllers/components_controller.rb - version 1.3
+# Added serial_number, order_number, component_condition_id to strong params
+# so that the new database columns can be written via the component form.
 
 class ComponentsController < ApplicationController
   before_action :set_component, only: %i[show edit update destroy]
@@ -104,6 +103,13 @@ class ComponentsController < ApplicationController
   end
 
   def component_params
-    params.require(:component).permit(:component_type_id, :computer_id, :description)
+    params.require(:component).permit(
+      :component_type_id,
+      :computer_id,
+      :component_condition_id,
+      :serial_number,
+      :order_number,
+      :description
+    )
   end
 end

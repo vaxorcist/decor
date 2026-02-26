@@ -1,3 +1,6 @@
+<%# decor/app/views/components/show.html.erb - version 1.1 %>
+<%# Added display of serial_number, order_number, and component_condition %>
+
 <div class="max-w-7xl mx-auto">
   <div class="flex justify-between items-start mb-4">
     <div>
@@ -24,6 +27,28 @@
           <% end %>
         </dd>
       </div>
+
+      <% if @component.serial_number.present? %>
+        <div>
+          <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider">Serial Number</dt>
+          <dd class="mt-1 text-stone-600"><%= @component.serial_number %></dd>
+        </div>
+      <% end %>
+
+      <% if @component.order_number.present? %>
+        <div>
+          <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider">Order Number</dt>
+          <dd class="mt-1 text-stone-600"><%= @component.order_number %></dd>
+        </div>
+      <% end %>
+
+      <% if @component.component_condition %>
+        <div>
+          <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider">Condition</dt>
+          <dd class="mt-1 text-stone-600"><%= @component.component_condition.condition %></dd>
+        </div>
+      <% end %>
+
       <% if @component.description.present? %>
         <div>
           <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider">Description</dt>

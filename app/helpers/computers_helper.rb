@@ -1,3 +1,9 @@
+# decor/app/helpers/computers_helper.rb
+# version 1.1
+# Updated following the conditions → computer_conditions rename (Session 7):
+#   Condition.order(:name)   → ComputerCondition.order(:name)
+#   params[:condition_id]    → params[:computer_condition_id]
+
 module ComputersHelper
   COMPUTER_SORT_OPTIONS = {
     added_desc: "Added (Newest First)",
@@ -11,7 +17,7 @@ module ComputersHelper
   end
 
   def computer_sort_selected
-    if params[:sort].in? (COMPUTER_SORT_OPTIONS.keys.map(&:to_s))
+    if params[:sort].in?(COMPUTER_SORT_OPTIONS.keys.map(&:to_s))
       params[:sort]
     else
       "added_desc"
@@ -27,11 +33,11 @@ module ComputersHelper
   end
 
   def computer_filter_conditions_options
-    Condition.order(:name).pluck(:name, :id)
+    ComputerCondition.order(:name).pluck(:name, :id)
   end
 
   def computer_filter_conditions_selected
-    params[:condition_id]
+    params[:computer_condition_id]
   end
 
   def computer_filter_run_statuses_options

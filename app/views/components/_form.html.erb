@@ -1,17 +1,51 @@
+<%# decor/app/views/components/_form.html.erb - version 1.1 %>
+<%# Added: serial_number, order_number, component_condition_id fields %>
+<%# Layout: Type / Computer (existing row 1) %>
+<%#          Serial Number / Order Number (new row 2) %>
+<%#          Condition (new row 3, half-width) %>
+<%#          Description (existing, full-width) %>
+
 <%= form_with model: component, class: "space-y-4" do |f| %>
   <%= render "common/record_errors", record: component %>
 
-  <div>
-    <%= f.label :component_type_id, "Type", class: "block text-sm font-medium text-stone-700" %>
-    <%= f.collection_select :component_type_id, ComponentType.order(:name), :id, :name, { prompt: "Select a type" }, class: field_classes %>
+  <!-- Row 1: Type | Computer (existing) -->
+  <div class="grid grid-cols-2 gap-4">
+    <div>
+      <%= f.label :component_type_id, "Type", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.collection_select :component_type_id, ComponentType.order(:name), :id, :name, { prompt: "Select a type" }, class: field_classes %>
+    </div>
+
+    <div>
+      <%= f.label :computer_id, "Computer", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.collection_select :computer_id, Current.owner.computers.includes(:computer_model), :id, ->(c) { c.computer_model.name }, { include_blank: "Spare (not attached)" }, class: field_classes %>
+      <p class="mt-1 text-xs text-stone-500">Leave blank if this is a spare component not attached to a computer.</p>
+    </div>
   </div>
 
-  <div>
-    <%= f.label :computer_id, "Computer", class: "block text-sm font-medium text-stone-700" %>
-    <%= f.collection_select :computer_id, Current.owner.computers.includes(:computer_model), :id, ->(c) { c.computer_model.name }, { include_blank: "Spare (not attached)" }, class: field_classes %>
-    <p class="mt-1 text-xs text-stone-500">Leave blank if this is a spare component not attached to a computer.</p>
+  <!-- Row 2: Serial Number | Order Number (new) -->
+  <div class="grid grid-cols-2 gap-4">
+    <div>
+      <%= f.label :serial_number, "Serial Number", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.text_field :serial_number, maxlength: 20, class: field_classes %>
+      <p class="mt-1 text-xs text-stone-500">Maximum 20 characters.</p>
+    </div>
+
+    <div>
+      <%= f.label :order_number, "Order Number", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.text_field :order_number, maxlength: 20, class: field_classes %>
+      <p class="mt-1 text-xs text-stone-500">Maximum 20 characters.</p>
+    </div>
   </div>
 
+  <!-- Row 3: Condition (half-width, new) -->
+  <div class="grid grid-cols-2 gap-4">
+    <div>
+      <%= f.label :component_condition_id, "Condition", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.collection_select :component_condition_id, ComponentCondition.order(:condition), :id, :condition, { include_blank: "Unknown" }, class: field_classes %>
+    </div>
+  </div>
+
+  <!-- Row 4: Description (existing, full-width) -->
   <div>
     <%= f.label :description, class: "block text-sm font-medium text-stone-700" %>
     <%= f.text_area :description, rows: 4, class: field_classes %>

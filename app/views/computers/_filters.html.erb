@@ -1,5 +1,6 @@
-<%# decor/app/views/computers/_filters.html.erb - version 1.0 %>
-<%# Updated: Added wildcard usage tips for search functionality %>
+<%# decor/app/views/computers/_filters.html.erb - version 1.1 %>
+<%# Updated: condition_id → computer_condition_id following the %>
+<%# conditions → computer_conditions table rename (Session 7, Feb 25, 2026). %>
 
 <%= form_with url: computers_path, method: :get, local: true, class: "col-span-1 self-start flex flex-col gap-4 mb-4 p-4 bg-stone-100" do |form| %>
   <div class="-mb-2 font-medium">Filters</div>
@@ -21,8 +22,8 @@
   </div>
 
   <div class="flex flex-col">
-    <%= form.label :condition_id, "Condition", class: "text-sm text-stone-600 font-medium" %>
-    <%= form.select :condition_id, computer_filter_conditions_options, { selected: computer_filter_conditions_selected, include_blank: "Any" }, { class: field_classes } %>
+    <%= form.label :computer_condition_id, "Condition", class: "text-sm text-stone-600 font-medium" %>
+    <%= form.select :computer_condition_id, computer_filter_conditions_options, { selected: computer_filter_conditions_selected, include_blank: "Any" }, { class: field_classes } %>
   </div>
 
   <div class="flex flex-col">

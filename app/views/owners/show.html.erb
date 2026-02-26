@@ -1,5 +1,6 @@
-<%# decor/app/views/owners/show.html.erb - version 1.0 %>
-<%# Fixed: Added safe navigation for optional condition and run_status fields in computers table %>
+<%# decor/app/views/owners/show.html.erb - version 1.1 %>
+<%# Updated: computer.condition → computer.computer_condition following the %>
+<%# conditions → computer_conditions table/model rename (Session 7, Feb 25, 2026). %>
 
 <div class="max-w-7xl mx-auto">
   <div class="flex justify-between items-start mb-4">
@@ -67,7 +68,7 @@
               <tr>
                 <td class="px-4 py-3 whitespace-nowrap font-medium text-stone-900"><%= computer.computer_model.name %></td>
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= computer.serial_number %></td>
-                <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= computer.condition&.name || "—" %></td>
+                <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= computer.computer_condition&.name || "—" %></td>
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= computer.run_status&.name || "—" %></td>
                 <td class="px-4 py-3 whitespace-nowrap text-right">
                   <%= link_to "View", computer_path(computer), class: "text-stone-700 hover:text-stone-900" %>

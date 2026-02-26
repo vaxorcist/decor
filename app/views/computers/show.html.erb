@@ -1,5 +1,6 @@
-<%# decor/app/views/computers/show.html.erb - version 1.1 %>
-<%# Renamed description field to order_number; changed to single-line display (no whitespace-pre-wrap) %>
+<%# decor/app/views/computers/show.html.erb - version 1.2 %>
+<%# Updated: computer.condition → computer.computer_condition following the %>
+<%# conditions → computer_conditions table/model rename (Session 7, Feb 25, 2026). %>
 
 <div class="max-w-7xl mx-auto">
   <div class="flex justify-between items-start mb-4">
@@ -23,7 +24,7 @@
       </div>
       <div>
         <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider">Condition</dt>
-        <dd class="mt-1"><%= @computer.condition&.name || "—" %></dd>
+        <dd class="mt-1"><%= @computer.computer_condition&.name || "—" %></dd>
       </div>
       <div>
         <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider">Run Status</dt>
