@@ -1,10 +1,10 @@
 # DECOR_PROJECT.md
-# version 2.4
+# version 2.5
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** February 24, 2026 (Session 6: FK enforcement enabled; gem security updates; docs/claude/ directory added; git workflow overhauled)
-**Current Status:** Production-ready; session 6 changes fully committed and deployed
+**Last Updated:** February 25, 2026 (Session 7: component_conditions table; conditions→computer_conditions rename; type cleanup; new component fields; rule set updates)
+**Current Status:** Production-ready; session 7 changes fully committed and deployed
 
 ---
 
@@ -61,7 +61,7 @@
 **Length:** Minimum 12 characters
 **Strength:** Minimum zxcvbn score of 3 (strong/very strong)
 
-**Test Passwords** (centralized in `test/support/authentication_helper.rb`):
+**Test Passwords** (centralized in `decor/test/support/authentication_helper.rb`):
 ```ruby
 TEST_PASSWORD_ALICE = "DecorAdmin2026!".freeze   # Admin user
 TEST_PASSWORD_BOB   = "DecorUser2026!".freeze    # Regular user
@@ -85,42 +85,37 @@ decor/
 │   │   ├── computers_controller.rb
 │   │   ├── components_controller.rb
 │   │   ├── owners_controller.rb
-│   │   └── home_controller.rb
+│   │   ├── home_controller.rb
+│   │   └── admin/
+│   │       ├── base_controller.rb
+│   │       ├── conditions_controller.rb    ← manages computer_conditions table
+│   │       ├── component_types_controller.rb
+│   │       ├── computer_models_controller.rb
+│   │       └── run_statuses_controller.rb
 │   ├── helpers/
+│   │   ├── computers_helper.rb
 │   │   └── components_helper.rb
 │   ├── models/
 │   │   ├── owner.rb
 │   │   ├── computer.rb
-│   │   └── component.rb
+│   │   ├── component.rb
+│   │   ├── computer_condition.rb           ← renamed from condition.rb
+│   │   └── component_condition.rb          ← new (Session 7)
 │   └── views/
 │       ├── home/
-│       │   └── index.html.erb
 │       ├── owners/
-│       │   ├── index.html.erb
-│       │   ├── index.turbo_stream.erb
-│       │   ├── _owner.html.erb
-│       │   └── _filters.html.erb
 │       ├── computers/
-│       │   ├── index.html.erb
-│       │   ├── index.turbo_stream.erb
-│       │   ├── _computer.html.erb
-│       │   ├── _form.html.erb
-│       │   ├── _computer_component_form.html.erb  ← NEW (session 5)
-│       │   ├── edit.html.erb
-│       │   ├── new.html.erb
-│       │   ├── show.html.erb
-│       │   └── _filters.html.erb
-│       └── components/
-│           ├── index.html.erb
-│           ├── index.turbo_stream.erb
-│           ├── _component.html.erb
-│           └── _filters.html.erb
+│       ├── components/
+│       └── admin/
+│           └── conditions/                 ← manages computer_conditions
 ├── config/
-│   ├── deploy.yml (Kamal configuration)
+│   ├── deploy.yml
 │   ├── routes.rb
 │   └── master.key (NEVER commit!)
 ├── db/
 │   └── migrate/
+├── docs/
+│   └── claude/                             ← rule set and session handover docs
 └── test/
     ├── fixtures/
     └── models/
@@ -136,7 +131,7 @@ decor/
 - Visibility settings: real_name, email, country (public/members_only/private)
 - Authentication via has_secure_password
 - Validations:
-  - user_name: required, unique, max 15 characters
+  - user_name: required, unique, max 15 characters (VARCHAR(15) + CHECK in DB)
   - email: required, unique, valid format
   - country: ISO 3166 code (optional)
   - website: valid HTTP/HTTPS URL (optional)
@@ -144,235 +139,98 @@ decor/
 ### Computer
 - belongs_to owner
 - belongs_to computer_model
-- belongs_to condition (optional)
+- belongs_to computer_condition (optional) ← renamed from condition
 - belongs_to run_status (optional)
 - has_many components, dependent: :nullify
 - Validations:
-  - serial_number: required, NOT NULL in DB
-  - order_number: max 20 characters, optional
+  - serial_number: required, VARCHAR(20) + CHECK in DB
+  - order_number: max 20 characters, optional, VARCHAR(20) + CHECK in DB
 
 ### Component
 - belongs_to owner
 - belongs_to computer (optional)
 - belongs_to component_type
-- belongs_to condition (optional)
+- belongs_to component_condition (optional) ← new (replaces old condition association)
+- Fields: description (TEXT), serial_number VARCHAR(20), order_number VARCHAR(20)
+
+### ComputerCondition (formerly Condition)
+- Table: computer_conditions
+- has_many computers, dependent: :restrict_with_error
+- Managed via admin UI at /admin/conditions
+- Examples: Completely original, Modified, Built from parts
+
+### ComponentCondition (new)
+- Table: component_conditions
+- Column: condition VARCHAR(40) UNIQUE NOT NULL (note: "condition", not "name")
+- has_many components, dependent: :restrict_with_error
+- Managed via admin UI (to be built in a future session)
+- Examples: Working, Defective
 
 ---
 
-## Work Completed - Session 1
+## Route Notes
 
-### 1. Converted Index Pages from Grid to Table Layout
-### 2. Implemented Search Functionality
-### 3. Made Serial Number Required for Computers
-### 4. Fixed Nil Errors for Optional Fields
-
----
-
-## Work Completed - Session 2
-
-### 1. Rubocop Fixes
-### 2. Test Failures Fixed
-### 3. Fixed Production Deployment
-### 4. Updated Owners Page (layout, validations, filtering)
+`resources :conditions` in `decor/config/routes.rb` maps to `Admin::ConditionsController`
+which manages the `computer_conditions` table (class `ComputerCondition`). The route
+resource name was intentionally kept as `:conditions` to avoid a route rename ripple.
+The controller uses explicit `url:` and `scope: :condition` in its form partial to
+bridge the class name / route name mismatch.
 
 ---
 
-## Work Completed - Session 3
+## Work Completed - Sessions 1–6
 
-### Password Change Functionality
-- Added "Change Password" section to Edit Profile page
-- Current password required; 7 controller tests, manual testing complete
+(See SESSION_HANDOVER.md v7.0 for detail on Sessions 1–6)
 
----
-
-## Work Completed - Session 4
-
-### 1. Merged Password Strength Validation (from Session 3 branch)
-### 2. Computers Page — UI Improvements
-### 3. Components Page — UI Improvements + Sort Options
-### 4. README.md Corrected
-### 5. Renamed computers.description → order_number
+Key milestones:
+- Session 1: Index table layouts, search, serial number required
+- Session 2: Rubocop fixes, owners page redesign
+- Session 3: Password change functionality
+- Session 4: Password strength validation, computers/components UI improvements
+- Session 5: Embedded component sub-form on computer edit page
+- Session 6: SQLite FK enforcement enabled, gem security updates, docs/claude/ directory
 
 ---
 
-## Work Completed - Session 5
+## Work Completed - Session 7 (February 25, 2026)
 
-### 1. Removed Duplicate "View" Links from Index Pages
+### 1. Database Restructuring (Branch 1)
 
-Each index page had a redundant "View" link alongside the clickable first-column
-value that already linked to the same show page. Removed from all three partials.
+Migration `20260225120000_component_conditions_and_type_cleanup.rb`:
+- Renamed `conditions` → `computer_conditions`
+- Created `component_conditions` table
+- Renamed `computers.condition_id` → `computers.computer_condition_id`
+- Added `components.component_condition_id`, `serial_number`, `order_number`
+- Type cleanup: 11 columns across 6 tables tightened to VARCHAR(n) + CHECK
 
-**Files modified:**
+### 2. Application-Level Changes (Branch 2)
 
-    decor/app/views/owners/_owner.html.erb (v3.2)
-    decor/app/views/computers/_computer.html.erb
-    decor/app/views/components/_component.html.erb
+All models, controllers, helpers, and views updated to use the new schema.
+New fields (`serial_number`, `order_number`, `component_condition`) added to
+component forms, embedded sub-form, and show page.
 
-### 2. Computer Edit/New Page — Redesigned Form
+### 3. Rule Set Updates
 
-**Layout changes:**
-- Line 1: Model | Order Number | Serial Number (3-column grid)
-- Line 2: Condition | Run Status (2-column grid)
-- Line 3: History (3 rows, min-height 4.5rem)
-- Width: form at 80%, container widened from max-w-2xl to max-w-5xl
-- Asterisks moved inline into labels for vertical alignment
-- Descriptive hint texts added under Model, Order Number, Serial Number
-- "Cancel" renamed to "Done" (no implication of reverting prior actions)
-
-**Files modified:**
-
-    decor/app/views/computers/_form.html.erb (v1.7)
-    decor/app/views/computers/edit.html.erb (v1.1)
-    decor/app/views/computers/new.html.erb (v1.2)
-
-### 3. Embedded Component Sub-Form on Computer Edit Page
-
-Components can now be added, edited, and deleted directly from the computer
-edit page without navigating away.
-
-**Design decisions:**
-- Add/Edit sub-form appears ABOVE the components list
-- Heading changes to "Edit Computer's Component" when editing an existing one
-- "Done" button on sub-form clears edit state, stays on edit page
-- Computer field not shown — pre-set via hidden field
-- Edit and Delete actions side by side in component list
-- Delete requires turbo confirm dialog
-- `source=computer` hidden param causes components_controller to redirect
-  back to edit_computer_path after create/update/destroy
-- Nested forms avoided — component section is after the computer form_with end tag
-- After "Create Computer", user is redirected to edit page (not show page)
-  so components can be added immediately
-
-**Files modified/created:**
-
-    decor/app/views/computers/_form.html.erb (v1.7)           Component section added
-    decor/app/views/computers/_computer_component_form.html.erb (v1.1, NEW)
-    decor/app/controllers/computers_controller.rb (v1.4)       edit sets @new_component/@edit_component; create redirects to edit
-    decor/app/controllers/components_controller.rb (v1.2)      source=computer redirect handling
-
-**Deployed:** Session 5 changes pending commit/deploy (see below)
-
----
-
-## Work Completed - Session 6
-
-### 1. SQLite Foreign Key Enforcement Enabled
-
-Added `foreign_keys: true` to `decor/config/database.yml` default section.
-Enables `PRAGMA foreign_keys = ON` per connection — SQLite was silently ignoring
-FK constraints defined in the schema. All 8 FK relationships verified clean
-(0 orphaned records) in both development and production before enabling.
-
-Also added missing `has_many :components, dependent: :restrict_with_error` to
-`decor/app/models/condition.rb` — this association is temporary and will be
-removed when the upcoming migration drops `condition_id` from `components`.
-
-**Files modified:**
-
-    decor/config/database.yml (v1.1)
-    decor/app/models/condition.rb (v1.1)
-
-### 2. Gem Security Updates
-
-Updated vulnerable gems flagged by `bundler-audit` in CI:
-- nokogiri 1.19.0 → 1.19.1 (GHSA-wx95-c6cv-8532, Medium)
-- rack 3.2.4 → 3.2.5 (CVE-2026-22860 directory traversal High; CVE-2026-25500 XSS Medium)
-
-**Files modified:**
-
-    decor/Gemfile.lock
-
-### 3. docs/claude/ Directory Created
-
-Added `decor/docs/claude/` to store rule set and session handover documents.
-All five documents committed to this directory and versioned with the project.
-
-    decor/docs/claude/COMMON_BEHAVIOR.md (v1.4)
-    decor/docs/claude/PROGRAMMING_GENERAL.md (v1.5)
-    decor/docs/claude/RAILS_SPECIFICS.md (v1.4)
-    decor/docs/claude/DECOR_PROJECT.md (v2.4)
-    decor/docs/claude/SESSION_HANDOVER.md (v7.0)
-
-### 4. Rule Set Updates
-
-**COMMON_BEHAVIOR.md v1.3 → v1.4:**
-- Added: mandatory file download rule (always present files via present_files tool)
-- Added: Key insight communication pattern
-
-**PROGRAMMING_GENERAL.md v1.4 → v1.5:**
-- Overhauled git workflow: explicit branch start, local checks before commit
-- Added `bin/brakeman --no-pager` as mandatory pre-commit step
-- Added `gh pr create --fill` pattern
-- Fixed `gh pr merge --merge` — flag is required, omitting triggers interactive prompt
-- Correct PR/merge/cleanup order with explicit local branch deletion
-- Production data verification before deploy added to FK enforcement section
-
-**RAILS_SPECIFICS.md v1.3 → v1.4:**
-- Added: full SQLite FK enforcement section with pre-enable verification
-- Added: production data verification must happen BEFORE deploying
-- Corrected: .yml files DO render in context window (previously listed as requiring view tool)
+See SESSION_HANDOVER.md v8.0 for details.
 
 ---
 
 ## Pending — Next Session
 
-### Component Changes (NOT YET STARTED)
-
-The following changes are fully planned but not yet implemented.
-Requires all model, fixture, and controller files to be provided at session start.
-
-#### 1. New table: component_conditions
-- Field: `condition` VARCHAR(40) UNIQUE NOT NULL
-- Managed via admin UI (to be built later)
-- Seed values: unknown, working, probably working, defective, probably defective, incomplete
-
-#### 2. Changes to components table
-- DROP `condition_id` FK → `conditions` (replaces old association)
-- ADD `component_condition_id` FK → `component_conditions` (optional, plain FK, no cascade)
-- ADD `serial_number` VARCHAR(20) with CHECK constraint
-- ADD `order_number` VARCHAR(20) with CHECK constraint
-
-#### 3. Database type cleanup (bundled with above migration)
-Tighten VARCHAR lengths with CHECK constraints across multiple tables:
-
-    computers.order_number      TEXT        → VARCHAR(20)
-    computers.serial_number     VARCHAR     → VARCHAR(20)  (was unlimited)
-    component_types.name        VARCHAR     → VARCHAR(40)
-    computer_models.name        VARCHAR     → VARCHAR(40)
-    conditions.name             VARCHAR     → VARCHAR(40)
-    owners.country_visibility   VARCHAR     → VARCHAR(20)
-    owners.email_visibility     VARCHAR     → VARCHAR(20)
-    owners.real_name            VARCHAR     → VARCHAR(40)
-    owners.real_name_visibility VARCHAR     → VARCHAR(20)
-    owners.user_name            VARCHAR     → VARCHAR(15)  (matches model validation)
-    run_statuses.name           VARCHAR     → VARCHAR(40)
-
-#### 4. After migration: model and view updates
-- `component.rb` — swap association, add serial_number/order_number validations
-- `condition.rb` — remove temporary `has_many :components` (no longer needed)
-- `components_controller.rb` — add new fields to strong params
-- Component form views — add serial_number, order_number, condition fields
-- Embedded component sub-form on computer edit page — same additions
-
-### Files needed at start of next session
-- `decor/app/models/computer.rb`
-- `decor/app/models/component.rb`
-- `decor/app/models/owner.rb`
-- `decor/app/controllers/components_controller.rb`
-- `decor/test/fixtures/computers.yml`
-- `decor/test/fixtures/components.yml`
-- `decor/test/fixtures/owners.yml`
-- `decor/test/fixtures/conditions.yml`
-- `decor/test/fixtures/component_types.yml`
-- `decor/test/fixtures/computer_models.yml`
-- `decor/test/fixtures/run_statuses.yml`
+No specific items required. Candidates:
+- Admin UI for `component_conditions` table
+- Legal/Compliance: Impressum, Privacy Policy, GDPR, Cookie Consent, TOS
+- Dependabot PR #10: minitest 5.27.0 → 6.0.1
+- System tests: `decor/test/system/` still empty
+- Account deletion (GDPR), data export (GDPR)
+- Spam / Postmark DNS fix (awaiting Rob's dashboard findings)
 
 ---
 
 ## Current Deployment Status
 
-**Production Version:** Fully up to date through Session 6
-**Pending:** Component changes and database type cleanup (next session)
+**Production Version:** Fully up to date through Session 7
+**Pending:** Nothing — choose next topic at start of next session
 
 ---
 
@@ -419,7 +277,7 @@ Tighten VARCHAR lengths with CHECK constraints across multiple tables:
 Container:  max-w-5xl mx-auto
 Form:       width: 80%
 Line 1:     grid grid-cols-3 gap-4  (model, order_number, serial_number)
-Line 2:     grid grid-cols-2 gap-4  (condition, run_status)
+Line 2:     grid grid-cols-2 gap-4  (computer_condition, run_status)
 Line 3:     full width textarea      (history, 3 rows)
 ```
 
@@ -434,14 +292,22 @@ Line 3:     full width textarea      (history, 3 rows)
 ## Known Issues & Solutions
 
 ### SQLite ALTER TABLE Limitations
-Cannot add named CHECK constraints to existing tables — requires full table recreation.
-Rails handles recreation automatically via `change_table`. Use backup-in-migration pattern.
-See RAILS_SPECIFICS.md for full details.
+Cannot add named CHECK constraints to existing tables — requires full table
+recreation. Use `disable_ddl_transaction!` + raw SQL in migrations.
+See RAILS_SPECIFICS.md for full pattern.
 
 ### SQLite FK Enforcement
-Must be explicitly enabled via `foreign_keys: true` in `database.yml`.
-Without it, FK constraints in schema are decorative only.
-Enabled in this project as of Session 6 (February 24, 2026).
+Must be explicitly enabled via `foreign_keys: true` in `decor/config/database.yml`.
+Enabled as of Session 6 (February 24, 2026).
+
+### SQLite VARCHAR Enforcement
+VARCHAR(n) is cosmetic in SQLite — CHECK constraints required for actual enforcement.
+See RAILS_SPECIFICS.md and PROGRAMMING_GENERAL.md for rules.
+
+### form_with Class Name / Route Name Mismatch
+When a model class name does not match the Rails route resource name, use both
+`url:` (fixes routing) and `scope:` (fixes param naming) on `form_with`.
+Example: `ComputerCondition` model on `resources :conditions` route.
 
 ### Squash Merge Git Divergence
 Use `gh pr merge --merge` (not `--squash`).
@@ -454,16 +320,13 @@ Place `id="items"` on `<tbody>`, not outer div.
 Use `kamal app exec --reuse` (not `kamal app exec`).
 
 ### Nested Forms
-Rails/HTML does not allow a form inside a form. When embedding a component
-sub-form on the computer edit page, the component section must be placed AFTER
-the computer `form_with` end tag, not inside it. `button_to` (which renders its
-own mini-form) must also be outside the main form.
+Rails/HTML does not allow a form inside a form. Component sub-form on computer
+edit page must be placed AFTER the computer `form_with` end tag.
 
 ### source=computer Redirect Pattern
 When a component is created/updated/deleted from the computer edit page,
-a hidden `source=computer` param is passed. `components_controller` checks
-this param and redirects to `edit_computer_path` instead of the default path.
-This keeps the user on the computer edit page throughout.
+`source=computer` param causes `components_controller` to redirect back to
+`edit_computer_path` instead of the default path.
 
 ---
 
@@ -473,14 +336,13 @@ This keeps the user on the computer edit page throughout.
 - Impressum (German law), Privacy Policy (GDPR), Cookie Consent, Terms of Service
 
 ### Technical Improvements (Optional)
-- System tests: `test/system/` still empty — priority: account deletion, password change
+- Admin UI for component_conditions table
+- System tests: `decor/test/system/` still empty
 - Dependabot PR #10: minitest 5.27.0 → 6.0.1
-- conditions table rename: `conditions` → `computer_conditions` (deferred, planned)
-- Image upload (if added: AWS Rekognition for moderation)
-- Migrate SQLite → PostgreSQL (better constraint support)
 - Account deletion (GDPR), data export (GDPR)
 - Spam / Postmark DNS fix (awaiting Rob's dashboard findings)
-- Admin UI for component_conditions table (after migration is done)
+- Image upload (if added: AWS Rekognition for moderation)
+- Migrate SQLite → PostgreSQL (better constraint support)
 
 ---
 

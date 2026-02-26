@@ -1,9 +1,11 @@
 # PROGRAMMING_GENERAL.md
-# version 1.5
+# version 1.6
+# Updated: bin/rails test → [full test suite command] (projects may not be Rails)
+# Added: Database Column Types section — VARCHAR with length required; TEXT requires approval
 
 **General Programming Rules for All Technical Projects**
 
-**Last Updated:** February 24, 2026 (v1.5: --merge flag required on gh pr merge to avoid interactive prompt)
+**Last Updated:** February 25, 2026 (v1.6: generic test command placeholder; VARCHAR/TEXT policy added)
 
 ---
 
@@ -92,8 +94,8 @@ end
 1. ✅ Make code changes
 2. ✅ Run migrations (if any)
 3. ✅ Run FULL test suite (not just one file)
-4. ✅ Run lint check: `bundle exec rubocop -f github`
-5. ✅ Fix any lint offenses: `bundle exec rubocop -A` then re-verify
+4. ✅ Run lint check
+5. ✅ Fix any lint offenses, then re-verify
 6. ✅ Test manually (if applicable)
 7. ✅ **ONLY AFTER successful testing AND clean lint:** Stage, commit, push
 
@@ -102,7 +104,7 @@ end
 ### Testing Commands
 ```bash
 # ALWAYS run full test suite when making changes
-bin/rails test  # or equivalent for project
+[full test suite command]       # e.g. bin/rails test, pytest, npm test
 
 # Test specific file only for debugging
 [test-command-for-file]
@@ -111,6 +113,48 @@ bin/rails test  # or equivalent for project
 [start-server-command]
 # Then verify in browser/CLI
 ```
+
+---
+
+## Database Column Types — MANDATORY
+
+### Always Use VARCHAR with Explicit Length for Application Data
+
+**Rule:** All application string/text columns MUST use `VARCHAR(n)` with an
+explicit maximum length. Do NOT use unqualified `VARCHAR` or `TEXT` for
+application data without prior approval.
+
+**Rationale:** Explicit lengths document intent, enforce data integrity at the
+database level, and prevent runaway data from reaching the application.
+
+**Good:**
+```sql
+user_name    VARCHAR(15)
+real_name    VARCHAR(40)
+order_number VARCHAR(20)
+```
+
+**Bad:**
+```sql
+user_name    VARCHAR     -- no length = no enforcement
+description  TEXT        -- TEXT should be explicitly approved
+```
+
+### Exceptions — VARCHAR length NOT required:
+- Rails/framework internal columns: `password_digest`, `reset_password_token`,
+  `remember_digest`, and similar framework-managed fields
+- Email addresses and URLs (length limits are complex and framework-managed)
+
+### TEXT data type — requires explicit approval:
+- ❌ Do NOT use `TEXT` without asking first
+- ✅ Only use `TEXT` when the user explicitly instructs it, OR
+  when the field is clearly free-form long content (e.g. `history`, `description`,
+  `body`) AND the user has confirmed TEXT is appropriate for that field
+- When uncertain: ask "Should this be TEXT or VARCHAR(n)?"
+
+**Cross-reference:** SQLite does not enforce VARCHAR length at runtime without
+CHECK constraints. See RAILS_SPECIFICS.md for the SQLite-specific implementation
+pattern (CHECK constraints required alongside VARCHAR declarations).
 
 ---
 
@@ -126,9 +170,6 @@ bin/rails test  # or equivalent for project
 password: "password123"
 
 # file2_test.rb
-password: "password123"
-
-# file3_test.rb
 password: "password123"
 ```
 
@@ -241,23 +282,8 @@ end
 **Best practice: Database constraint + Model validation**
 
 **Why both:**
-- Database constraint - Cannot be bypassed (SQL, bulk imports, external access)
-- Model validation - User-friendly error messages, catches errors early
-
-**Example:**
-```ruby
-# Database migration
-class AddLengthConstraint < ActiveRecord::Migration
-  def change
-    # Database-level enforcement
-  end
-end
-
-# Model validation
-class Model < ApplicationRecord
-  validates :field, length: { maximum: 15 }
-end
-```
+- Database constraint — Cannot be bypassed (SQL, bulk imports, external access)
+- Model validation — User-friendly error messages, catches errors early
 
 ---
 
@@ -282,56 +308,8 @@ set -o pipefail
 - ✅ Verify all input files exist before starting
 - ✅ Create backups before modifying files
 - ✅ Check return codes of all operations
-- ✅ Verify operations succeeded (count before/after)
-- ✅ Print meaningful error messages
-- ✅ Exit with proper exit codes (0 = success, non-zero = failure)
 
-**Example:**
-```bash
-set -euo pipefail
-
-# Verify file exists
-if [ ! -f "$FILE" ]; then
-  echo "ERROR: File not found: $FILE"
-  exit 1
-fi
-
-# Backup before modifying
-cp "$FILE" "$FILE.backup" || {
-  echo "ERROR: Failed to create backup"
-  exit 1
-}
-
-# Perform operation and verify
-sed -i 's/old/new/g' "$FILE" || {
-  echo "ERROR: sed operation failed"
-  exit 1
-}
-
-# Verify result
-if grep -q "old" "$FILE"; then
-  echo "ERROR: Operation incomplete - 'old' still present"
-  exit 1
-fi
-
-echo "Success!"
-exit 0
-```
-
-### Centralization Principles
-
-**RULE:** Don't Repeat Yourself (DRY)
-- ✅ Shared constants in ONE module
-- ✅ Shared methods in ONE helper
-- ✅ Configuration in ONE file
-- ✅ Test data in ONE location
-
-**When you find yourself copying code, STOP:**
-1. Create centralized module/helper
-2. Move shared logic there
-3. Have all code reference the central location
-
-### Comments & Documentation
+### Code Comments
 - ✅ Add detailed comments explaining WHY, not just WHAT
 - ✅ Document assumptions
 - ✅ Note limitations or edge cases
@@ -384,19 +362,10 @@ exit 0
 - ✅ Include version number and detailed comments in test file
 - ✅ Cover main scenarios: success cases, error cases, edge cases
 
-**Examples of testable functionality:**
-- New controller actions
-- New model methods
-- Authentication/authorization changes
-- Data validation changes
-- Business logic changes
-- API endpoints
-
 **Test file template:**
 ```ruby
 # project/test/type/feature_test.rb - version 1.0
 # Description of what this test file covers
-# Lists main test scenarios included
 
 require "test_helper"
 
@@ -433,12 +402,12 @@ Step                              Command
 
 3. Do the work                    <coding>
 
-4. Run full test suite            bin/rails test
+4. Run full test suite            [full test suite command]
 
-5. Run lint (auto-fix + verify)   bundle exec rubocop -A
-                                  bundle exec rubocop
+5. Run lint (auto-fix + verify)   [lint fix command]
+                                  [lint verify command]
 
-6. Run security scan              bin/brakeman --no-pager
+6. Run security scan              [security scan command]
 
 7. Manual / local testing         <start server, verify in browser>
 
@@ -447,20 +416,13 @@ Step                              Command
 9. Commit                         git commit -m "<descriptive message>"
 
 10. Push branch                   git push origin feature/<branch-name>
-    (first push on new branch)    (sets upstream automatically if
-                                   push.autoSetupRemote = true, otherwise
-                                   git push --set-upstream origin <branch>)
 
 11. Create PR                     gh pr create --fill
-    (uses commit msg as title)
 
 12. Wait for CI checks            gh pr checks feature/<branch-name>
     (BEFORE merging)
 
 13. Merge PR (regular merge)      gh pr merge --merge feature/<branch-name>
-    (NOT --squash, see below)         (--merge flag REQUIRED — omitting it
-                                       triggers an interactive prompt asking
-                                       which merge strategy to use)
 
 14. Switch back to main           git switch main
     and sync                      git pull origin main
@@ -470,18 +432,15 @@ Step                              Command
 16. Delete remote branch          git push origin --delete feature/<branch-name>
     (if not auto-deleted by PR)
 
-17. Deploy                        kamal deploy
+17. Deploy                        [deploy command]
 ```
+
+**For Rails projects:** See RAILS_SPECIFICS.md for the Rails-specific commands
+at steps 4–6 (`bin/rails test`, `bundle exec rubocop`, `bin/brakeman`).
 
 **Why steps 4–6 run BEFORE committing, not after:**
 - Catches failures locally without a push-fail-fix cycle
-- Brakeman locally avoids waiting for CI to report security issues
-- Rubocop auto-fix before staging means the commit is clean from the start
 - CI should confirm what local checks already verified — not discover problems
-
-**Why `gh pr checks` runs BEFORE merging (step 12):**
-- Running it after merge is too late — CI failures cannot be acted on
-- Merge only when all checks pass
 
 ### Commit Messages
 - ✅ Clear, descriptive commit messages
@@ -496,37 +455,10 @@ Add database constraint for serial_number (defense-in-depth)
 Centralize test passwords to eliminate duplication
 ```
 
-**`gh pr create --fill`** uses the commit message as PR title and body automatically.
-Use explicit `--title "..."` only when the PR needs a different title from the commit.
-
-### PR Merge Strategy - CRITICAL
-
-**DECOR project uses: `gh pr merge --merge` (regular merge)**
-
-**Why NOT `--squash`:**
-- `--squash` creates a brand-new commit on main with a different SHA
-- Local main and origin/main then diverge (1 commit each direction)
-- `git pull` fails with "fatal: need to specify how to reconcile divergent branches"
-- Requires an extra `git reset --hard origin/main` after every merge
-- This is a recurring footgun in solo development workflows
-
-**Why `--merge` (regular merge):**
-- Creates a standard merge commit that preserves the feature branch history
-- Local main fast-forwards cleanly with `git pull`
-- No divergence, no extra steps after merge
-- Simpler and safer for solo developers
-
-**If `--squash` was used and divergence occurred:**
-```bash
-# Safe recovery (only if git status shows clean working directory):
-git fetch origin
-git reset --hard origin/main
-git status                            # Verify clean
-```
-
-**Lesson learned:** `--squash` was recommended in a prior session for a "cleaner
-git log" but the post-merge divergence is a recurring problem that outweighs
-the benefit for a solo developer. Switched to `--merge` on February 18, 2026.
+### PR Merge Strategy
+- Always use regular merge (not squash) unless project explicitly requires otherwise
+- Squash creates divergence between local and remote main on solo dev workflows
+- See project-specific docs for the merge flag required
 
 ### CRITICAL: Destructive Git Commands
 
@@ -539,8 +471,6 @@ Destructive commands include:
 - `git restore`
 
 **These commands PERMANENTLY DESTROY uncommitted changes with no recovery possible.**
-
-**Safe workflow before any destructive command:**
 
 ```bash
 # Step 1: Always check first
@@ -555,27 +485,6 @@ git stash
 # Step 2b: Only THEN run the destructive command
 git reset --hard origin/main
 ```
-
-**Real example of what can go wrong:**
-Without this check, `git reset --hard origin/main` silently destroyed 4 modified
-files in one command. Files had to be manually recreated from session outputs.
-
-**Rule for Claude:** Before suggesting `reset --hard` or similar, ALWAYS instruct
-the user to run `git status` first and commit/stash any uncommitted changes.
-
-### CRITICAL Rubocop Rules
-- ✅ ALWAYS run `bundle exec rubocop` locally on the **entire project** before committing
-- ✅ Fix all offenses: `bundle exec rubocop -A` then re-verify with `bundle exec rubocop`
-- ✅ Use `bundle exec rubocop -f github` only when **debugging CI failures** — it mimics CI output format (shows filenames and line numbers), useful for matching against CI logs
-- ❌ NEVER run rubocop on `.erb` files — it cannot parse them (will show false errors)
-- ❌ NEVER check only changed files — CI checks entire project
-
-**When debugging CI lint failures:**
-```bash
-bundle exec rubocop -f github   # same format as CI output
-```
-
-**Lesson learned:** Lint fixes committed to a feature branch AFTER the PR is merged never reach main. Fix lint BEFORE merging.
 
 ---
 

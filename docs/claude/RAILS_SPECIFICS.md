@@ -1,9 +1,12 @@
 # RAILS_SPECIFICS.md
-# version 1.4
+# version 1.5
+# Added: Rails-specific Pre-Implementation Verification section (moved from COMMON_BEHAVIOR.md)
+# Added: Association rename grep sweep rule (lesson from Session 7)
+# Added: VARCHAR/TEXT cross-reference note for SQLite CHECK constraint requirement
 
 **Ruby on Rails Specific Patterns and Best Practices**
 
-**Last Updated:** February 24, 2026 (Added: SQLite FK enforcement — explicit config, pre-enable verification including production; .yml files render in context window)
+**Last Updated:** February 25, 2026 (v1.5: Rails pre-implementation verification moved here from COMMON_BEHAVIOR.md; grep sweep rule; VARCHAR/TEXT note)
 
 ---
 
@@ -25,23 +28,18 @@
 
 **Rails 5.0+ (2016):**
 - `assigns()` deprecated - don't use in new tests
-- Controller tests should check response status, not instance variables
-- `assigns(:variable)` → Use `assert_response` and JSON/HTML parsing
 
 **Rails 6.0+ (2019):**
 - `assigns()` completely removed - will cause NoMethodError
 - Must use response body parsing or status codes
-- Integration tests preferred over controller tests
 
 **Rails 7.0+ (2021):**
-- `assert_response` patterns are standard
 - Hotwire/Turbo introduced
 - Modern testing focuses on behavior, not internals
 
 **Rails 8.0+ (2024):**
 - No access to controller instance variables in tests
 - Use `assert_response :unprocessable_entity` to verify validation failures
-- Check response body/JSON for specific error messages if needed
 - Stimulus/Turbo patterns standard
 
 ### Common Compatibility Issues
@@ -49,45 +47,91 @@
 **Don't Use (Removed in Rails 6+):**
 ```ruby
 # BAD - Will fail in Rails 6+
-test "validation fails" do
-  post users_url, params: { user: { name: "" } }
-  assert_not assigns(:user).valid?  # NoMethodError: assigns
-end
+assert_not assigns(:user).valid?  # NoMethodError: assigns
 ```
 
 **Use Instead (Rails 6+):**
 ```ruby
 # GOOD - Works in all modern Rails
-test "validation fails" do
-  post users_url, params: { user: { name: "" } }
-  assert_response :unprocessable_entity
-end
+assert_response :unprocessable_entity
 ```
 
-### Verification Checklist
+---
 
-Before implementing Rails-specific code:
-- [ ] Checked Rails version in project docs
-- [ ] Verified feature exists in that version
-- [ ] Reviewed existing project test patterns
-- [ ] Checked Rails guides for version-specific syntax
-- [ ] Tested locally before suggesting
+## Pre-Implementation Verification — Rails (MANDATORY)
 
-### When Creating Test Helpers
+This section elaborates on the generic checklist in COMMON_BEHAVIOR.md with
+Rails-specific requirements. Follow these BEFORE writing any code.
 
-**CRITICAL:** Check existing test files FIRST to see if helper already exists or if pattern is already established.
+### For Writing Tests:
+- [ ] **Request and review all relevant fixture files**
+      Never assume fixture labels or data values.
+      Request: `test/fixtures/[model]s.yml` for ALL referenced models.
+- [ ] **Verify exact fixture references**
+      Example: `computer_models(:pdp11_70)` not guessed `(:pdp11)`
+      Example: verify Bob has 2 computers, not assumed 0
+- [ ] **Review existing test patterns**
+      Check similar test files for established patterns.
+      Use centralized test helpers (authentication, constants).
+- [ ] **Check for existing test files that will be affected**
+      A rename or refactor may break test files you haven't seen yet.
+      Always ask: "Are there test files for this model/controller?"
 
-**Example: assert_record_errors**
-```ruby
-# DON'T blindly create helpers that use removed features
-def assert_record_errors
-  assert assigns(:record).errors.any?  # FAILS in Rails 6+
-end
+### For Implementing Features:
+- [ ] **Have all controller, model, view, helper, and partial files involved**
+      Not just the primary file — also related concerns, helpers, and partials.
+- [ ] **Have seen similar working examples in this codebase**
+      Don't invent patterns — follow established ones.
+      Check existing code for styling, structure, naming.
+- [ ] **Understand the project's naming and styling conventions**
+      Naming conventions, CSS classes, button styles, auth patterns.
+- [ ] **Run a grep sweep for ALL affected accessors/methods BEFORE writing files**
+      See "Association Rename Grep Sweep" section below.
 
-# DO check if helper is even needed
-# Most tests already use assert_response :unprocessable_entity
-# which proves validation failed
+### Why This Matters — Real Examples:
+
+**Fixture assumption failure (prior session):**
+- ❌ Assumed fixture name `computer_models(:pdp11)` → Should be `(:pdp11_70)`
+- ❌ Assumed `bob.computers.count = 0` → Actually = 2
+- ❌ Caused 5 test failures that were 100% preventable
+
+**Missing test file failure (Session 7):**
+- ❌ Renamed `Condition` → `ComputerCondition` without knowing `condition_test.rb`
+  and `conditions_controller_test.rb` existed
+- ❌ Caused 24 test errors that were 100% preventable
+- ✅ Fix: always ask "Are there test files for this model/controller?"
+
+---
+
+## Association Rename Grep Sweep — MANDATORY
+
+**When renaming a model, table, or association, BEFORE writing any files:**
+
+Run a grep across the ENTIRE project for the old name in all contexts:
+
+```bash
+# Old association accessor in views, helpers, controllers
+grep -rn "\.old_name" decor/app/
+
+# Old class name in Ruby files
+grep -rn "OldClassName" decor/app/ decor/test/
+
+# Old fixture helper in tests
+grep -rn "old_names(:" decor/test/
+
+# Old column name in params, where clauses, strong params
+grep -rn "old_name_id" decor/app/
 ```
+
+Fix ALL occurrences found before running the test suite.
+
+**Real example (Session 7, February 25, 2026):**
+- Renamed `computer.condition` → `computer.computer_condition` in models and primary views
+- Did not grep `decor/app/views/` for remaining `.condition` occurrences
+- Result: 3 separate runtime errors in `_computer.html.erb`, `owners/show.html.erb`,
+  and `computers/show.html.erb` — each requiring a separate upload-fix-test cycle
+- Fix: one `grep -rn "\.condition" decor/app/views/` before starting would have
+  revealed all occurrences at once
 
 ---
 
@@ -121,24 +165,11 @@ module AuthenticationHelper
       password: password
     }
   end
-
-  private
-
-  def detect_password(user)
-    # Auto-detect based on fixture
-    case user.user_name
-    when "admin_user"
-      TEST_PASSWORD_ADMIN
-    else
-      TEST_PASSWORD_USER
-    end
-  end
 end
 ```
 
 **test/test_helper.rb:**
 ```ruby
-# Load all support modules
 Dir[Rails.root.join("test/support/**/*.rb")].sort.each { |f| require f }
 
 module ActiveSupport
@@ -152,48 +183,15 @@ class ActionDispatch::IntegrationTest
 end
 ```
 
-### Never Duplicate Login Methods
-
-**Bad (Duplicated across 10 files):**
-```ruby
-# admin/users_controller_test.rb
-def log_in_as(user, password: "password123")
-  post session_url, params: { ... }
-end
-
-# admin/posts_controller_test.rb
-def log_in_as(user, password: "password123")  # DUPLICATE
-  post session_url, params: { ... }
-end
-```
-
-**Good (Centralized):**
-```ruby
-# test/support/authentication_helper.rb - ONE place
-# All tests inherit this method
-```
-
 ### Test Data Constants
 
-**Bad (Scattered):**
-```ruby
-# Multiple files with:
-password: "password123"
-password: "validpass12"
-password: "testpass123"
-```
-
-**Good (Centralized):**
+**Centralized:**
 ```ruby
 # test/support/test_constants.rb
 module TestConstants
   TEST_PASSWORD_VALID = "password12345".freeze
   TEST_EMAIL_VALID = "test@example.com".freeze
-  TEST_USERNAME_VALID = "testuser".freeze
 end
-
-# All tests use:
-password: TEST_PASSWORD_VALID
 ```
 
 ---
@@ -233,10 +231,7 @@ password: TEST_PASSWORD_VALID
 ### Controller
 ```ruby
 def index
-  # Build query
   items = Model.includes(:associations).where(...)
-
-  # Use paginate - provided by geared_pagination gem
   paginate items
 end
 ```
@@ -248,17 +243,11 @@ end
 <% end %>
 ```
 
-**NOT** `@items` or `@scope` - always `@page.records`
-
 ---
 
 ## Turbo Stream Pagination Pattern
 
 ### CRITICAL: ID Must Be on <tbody>
-
-**Problem:** When turbo_stream appends rows, they must go into `<tbody>`, not outer div.
-
-**Correct Pattern:**
 
 **index.html.erb:**
 ```erb
@@ -272,482 +261,134 @@ end
 </table>
 ```
 
-**index.turbo_stream.erb:**
-```erb
-<%= turbo_stream.append :items do %>
-  <% @page.records.each do |item| %>
-    <%= render "item", item: item %>
-  <% end %>
-<% end %>
+---
+
+## Rails Git Workflow Commands
+
+Steps 4–6 of the general git workflow (PROGRAMMING_GENERAL.md) for Rails projects:
+
+```
+Step 4: Run full test suite      bin/rails test
+
+Step 5: Run lint (auto-fix)      bundle exec rubocop -A
+        Verify clean             bundle exec rubocop
+
+Step 6: Run security scan        bin/brakeman --no-pager
 ```
 
-**Why:** Appending to outer div causes border/styling issues. The `id` must be on `<tbody>` so new rows are properly inserted as table rows.
+**Additional Rails rules:**
+- ❌ NEVER run rubocop on `.erb` files — it cannot parse them
+- ❌ NEVER check only changed files — CI checks entire project
+- Use `bundle exec rubocop -f github` only when debugging CI failures
 
 ---
 
-## Safe Navigation for Optional Associations
+## SQLite — VARCHAR Length Enforcement
 
-### The Problem
-```ruby
-belongs_to :condition, optional: true
+**VARCHAR length in SQLite is cosmetic only.** SQLite does not enforce VARCHAR(n)
+at runtime. To actually restrict column length, a CHECK constraint is required
+alongside the VARCHAR declaration:
+
+```sql
+user_name VARCHAR(15) CHECK(length(user_name) <= 15)
 ```
 
-If `condition` is nil, calling `.condition.name` causes NoMethodError.
-
-### The Solution
-```erb
-<!-- WRONG -->
-<%= computer.condition.name %>
-
-<!-- RIGHT -->
-<%= computer.condition&.name || "—" %>
-```
-
-**Pattern:** When a field is optional, ALWAYS use safe navigation (`&.`) or nil checks in ALL views.
-
----
-
-## Rails Validation vs Database Constraints
-
-### Model Validation (Application Layer)
+**In Rails migrations using raw SQL (required for SQLite table recreation):**
 ```ruby
-class Computer < ApplicationRecord
-  validates :serial_number, presence: true, length: { maximum: 15 }
-end
-```
-
-**Pros:**
-- User-friendly error messages
-- Catches errors early
-- Easy to implement
-
-**Cons:**
-- Can be bypassed (bulk imports, raw SQL, console with `.update_column`)
-
-### Database Constraint (Database Layer)
-```ruby
-class AddConstraint < ActiveRecord::Migration[8.1]
-  def change
-    # PostgreSQL/MySQL
-    change_column_null :computers, :serial_number, false
-  end
-end
-```
-
-**Pros:**
-- Cannot be bypassed
-- Enforces data integrity at lowest level
-
-**Cons:**
-- Less friendly error messages
-- SQLite has severe limitations
-
-### Best Practice: Use Both (Defense-in-Depth)
-- Database constraint prevents bypass
-- Model validation provides good UX
-- Together = robust data integrity
-
----
-
-## SQLite Limitations
-
-### ALTER TABLE Constraints
-
-**Problem:** SQLite cannot add named CHECK constraints to existing tables.
-
-**This FAILS on SQLite:**
-```ruby
-execute <<-SQL
-  ALTER TABLE owners
-  ADD CONSTRAINT check_name_length
-  CHECK (LENGTH(name) <= 15)
+execute <<~SQL
+  CREATE TABLE owners_new (
+    user_name VARCHAR(15),
+    CHECK(length(user_name) <= 15)
+  )
 SQL
 ```
 
-**Error:** `near "CONSTRAINT": syntax error`
+**Cross-reference:** The general rule (always use VARCHAR with length; ask before TEXT)
+is in PROGRAMMING_GENERAL.md — Database Column Types section. This SQLite note
+explains the implementation detail that makes the rule meaningful on this stack.
 
-**What SQLite DOES support without table recreation:**
-
-    ADD COLUMN                    Nullable column or column with default value
-    RENAME TABLE                  Rename entire table
-    RENAME COLUMN                 Rename a column (SQLite 3.25+, 2018)
-    DROP COLUMN                   Remove a column (SQLite 3.35+, 2021)
-    CREATE / DROP INDEX           Add or remove indexes
-    CREATE / DROP VIEW            Add or remove views
-
-**What requires full table recreation:**
-
-    Change column type             e.g. INTEGER → TEXT
-    Change column constraints      e.g. add NOT NULL, add UNIQUE
-    Add named CHECK constraints    e.g. CHECK (LENGTH(name) <= 15)
-    Add FOREIGN KEY constraints    to an existing table
-    Remove a column constraint     e.g. drop NOT NULL from existing column
-    Reorder columns                not possible at all
-
-**Solutions for unsupported changes:**
-1. **Use validation only** (recommended for SQLite projects)
-2. **Recreate table** (Rails handles with change_table — slow on large datasets)
-3. **Migrate to PostgreSQL** (best long-term solution)
-
-### When Using SQLite
-- ✅ Check database type BEFORE creating constraint migrations
-- ✅ Consider validation-only approach
-- ✅ Document this limitation
-- ✅ Plan migration to PostgreSQL/MySQL if constraints are critical
+**Real example (Session 7, February 25, 2026):** All type-cleanup columns used
+`VARCHAR(n) + CHECK(length(col) <= n)` to ensure actual enforcement, not just
+documentation.
 
 ---
 
-## SQLite Migration Backup Pattern
+## SQLite Foreign Key Enforcement — MANDATORY for New Projects
 
-### Problem
-Destructive migrations (table recreation) involve copying all data to a new table.
-If hardware failure or corruption occurs, data may be lost.
-SQLite's transaction journaling handles clean process interruptions (crash, exception) —
-the database rolls back to its pre-migration state. But journaling does NOT protect
-against hardware failure or disk corruption.
+### Why SQLite Does NOT Enforce FKs by Default
 
-### Solution: Backup in Migration
+SQLite defines FK constraints in the schema but silently ignores them at runtime
+unless explicitly enabled per connection.
+
+**Rails 8.1 with the SQLite3 adapter does NOT enable FK enforcement automatically.**
+
+### How to Enable FK Enforcement
+
+Add `foreign_keys: true` to the `default:` section of `config/database.yml`.
+
+```yaml
+default: &default
+  adapter: sqlite3
+  foreign_keys: true        # ← Enables PRAGMA foreign_keys = ON per connection
+```
+
+### Pre-Enable Verification — CRITICAL
+
+**Before enabling on an existing project**, verify no orphaned records exist:
+
+```bash
+sqlite3 storage/development.sqlite3 << 'EOF'
+SELECT 'table_a → table_b' AS check_name, COUNT(*) AS orphaned_rows
+FROM table_a WHERE fk_id IS NOT NULL
+  AND fk_id NOT IN (SELECT id FROM table_b);
+EOF
+```
+
+All counts must be 0. Verify production BEFORE deploying — not after.
+
+### disable_ddl_transaction! Required for PRAGMA in Migrations
+
+`PRAGMA foreign_keys = OFF/ON` is a no-op inside a transaction. Rails wraps
+migrations in transactions by default. Use `disable_ddl_transaction!` in any
+migration that needs to temporarily suspend FK enforcement:
 
 ```ruby
-# decor/db/migrate/YYYYMMDDHHMMSS_descriptive_name.rb - version 1.0
-# Backs up SQLite database before destructive table recreation
+class MyMigration < ActiveRecord::Migration[8.1]
+  disable_ddl_transaction!
 
-class DescriptiveName < ActiveRecord::Migration[8.1]
   def up
-    # Step 1: Backup database file before any structural changes
-    db_path = ActiveRecord::Base.connection.pool.db_config.database
-    backup_path = "#{db_path}.backup-#{Time.now.strftime("%Y%m%d%H%M%S")}"
-    FileUtils.cp(db_path, backup_path)
-    Rails.logger.info "Database backed up to #{backup_path}"
-
-    # Step 2: Proceed with migration
-    change_table :table_name, bulk: true do |t|
-      # your changes here
-    end
-  end
-
-  def down
-    # rollback logic
+    execute "PRAGMA foreign_keys = OFF"
+    # ... table operations ...
+    execute "PRAGMA foreign_keys = ON"
   end
 end
-```
-
-**When to use this pattern:**
-- ✅ Any migration that requires table recreation (unsupported ALTER TABLE operations)
-- ✅ Any migration adding NOT NULL constraints to populated tables
-- ✅ Any migration you are uncertain about in production
-
-**When NOT needed:**
-- Adding a nullable column (ADD COLUMN — safe, no recreation)
-- Adding an index (safe, reversible)
-- Renaming a table or column (safe, reversible)
-
-**Recovery:** If migration fails after backup, restore with:
-```bash
-cp storage/development.sqlite3.backup-YYYYMMDDHHMMSS storage/development.sqlite3
 ```
 
 ---
 
-## Rails Migration Best Practices
+## SQLite ALTER TABLE Limitations
 
-### Migration Template
-```ruby
-# project/db/migrate/YYYYMMDDHHMMSS_descriptive_name.rb - version 1.0
-# Description of what this migration does and why
+Cannot add named CHECK constraints to existing columns — requires full table
+recreation. Rails handles recreation automatically via raw SQL in migrations.
+Use backup-in-migration pattern for safety.
 
-class DescriptiveName < ActiveRecord::Migration[8.1]
-  def change
-    # Migration code
-  end
-end
-```
-
-### Reversible Migrations
-```ruby
-def change
-  reversible do |dir|
-    dir.up do
-      # Forward migration
-    end
-
-    dir.down do
-      # Rollback migration
-    end
-  end
-end
-```
-
-### Production Migration Workflow
-
-**For projects using Kamal:**
-```bash
-# 1. After PR merge, run migration in production FIRST
-kamal app exec --reuse "bin/rails db:migrate"
-
-# 2. THEN deploy the code
-kamal deploy
-```
-
-**Why `--reuse`:**
-- Uses existing running container (has secrets/env vars)
-- Creating new container often fails with missing secrets
-
----
-
-## Rails Testing Patterns
-
-### Fixtures
-**Location:** `test/fixtures/model_name.yml`
-
-**When field becomes required, update ALL fixtures:**
-```yaml
-# test/fixtures/computers.yml
-computer_one:
-  model: pdp11
-  serial_number: "SN-001"  # Don't forget this!
-  owner: owner_one
-```
-
-**Add comment linking to test constants:**
-```yaml
-# Test passwords defined in test/support/authentication_helper.rb
-# Admin user: TEST_PASSWORD_ADMIN
-# Regular user: TEST_PASSWORD_USER
-```
-
-### Model Tests
-**Location:** `test/models/model_name_test.rb`
-
-**Use centralized constants:**
-```ruby
-require "test_helper"
-
-class ModelTest < ActiveSupport::TestCase
-  def valid_attributes
-    {
-      user_name: "testuser",
-      email: "test@example.com",
-      password: TEST_PASSWORD_VALID,  # From AuthenticationHelper
-      password_confirmation: TEST_PASSWORD_VALID
-    }
-  end
-
-  test "field must be present" do
-    model = Model.new(valid_attributes.merge(field: nil))
-    assert_not model.valid?
-    assert_includes model.errors[:field], "can't be blank"
-  end
-end
-```
-
-### Test Update Checklist for Required Fields
-1. ✅ Update fixtures with valid values
-2. ✅ Search for `Model.new` - add field to all instances
-3. ✅ Search for `Model.create` - add field to all instances
-4. ✅ Add validation tests
-5. ✅ Run full test suite
-
-### Integration Test Authentication Pattern
-
-**Use centralized helper:**
-
-```ruby
-# test/controllers/feature_test.rb
-class FeatureTest < ActionDispatch::IntegrationTest
-  # AuthenticationHelper is included automatically
-
-  test "authenticated action" do
-    login_as(users(:admin))  # Auto-detects password
-    # Test authenticated action
-  end
-end
-```
-
-**Don't duplicate login logic in each test file.**
-
-### CRITICAL: Integration Tests vs System Tests - Know the Difference
-
-**Lesson learned:** Integration tests cannot catch browser/UI bugs. Several bugs
-required manual testing to find that system tests would have caught automatically.
-
-**What Integration Tests CAN catch:**
-- ✅ Controller logic (authentication, authorization)
-- ✅ Database changes (record created/deleted)
-- ✅ Redirect behavior (assert_redirected_to)
-- ✅ Flash values in Ruby (flash[:alert])
-- ✅ Response status codes
-
-**What Integration Tests CANNOT catch:**
-- ❌ HTML form structure issues (e.g. nested forms)
-- ❌ JavaScript/Turbo behavior (e.g. form not submitting)
-- ❌ Flash messages actually rendered in HTML
-- ❌ Navigation/layout elements (e.g. admin badge showing to all)
-- ❌ Confirmation dialog behavior
-
-**What System Tests (Capybara) additionally catch:**
-- ✅ Form submission through real browser
-- ✅ JavaScript interactions and Turbo behavior
-- ✅ Flash messages actually rendered on screen
-- ✅ Navigation elements visible to user
-- ✅ Full user workflows end-to-end
-
-**Real examples from DECOR that only manual testing caught:**
-- Nested form caused delete button to trigger update action instead
-- Turbo blocked form submission completely and silently
-- `flash[:alert]` set in controller but never rendered in view
-- Admin badge shown to ALL logged-in users (not just admins)
-
-**Rule: For any feature involving forms, JavaScript, or visual feedback:**
-Write BOTH integration tests AND system tests.
-
-```ruby
-# Integration test - controller behavior
-# test/controllers/owners_controller_destroy_test.rb
-test "should delete own account with correct password" do
-  login_as(@alice)
-  assert_difference("Owner.count", -1) do
-    delete owner_path(@alice), params: { password: TEST_PASSWORD_ALICE }
-  end
-  assert_redirected_to root_path
-end
-
-# System test - full browser behavior (TO BE ADDED next session)
-# test/system/account_deletion_test.rb
-test "delete with wrong password shows error message on screen" do
-  # Fills form in browser, clicks button, checks visible error message
-  # Catches flash rendering bugs that integration tests miss
-end
-```
-
-**DECOR Project:** Capybara + Selenium already configured.
-System tests live in `test/system/` (currently empty - to be populated).
-
-**When to write system tests:**
-- ✅ New forms with submit actions
-- ✅ Features using JavaScript or Turbo
-- ✅ Navigation/layout changes
-- ✅ Any feature where visual feedback matters to the user
-
----
-
-## Sort Queries with Joined Tables
-
-### CRITICAL: Use joins() not includes() for ORDER BY on associated tables
-
-**Problem:** When sorting by a column on an associated table, `includes()` does not
-guarantee a SQL JOIN — Rails may use a separate query (eager loading). The ORDER BY
-then fails silently or sorts incorrectly.
-
-**Wrong:**
-```ruby
-# includes() alone does NOT reliably support ORDER BY on joined table
-components.includes(:owner).order("owners.user_name asc")
-```
-
-**Correct:**
-```ruby
-# joins() forces the SQL JOIN needed for ORDER BY
-components.joins(:owner).order("owners.user_name asc")
-```
-
-**Note:** If you need both the join for sorting AND eager loading for performance,
-combine both:
-```ruby
-components.includes(:owner).joins(:owner).order("owners.user_name asc")
-```
-
-**Real example from DECOR (Session 4):**
-```ruby
-when "owner_asc" then components.joins(:owner).order("owners.user_name asc")
-when "type_asc"  then components.joins(:component_type).order("component_types.name asc")
-```
-
----
-
-## Common Rails Patterns in This User's Projects
-
-### Controller Filtering Pattern
-```ruby
-def index
-  items = Model.includes(:associations).search(params[:query])
-
-  # Apply filters
-  items = items.where(field: params[:filter]) if params[:filter].present?
-
-  # Apply sorting
-  items = case params[:sort]
-  when "asc" then items.order(field: :asc)
-  when "desc" then items.order(field: :desc)
-  else items.order(created_at: :desc)
-  end
-
-  paginate items
-end
-```
-
-### View Link Pattern for Filtering
-```erb
-<%= link_to count, path(filter_param: value), class: "text-indigo-600 hover:text-indigo-900" %>
-```
-
----
-
-## Rails File Structure Reminders
-
-```
-project/
-├── app/
-│   ├── controllers/
-│   │   └── model_controller.rb
-│   ├── models/
-│   │   └── model.rb
-│   └── views/
-│       └── models/
-│           ├── index.html.erb
-│           ├── index.turbo_stream.erb
-│           ├── _model.html.erb
-│           └── _filters.html.erb
-├── db/
-│   └── migrate/
-│       └── YYYYMMDDHHMMSS_migration_name.rb
-└── test/
-    ├── support/              # ← Centralized helpers
-    │   ├── authentication_helper.rb
-    │   └── test_constants.rb
-    ├── fixtures/
-    │   └── models.yml
-    ├── models/
-    │   └── model_test.rb
-    └── controllers/
-        └── models_controller_test.rb
-```
+**Migration pattern for SQLite table recreation:**
+1. `PRAGMA foreign_keys = OFF`
+2. `CREATE TABLE new_name (...)`
+3. `INSERT INTO new_name SELECT ... FROM old_name`
+4. `DROP TABLE old_name`
+5. `ALTER TABLE new_name RENAME TO old_name`
+6. Recreate all indexes
+7. `PRAGMA foreign_keys = ON`
 
 ---
 
 ## Rails Test Class — Required Inclusions
 
-Different test base classes include different helpers automatically. Missing inclusions
-cause `NoMethodError` at runtime, not at load time — easy to miss until the test runs.
-
-**Known inclusions NOT automatic — must be added explicitly:**
-
 `ActionMailer::TestHelper` (provides `assert_emails`, `assert_no_emails`):
 - ✅ Included automatically in: `ActionMailer::TestCase`
 - ❌ NOT included in: `ActiveJob::TestCase`, `ActiveSupport::TestCase`, `ActionDispatch::IntegrationTest`
 - Fix: `include ActionMailer::TestHelper` at the top of the test class
-
-**Rule: When writing a job test that sends emails, always add:**
-```ruby
-class MyJobTest < ActiveJob::TestCase
-  include ActionMailer::TestHelper
-end
-```
-
-**Real example from Session 5 (February 20, 2026):**
-- `InviteReminderJobTest < ActiveJob::TestCase` used `assert_emails`
-- 3 tests failed with `NoMethodError: undefined method 'assert_emails'`
-- Fix: one line — `include ActionMailer::TestHelper`
 
 ---
 
@@ -755,14 +396,10 @@ end
 
 **`save!(validate: false)` skips `before_validation` callbacks entirely.**
 
-This is a common trap when trying to bypass validations while still wanting
-callbacks (e.g. token generation, timestamp setting) to run.
-
 **Wrong — skips ALL before_validation callbacks:**
 ```ruby
 record = Model.new(email: "x@example.com")
 record.save!(validate: false)  # before_validation never runs
-# Result: NOT NULL constraint fails if callback was supposed to set a required field
 ```
 
 **Correct — use create! then override with update_columns:**
@@ -771,181 +408,23 @@ record = Model.create!(email: "x@example.com")  # all callbacks run normally
 record.update_columns(sent_at: 21.days.ago)      # override timestamp directly in DB
 ```
 
-`update_columns` writes directly to the DB, bypassing callbacks and validations —
-useful for backdating timestamps in tests without triggering business logic.
+---
 
-**Real example from Session 5 (February 20, 2026):**
-- `Invite.save!(validate: false)` meant `set_sent_at` callback never ran
-- SQLite raised `NOT NULL constraint failed: invites.sent_at`
-- All 12 tests in `InviteReminderJobTest` failed immediately
-- Fix: switch to `create!` then `update_columns`
+## Which File Types Appear in the Context Window
 
-
-
-### Which file types appear in the context window automatically
-Only these file types are rendered as readable text when uploaded:
-- .md, .txt, .html, .csv (as text)
-- .yml, .yaml (as text — these DO render in context window)
-- .png (as image)
-- .pdf (as image)
+Only these file types render as readable text when uploaded:
+- `.md`, `.txt`, `.html`, `.csv` (as text)
+- `.yml`, `.yaml` (as text — these DO render in context window)
+- `.png` (as image)
+- `.pdf` (as image)
 
 ### ERB and other code files — ALWAYS use the view tool
 
-**ERB files (.erb) do NOT appear in the context window**, even when uploaded.
-The same applies to .rb, .js, and all other code file types.
+**ERB files (`.erb`) do NOT appear in the context window**, even when uploaded.
+The same applies to `.rb`, `.js`, and all other code file types.
 
-**.yml/.yaml files DO appear in the context window** — no view tool needed.
-Never ask the user to re-upload a .yml file; read it directly from the context.
-
-**RULE: When a user uploads any .erb, .rb, or other non-Markdown, non-YAML file,
-ALWAYS use the `view` tool immediately — do NOT assume the content is visible.
-Never ask the user to re-upload a file that was already uploaded. The file is
-on the filesystem at `/mnt/user-data/uploads/` — just read it.**
-
-**Correct behaviour:**
-```
-User uploads: index_html.erb
-Claude: [immediately calls view tool on /mnt/user-data/uploads/index_html.erb]
-```
-
-**Wrong behaviour:**
-```
-"The file wasn't recognized — could you upload it again?"
-← The file was there all along. Claude simply didn't read it.
-```
-
-**Real example from Session 5 (February 20, 2026):**
-- User uploaded `index_html.erb` twice
-- Claude failed to read it both times, asking the user to re-upload
-- Root cause: ERB files are only on the filesystem, not in context window
-- Fix: use the `view` tool proactively for every non-Markdown upload
-- Cost: wasted user time and tokens, avoidable frustration
-
----
-
-## SQLite Foreign Key Enforcement — MANDATORY for New Projects
-
-### Why SQLite Does NOT Enforce FKs by Default
-
-SQLite defines FK constraints in the schema (visible in `.schema` output), but
-silently ignores them at runtime unless explicitly enabled per connection.
-This means invalid FK values can be written to the database with no error —
-defeating the entire purpose of FK constraints.
-
-**Rails 8.1 with the SQLite3 adapter does NOT enable FK enforcement automatically.**
-It must be configured explicitly in `database.yml`.
-
-### How to Enable FK Enforcement
-
-Add `foreign_keys: true` to the `default:` section of `config/database.yml`.
-This applies to all environments (development, test, production) via YAML anchor.
-
-```yaml
-# config/database.yml
-default: &default
-  adapter: sqlite3
-  foreign_keys: true        # ← Enables PRAGMA foreign_keys = ON per connection
-  max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
-  timeout: 5000
-```
-
-**This is required for every SQLite-based Rails project.**
-
-### Pre-Enable Verification — CRITICAL
-
-**Before enabling FK enforcement on an existing project**, verify no orphaned
-records exist. Enabling FK enforcement on dirty data will cause runtime errors.
-
-**Step 1: Identify all FK relationships from `.schema` output**
-
-**Step 2: Run verification queries for each FK:**
-```bash
-sqlite3 storage/development.sqlite3 << 'EOF'
--- Example for a project with components and computers tables.
--- Adapt to your actual schema.
-SELECT 'table_a → table_b' AS check_name, COUNT(*) AS orphaned_rows
-FROM table_a WHERE fk_id IS NOT NULL
-  AND fk_id NOT IN (SELECT id FROM table_b)
-UNION ALL
-SELECT 'table_a → table_c (required)',
-  COUNT(*) FROM table_a WHERE required_fk_id NOT IN (SELECT id FROM table_c);
-EOF
-```
-
-**Step 3: All counts must be 0 before enabling.**
-If any are non-zero, fix the data first (update or delete orphaned records).
-
-**Step 4: Verify production data BEFORE deploying — CRITICAL.**
-Development and production are independent databases. A clean development DB
-does not guarantee a clean production DB. Run the equivalent check against
-production BEFORE running `kamal deploy`:
-
-```bash
-kamal app exec --reuse "bin/rails runner \"
-# Adapt to your actual models and FK relationships
-puts 'components → conditions: ' + Component.where.not(condition_id: nil).where.not(condition_id: Condition.select(:id)).count.to_s
-puts 'computers → owners: ' + Computer.where.not(owner_id: Owner.select(:id)).count.to_s
-# ... add all FK relationships
-\""
-```
-
-All counts must be 0. If any are non-zero, fix production data before deploying.
-
-**Step 5: Enable FK enforcement, then immediately run full test suite:**
-```bash
-bin/rails test
-```
-
-**Step 6: Deploy only after steps 1–5 are all clean.**
-
-A clean test run confirms no test was relying on invalid FK values being silently accepted.
-
-**Correct deployment order:**
-1. Verify development data clean
-2. Run full test suite
-3. Verify production data clean  ← MUST happen before deploy
-4. Deploy (`kamal deploy`)
-5. Confirm post-deploy (app running, no errors)
-
-**Real example (DECOR, February 24, 2026):** Production verification was done
-AFTER deployment — wrong order. Fortunately data was clean, but this was luck,
-not process. Always verify production before deploying.
-
-### FK Enforcement Cleanup as a Standalone PR
-
-When adding FK enforcement to an existing project mid-development:
-- ✅ Do it as a dedicated, isolated PR — not bundled with feature work
-- ✅ Verify data clean in ALL environments (dev, test, prod separately)
-- ✅ Run full test suite before and after
-- ✅ Commit only `database.yml` in this PR — nothing else
-- Reason: clean, auditable, easy to revert if an issue is found
-
-### Model-Level FK Validation
-
-`foreign_keys: true` in `database.yml` enforces at the DB level.
-Complement it with Rails model validations for user-friendly error messages:
-
-```ruby
-# For optional FK:
-belongs_to :component_condition, optional: true
-
-# For required FK:
-belongs_to :component_type  # optional: false is the default
-```
-
-Rails `belongs_to` with `optional: false` ensures the field is not nil.
-The DB FK constraint ensures the referenced record actually exists.
-Both layers together = full defense-in-depth.
-
-### Real Example (DECOR Project, February 24, 2026)
-
-- Schema had FK constraints defined on `components` and `computers` tables
-- `PRAGMA foreign_keys` was never set → constraints were decorative only
-- `grep` confirmed no `foreign_keys:` setting anywhere in config/
-- Pre-enable verification: all 8 FK relationships had 0 orphaned records
-- Added `foreign_keys: true` to `database.yml` default section
-- Ran 232 tests → all passed
-- Committed as standalone PR before continuing feature work
+**RULE: When a user uploads any `.erb`, `.rb`, or other non-Markdown, non-YAML file,
+ALWAYS use the `view` tool immediately — do NOT assume the content is visible.**
 
 ---
 
