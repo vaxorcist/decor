@@ -1,8 +1,8 @@
 # decor/app/controllers/admin/conditions_controller.rb
-# version 1.1
-# Updated all references: Condition → ComputerCondition, matching the renamed
-# model (conditions table → computer_conditions, model class Condition → ComputerCondition).
-# Routes remain resources :conditions — no route helper names change.
+# version 1.2
+# Updated flash messages to say "Computer condition" (was "Condition") to
+# distinguish from the new component conditions managed by
+# Admin::ComponentConditionsController.
 
 module Admin
   class ConditionsController < BaseController
@@ -20,7 +20,7 @@ module Admin
       @condition = ComputerCondition.new(condition_params)
 
       if @condition.save
-        redirect_to admin_conditions_path, notice: "Condition was successfully created."
+        redirect_to admin_conditions_path, notice: "Computer condition was successfully created."
       else
         render :new, status: :unprocessable_entity
       end
@@ -31,7 +31,7 @@ module Admin
 
     def update
       if @condition.update(condition_params)
-        redirect_to admin_conditions_path, notice: "Condition was successfully updated."
+        redirect_to admin_conditions_path, notice: "Computer condition was successfully updated."
       else
         render :edit, status: :unprocessable_entity
       end
@@ -39,7 +39,7 @@ module Admin
 
     def destroy
       @condition.destroy
-      redirect_to admin_conditions_path, notice: "Condition was successfully deleted."
+      redirect_to admin_conditions_path, notice: "Computer condition was successfully deleted."
     end
 
     private

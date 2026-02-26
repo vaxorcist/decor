@@ -1,16 +1,16 @@
 # decor/app/models/component_condition.rb
-# version 1.0
-# New model for the component_conditions table introduced in Session 7
-# (February 25, 2026).
-#
-# The value column is named "condition" (not "name") to distinguish it from
-# the computer_conditions lookup pattern — this is an intentional design choice.
-#
-# Deletion behaviour: restrict_with_error — a component_condition record cannot
-# be deleted while any component still references it. The user must reassign
-# or clear the condition on all components first. This matches the stricter
-# pattern used elsewhere in the project and prevents accidental data loss.
+# version 1.1
+# Added: validates :condition — presence (non-blank) and uniqueness (case-insensitive).
+# Without these, blank strings saved successfully and duplicate values raised a raw
+# SQLite3::ConstraintException instead of a clean ActiveRecord validation error.
+# The DB still enforces UNIQUE NOT NULL as a safety net (defense-in-depth), but
+# the model validation ensures user-friendly error messages and correct controller
+# behaviour (re-render form with 422 on failure).
 
 class ComponentCondition < ApplicationRecord
   has_many :components, dependent: :restrict_with_error
+
+  # :condition is the value column (not :name) — intentional design from Session 7.
+  # case_sensitive: false matches the convention used for ComputerCondition.
+  validates :condition, presence: true, uniqueness: { case_sensitive: false }
 end

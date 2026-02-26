@@ -1,3 +1,7 @@
+# decor/config/routes.rb
+# version 1.1
+# Added: resources :component_conditions in admin namespace
+
 Rails.application.routes.draw do
   default_url_options(host: Decor::Routes.host, protocol: Decor::Routes.protocol)
 
@@ -18,6 +22,7 @@ Rails.application.routes.draw do
     resources :component_types, only: %i[index new create edit update destroy]
     resources :computer_models, only: %i[index new create edit update destroy]
     resources :conditions, only: %i[index new create edit update destroy]
+    resources :component_conditions, only: %i[index new create edit update destroy]
     resources :run_statuses, only: %i[index new create edit update destroy]
     resources :bulk_uploads, only: %i[new create]
   end

@@ -1,0 +1,20 @@
+<%# decor/app/views/admin/component_conditions/_form.html.erb %>
+<%# version 1.0 %>
+<%# Form partial for both new and edit actions. %>
+<%# ComponentCondition class name matches the :component_conditions route, so %>
+<%# form_with model: [:admin, component_condition] resolves correctly without %>
+<%# any explicit url: or scope: override (unlike the computer conditions form). %>
+<%# The field is :condition (not :name) — intentional column naming from Session 7. %>
+<%= form_with model: [:admin, component_condition], class: "space-y-4" do |f| %>
+  <%= render "common/record_errors", record: component_condition %>
+
+  <div>
+    <%= f.label :condition, class: "block text-sm font-medium text-stone-700" %>
+    <%= f.text_field :condition, required: true, autofocus: true, class: field_classes %>
+  </div>
+
+  <div class="flex gap-3">
+    <%= f.submit class: button_classes(style: :primary) %>
+    <%= link_to "Cancel", admin_component_conditions_path, class: button_classes(style: :secondary) %>
+  </div>
+<% end %>
