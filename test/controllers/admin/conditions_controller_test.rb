@@ -1,11 +1,11 @@
 # decor/test/controllers/admin/conditions_controller_test.rb
-# version 1.2
-# Updated all references following the conditions → computer_conditions rename:
-#   conditions(:label)   → computer_conditions(:label)
-#   Condition.count      → ComputerCondition.count
-#   Condition.create!    → ComputerCondition.create!
-# Route helpers (admin_conditions_url etc.) are UNCHANGED — routes.rb still
-# declares resources :conditions, so all URL helpers retain their original names.
+# version 1.3
+# Updated assert_select strings to match renamed UI labels:
+#   "Conditions"     → "Computer Conditions"
+#   "New Condition"  → "New Computer Condition"
+#   "Edit Condition" → "Edit Computer Condition"
+#   flash messages   → "Computer condition was successfully ..."
+# No route helper changes — routes.rb still uses resources :conditions.
 
 require "test_helper"
 
@@ -23,7 +23,7 @@ module Admin
       get admin_conditions_url
 
       assert_response :success
-      assert_select "h1", "Conditions"
+      assert_select "h1", "Computer Conditions"
       assert_select "td", @condition.name
     end
 
@@ -34,7 +34,7 @@ module Admin
       get new_admin_condition_url
 
       assert_response :success
-      assert_select "h1", "New Condition"
+      assert_select "h1", "New Computer Condition"
       assert_select "input[name='condition[name]']"
     end
 
@@ -83,7 +83,7 @@ module Admin
       get edit_admin_condition_url(@condition)
 
       assert_response :success
-      assert_select "h1", "Edit Condition"
+      assert_select "h1", "Edit Computer Condition"
       assert_select "input[value='#{@condition.name}']"
     end
 

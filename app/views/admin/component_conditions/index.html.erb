@@ -1,0 +1,43 @@
+<%# decor/app/views/admin/component_conditions/index.html.erb %>
+<%# version 1.0 %>
+<%# Lists all component_condition records with their component counts. %>
+<%# The "Components" count column and the restrict_with_error deletion guard %>
+<%# mirror the pattern used in admin/conditions for computer conditions. %>
+<div class="max-w-7xl mx-auto">
+  <div class="flex justify-between items-center mb-4">
+    <h1 class="text-2xl font-semibold">Component Conditions</h1>
+    <%= link_to "Add Component Condition", new_admin_component_condition_path, class: button_classes(style: :primary) %>
+  </div>
+
+  <% if @component_conditions.any? %>
+    <div class="bg-white border border-stone-200 rounded">
+      <table class="min-w-full divide-y divide-stone-200">
+        <thead class="bg-stone-50">
+          <tr>
+            <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Condition</th>
+            <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Components</th>
+            <th class="px-4 py-2"></th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-stone-200 text-sm">
+          <% @component_conditions.each do |component_condition| %>
+            <tr>
+              <td class="px-4 py-3 whitespace-nowrap font-medium text-stone-900"><%= component_condition.condition %></td>
+              <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component_condition.components.size %></td>
+              <td class="px-4 py-3 whitespace-nowrap text-right space-x-2">
+                <%= link_to "Edit", edit_admin_component_condition_path(component_condition), class: "text-stone-700 hover:text-stone-900 text-sm" %>
+                <% if component_condition.components.empty? %>
+                  <%= button_to "Delete", admin_component_condition_path(component_condition), method: :delete, data: { turbo_confirm: "Delete this component condition?" }, class: "text-stone-700 hover:text-stone-900 text-sm" %>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="bg-white border border-stone-200 rounded p-4 text-center text-sm text-stone-500">
+      No component conditions yet.
+    </div>
+  <% end %>
+</div>
