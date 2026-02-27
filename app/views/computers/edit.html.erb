@@ -1,8 +1,17 @@
-<%# decor/app/views/computers/edit.html.erb - version 1.1 %>
-<%# Widened container from max-w-2xl to max-w-5xl to give form room to reach 80% screen width %>
+<%# decor/app/views/computers/edit.html.erb - version 1.2 %>
+<%# Session 10: Added Stimulus Back button below form, matching components/edit pattern. %>
 
 <div class="max-w-5xl mx-auto">
   <h1 class="text-2xl font-semibold mb-4">Edit Computer</h1>
 
   <%= render "form", computer: @computer %>
+
+  <%# Stimulus Back button — history.back() primary; computer show page as fallback %>
+  <div class="mt-4">
+    <a href="#"
+       data-controller="back"
+       data-back-fallback-url-value="<%= computer_path(@computer) %>"
+       data-action="click->back#go"
+       class="text-sm text-stone-700 hover:text-stone-900">← Back</a>
+  </div>
 </div>

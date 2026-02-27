@@ -1,6 +1,5 @@
-<%# decor/app/views/computers/new.html.erb - version 1.2 %>
-<%# Widened container to max-w-5xl to match edit page %>
-<%# Added note that components can be added after the computer is saved %>
+<%# decor/app/views/computers/new.html.erb - version 1.3 %>
+<%# Session 10: Added Stimulus Back button below form, matching components/edit pattern. %>
 
 <div class="max-w-5xl mx-auto">
   <h1 class="text-2xl font-semibold mb-4">Add Computer</h1>
@@ -11,4 +10,13 @@
   </div>
 
   <%= render "form", computer: @computer %>
+
+  <%# Stimulus Back button — history.back() primary; computers index as fallback %>
+  <div class="mt-4">
+    <a href="#"
+       data-controller="back"
+       data-back-fallback-url-value="<%= computers_path %>"
+       data-action="click->back#go"
+       class="text-sm text-stone-700 hover:text-stone-900">← Back</a>
+  </div>
 </div>

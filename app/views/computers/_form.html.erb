@@ -1,7 +1,7 @@
-<%# decor/app/views/computers/_form.html.erb - version 1.8 %>
-<%# Fixed: condition_id → computer_condition_id, Condition → ComputerCondition %>
-<%# following the conditions → computer_conditions table/model rename. %>
-<%# Added Condition and Serial Number columns to the embedded components list. %>
+<%# decor/app/views/computers/_form.html.erb - version 1.9 %>
+<%# Session 10: Added Stimulus Back button alongside submit buttons so users %>
+<%# don't have to scroll past the component section to reach the back button. %>
+<%# Fallback URL mirrors the "Done" link: show page for existing, index for new. %>
 
 <%= form_with model: computer, class: "space-y-4", style: "width: 80%;" do |f| %>
   <%= render "common/record_errors", record: computer %>
@@ -52,13 +52,21 @@
     <p class="mt-1 text-xs text-stone-500">Provenance, previous owners, how you acquired it, etc.</p>
   </div>
 
-  <div class="flex gap-3">
+  <%# Button row — submit + secondary actions + Back button %>
+  <%# Back button placed here so it's visible without scrolling past the component section %>
+  <div class="flex gap-3 items-center">
     <%= f.submit class: button_classes(style: :primary) %>
     <% unless computer.persisted? %>
       <%= f.submit "Create and add another", name: "add_another", class: button_classes(style: :secondary) %>
     <% end %>
     <%# "Done" instead of "Cancel" — no implication of reverting a prior action %>
     <%= link_to "Done", (computer.persisted? ? computer_path(computer) : computers_path), class: button_classes(style: :secondary) %>
+    <%# Stimulus Back button — history.back() primary; fixed fallback for direct/bookmarked URLs %>
+    <a href="#"
+       data-controller="back"
+       data-back-fallback-url-value="<%= computer.persisted? ? computer_path(computer) : computers_path %>"
+       data-action="click->back#go"
+       class="text-sm text-stone-700 hover:text-stone-900">← Back</a>
   </div>
 <% end %>
 
@@ -100,7 +108,7 @@
           <tbody class="bg-white divide-y divide-stone-200 text-sm">
             <% computer.components.includes(:component_type, :component_condition).each do |component| %>
               <tr class="hover:bg-stone-50">
-                <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.component_type.name %></td>
+                <td class="px-4 py-3 whitespace-nowrap"><%= link_to component.component_type.name, component_path(component), class: "text-indigo-600 hover:text-indigo-900" %></td>
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.component_condition&.condition %></td>
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.serial_number %></td>
                 <td class="px-4 py-3 text-stone-600"><%= component.description %></td>

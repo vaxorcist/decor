@@ -1,12 +1,13 @@
 # decor/docs/claude/DECOR_PROJECT.md
-# version 2.6
-# Session 8: Admin UI for component_conditions; Computer Conditions rename in UI;
-# ComputerCondition uniqueness now case-insensitive; brakeman 8.0.3 + model validations added.
+# version 2.7
+# Session 9: components/show redesign (Step 3); back_controller.js; components/edit+form
+# aligned with show layout; RAILS_SPECIFICS whitespace-pre-wrap rule added.
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** February 27, 2026 (Session 8: component_conditions admin UI; UI rename; model fixes; gem updates)
-**Current Status:** Production-ready; session 8 changes fully committed and deployed
+**Last Updated:** February 27, 2026 (Session 9: component layout branch completed;
+Stimulus Back controller added; computers/show redesign pending)
+**Current Status:** Production-ready; session 9 changes fully committed and deployed
 
 ---
 
@@ -91,14 +92,19 @@ decor/
 │   │   ├── home_controller.rb
 │   │   └── admin/
 │   │       ├── base_controller.rb
-│   │       ├── conditions_controller.rb          ← manages computer_conditions table
-│   │       ├── component_conditions_controller.rb ← new (Session 8)
+│   │       ├── conditions_controller.rb
+│   │       ├── component_conditions_controller.rb
 │   │       ├── component_types_controller.rb
 │   │       ├── computer_models_controller.rb
 │   │       └── run_statuses_controller.rb
 │   ├── helpers/
+│   │   ├── application_helper.rb
+│   │   ├── style_helper.rb                      ← field_classes, button_classes
 │   │   ├── computers_helper.rb
 │   │   └── components_helper.rb
+│   ├── javascript/
+│   │   └── controllers/
+│   │       └── back_controller.js               ← new (Session 9)
 │   ├── models/
 │   │   ├── owner.rb
 │   │   ├── computer.rb
@@ -111,8 +117,8 @@ decor/
 │       ├── computers/
 │       ├── components/
 │       └── admin/
-│           ├── conditions/                       ← manages computer_conditions
-│           └── component_conditions/             ← new (Session 8)
+│           ├── conditions/
+│           └── component_conditions/
 ├── config/
 │   ├── deploy.yml
 │   ├── routes.rb
@@ -120,13 +126,11 @@ decor/
 ├── db/
 │   └── migrate/
 ├── docs/
-│   └── claude/                                  ← rule set and session handover docs
+│   └── claude/
 └── test/
     ├── fixtures/
     └── controllers/
         └── admin/
-            ├── conditions_controller_test.rb
-            └── component_conditions_controller_test.rb  ← new (Session 8)
 ```
 
 ---
@@ -180,20 +184,20 @@ decor/
 
 ## Route Notes
 
-`resources :conditions` in `decor/config/routes.rb` maps to `Admin::ConditionsController`
-which manages the `computer_conditions` table (class `ComputerCondition`). The route
-resource name was intentionally kept as `:conditions` to avoid a route rename ripple.
-The controller uses explicit `url:` and `scope: :condition` in its form partial to
+`resources :conditions` maps to `Admin::ConditionsController` which manages the
+`computer_conditions` table (class `ComputerCondition`). The route resource name
+was intentionally kept as `:conditions` to avoid a route rename ripple. The
+controller uses explicit `url:` and `scope: :condition` in its form partial to
 bridge the class name / route name mismatch.
 
 `resources :component_conditions` maps cleanly to `Admin::ComponentConditionsController`
-(class `ComponentCondition`) — no url:/scope: workaround needed, class name matches route.
+(class `ComponentCondition`) — no url:/scope: workaround needed.
 
 ---
 
-## Work Completed - Sessions 1–7
+## Work Completed - Sessions 1–8
 
-(See SESSION_HANDOVER.md v8.0 for detail on Sessions 1–7)
+(See SESSION_HANDOVER.md v9.1 for detail on Sessions 1–8)
 
 Key milestones:
 - Session 1: Index table layouts, search, serial number required
@@ -203,64 +207,74 @@ Key milestones:
 - Session 5: Embedded component sub-form on computer edit page
 - Session 6: SQLite FK enforcement enabled, gem security updates, docs/claude/ directory
 - Session 7: component_conditions table; conditions→computer_conditions rename; type cleanup
+- Session 8: Admin UI for component_conditions; Computer Conditions rename in UI;
+  model validations; brakeman 8.0.3; owners/show + components/show layout (Steps 1–2)
 
 ---
 
-## Work Completed - Session 8 (February 27, 2026)
+## Work Completed - Session 9 (February 27, 2026)
 
-### 1. Admin UI — Computer Conditions renamed
+### 1. Rule Set — RAILS_SPECIFICS.md v1.6
+Added "ERB + whitespace-pre-wrap — Literal Whitespace Gotcha": `whitespace-pre-wrap`
+renders the newline + indentation between an opening tag and its `<%= %>` content
+literally. Fix: put ERB tag on the same line as the opening HTML tag.
 
-All user-visible labels updated from "Conditions" / "Condition" to
-"Computer Conditions" / "Computer Condition":
-- Nav link in `decor/app/views/layouts/admin.html.erb`
-- h1 headings and button labels in index/new/edit views
-- Flash messages in `Admin::ConditionsController`
-- assert_select strings in `conditions_controller_test.rb`
+### 2. components/show.html.erb — Step 3 completed
 
-### 2. Admin UI — Component Conditions (new)
+    decor/app/views/components/show.html.erb    (v1.5)
 
-Full CRUD admin interface added:
-- `decor/app/controllers/admin/component_conditions_controller.rb`
-- `decor/app/views/admin/component_conditions/` (index, new, edit, _form)
-- `decor/config/routes.rb` — added `resources :component_conditions`
-- `decor/test/controllers/admin/component_conditions_controller_test.rb`
+- Line 1: 3-col — Computer | Type | Condition
+- Line 2: 2-col — Order Number | Serial Number
+- All values in styled display boxes (matching field_classes appearance)
+- Description: styled box, min-height 4.5rem, ERB on same line (whitespace-pre-wrap fix)
+- Outer bg-white border wrapper removed
+- "← Back to owner" → Stimulus Back button
 
-Destroy failure handled gracefully: redirect with `flash[:alert]` rather than
-raising `ActiveRecord::DeleteRestrictionError`.
+### 3. Stimulus Back Controller — new
 
-### 3. Model validations added
+    decor/app/javascript/controllers/back_controller.js    (v1.0)
 
-Both condition models were missing presence/uniqueness validations:
-- `decor/app/models/computer_condition.rb` v1.2 — uniqueness: case_sensitive: false
-- `decor/app/models/component_condition.rb` v1.1 — presence + uniqueness: case_sensitive: false
+Reusable controller: `history.back()` primary; falls back to
+`data-back-fallback-url-value` when `history.length === 1`.
+Auto-registered by stimulus-rails — no index.js edit needed.
 
-### 4. Gem updates
+### 4. Component Edit Page — aligned with show layout
 
-- brakeman updated to 8.0.3 (CI was rejecting 8.0.2 as outdated)
-- Dependabot PRs deferred to a dedicated future session
+    decor/app/views/components/edit.html.erb      (v1.1)
+    decor/app/views/components/_form.html.erb     (v1.3)
 
-### 5. Rule set update
-
-- `decor/docs/claude/COMMON_BEHAVIOR.md` v1.6 — added "After Research: Reframe
-  Before Planning" to Problem-Solving Approach
+- edit.html.erb: max-w-2xl → max-w-5xl; Stimulus Back button added
+- _form.html.erb: fields reordered (Computer | Type | Condition / Order | Serial /
+  Description); min-height on description; "Cancel" → "Done"
 
 ---
 
 ## Pending — Next Session
 
-Candidates:
-- Dependabot PRs — dedicated session (research workflow established in Session 8)
+### Priority: computers/show.html.erb redesign
+
+Redesign to match components/show layout:
+- max-w-7xl → max-w-5xl; remove outer wrapper
+- Line 1 (3-col): Order Number | Serial Number | Condition
+- Line 2 (half-width): Run Status (left col of 2-col grid)
+- Line 3 (full): History (whitespace-pre-wrap, min-height 4.5rem, ERB same line)
+- Components table: Type → indigo link; "View" removed; "Edit" owner/admin only
+- Stimulus Back button; fallback: owner_path(@computer.owner)
+- **Open question:** confirm Run Status alone on left half of 2-col row
+
+### Other Candidates
+- Dependabot PRs — dedicated session
 - Legal/Compliance: Impressum, Privacy Policy, GDPR, Cookie Consent, TOS
-- System tests: `decor/test/system/` still empty
-- Account deletion (GDPR), data export (GDPR)
+- System tests: decor/test/system/ still empty
+- Account deletion + data export (GDPR)
 - Spam / Postmark DNS fix (awaiting Rob's dashboard findings)
 
 ---
 
 ## Current Deployment Status
 
-**Production Version:** Fully up to date through Session 8
-**Pending:** Nothing — choose next topic at start of next session
+**Production Version:** Fully up to date through Session 9
+**Pending:** computers/show.html.erb redesign
 
 ---
 
@@ -283,7 +297,41 @@ Candidates:
 - **Primary action:** descriptive ("Update Computer", "Save Component", etc.)
 - **Secondary / exit:** "Done" — never "Cancel" (avoids implying a revert)
 
-### Layout Pattern (Computers/Components/Owners)
+### Show Page Layout Pattern (Components — established Session 9)
+```
+Container:   max-w-5xl mx-auto
+Header:      flex justify-between — title+owner left, Edit/Delete right (owner only)
+Fields:      <dl class="space-y-4 text-sm mb-6"> — NO outer wrapper div
+Line 1:      grid grid-cols-3 gap-4
+Line 2:      grid grid-cols-2 gap-4
+Line 3:      full width — Description/History with min-height: 4.5rem
+Field boxes: flex items-center w-full h-10 p-3 rounded border border-stone-300 bg-white text-sm
+             (single-line fields)
+             block w-full p-3 rounded border border-stone-300 bg-white text-sm whitespace-pre-wrap
+             (multi-line fields — ERB tag MUST be on same line as opening tag)
+Back button: Stimulus back_controller, history.back() + fallback URL
+```
+
+### Edit Form Pattern (Components — established Session 9)
+```
+Container:   max-w-5xl mx-auto
+Form width:  full (no 80% constraint — matches show page width)
+Row 1:       grid grid-cols-3 gap-4 (Computer | Type | Condition)
+Row 2:       grid grid-cols-2 gap-4 (Order Number | Serial Number)
+Row 3:       full width textarea with min-height: 4.5rem (Description/History)
+Back button: Stimulus back_controller below the form
+```
+
+### Edit/New Form Pattern (Computers — unchanged)
+```
+Container:  max-w-5xl mx-auto
+Form:       width: 80%
+Line 1:     grid grid-cols-3 gap-4  (model, order_number, serial_number)
+Line 2:     grid grid-cols-2 gap-4  (computer_condition, run_status)
+Line 3:     full width textarea      (history, 3 rows)
+```
+
+### Layout Pattern (Index pages — Computers/Components/Owners)
 ```erb
 <div class="px-4">
   <h1 class="text-2xl font-semibold mb-4 sticky top-0 bg-white z-10 py-2">Title</h1>
@@ -302,20 +350,22 @@ Candidates:
 </div>
 ```
 
-### Edit/New Form Pattern (Computers)
-```
-Container:  max-w-5xl mx-auto
-Form:       width: 80%
-Line 1:     grid grid-cols-3 gap-4  (model, order_number, serial_number)
-Line 2:     grid grid-cols-2 gap-4  (computer_condition, run_status)
-Line 3:     full width textarea      (history, 3 rows)
-```
-
 ### Table Styling
 - Dividers: `divide-y divide-stone-200`
 - Sticky headers: `sticky top-0 z-10`
 - Hover: `hover:bg-stone-50`
 - Cell padding: `px-4 py-3`
+
+### Stimulus Back Controller
+```
+File:     decor/app/javascript/controllers/back_controller.js (v1.0)
+Usage:    <a href="#"
+             data-controller="back"
+             data-back-fallback-url-value="<%= some_path %>"
+             data-action="click->back#go"
+             class="text-sm text-stone-700 hover:text-stone-900">← Back</a>
+Logic:    history.back() if window.history.length > 1; else navigate to fallback URL
+```
 
 ---
 
@@ -338,20 +388,23 @@ See RAILS_SPECIFICS.md and PROGRAMMING_GENERAL.md for rules.
 When a model class name does not match the Rails route resource name, use both
 `url:` (fixes routing) and `scope:` (fixes param naming) on `form_with`.
 Example: `ComputerCondition` model on `resources :conditions` route.
-`ComponentCondition` on `resources :component_conditions` has no mismatch — no
-workaround needed.
 
 ### restrict_with_error — Destroy Failure Handling
 `dependent: :restrict_with_error` causes `destroy` to return false (not raise)
 when dependent records exist. Always check the return value and redirect with
-`flash[:alert]` using `errors.full_messages.to_sentence`. Do NOT let it bubble
-up as an unhandled `ActiveRecord::DeleteRestrictionError`.
+`flash[:alert]` using `errors.full_messages.to_sentence`.
 
 ### Missing Model Validations Cause Raw DB Exceptions
-Without presence/uniqueness validations on the model, blank or duplicate values
-reach the DB and raise `SQLite3::ConstraintException` instead of producing clean
-validation errors. Always add model-level validations alongside DB constraints
-(defense-in-depth). See PROGRAMMING_GENERAL.md — Defense-in-Depth Approach.
+Without presence/uniqueness validations, blank or duplicate values raise
+`SQLite3::ConstraintException` instead of clean validation errors. Always add
+model-level validations alongside DB constraints (defense-in-depth).
+
+### ERB + whitespace-pre-wrap Renders Leading Whitespace Literally
+`whitespace-pre-wrap` preserves the newline + indentation between an opening
+HTML tag and its `<%= %>` content tag, making text appear indented from the left.
+`text-align: left` does not fix it. Fix: put the ERB tag on the same line as
+the opening tag — `<dd class="whitespace-pre-wrap"><%= content %></dd>`.
+See RAILS_SPECIFICS.md v1.6.
 
 ### Squash Merge Git Divergence
 Use `gh pr merge --merge` (not `--squash`).
