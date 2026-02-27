@@ -1,54 +1,52 @@
-<%# decor/app/views/components/_form.html.erb - version 1.1 %>
-<%# Added: serial_number, order_number, component_condition_id fields %>
-<%# Layout: Type / Computer (existing row 1) %>
-<%#          Serial Number / Order Number (new row 2) %>
-<%#          Condition (new row 3, half-width) %>
-<%#          Description (existing, full-width) %>
+<%# decor/app/views/components/_form.html.erb - version 1.3 %>
+<%# Restructured field order to match components/show.html.erb layout: %>
+<%#   Row 1 (3-col): Computer | Type | Condition %>
+<%#   Row 2 (2-col): Order Number | Serial Number %>
+<%#   Row 3 (full):  Description %>
+<%# "Cancel" → "Done" per project button label conventions (no implication of reverting). %>
+<%# Added min-height: 4.5rem to description textarea to match show view. %>
 
 <%= form_with model: component, class: "space-y-4" do |f| %>
   <%= render "common/record_errors", record: component %>
 
-  <!-- Row 1: Type | Computer (existing) -->
-  <div class="grid grid-cols-2 gap-4">
+  <%# Row 1: Computer | Type | Condition — matches Line 1 of show view %>
+  <div class="grid grid-cols-3 gap-4">
+    <div>
+      <%= f.label :computer_id, "Computer", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.collection_select :computer_id, Current.owner.computers.includes(:computer_model), :id, ->(c) { c.computer_model.name }, { include_blank: "Spare (not attached)" }, class: field_classes %>
+      <p class="mt-1 text-xs text-stone-500">Leave blank if this is a spare component not attached to a computer.</p>
+    </div>
+
     <div>
       <%= f.label :component_type_id, "Type", class: "block text-sm font-medium text-stone-700" %>
       <%= f.collection_select :component_type_id, ComponentType.order(:name), :id, :name, { prompt: "Select a type" }, class: field_classes %>
     </div>
 
     <div>
-      <%= f.label :computer_id, "Computer", class: "block text-sm font-medium text-stone-700" %>
-      <%= f.collection_select :computer_id, Current.owner.computers.includes(:computer_model), :id, ->(c) { c.computer_model.name }, { include_blank: "Spare (not attached)" }, class: field_classes %>
-      <p class="mt-1 text-xs text-stone-500">Leave blank if this is a spare component not attached to a computer.</p>
-    </div>
-  </div>
-
-  <!-- Row 2: Serial Number | Order Number (new) -->
-  <div class="grid grid-cols-2 gap-4">
-    <div>
-      <%= f.label :serial_number, "Serial Number", class: "block text-sm font-medium text-stone-700" %>
-      <%= f.text_field :serial_number, maxlength: 20, class: field_classes %>
-      <p class="mt-1 text-xs text-stone-500">Maximum 20 characters.</p>
-    </div>
-
-    <div>
-      <%= f.label :order_number, "Order Number", class: "block text-sm font-medium text-stone-700" %>
-      <%= f.text_field :order_number, maxlength: 20, class: field_classes %>
-      <p class="mt-1 text-xs text-stone-500">Maximum 20 characters.</p>
-    </div>
-  </div>
-
-  <!-- Row 3: Condition (half-width, new) -->
-  <div class="grid grid-cols-2 gap-4">
-    <div>
       <%= f.label :component_condition_id, "Condition", class: "block text-sm font-medium text-stone-700" %>
       <%= f.collection_select :component_condition_id, ComponentCondition.order(:condition), :id, :condition, { include_blank: "Unknown" }, class: field_classes %>
     </div>
   </div>
 
-  <!-- Row 4: Description (existing, full-width) -->
+  <%# Row 2: Order Number | Serial Number — matches Line 2 of show view %>
+  <div class="grid grid-cols-2 gap-4">
+    <div>
+      <%= f.label :order_number, "Order Number", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.text_field :order_number, maxlength: 20, class: field_classes %>
+      <p class="mt-1 text-xs text-stone-500">Maximum 20 characters.</p>
+    </div>
+
+    <div>
+      <%= f.label :serial_number, "Serial Number", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.text_field :serial_number, maxlength: 20, class: field_classes %>
+      <p class="mt-1 text-xs text-stone-500">Maximum 20 characters.</p>
+    </div>
+  </div>
+
+  <%# Row 3: Description — full width, matches Line 3 of show view %>
   <div>
     <%= f.label :description, class: "block text-sm font-medium text-stone-700" %>
-    <%= f.text_area :description, rows: 4, class: field_classes %>
+    <%= f.text_area :description, rows: 4, style: "min-height: 4.5rem;", class: field_classes %>
   </div>
 
   <div class="flex gap-3">
@@ -56,6 +54,7 @@
     <% unless component.persisted? %>
       <%= f.submit "Create and add another", name: "add_another", class: button_classes(style: :secondary) %>
     <% end %>
-    <%= link_to "Cancel", (component.persisted? ? component_path(component) : components_path), class: button_classes(style: :secondary) %>
+    <%# "Done" instead of "Cancel" — no implication of reverting a prior action %>
+    <%= link_to "Done", (component.persisted? ? component_path(component) : components_path), class: button_classes(style: :secondary) %>
   </div>
 <% end %>

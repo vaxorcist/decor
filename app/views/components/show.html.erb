@@ -1,13 +1,11 @@
-<%# decor/app/views/components/show.html.erb - version 1.4 %>
+<%# decor/app/views/components/show.html.erb - version 1.5 %>
 <%# Step 3 of feature/component-layout-updates: %>
 <%#   - Line 1 now 3-col: Computer | Type | Condition (Condition moved from Line 2) %>
 <%#   - Line 2 now 2-col: Order Number | Serial Number %>
-<%#   - Each value rendered in a styled display box matching field_classes visual appearance: %>
-<%#     Computer/Type/Condition/OrderNumber/SerialNumber: flex items-center h-10 (single line) %>
-<%#     Description: block w-full p-3 rounded border border-stone-300 bg-white (multi-line box) %>
-<%#   - Description text starts top-left; box grows with content via min-height: 4.5rem %>
-<%#   - "Back to <owner>" replaced with Stimulus-powered smart Back button: %>
-<%#     history.back() primary; fallback URL passed as data attribute %>
+<%#   - Each value rendered in a styled display box matching field_classes visual appearance %>
+<%#   - Description: styled box, text starts top-left (ERB tag on same line — no pre-wrap indent) %>
+<%#   - Outer bg-white border wrapper removed — fields now sit directly in the container %>
+<%#   - "Back to <owner>" replaced with Stimulus-powered smart Back button %>
 
 <div class="max-w-5xl mx-auto">
   <div class="flex justify-between items-start mb-4">
@@ -23,8 +21,7 @@
     <% end %>
   </div>
 
-  <div class="bg-white border border-stone-200 rounded p-4 mb-6">
-    <dl class="space-y-4 text-sm">
+  <dl class="space-y-4 text-sm mb-6">
 
       <%# Line 1: Computer | Type | Condition %>
       <div class="grid grid-cols-3 gap-4">
@@ -78,7 +75,6 @@
       </div>
 
     </dl>
-  </div>
 
   <%# Smart Back button — Stimulus back_controller.js %>
   <%# Primary: history.back() (returns to wherever the user came from) %>
