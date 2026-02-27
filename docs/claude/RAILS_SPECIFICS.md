@@ -1,8 +1,9 @@
 # RAILS_SPECIFICS.md
-# version 1.5
+# version 1.6
 # Added: Rails-specific Pre-Implementation Verification section (moved from COMMON_BEHAVIOR.md)
 # Added: Association rename grep sweep rule (lesson from Session 7)
 # Added: VARCHAR/TEXT cross-reference note for SQLite CHECK constraint requirement
+# Added: ERB + whitespace-pre-wrap literal whitespace gotcha (lesson from Session 9)
 
 **Ruby on Rails Specific Patterns and Best Practices**
 
@@ -425,6 +426,40 @@ The same applies to `.rb`, `.js`, and all other code file types.
 
 **RULE: When a user uploads any `.erb`, `.rb`, or other non-Markdown, non-YAML file,
 ALWAYS use the `view` tool immediately — do NOT assume the content is visible.**
+
+---
+
+## ERB + whitespace-pre-wrap — Literal Whitespace Gotcha
+
+`whitespace-pre-wrap` (and CSS `white-space: pre-wrap`) renders ALL whitespace
+literally — including the newline and indentation that ERB templating adds
+between a tag and its `<%= %>` content block.
+
+**Symptom:** text appears indented from the left even though no alignment
+CSS is set. Adding `text-align: left` has no effect because the cause is
+rendered whitespace, not CSS alignment.
+
+**Wrong (indentation rendered as visible leading space):**
+```erb
+<dd class="whitespace-pre-wrap">
+  <%= record.description %>
+</dd>
+```
+
+**Correct (no whitespace between tag and content):**
+```erb
+<dd class="whitespace-pre-wrap"><%= record.description %></dd>
+```
+
+**Rule:** whenever `whitespace-pre-wrap` is used on an element whose content
+comes from an ERB tag, the `<%= %>` tag MUST be on the same line as the
+opening HTML tag — no newline, no leading spaces between them.
+
+**Real example (Session 9, February 27, 2026):**
+`components/show.html.erb` Description box — two iterations spent adding
+`text-align: left` and `vertical-align: top` inline styles with no effect.
+Root cause was the newline + indentation between `<dd>` and `<%= %>` being
+rendered literally by `whitespace-pre-wrap`. Fixed by collapsing to one line.
 
 ---
 

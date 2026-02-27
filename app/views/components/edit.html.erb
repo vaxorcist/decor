@@ -1,5 +1,21 @@
-<div class="max-w-2xl mx-auto">
+<%# decor/app/views/components/edit.html.erb - version 1.1 %>
+<%# Widened container from max-w-2xl to max-w-5xl to match components/show layout. %>
+<%# Added Stimulus smart Back button — history.back() primary; fallback to computer or owner. %>
+
+<div class="max-w-5xl mx-auto">
   <h1 class="text-2xl font-semibold mb-4">Edit Component</h1>
 
   <%= render "form", component: @component %>
+
+  <%# Smart Back button — same fallback logic as components/show.html.erb %>
+  <%# Primary: history.back() (returns to computer edit page if that's where the user came from) %>
+  <%# Fallback: computer page if component has a computer, else owner page %>
+  <% fallback_url = @component.computer ? computer_path(@component.computer) : owner_path(@component.owner) %>
+  <div class="mt-4">
+    <a href="#"
+       data-controller="back"
+       data-back-fallback-url-value="<%= fallback_url %>"
+       data-action="click->back#go"
+       class="text-sm text-stone-700 hover:text-stone-900">← Back</a>
+  </div>
 </div>

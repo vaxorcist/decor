@@ -1,7 +1,13 @@
-<%# decor/app/views/components/show.html.erb - version 1.1 %>
-<%# Added display of serial_number, order_number, and component_condition %>
+<%# decor/app/views/components/show.html.erb - version 1.5 %>
+<%# Step 3 of feature/component-layout-updates: %>
+<%#   - Line 1 now 3-col: Computer | Type | Condition (Condition moved from Line 2) %>
+<%#   - Line 2 now 2-col: Order Number | Serial Number %>
+<%#   - Each value rendered in a styled display box matching field_classes visual appearance %>
+<%#   - Description: styled box, text starts top-left (ERB tag on same line — no pre-wrap indent) %>
+<%#   - Outer bg-white border wrapper removed — fields now sit directly in the container %>
+<%#   - "Back to <owner>" replaced with Stimulus-powered smart Back button %>
 
-<div class="max-w-7xl mx-auto">
+<div class="max-w-5xl mx-auto">
   <div class="flex justify-between items-start mb-4">
     <div>
       <h1 class="text-2xl font-semibold"><%= @component.component_type.name %></h1>
@@ -15,50 +21,70 @@
     <% end %>
   </div>
 
-  <div class="bg-white border border-stone-200 rounded p-4 mb-6">
-    <dl class="space-y-3 text-sm">
-      <div>
-        <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider">Computer</dt>
-        <dd class="mt-1">
-          <% if @component.computer %>
-            <%= link_to @component.computer.computer_model.name, computer_path(@component.computer), class: "text-stone-700 hover:text-stone-900" %>
-          <% else %>
-            <span class="text-stone-400">Spare (not attached to a computer)</span>
-          <% end %>
-        </dd>
+  <dl class="space-y-4 text-sm mb-6">
+
+      <%# Line 1: Computer | Type | Condition %>
+      <div class="grid grid-cols-3 gap-4">
+        <div>
+          <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider mb-1">Computer</dt>
+          <%# Link to computer if assigned; "Spare" in muted text if not %>
+          <dd class="flex items-center w-full h-10 p-3 rounded border border-stone-300 bg-white text-sm">
+            <% if @component.computer %>
+              <%= link_to @component.computer.computer_model.name, computer_path(@component.computer), class: "text-indigo-600 hover:text-indigo-900" %>
+            <% else %>
+              <span class="text-stone-400">Spare</span>
+            <% end %>
+          </dd>
+        </div>
+        <div>
+          <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider mb-1">Type</dt>
+          <dd class="flex items-center w-full h-10 p-3 rounded border border-stone-300 bg-white text-sm text-stone-600">
+            <%= @component.component_type.name %>
+          </dd>
+        </div>
+        <div>
+          <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider mb-1">Condition</dt>
+          <dd class="flex items-center w-full h-10 p-3 rounded border border-stone-300 bg-white text-sm text-stone-600">
+            <%= @component.component_condition&.condition || "—" %>
+          </dd>
+        </div>
       </div>
 
-      <% if @component.serial_number.present? %>
+      <%# Line 2: Order Number | Serial Number %>
+      <div class="grid grid-cols-2 gap-4">
         <div>
-          <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider">Serial Number</dt>
-          <dd class="mt-1 text-stone-600"><%= @component.serial_number %></dd>
+          <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider mb-1">Order Number</dt>
+          <dd class="flex items-center w-full h-10 p-3 rounded border border-stone-300 bg-white text-sm text-stone-600">
+            <%= @component.order_number.presence || "—" %>
+          </dd>
         </div>
-      <% end %>
+        <div>
+          <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider mb-1">Serial Number</dt>
+          <dd class="flex items-center w-full h-10 p-3 rounded border border-stone-300 bg-white text-sm text-stone-600">
+            <%= @component.serial_number.presence || "—" %>
+          </dd>
+        </div>
+      </div>
 
-      <% if @component.order_number.present? %>
-        <div>
-          <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider">Order Number</dt>
-          <dd class="mt-1 text-stone-600"><%= @component.order_number %></dd>
-        </div>
-      <% end %>
+      <%# Line 3: Description — full width styled box, text starts top-left %>
+      <%# text-left overrides any inherited text-align; whitespace-pre-wrap preserves line breaks %>
+      <div>
+        <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider mb-1">Description</dt>
+        <%# ERB tag on same line as <dd> — whitespace-pre-wrap would render leading spaces/newlines literally %>
+        <dd class="block w-full p-3 rounded border border-stone-300 bg-white text-sm text-stone-600 whitespace-pre-wrap" style="min-height: 4.5rem;"><%= @component.description.presence || "—" %></dd>
+      </div>
 
-      <% if @component.component_condition %>
-        <div>
-          <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider">Condition</dt>
-          <dd class="mt-1 text-stone-600"><%= @component.component_condition.condition %></dd>
-        </div>
-      <% end %>
-
-      <% if @component.description.present? %>
-        <div>
-          <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider">Description</dt>
-          <dd class="mt-1 whitespace-pre-wrap"><%= @component.description %></dd>
-        </div>
-      <% end %>
     </dl>
-  </div>
 
+  <%# Smart Back button — Stimulus back_controller.js %>
+  <%# Primary: history.back() (returns to wherever the user came from) %>
+  <%# Fallback when history is empty: computer page if assigned, else owner page %>
+  <% fallback_url = @component.computer ? computer_path(@component.computer) : owner_path(@component.owner) %>
   <div class="mt-6">
-    <%= link_to "← Back to #{@component.owner.user_name}", @component.owner, class: "text-sm text-stone-700 hover:text-stone-900" %>
+    <a href="#"
+       data-controller="back"
+       data-back-fallback-url-value="<%= fallback_url %>"
+       data-action="click->back#go"
+       class="text-sm text-stone-700 hover:text-stone-900">← Back</a>
   </div>
 </div>

@@ -1,12 +1,13 @@
 # COMMON_BEHAVIOR.md
-# version 1.5
-# Moved Rails-specific test/implementation checklist content to RAILS_SPECIFICS.md
-# Pre-Implementation Verification now contains generic principles only
-# Rails-specific elaboration lives in RAILS_SPECIFICS.md
+# version 1.6
+# decor/docs/claude/COMMON_BEHAVIOR.md
+# Added: "After Research — Reframe Before Planning" rule under Problem-Solving Approach
+# Lesson: research findings must be allowed to challenge the original task framing,
+#         not be fitted into a pre-locked plan.
 
 **Universal Rules for All Interactions with This User**
 
-**Last Updated:** February 25, 2026 (v1.5: moved Rails-specific verification content to RAILS_SPECIFICS.md; kept generic principles here)
+**Last Updated:** February 26, 2026 (v1.6: added "After Research — Reframe Before Planning" to Problem-Solving Approach)
 
 ---
 
@@ -236,6 +237,38 @@ on the new branch when you create it.
 - ✅ Ask for more files when needed
 - ✅ Think first, code later - plan completely before implementing
 - ✅ Consider possible interdependencies
+
+### After Research — Reframe Before Planning
+
+**This rule exists because of a recurring failure pattern:** Claude completes
+research, then builds a plan that fits the *original task framing* — without
+asking whether the findings change what the right approach actually is.
+
+**The correct sequence after any research step:**
+
+1. ✅ Collect and absorb all findings
+2. ✅ Step back and ask: **"What does this tell me about the whole situation?"**
+3. ✅ Let the findings actively challenge the original framing
+4. ✅ Only then design the plan — from the findings outward, not from the
+      original framing inward
+5. ✅ If the findings suggest a simpler, broader, or different path than
+      originally framed, take that path and explain the reframe to the user
+
+**Anti-patterns to avoid:**
+- ❌ Treating research as confirmation of a pre-formed plan
+- ❌ Fitting findings into the original framing when they point elsewhere
+- ❌ Proposing a multi-step workaround when the findings reveal the problem
+      is already solved (e.g. "upgrade Rails first" when you're already on
+      the version that has the fix)
+
+**Real example (Session 8, February 26, 2026):**
+Research revealed that Rails 8.1.2 already fixes the minitest 6 incompatibility.
+The correct conclusion was: "check if we're already on 8.1.2 — if so, just merge
+the Dependabot PR." Instead, a multi-step plan was proposed (upgrade Rails, then
+merge PR) without first checking the current Rails version. The user was already
+on 8.1.2, making the Rails upgrade step unnecessary. The reframe question —
+"what does this tell me about the whole situation?" — would have surfaced this
+immediately.
 
 ### When Uncertain
 - ✅ Ask clarifying questions

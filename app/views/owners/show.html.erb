@@ -1,6 +1,10 @@
-<%# decor/app/views/owners/show.html.erb - version 1.1 %>
-<%# Updated: computer.condition → computer.computer_condition following the %>
-<%# conditions → computer_conditions table/model rename (Session 7, Feb 25, 2026). %>
+<%# decor/app/views/owners/show.html.erb - version 1.2 %>
+<%# Computers section: Model column now links to computer_path; "View" button %>
+<%# replaced by "Edit" button (owner-only) in rightmost column. %>
+<%# Components section: Type column now links to component_path; "View" button %>
+<%# replaced by "Edit" button (owner-only) in rightmost column. %>
+<%# Follows the pattern established in _computer.html.erb and _component.html.erb: %>
+<%# clickable first-column values use text-indigo-600, Edit links match. %>
 
 <div class="max-w-7xl mx-auto">
   <div class="flex justify-between items-start mb-4">
@@ -43,6 +47,7 @@
     </dl>
   </div>
 
+  <%# ---- Computers ---- %>
   <div class="mb-6">
     <div class="flex justify-between items-center mb-3">
       <h2 class="text-lg font-semibold">Computers (<%= @computers.count %>)</h2>
@@ -65,13 +70,19 @@
           </thead>
           <tbody class="bg-white divide-y divide-stone-200 text-sm">
             <% @computers.each do |computer| %>
-              <tr>
-                <td class="px-4 py-3 whitespace-nowrap font-medium text-stone-900"><%= computer.computer_model.name %></td>
+              <tr class="hover:bg-stone-50">
+                <%# Model — clickable, navigates to computer show page %>
+                <td class="px-4 py-3 whitespace-nowrap font-medium">
+                  <%= link_to computer.computer_model.name, computer_path(computer), class: "text-indigo-600 hover:text-indigo-900" %>
+                </td>
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= computer.serial_number %></td>
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= computer.computer_condition&.name || "—" %></td>
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= computer.run_status&.name || "—" %></td>
+                <%# Actions — Edit shown to owner only %>
                 <td class="px-4 py-3 whitespace-nowrap text-right">
-                  <%= link_to "View", computer_path(computer), class: "text-stone-700 hover:text-stone-900" %>
+                  <% if Current.owner == @owner %>
+                    <%= link_to "Edit", edit_computer_path(computer), class: "text-indigo-600 hover:text-indigo-900" %>
+                  <% end %>
                 </td>
               </tr>
             <% end %>
@@ -83,6 +94,7 @@
     <% end %>
   </div>
 
+  <%# ---- Components ---- %>
   <div>
     <div class="flex justify-between items-center mb-3">
       <h2 class="text-lg font-semibold">Components (<%= @components.count %>)</h2>
@@ -104,18 +116,24 @@
           </thead>
           <tbody class="bg-white divide-y divide-stone-200 text-sm">
             <% @components.each do |component| %>
-              <tr>
-                <td class="px-4 py-3 whitespace-nowrap font-medium text-stone-900"><%= component.component_type.name %></td>
+              <tr class="hover:bg-stone-50">
+                <%# Type — clickable, navigates to component show page %>
+                <td class="px-4 py-3 whitespace-nowrap font-medium">
+                  <%= link_to component.component_type.name, component_path(component), class: "text-indigo-600 hover:text-indigo-900" %>
+                </td>
                 <td class="px-4 py-3 text-stone-600"><%= truncate(component.description, length: 50) || "—" %></td>
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600">
                   <% if component.computer %>
-                    <%= link_to component.computer.computer_model.name, computer_path(component.computer), class: "text-stone-700 hover:text-stone-900" %>
+                    <%= link_to component.computer.computer_model.name, computer_path(component.computer), class: "text-indigo-600 hover:text-indigo-900" %>
                   <% else %>
                     <span class="text-stone-400">Spare</span>
                   <% end %>
                 </td>
+                <%# Actions — Edit shown to owner only %>
                 <td class="px-4 py-3 whitespace-nowrap text-right">
-                  <%= link_to "View", component_path(component), class: "text-stone-700 hover:text-stone-900" %>
+                  <% if Current.owner == @owner %>
+                    <%= link_to "Edit", edit_component_path(component), class: "text-indigo-600 hover:text-indigo-900" %>
+                  <% end %>
                 </td>
               </tr>
             <% end %>

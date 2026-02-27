@@ -1,10 +1,12 @@
-# DECOR_PROJECT.md
-# version 2.5
+# decor/docs/claude/DECOR_PROJECT.md
+# version 2.6
+# Session 8: Admin UI for component_conditions; Computer Conditions rename in UI;
+# ComputerCondition uniqueness now case-insensitive; brakeman 8.0.3 + model validations added.
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** February 25, 2026 (Session 7: component_conditions table; conditions→computer_conditions rename; type cleanup; new component fields; rule set updates)
-**Current Status:** Production-ready; session 7 changes fully committed and deployed
+**Last Updated:** February 27, 2026 (Session 8: component_conditions admin UI; UI rename; model fixes; gem updates)
+**Current Status:** Production-ready; session 8 changes fully committed and deployed
 
 ---
 
@@ -29,7 +31,7 @@
 
 ## Technology Stack
 
-**Framework:** Ruby on Rails 8.1
+**Framework:** Ruby on Rails 8.1.2
 **Ruby Version:** 3.4
 **CSS Framework:** Tailwind CSS
 **JavaScript:** Turbo/Hotwire, Stimulus
@@ -46,6 +48,7 @@
 - bcrypt
 - zxcvbn-ruby (password strength validation)
 - kamal
+- brakeman 8.0.3
 
 ---
 
@@ -88,7 +91,8 @@ decor/
 │   │   ├── home_controller.rb
 │   │   └── admin/
 │   │       ├── base_controller.rb
-│   │       ├── conditions_controller.rb    ← manages computer_conditions table
+│   │       ├── conditions_controller.rb          ← manages computer_conditions table
+│   │       ├── component_conditions_controller.rb ← new (Session 8)
 │   │       ├── component_types_controller.rb
 │   │       ├── computer_models_controller.rb
 │   │       └── run_statuses_controller.rb
@@ -99,15 +103,16 @@ decor/
 │   │   ├── owner.rb
 │   │   ├── computer.rb
 │   │   ├── component.rb
-│   │   ├── computer_condition.rb           ← renamed from condition.rb
-│   │   └── component_condition.rb          ← new (Session 7)
+│   │   ├── computer_condition.rb
+│   │   └── component_condition.rb
 │   └── views/
 │       ├── home/
 │       ├── owners/
 │       ├── computers/
 │       ├── components/
 │       └── admin/
-│           └── conditions/                 ← manages computer_conditions
+│           ├── conditions/                       ← manages computer_conditions
+│           └── component_conditions/             ← new (Session 8)
 ├── config/
 │   ├── deploy.yml
 │   ├── routes.rb
@@ -115,10 +120,13 @@ decor/
 ├── db/
 │   └── migrate/
 ├── docs/
-│   └── claude/                             ← rule set and session handover docs
+│   └── claude/                                  ← rule set and session handover docs
 └── test/
     ├── fixtures/
-    └── models/
+    └── controllers/
+        └── admin/
+            ├── conditions_controller_test.rb
+            └── component_conditions_controller_test.rb  ← new (Session 8)
 ```
 
 ---
@@ -139,7 +147,7 @@ decor/
 ### Computer
 - belongs_to owner
 - belongs_to computer_model
-- belongs_to computer_condition (optional) ← renamed from condition
+- belongs_to computer_condition (optional)
 - belongs_to run_status (optional)
 - has_many components, dependent: :nullify
 - Validations:
@@ -150,20 +158,22 @@ decor/
 - belongs_to owner
 - belongs_to computer (optional)
 - belongs_to component_type
-- belongs_to component_condition (optional) ← new (replaces old condition association)
+- belongs_to component_condition (optional)
 - Fields: description (TEXT), serial_number VARCHAR(20), order_number VARCHAR(20)
 
-### ComputerCondition (formerly Condition)
+### ComputerCondition
 - Table: computer_conditions
 - has_many computers, dependent: :restrict_with_error
+- Validations: name presence + uniqueness (case_sensitive: false)
 - Managed via admin UI at /admin/conditions
 - Examples: Completely original, Modified, Built from parts
 
-### ComponentCondition (new)
+### ComponentCondition
 - Table: component_conditions
 - Column: condition VARCHAR(40) UNIQUE NOT NULL (note: "condition", not "name")
 - has_many components, dependent: :restrict_with_error
-- Managed via admin UI (to be built in a future session)
+- Validations: condition presence + uniqueness (case_sensitive: false)
+- Managed via admin UI at /admin/component_conditions
 - Examples: Working, Defective
 
 ---
@@ -176,11 +186,14 @@ resource name was intentionally kept as `:conditions` to avoid a route rename ri
 The controller uses explicit `url:` and `scope: :condition` in its form partial to
 bridge the class name / route name mismatch.
 
+`resources :component_conditions` maps cleanly to `Admin::ComponentConditionsController`
+(class `ComponentCondition`) — no url:/scope: workaround needed, class name matches route.
+
 ---
 
-## Work Completed - Sessions 1–6
+## Work Completed - Sessions 1–7
 
-(See SESSION_HANDOVER.md v7.0 for detail on Sessions 1–6)
+(See SESSION_HANDOVER.md v8.0 for detail on Sessions 1–7)
 
 Key milestones:
 - Session 1: Index table layouts, search, serial number required
@@ -189,38 +202,55 @@ Key milestones:
 - Session 4: Password strength validation, computers/components UI improvements
 - Session 5: Embedded component sub-form on computer edit page
 - Session 6: SQLite FK enforcement enabled, gem security updates, docs/claude/ directory
+- Session 7: component_conditions table; conditions→computer_conditions rename; type cleanup
 
 ---
 
-## Work Completed - Session 7 (February 25, 2026)
+## Work Completed - Session 8 (February 27, 2026)
 
-### 1. Database Restructuring (Branch 1)
+### 1. Admin UI — Computer Conditions renamed
 
-Migration `20260225120000_component_conditions_and_type_cleanup.rb`:
-- Renamed `conditions` → `computer_conditions`
-- Created `component_conditions` table
-- Renamed `computers.condition_id` → `computers.computer_condition_id`
-- Added `components.component_condition_id`, `serial_number`, `order_number`
-- Type cleanup: 11 columns across 6 tables tightened to VARCHAR(n) + CHECK
+All user-visible labels updated from "Conditions" / "Condition" to
+"Computer Conditions" / "Computer Condition":
+- Nav link in `decor/app/views/layouts/admin.html.erb`
+- h1 headings and button labels in index/new/edit views
+- Flash messages in `Admin::ConditionsController`
+- assert_select strings in `conditions_controller_test.rb`
 
-### 2. Application-Level Changes (Branch 2)
+### 2. Admin UI — Component Conditions (new)
 
-All models, controllers, helpers, and views updated to use the new schema.
-New fields (`serial_number`, `order_number`, `component_condition`) added to
-component forms, embedded sub-form, and show page.
+Full CRUD admin interface added:
+- `decor/app/controllers/admin/component_conditions_controller.rb`
+- `decor/app/views/admin/component_conditions/` (index, new, edit, _form)
+- `decor/config/routes.rb` — added `resources :component_conditions`
+- `decor/test/controllers/admin/component_conditions_controller_test.rb`
 
-### 3. Rule Set Updates
+Destroy failure handled gracefully: redirect with `flash[:alert]` rather than
+raising `ActiveRecord::DeleteRestrictionError`.
 
-See SESSION_HANDOVER.md v8.0 for details.
+### 3. Model validations added
+
+Both condition models were missing presence/uniqueness validations:
+- `decor/app/models/computer_condition.rb` v1.2 — uniqueness: case_sensitive: false
+- `decor/app/models/component_condition.rb` v1.1 — presence + uniqueness: case_sensitive: false
+
+### 4. Gem updates
+
+- brakeman updated to 8.0.3 (CI was rejecting 8.0.2 as outdated)
+- Dependabot PRs deferred to a dedicated future session
+
+### 5. Rule set update
+
+- `decor/docs/claude/COMMON_BEHAVIOR.md` v1.6 — added "After Research: Reframe
+  Before Planning" to Problem-Solving Approach
 
 ---
 
 ## Pending — Next Session
 
-No specific items required. Candidates:
-- Admin UI for `component_conditions` table
+Candidates:
+- Dependabot PRs — dedicated session (research workflow established in Session 8)
 - Legal/Compliance: Impressum, Privacy Policy, GDPR, Cookie Consent, TOS
-- Dependabot PR #10: minitest 5.27.0 → 6.0.1
 - System tests: `decor/test/system/` still empty
 - Account deletion (GDPR), data export (GDPR)
 - Spam / Postmark DNS fix (awaiting Rob's dashboard findings)
@@ -229,7 +259,7 @@ No specific items required. Candidates:
 
 ## Current Deployment Status
 
-**Production Version:** Fully up to date through Session 7
+**Production Version:** Fully up to date through Session 8
 **Pending:** Nothing — choose next topic at start of next session
 
 ---
@@ -308,6 +338,20 @@ See RAILS_SPECIFICS.md and PROGRAMMING_GENERAL.md for rules.
 When a model class name does not match the Rails route resource name, use both
 `url:` (fixes routing) and `scope:` (fixes param naming) on `form_with`.
 Example: `ComputerCondition` model on `resources :conditions` route.
+`ComponentCondition` on `resources :component_conditions` has no mismatch — no
+workaround needed.
+
+### restrict_with_error — Destroy Failure Handling
+`dependent: :restrict_with_error` causes `destroy` to return false (not raise)
+when dependent records exist. Always check the return value and redirect with
+`flash[:alert]` using `errors.full_messages.to_sentence`. Do NOT let it bubble
+up as an unhandled `ActiveRecord::DeleteRestrictionError`.
+
+### Missing Model Validations Cause Raw DB Exceptions
+Without presence/uniqueness validations on the model, blank or duplicate values
+reach the DB and raise `SQLite3::ConstraintException` instead of producing clean
+validation errors. Always add model-level validations alongside DB constraints
+(defense-in-depth). See PROGRAMMING_GENERAL.md — Defense-in-Depth Approach.
 
 ### Squash Merge Git Divergence
 Use `gh pr merge --merge` (not `--squash`).
@@ -336,9 +380,8 @@ When a component is created/updated/deleted from the computer edit page,
 - Impressum (German law), Privacy Policy (GDPR), Cookie Consent, Terms of Service
 
 ### Technical Improvements (Optional)
-- Admin UI for component_conditions table
+- Dependabot PRs — dedicated session
 - System tests: `decor/test/system/` still empty
-- Dependabot PR #10: minitest 5.27.0 → 6.0.1
 - Account deletion (GDPR), data export (GDPR)
 - Spam / Postmark DNS fix (awaiting Rob's dashboard findings)
 - Image upload (if added: AWS Rekognition for moderation)
