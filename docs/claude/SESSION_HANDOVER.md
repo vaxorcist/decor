@@ -1,130 +1,96 @@
-# SESSION_HANDOVER.md
-# version 8.0
+# decor/docs/claude/SESSION_HANDOVER.md
+# version 9.0
 
-**Date:** February 25, 2026
-**Session Duration:** ~5 hours
-**Branch:** main (all session 7 work committed and deployed)
+**Date:** February 27, 2026
+**Session Duration:** ~3 hours
+**Branch:** main (all session 8 work committed and deployed)
 **Status:** ✅ Production up to date — next session starts fresh
 
 ---
 
 ## Session Summary
 
-Two migration branches completed and deployed. First branch: large database
-restructuring (table rename, new table, column renames, type cleanup across
-6 tables). Second branch: all application-level changes to use the new schema
-(models, controllers, views, helpers, filters). Rule set updated with lessons
-learned.
+Session 8 focused on system maintenance and a new admin UI feature. A new
+behavioral rule was added to the rule set. All work committed, CI passed,
+and deployed to production.
 
 ---
 
 ## Work Completed This Session
 
-### Branch 1 — Database restructuring
+### 1. Rule Set Update — COMMON_BEHAVIOR.md v1.6
 
-**Migration:** `decor/db/migrate/20260225120000_component_conditions_and_type_cleanup.rb`
+Added "After Research — Reframe Before Planning" to Problem-Solving Approach.
 
-Operations performed (in one atomic migration using `disable_ddl_transaction!`):
-1. Renamed `conditions` table → `computer_conditions`
-2. Created new `component_conditions` table (column: `condition VARCHAR(40) UNIQUE NOT NULL`)
-3. Recreated `computers`: renamed `condition_id` → `computer_condition_id` (FK now → `computer_conditions`); `order_number TEXT` → `VARCHAR(20) + CHECK`; `serial_number VARCHAR` → `VARCHAR(20) + CHECK`
-4. Recreated `components`: dropped `condition_id`; added `component_condition_id` FK → `component_conditions` (optional); added `serial_number VARCHAR(20) + CHECK`; added `order_number VARCHAR(20) + CHECK`
-5. Recreated `component_types`: `name VARCHAR` → `VARCHAR(40) + CHECK`
-6. Recreated `computer_models`: `name VARCHAR` → `VARCHAR(40) + CHECK`
-7. Recreated `owners`: `user_name` → `VARCHAR(15)`; `real_name` → `VARCHAR(40)`; `*_visibility` → `VARCHAR(20)`; all + CHECK
-8. Recreated `run_statuses`: `name VARCHAR` → `VARCHAR(40) + CHECK`
+**Lesson:** During minitest 6 research, the finding that Rails 8.1.2 was already
+installed should have restructured the entire plan immediately. Instead it was
+treated as a conditional detail inside a plan built around the original framing.
+Rule added to prevent recurrence.
 
-**New/renamed model files:**
+### 2. Maintenance — Gem Updates
 
-    decor/app/models/computer_condition.rb   (NEW — replaces condition.rb; delete condition.rb)
-    decor/app/models/component_condition.rb  (NEW)
-    decor/app/models/computer.rb             (v1.3 — belongs_to :computer_condition)
-    decor/app/models/component.rb            (v1.2 — belongs_to :component_condition)
+- brakeman updated 8.0.2 → 8.0.3 (CI rejected 8.0.2 as outdated)
+- Dependabot PR #10 (minitest 6.0.1): already merged by partner; remaining
+  Dependabot PRs deferred to a dedicated future session
+- Rails already on 8.1.2 (fixes minitest 6 incompatibility)
 
-**New/renamed fixture files:**
+### 3. Admin UI — Computer Conditions (renamed)
 
-    decor/test/fixtures/computer_conditions.yml   (NEW — replaces conditions.yml; delete conditions.yml)
-    decor/test/fixtures/component_conditions.yml  (NEW — two entries: working, defective)
-    decor/test/fixtures/computers.yml             (v1.3 — condition: → computer_condition:)
+User-visible labels updated from "Conditions" to "Computer Conditions" across:
 
-**Updated test files:**
+    decor/app/views/layouts/admin.html.erb                       (v1.1)
+    decor/app/views/admin/conditions/index.html.erb              (v1.1)
+    decor/app/views/admin/conditions/new.html.erb                (v1.1)
+    decor/app/views/admin/conditions/edit.html.erb               (v1.1)
+    decor/app/controllers/admin/conditions_controller.rb         (v1.2)
+    decor/test/controllers/admin/conditions_controller_test.rb   (v1.3)
 
-    decor/test/models/computer_condition_test.rb              (NEW — replaces condition_test.rb; delete condition_test.rb)
-    decor/test/models/computer_test.rb                        (v1.2)
-    decor/test/controllers/admin/conditions_controller_test.rb (v1.2)
+### 4. Admin UI — Component Conditions (new)
 
-**Updated controller and view:**
+Full CRUD admin interface for the component_conditions lookup table:
 
-    decor/app/controllers/admin/conditions_controller.rb      (v1.1 — Condition → ComputerCondition)
-    decor/app/views/admin/conditions/_form.html.erb           (v1.1 — explicit url: + scope: :condition)
+    decor/config/routes.rb                                                   (v1.1)
+    decor/app/controllers/admin/component_conditions_controller.rb           (v1.0)
+    decor/app/views/admin/component_conditions/index.html.erb                (v1.0)
+    decor/app/views/admin/component_conditions/new.html.erb                  (v1.0)
+    decor/app/views/admin/component_conditions/edit.html.erb                 (v1.0)
+    decor/app/views/admin/component_conditions/_form.html.erb                (v1.0)
+    decor/test/controllers/admin/component_conditions_controller_test.rb     (v1.0)
 
-### Branch 2 — Application-level changes
+### 5. Model Validations Fixed
 
-**Controllers:**
+Both condition models were missing presence/uniqueness validations, causing
+raw SQLite3::ConstraintException instead of clean validation errors:
 
-    decor/app/controllers/computers_controller.rb   (v1.5 — condition_id → computer_condition_id throughout)
-    decor/app/controllers/components_controller.rb  (v1.3 — added serial_number, order_number, component_condition_id to strong params)
-
-**Helpers:**
-
-    decor/app/helpers/computers_helper.rb           (v1.1 — Condition → ComputerCondition; params[:condition_id] → params[:computer_condition_id])
-
-**Views:**
-
-    decor/app/views/computers/_form.html.erb                    (v1.8 — condition_id → computer_condition_id; new columns in component list)
-    decor/app/views/computers/_filters.html.erb                 (v1.1 — condition_id → computer_condition_id)
-    decor/app/views/computers/_computer_component_form.html.erb (v1.2 — added serial_number, order_number, component_condition_id fields)
-    decor/app/views/computers/_computer.html.erb                (v1.6 — computer.condition → computer.computer_condition)
-    decor/app/views/computers/show.html.erb                     (fixed by user — computer.condition → computer.computer_condition)
-    decor/app/views/components/_form.html.erb                   (v1.1 — added serial_number, order_number, component_condition_id fields)
-    decor/app/views/components/show.html.erb                    (v1.1 — display new fields)
-    decor/app/views/owners/show.html.erb                        (v1.1 — computer.condition → computer.computer_condition)
-
-### Rule Set Updates This Session
-
-**COMMON_BEHAVIOR.md v1.4 → v1.5:**
-- Pre-Implementation Verification: stripped Rails-specific checklist to generic principles
-- Rails elaboration moved to RAILS_SPECIFICS.md
-- "For Implementing Features" generic version retained; Rails detail in RAILS_SPECIFICS.md
-
-**PROGRAMMING_GENERAL.md v1.5 → v1.6:**
-- Testing Commands: `bin/rails test` → `[full test suite command]` (non-Rails projects exist)
-- Added: Database Column Types section — always VARCHAR(n); TEXT requires explicit approval
-
-**RAILS_SPECIFICS.md v1.4 → v1.5:**
-- Added: Rails-specific Pre-Implementation Verification section (moved from COMMON_BEHAVIOR.md)
-- Added: Association Rename Grep Sweep — mandatory grep before writing any files on a rename
-- Added: SQLite VARCHAR/TEXT cross-reference note
+    decor/app/models/computer_condition.rb   (v1.2 — uniqueness: case_sensitive: false)
+    decor/app/models/component_condition.rb  (v1.1 — presence + uniqueness: case_sensitive: false)
 
 ---
 
 ## Lessons Learned This Session
 
-### Grep sweep mandatory before association renames
+### Always verify model validations exist alongside DB constraints
 
-When renaming `Condition` → `ComputerCondition`, did not sweep all views for
-`.condition` before starting. Result: 3 separate runtime errors in views, each
-requiring a separate upload-fix-test cycle. One `grep -rn "\.condition" decor/app/`
-at the start would have found all occurrences. Rule documented in RAILS_SPECIFICS.md.
+When creating a new controller + test suite, the test for duplicate/blank
+submissions failed with raw DB exceptions because the model had no validates
+lines. The DB UNIQUE NOT NULL constraint was there, but without model-level
+validation, Rails never caught the error cleanly. Rule already exists in
+PROGRAMMING_GENERAL.md (Defense-in-Depth) — but the pre-implementation
+checklist should explicitly include "check model validations" when writing
+controller tests.
 
-### Ask for all test files upfront on renames
+### restrict_with_error returns false, not raises
 
-`condition_test.rb` and `conditions_controller_test.rb` were not known to exist
-until the test suite failed with 24 errors. Should always ask "Are there test
-files for this model/controller?" before starting any rename or refactor.
+`dependent: :restrict_with_error` causes `model.destroy` to return false and
+populate `model.errors` — it does NOT raise an exception. The controller must
+check the return value and redirect with flash[:alert]. Documented in
+DECOR_PROJECT.md — Known Issues & Solutions.
 
-### form_with model: vs url: + scope:
+### CI brakeman version pin
 
-When a model class name no longer matches the route resource name (e.g. `ComputerCondition`
-on a `resources :conditions` route), two explicit overrides are needed:
-- `url:` — fixes route resolution (class name → route inference is broken)
-- `scope:` — fixes param naming (`computer_condition[name]` vs `condition[name]`)
-
-### PRAGMA foreign_keys requires disable_ddl_transaction!
-
-`PRAGMA foreign_keys = OFF/ON` is silently ignored inside a transaction. Rails
-wraps migrations in transactions by default. Must use `disable_ddl_transaction!`
-in any migration that needs to suspend FK enforcement for table recreation.
+GitHub CI rejects brakeman if it is not the latest released version. When CI
+fails with a brakeman exit code 5 referencing "not the latest version", the fix
+is `bundle update brakeman` locally, verify clean, then amend + force-push.
 
 ---
 
@@ -132,34 +98,29 @@ in any migration that needs to suspend FK enforcement for table recreation.
 
 **Branch:** main
 **All PRs merged:** Yes
-**Last deployed:** Session 7 complete (both branches)
+**Last deployed:** Session 8 complete
 
 ---
 
 ## Next Session — No Specific Items Planned
 
-The component changes and database type cleanup from the original plan are
-fully complete. Candidates for the next session (from Future Considerations):
+Candidates (in rough priority order):
 
-- Admin UI for `component_conditions` table (now that the migration is done)
-- Legal/Compliance: Impressum, Privacy Policy, GDPR, Cookie Consent, TOS
-- Dependabot PR #10: minitest 5.27.0 → 6.0.1
-- System tests: `decor/test/system/` still empty
-- Account deletion (GDPR), data export (GDPR)
-- Spam / Postmark DNS fix (awaiting Rob's dashboard findings)
+1. Dependabot PRs — dedicated session (workflow and research established Session 8)
+2. Legal/Compliance: Impressum, Privacy Policy, GDPR, Cookie Consent, TOS
+3. System tests: decor/test/system/ still empty
+4. Account deletion + data export (GDPR)
+5. Spam / Postmark DNS fix (awaiting Rob's dashboard findings)
 
-No mandatory files to provide at start of next session — depends on which
-topic is chosen.
+No mandatory files to provide at start of next session — depends on topic chosen.
 
 ---
 
 ## Documents Updated This Session
 
-    decor/docs/claude/COMMON_BEHAVIOR.md       v1.5
-    decor/docs/claude/PROGRAMMING_GENERAL.md   v1.6
-    decor/docs/claude/RAILS_SPECIFICS.md       v1.5
-    decor/docs/claude/DECOR_PROJECT.md         v2.5
-    decor/docs/claude/SESSION_HANDOVER.md      v8.0
+    decor/docs/claude/COMMON_BEHAVIOR.md       v1.6
+    decor/docs/claude/DECOR_PROJECT.md         v2.6
+    decor/docs/claude/SESSION_HANDOVER.md      v9.0
 
 ---
 
