@@ -1,10 +1,8 @@
-<%# decor/app/views/owners/show.html.erb - version 1.2 %>
-<%# Computers section: Model column now links to computer_path; "View" button %>
-<%# replaced by "Edit" button (owner-only) in rightmost column. %>
-<%# Components section: Type column now links to component_path; "View" button %>
-<%# replaced by "Edit" button (owner-only) in rightmost column. %>
-<%# Follows the pattern established in _computer.html.erb and _component.html.erb: %>
-<%# clickable first-column values use text-indigo-600, Edit links match. %>
+<%# decor/app/views/owners/show.html.erb - version 1.3 %>
+<%# Added: "Export / Import" button in the top-right button group, shown only to %>
+<%#         the current owner (same visibility guard as "Edit Profile" and "Logout"). %>
+<%# Previous changes (v1.2): Model column links to computer_path; Type column links %>
+<%#   to component_path; "View" replaced by owner-only "Edit" in rightmost column. %>
 
 <div class="max-w-7xl mx-auto">
   <div class="flex justify-between items-start mb-4">
@@ -17,6 +15,10 @@
     <div class="flex items-center gap-2">
       <% if Current.owner == @owner || admin? %>
         <%= link_to "Edit Profile", edit_owner_path(@owner), class: button_classes(style: :secondary) %>
+      <% end %>
+      <%# Export / Import — only the owner needs access to their own data transfer page %>
+      <% if Current.owner == @owner %>
+        <%= link_to "Export / Import", data_transfer_path, class: button_classes(style: :secondary) %>
       <% end %>
       <% if Current.owner == @owner %>
         <%= button_to "Logout", session_path, method: :delete, class: button_classes(style: :secondary) %>

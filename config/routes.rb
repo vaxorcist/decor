@@ -1,6 +1,6 @@
 # decor/config/routes.rb
-# version 1.1
-# Added: resources :component_conditions in admin namespace
+# version 1.2
+# Added: data_transfer routes for owner export/import feature
 
 Rails.application.routes.draw do
   default_url_options(host: Decor::Routes.host, protocol: Decor::Routes.protocol)
@@ -10,6 +10,13 @@ Rails.application.routes.draw do
   resources :owners
   resources :computers
   resources :components
+
+  # Owner data export / import — always scoped to Current.owner (no id in URL).
+  # Three named routes rather than a resource block because export is a GET that
+  # streams a file download, which does not map neatly to a standard REST verb.
+  get  "data_transfer",        to: "data_transfers#show",   as: :data_transfer
+  get  "data_transfer/export", to: "data_transfers#export",  as: :export_data_transfer
+  post "data_transfer/import", to: "data_transfers#import",  as: :import_data_transfer
 
   resource :session, only: %i[new create destroy]
   resources :password_resets, only: %i[new create edit update], param: :token

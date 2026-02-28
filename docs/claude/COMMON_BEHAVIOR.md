@@ -1,7 +1,9 @@
 # COMMON_BEHAVIOR.md
-# version 1.7
+# version 1.8
 # decor/docs/claude/COMMON_BEHAVIOR.md
 # Changed: Token Usage Reporting section rewritten.
+# Added (Session 10): Download file naming rule — directory prefix only when needed to
+#   distinguish same-named files; "#" as separator instead of "_".
 # Lesson (Session 10): Pre-warning estimates are fundamentally unreliable.
 #   Claude cannot see the system prompt, tool definitions, or API overhead —
 #   all of which form a large fixed base cost invisible to Claude's counting.
@@ -11,7 +13,7 @@
 
 **Universal Rules for All Interactions with This User**
 
-**Last Updated:** February 27, 2026 (v1.7: Token Usage Reporting rewritten — pre-warning estimates are unreliable)
+**Last Updated:** February 28, 2026 (v1.8: download file naming rule added)
 
 ---
 
@@ -29,6 +31,25 @@
 **Why this matters:**
 The user needs to place files directly into the project. A download link is faster,
 safer, and less error-prone than manual copy/paste from a code block.
+
+### Download File Naming
+
+- ✅ Use the bare filename as the download name (e.g. `show.html.erb`, `routes.rb`)
+- ✅ Prefix with the immediate parent directory **only** when two or more files
+  in the same response share the same filename (e.g. two `show.html.erb` files)
+- ✅ Use `#` as the separator between directory and filename
+  (e.g. `data_transfers#show.html.erb`, `owners#show.html.erb`)
+- ❌ Do NOT add a directory prefix when the filename is already unique in the response
+- ❌ Do NOT use `_` as the separator (indistinguishable from underscores in the filename)
+
+**Examples:**
+
+Single `show.html.erb` in the response → download name: `show.html.erb`
+
+Two `show.html.erb` files in the same response → download names:
+  `data_transfers#show.html.erb` and `owners#show.html.erb`
+
+`routes.rb` is always unique → download name: `routes.rb` (no prefix needed)
 
 ---
 
