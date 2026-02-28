@@ -1,51 +1,131 @@
-<%# decor/app/views/components/_form.html.erb - version 1.3 %>
-<%# Restructured field order to match components/show.html.erb layout: %>
-<%#   Row 1 (3-col): Computer | Type | Condition %>
-<%#   Row 2 (2-col): Order Number | Serial Number %>
+<%# decor/app/views/components/_form.html.erb - version 1.5 %>
+<%# Session 10 (rev 2): Computer Model dropdown shows full detail while browsing; %>
+<%#   collapses to model name only once a computer is selected (order/serial are %>
+<%#   already visible in the dedicated read-only fields). %>
+<%# %>
+<%#   Row 1 (3-col): Computer Model (select) | Computer Order Number (read-only) | Computer Serial Number (read-only) %>
+<%#   Row 2 (4-col): Component Type | Component Order Number | Component Serial Number | Component Condition %>
 <%#   Row 3 (full):  Description %>
-<%# "Cancel" → "Done" per project button label conventions (no implication of reverting). %>
-<%# Added min-height: 4.5rem to description textarea to match show view. %>
+<%# %>
+<%# Auto-fill + display-collapse mechanism: %>
+<%#   - owner_computers captured once (one query). %>
+<%#   - Each <option> carries data-model-name (short label) so the Stimulus controller %>
+<%#     can collapse to model name after selection without needing a separate lookup. %>
+<%#   - A JSON map { id => { order_number, serial_number } } is embedded as the %>
+<%#     Stimulus "computers" value; the controller writes into the two read-only inputs. %>
+<%#   - f.select (not collection_select) is used here because collection_select does not %>
+<%#     support per-option HTML data attributes. %>
+<%#   - The read-only inputs have no name attribute — they must not be submitted. %>
+
+<%# Capture owner's computers once — used for the dropdown options and the JSON map. %>
+<% owner_computers = Current.owner.computers.includes(:computer_model).to_a %>
+
+<%# Build option array for f.select: [display_label, value, html_option_attributes] %>
+<%# The full label (shown while browsing) is "Model  /  Order  /  Serial". %>
+<%# data-model-name carries just the model name for the post-selection collapsed display. %>
+<% computer_options = owner_computers.map { |c|
+     full_label = [
+       c.computer_model.name,
+       c.order_number.presence  || "—",
+       c.serial_number.presence || "—"
+     ].join("  /  ")
+     [full_label, c.id, { data: { model_name: c.computer_model.name } }]
+   } %>
+
+<%# JSON map for auto-filling the read-only display fields. %>
+<% computers_json = owner_computers.each_with_object({}) { |c, h|
+     h[c.id.to_s] = {
+       order_number:  c.order_number.to_s,
+       serial_number: c.serial_number.to_s
+     }
+   }.to_json %>
 
 <%= form_with model: component, class: "space-y-4" do |f| %>
   <%= render "common/record_errors", record: component %>
 
-  <%# Row 1: Computer | Type | Condition — matches Line 1 of show view %>
-  <div class="grid grid-cols-3 gap-4">
+  <%# ─── Row 1: Computer Model | Computer Order Number | Computer Serial Number ─── %>
+  <%# %>
+  <%# Stimulus controller wraps all three columns so it can reach all three targets. %>
+  <%# data-computer-select-computers-value carries the JSON map for order/serial lookup. %>
+  <div class="grid grid-cols-3 gap-4"
+       data-controller="computer-select"
+       data-computer-select-computers-value="<%= computers_json %>">
+
+    <%# Computer Model: f.select (not collection_select) so options can carry %>
+    <%# data-model-name for the post-selection collapsed display. %>
+    <%# Three data-action events wired: change (pick), focus (open), blur (close). %>
     <div>
-      <%= f.label :computer_id, "Computer", class: "block text-sm font-medium text-stone-700" %>
-      <%= f.collection_select :computer_id, Current.owner.computers.includes(:computer_model), :id, ->(c) { c.computer_model.name }, { include_blank: "Spare (not attached)" }, class: field_classes %>
+      <%= f.label :computer_id, "Computer Model", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.select :computer_id,
+            computer_options,
+            { include_blank: "Spare (not attached to a computer)" },
+            class: field_classes,
+            data: {
+              "computer-select-target": "computerSelect",
+              action: [
+                "change->computer-select#change",
+                "focus->computer-select#openDropdown",
+                "blur->computer-select#closeDropdown"
+              ].join(" ")
+            } %>
       <p class="mt-1 text-xs text-stone-500">Leave blank if this is a spare component not attached to a computer.</p>
     </div>
 
+    <%# Computer Order Number — read-only, auto-filled by Stimulus. %>
+    <%# No name attribute: must not be submitted (value belongs to the Computer record). %>
+    <%# Styled bg-stone-50 / text-stone-400 / cursor-not-allowed to signal non-editability. %>
     <div>
-      <%= f.label :component_type_id, "Type", class: "block text-sm font-medium text-stone-700" %>
+      <label class="block text-sm font-medium text-stone-700">Computer Order Number</label>
+      <input type="text"
+             readonly
+             tabindex="-1"
+             placeholder="—"
+             data-computer-select-target="orderNumber"
+             class="w-full h-10 p-3 rounded border border-stone-300 bg-stone-50 text-sm text-stone-400 cursor-not-allowed">
+      <p class="mt-1 text-xs text-stone-500">Auto-filled from the selected computer.</p>
+    </div>
+
+    <%# Computer Serial Number — read-only, auto-filled by Stimulus. Same as above. %>
+    <div>
+      <label class="block text-sm font-medium text-stone-700">Computer Serial Number</label>
+      <input type="text"
+             readonly
+             tabindex="-1"
+             placeholder="—"
+             data-computer-select-target="serialNumber"
+             class="w-full h-10 p-3 rounded border border-stone-300 bg-stone-50 text-sm text-stone-400 cursor-not-allowed">
+      <p class="mt-1 text-xs text-stone-500">Auto-filled from the selected computer.</p>
+    </div>
+  </div>
+
+  <%# ─── Row 2: Component Type | Component Order Number | Component Serial Number | Condition ─── %>
+  <div class="grid grid-cols-4 gap-4">
+    <div>
+      <%= f.label :component_type_id, "Component Type", class: "block text-sm font-medium text-stone-700" %>
       <%= f.collection_select :component_type_id, ComponentType.order(:name), :id, :name, { prompt: "Select a type" }, class: field_classes %>
     </div>
 
     <div>
-      <%= f.label :component_condition_id, "Condition", class: "block text-sm font-medium text-stone-700" %>
-      <%= f.collection_select :component_condition_id, ComponentCondition.order(:condition), :id, :condition, { include_blank: "Unknown" }, class: field_classes %>
-    </div>
-  </div>
-
-  <%# Row 2: Order Number | Serial Number — matches Line 2 of show view %>
-  <div class="grid grid-cols-2 gap-4">
-    <div>
-      <%= f.label :order_number, "Order Number", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.label :order_number, "Component Order Number", class: "block text-sm font-medium text-stone-700" %>
       <%= f.text_field :order_number, maxlength: 20, class: field_classes %>
       <p class="mt-1 text-xs text-stone-500">Maximum 20 characters.</p>
     </div>
 
     <div>
-      <%= f.label :serial_number, "Serial Number", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.label :serial_number, "Component Serial Number", class: "block text-sm font-medium text-stone-700" %>
       <%= f.text_field :serial_number, maxlength: 20, class: field_classes %>
       <p class="mt-1 text-xs text-stone-500">Maximum 20 characters.</p>
     </div>
+
+    <div>
+      <%= f.label :component_condition_id, "Component Condition", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.collection_select :component_condition_id, ComponentCondition.order(:condition), :id, :condition, { include_blank: "Unknown" }, class: field_classes %>
+    </div>
   </div>
 
-  <%# Row 3: Description — full width, matches Line 3 of show view %>
+  <%# ─── Row 3: Description — full width ─── %>
   <div>
-    <%= f.label :description, class: "block text-sm font-medium text-stone-700" %>
+    <%= f.label :description, "Component Description", class: "block text-sm font-medium text-stone-700" %>
     <%= f.text_area :description, rows: 4, style: "min-height: 4.5rem;", class: field_classes %>
   </div>
 
@@ -54,7 +134,7 @@
     <% unless component.persisted? %>
       <%= f.submit "Create and add another", name: "add_another", class: button_classes(style: :secondary) %>
     <% end %>
-    <%# "Done" instead of "Cancel" — no implication of reverting a prior action %>
+    <%# "Done" instead of "Cancel" — no implication of reverting a prior action. %>
     <%= link_to "Done", (component.persisted? ? component_path(component) : components_path), class: button_classes(style: :secondary) %>
   </div>
 <% end %>
