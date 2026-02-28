@@ -1,13 +1,17 @@
 # COMMON_BEHAVIOR.md
-# version 1.6
+# version 1.7
 # decor/docs/claude/COMMON_BEHAVIOR.md
-# Added: "After Research — Reframe Before Planning" rule under Problem-Solving Approach
-# Lesson: research findings must be allowed to challenge the original task framing,
-#         not be fitted into a pre-locked plan.
+# Changed: Token Usage Reporting section rewritten.
+# Lesson (Session 10): Pre-warning estimates are fundamentally unreliable.
+#   Claude cannot see the system prompt, tool definitions, or API overhead —
+#   all of which form a large fixed base cost invisible to Claude's counting.
+#   In Session 10, Claude estimated ~50% when the UI showed 90%. The estimation
+#   rule is now: treat pre-warning estimates as directional only, never reassuring,
+#   and always tell the user to trust their UI over Claude's estimate.
 
 **Universal Rules for All Interactions with This User**
 
-**Last Updated:** February 26, 2026 (v1.6: added "After Research — Reframe Before Planning" to Problem-Solving Approach)
+**Last Updated:** February 27, 2026 (v1.7: Token Usage Reporting rewritten — pre-warning estimates are unreliable)
 
 ---
 
@@ -36,42 +40,62 @@ safer, and less error-prone than manual copy/paste from a code block.
 - Format: `================================================================================`
 
 ### Token Usage Reporting
-- ✅ Report token usage ACCURATELY from system warnings at the END of every response
-- ✅ Use exact numbers from `<system_warning>Token usage: X/Y; Z remaining</system_warning>`
-- ✅ Format: `**Token Usage:** X / Y (Z% used, ~W remaining)` where Z = (X/Y)*100
-- ✅ If user reports different percentage, TRUST their UI - it includes overhead you don't see
-- ✅ Never give false reassurance about remaining capacity
-- ❌ Don't do manual calculations that contradict system warnings
-- ❌ Don't underreport usage - this causes poor planning
 
-**When no system warning is visible (e.g. start of session, new conversation):**
-- ✅ Provide a ROUGH ESTIMATE based on conversation size and uploaded documents
-- ✅ Label it explicitly as an estimate: `**Token Usage (estimate):** ~X / 200,000 (~Y% used)`
-- ✅ Mention it is approximate, not from a system warning
-- ✅ Err on the HIGH side rather than falsely reassuring
-- ❌ Do NOT stay silent just because no system warning is visible
-- ❌ Do NOT report 0% or "unknown" - make a reasoned estimate
+**Ground truth:** the UI is ALWAYS the authoritative source. Claude's estimates
+are supplementary and must NEVER be used to reassure the user that capacity remains.
 
-**Why estimation matters:**
-The UI only warns the user at ~90% usage - far too late for planning. Early
-rough estimates help the user decide whether to start a new session, even
-if those estimates are imprecise.
+**Why Claude's estimates are structurally unreliable:**
+Claude cannot see or measure:
+- The system prompt (Anthropic's own instructions — likely tens of thousands of tokens)
+- Tool definitions (present_files, bash_tool etc. schemas sent every request)
+- API and conversation structure overhead
+- How uploaded files actually tokenize on the server side
 
-**Rough estimation guide:**
-- Each large uploaded document (~500 lines): ~3,000-5,000 tokens
-- Each response of ~500 words: ~700 tokens
-- Each code block of ~50 lines: ~500 tokens
+This invisible fixed base cost means Claude's naive count of visible content
+will always be a significant undercount. In Session 10 (February 27, 2026),
+Claude estimated ~50% when the UI showed 90% — a gap large enough to cause
+poor planning decisions.
+
+**Rules:**
+
+✅ When a system warning IS visible:
+- Use the EXACT numbers from `<system_warning>Token usage: X/Y; Z remaining</system_warning>`
+- Format: `**Token Usage:** X / Y (Z% used, ~W remaining)`
+- Never contradict or adjust a system warning with a manual calculation
+- Once a system warning appears, anchor all further estimates to it
+
+✅ When NO system warning is visible:
+- Provide an estimate, but label it explicitly as rough and likely an undercount
+- Apply a correction factor: multiply naive visible-content estimate by ~2
+- Format: `**Token Usage (estimate):** ~X / 200,000 (~Y% used) — rough estimate only; likely an undercount; trust your UI`
+- Err HIGH rather than falsely reassuring
+- Remind the user that the UI is the only reliable source
+
+❌ NEVER:
+- Stay silent just because no system warning is visible
+- Report 0% or "unknown"
+- Suggest remaining capacity is comfortable based on an estimate alone
+- Use estimates to reassure the user that there is plenty of room left
+
+**Rough estimation guide (apply ×2 correction factor to the sum):**
+- Each large uploaded document (~500 lines): ~5,000–8,000 tokens (before ×2)
+- Each response of ~500 words: ~700 tokens (before ×2)
+- Each code block of ~50 lines: ~500 tokens (before ×2)
 - Context window: ~200,000 tokens for claude.ai
 
 **Example:**
 ```
-System Warning: Token usage: 93143/190000; 96857 remaining
-Correct Report: **Token Usage:** ~93,000 / 190,000 (49% used, ~97,000 remaining)
-WRONG Report: **Token Usage:** ~18,600 / 190,000 (9.8% used) ← Completely false
+System warning present:
+  Warning text:  Token usage: 93143/190000; 96857 remaining
+  Correct report: **Token Usage:** ~93,000 / 190,000 (49% used, ~97,000 remaining)
+  WRONG:          **Token Usage:** ~18,600 / 190,000 (9.8% used) ← contradicts warning
 
-No system warning visible:
-Correct: **Token Usage (estimate):** ~35,000 / 200,000 (~18% used) — rough estimate only
-WRONG: [silent / omitted]
+No system warning:
+  Correct: **Token Usage (estimate):** ~70,000 / 200,000 (~35% used) — rough estimate
+           only; likely an undercount; trust your UI over this number
+  WRONG:   [silent / omitted]
+  WRONG:   **Token Usage (estimate):** ~35,000 / 200,000 (~18% used) ← too low,
+           gives false reassurance
 ```
 
 ---
