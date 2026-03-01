@@ -1,13 +1,17 @@
 # decor/docs/claude/DECOR_PROJECT.md
-# version 2.7
-# Session 9: components/show redesign (Step 3); back_controller.js; components/edit+form
-# aligned with show layout; RAILS_SPECIFICS whitespace-pre-wrap rule added.
+# version 2.9
+# Session 10: DataTransfersController, OwnerExportService, OwnerImportService,
+#   data transfer tests, rule doc updates (COMMON_BEHAVIOR v1.8, PROGRAMMING_GENERAL v1.7).
+# Session 11: owners/show ordering + new columns + delete buttons;
+#   source=owner redirect in computers + components destroy actions;
+#   owners_controller_test v1.3 (12 new show tests); RAILS_SPECIFICS v1.8 (Arel.sql rule);
+#   computers_controller_test + components_controller_test created (Session 12).
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** February 27, 2026 (Session 9: component layout branch completed;
-Stimulus Back controller added; computers/show redesign pending)
-**Current Status:** Production-ready; session 9 changes fully committed and deployed
+**Last Updated:** March 1, 2026 (Session 12: DECOR_PROJECT.md brought up to date
+through Sessions 10 and 11; destroy-redirect tests finalised)
+**Current Status:** Production-ready; all Session 11 work committed and deployed
 
 ---
 
@@ -86,9 +90,10 @@ TEST_PASSWORD_VALID = "ValidTest2026!".freeze    # Generic valid
 decor/
 ├── app/
 │   ├── controllers/
-│   │   ├── computers_controller.rb
-│   │   ├── components_controller.rb
-│   │   ├── owners_controller.rb
+│   │   ├── computers_controller.rb          v1.6
+│   │   ├── components_controller.rb         v1.4
+│   │   ├── owners_controller.rb             v1.4
+│   │   ├── data_transfers_controller.rb     v1.0  ← Session 10
 │   │   ├── home_controller.rb
 │   │   └── admin/
 │   │       ├── base_controller.rb
@@ -99,21 +104,25 @@ decor/
 │   │       └── run_statuses_controller.rb
 │   ├── helpers/
 │   │   ├── application_helper.rb
-│   │   ├── style_helper.rb                      ← field_classes, button_classes
+│   │   ├── style_helper.rb                  ← field_classes, button_classes
 │   │   ├── computers_helper.rb
 │   │   └── components_helper.rb
 │   ├── javascript/
 │   │   └── controllers/
-│   │       └── back_controller.js               ← new (Session 9)
+│   │       └── back_controller.js           v1.0  ← Session 9
 │   ├── models/
 │   │   ├── owner.rb
 │   │   ├── computer.rb
 │   │   ├── component.rb
 │   │   ├── computer_condition.rb
 │   │   └── component_condition.rb
+│   ├── services/                            ← Session 10
+│   │   ├── owner_export_service.rb
+│   │   └── owner_import_service.rb
 │   └── views/
 │       ├── home/
 │       ├── owners/
+│       │   └── show.html.erb                v1.4  ← Session 11
 │       ├── computers/
 │       ├── components/
 │       └── admin/
@@ -129,8 +138,17 @@ decor/
 │   └── claude/
 └── test/
     ├── fixtures/
-    └── controllers/
-        └── admin/
+    ├── controllers/
+    │   ├── admin/
+    │   ├── computers_controller_test.rb     v1.0  ← Session 12
+    │   ├── components_controller_test.rb    v1.0  ← Session 12
+    │   ├── data_transfers_controller_test.rb      ← Session 10
+    │   ├── owners_controller_test.rb        v1.3  ← Session 11
+    │   ├── owners_controller_destroy_test.rb
+    │   └── owners_controller_password_test.rb
+    └── services/                            ← Session 10
+        ├── owner_export_service_test.rb
+        └── owner_import_service_test.rb
 ```
 
 ---
@@ -193,6 +211,9 @@ bridge the class name / route name mismatch.
 `resources :component_conditions` maps cleanly to `Admin::ComponentConditionsController`
 (class `ComponentCondition`) — no url:/scope: workaround needed.
 
+`resource :data_transfer, only: [:show]` with member routes `get :export` and
+`post :import` — managed by `DataTransfersController` (Session 10).
+
 ---
 
 ## Work Completed - Sessions 1–8
@@ -215,9 +236,7 @@ Key milestones:
 ## Work Completed - Session 9 (February 27, 2026)
 
 ### 1. Rule Set — RAILS_SPECIFICS.md v1.6
-Added "ERB + whitespace-pre-wrap — Literal Whitespace Gotcha": `whitespace-pre-wrap`
-renders the newline + indentation between an opening tag and its `<%= %>` content
-literally. Fix: put ERB tag on the same line as the opening HTML tag.
+Added "ERB + whitespace-pre-wrap — Literal Whitespace Gotcha".
 
 ### 2. components/show.html.erb — Step 3 completed
 
@@ -225,18 +244,14 @@ literally. Fix: put ERB tag on the same line as the opening HTML tag.
 
 - Line 1: 3-col — Computer | Type | Condition
 - Line 2: 2-col — Order Number | Serial Number
-- All values in styled display boxes (matching field_classes appearance)
-- Description: styled box, min-height 4.5rem, ERB on same line (whitespace-pre-wrap fix)
-- Outer bg-white border wrapper removed
-- "← Back to owner" → Stimulus Back button
+- Line 3: full — Description (whitespace-pre-wrap, min-height 4.5rem)
 
-### 3. Stimulus Back Controller — new
+### 3. Stimulus Back Controller
 
     decor/app/javascript/controllers/back_controller.js    (v1.0)
 
 Reusable controller: `history.back()` primary; falls back to
 `data-back-fallback-url-value` when `history.length === 1`.
-Auto-registered by stimulus-rails — no index.js edit needed.
 
 ### 4. Component Edit Page — aligned with show layout
 
@@ -244,37 +259,140 @@ Auto-registered by stimulus-rails — no index.js edit needed.
     decor/app/views/components/_form.html.erb     (v1.3)
 
 - edit.html.erb: max-w-2xl → max-w-5xl; Stimulus Back button added
-- _form.html.erb: fields reordered (Computer | Type | Condition / Order | Serial /
-  Description); min-height on description; "Cancel" → "Done"
+- _form.html.erb: fields reordered; "Cancel" → "Done"
+
+---
+
+## Work Completed - Session 10 (February 28, 2026)
+
+### 1. Data Transfer Feature
+
+    decor/app/controllers/data_transfers_controller.rb     (v1.0)
+    decor/app/services/owner_export_service.rb
+    decor/app/services/owner_import_service.rb
+
+- `DataTransfersController`: show (landing page), export (CSV download),
+  import (CSV upload). Protected by `require_login`.
+- `OwnerExportService`: generates a CSV of the owner's computers and
+  components. Handles FK references (model name, condition, run status,
+  component type) and spare components (no computer attached).
+- `OwnerImportService`: two-pass import (computers first, then components).
+  Matches existing records by serial number; creates new records otherwise.
+  Atomic — wraps entire import in a transaction; rolls back on any error.
+
+### 2. Tests
+
+    decor/test/controllers/data_transfers_controller_test.rb
+    decor/test/services/owner_export_service_test.rb
+    decor/test/services/owner_import_service_test.rb
+
+Coverage: show/export/import actions (auth guard, happy path, error paths);
+export CSV headers, row content, FK references, spare handling;
+import two-pass logic, duplicates, atomicity.
+
+### 3. Rule Set Updates
+
+    decor/docs/claude/COMMON_BEHAVIOR.md          v1.8
+    decor/docs/claude/PROGRAMMING_GENERAL.md      v1.7
+
+COMMON_BEHAVIOR v1.8: Token Usage Reporting section rewritten (UI is ground
+truth; Claude estimates structurally unreliable); download file naming rule
+(bare filename; `#` separator only when same filename appears twice).
+
+PROGRAMMING_GENERAL v1.7: Mandatory end-of-task test coverage check added —
+after every implementation Claude must explicitly ask whether tests are needed.
+
+---
+
+## Work Completed - Session 11 (March 1, 2026)
+
+### 1. owners/show — Computers table
+
+    decor/app/views/owners/show.html.erb        (v1.4)
+    decor/app/controllers/owners_controller.rb  (v1.4)
+
+- Computers ordered by model name ASC (`eager_load` + `Arel.sql`)
+- Order Number column added between Model and Serial
+- Delete button added next to Edit (owner only); `params: { source: "owner" }`
+
+### 2. owners/show — Components table
+
+    decor/app/views/owners/show.html.erb        (v1.4)  (same file)
+    decor/app/controllers/owners_controller.rb  (v1.4)  (same file)
+
+- Components ordered by computer model name / serial number / component type
+  (`eager_load(:component_type, computer: :computer_model)` + `Arel.sql`
+  with `NULLS LAST` so spares sort after computer-attached components)
+- Column order: Computer | Type | Order No. | Serial No. | Description
+- Computer cell: "Model – Serial" as link to computer, or "Spare" for unattached
+- Order No. and Serial No. columns added (show "—" when blank)
+- Delete button added next to Edit (owner only); `params: { source: "owner" }`
+
+### 3. source=owner Redirect Pattern
+
+    decor/app/controllers/computers_controller.rb   (v1.6)
+    decor/app/controllers/components_controller.rb  (v1.4)
+
+Both destroy actions now check `params[:source]`:
+- `source=owner`    → redirect to `owner_path(owner)`
+- `source=computer` → redirect to `edit_computer_path(computer)` (components only)
+- default           → redirect to `computers_path` / `components_path`
+
+Consistent with the pre-existing `source=computer` convention.
+
+### 4. Tests
+
+    decor/test/controllers/owners_controller_test.rb    (v1.3)
+
+12 new tests: show page loads (owner/other/guest), computer ordering,
+Order column, component ordering (NULLS LAST for spares), Computer column
+labels, Order No./Serial No. headers, Edit+Delete visibility.
+
+### 5. Rule Set Update
+
+    decor/docs/claude/RAILS_SPECIFICS.md    (v1.8)
+
+Added: multi-table ORDER BY must be wrapped in `Arel.sql()`. Rails raises
+`ActiveRecord::UnknownAttributeReference` for raw strings containing dots
+or SQL keywords. Only wrap hardcoded developer strings — never user input.
+
+---
+
+## Work Completed - Session 12 (March 1, 2026)
+
+### Destroy-redirect tests — standalone test files created
+
+    decor/test/controllers/computers_controller_test.rb    (v1.0)
+    decor/test/controllers/components_controller_test.rb   (v1.0)
+
+Pending additions files from Session 11 converted to proper standalone test
+files (no pre-existing controller test files existed for these controllers).
+Stale `_additions.rb` stub files deleted.
 
 ---
 
 ## Pending — Next Session
 
-### Priority: computers/show.html.erb redesign
-
-Redesign to match components/show layout:
-- max-w-7xl → max-w-5xl; remove outer wrapper
-- Line 1 (3-col): Order Number | Serial Number | Condition
-- Line 2 (half-width): Run Status (left col of 2-col grid)
-- Line 3 (full): History (whitespace-pre-wrap, min-height 4.5rem, ERB same line)
-- Components table: Type → indigo link; "View" removed; "Edit" owner/admin only
-- Stimulus Back button; fallback: owner_path(@computer.owner)
-- **Open question:** confirm Run Status alone on left half of 2-col row
-
-### Other Candidates
+### Priority candidates
+- BulkUploadService stale model references (low priority, carried over):
+  `decor/app/services/bulk_upload_service.rb`
+  - `Condition` → `ComputerCondition`
+  - `computer.condition` → `computer.computer_condition`
+  - `component.history` field does not exist on Component model
+  - `component.condition` → `component.component_condition`
 - Dependabot PRs — dedicated session
 - Legal/Compliance: Impressum, Privacy Policy, GDPR, Cookie Consent, TOS
 - System tests: decor/test/system/ still empty
 - Account deletion + data export (GDPR)
 - Spam / Postmark DNS fix (awaiting Rob's dashboard findings)
+- computers/show.html.erb redesign (deprioritised Session 11)
 
 ---
 
 ## Current Deployment Status
 
-**Production Version:** Fully up to date through Session 9
-**Pending:** computers/show.html.erb redesign
+**Production Version:** Fully up to date through Session 11
+**Session 12:** Test files only — deploy after full suite passes
 
 ---
 
@@ -367,6 +485,18 @@ Usage:    <a href="#"
 Logic:    history.back() if window.history.length > 1; else navigate to fallback URL
 ```
 
+### source= Redirect Pattern (Destroy Actions)
+When a record is deleted from a page other than its own index, a `source`
+param controls where the user lands after deletion:
+
+- `source=owner`    → `owner_path(owner)` — used from owners/show
+- `source=computer` → `edit_computer_path(computer)` — used from computers/edit
+                      (components only)
+- no source         → default index path (`computers_path` / `components_path`)
+
+Implemented in: `computers_controller.rb` (v1.6), `components_controller.rb` (v1.4).
+Owner is captured in a `before_action` before the record is destroyed.
+
 ---
 
 ## Known Issues & Solutions
@@ -404,7 +534,7 @@ model-level validations alongside DB constraints (defense-in-depth).
 HTML tag and its `<%= %>` content tag, making text appear indented from the left.
 `text-align: left` does not fix it. Fix: put the ERB tag on the same line as
 the opening tag — `<dd class="whitespace-pre-wrap"><%= content %></dd>`.
-See RAILS_SPECIFICS.md v1.6.
+See RAILS_SPECIFICS.md v1.8.
 
 ### Squash Merge Git Divergence
 Use `gh pr merge --merge` (not `--squash`).
@@ -420,10 +550,11 @@ Use `kamal app exec --reuse` (not `kamal app exec`).
 Rails/HTML does not allow a form inside a form. Component sub-form on computer
 edit page must be placed AFTER the computer `form_with` end tag.
 
-### source=computer Redirect Pattern
-When a component is created/updated/deleted from the computer edit page,
-`source=computer` param causes `components_controller` to redirect back to
-`edit_computer_path` instead of the default path.
+### Multi-table ORDER BY Requires Arel.sql()
+Rails raises `ActiveRecord::UnknownAttributeReference` for `.order()` strings
+containing dots (`table.column`) or SQL keywords (`NULLS LAST`). Wrap in
+`Arel.sql()`. Only use for hardcoded developer strings — never user input.
+See RAILS_SPECIFICS.md v1.8.
 
 ---
 
@@ -439,6 +570,7 @@ When a component is created/updated/deleted from the computer edit page,
 - Spam / Postmark DNS fix (awaiting Rob's dashboard findings)
 - Image upload (if added: AWS Rekognition for moderation)
 - Migrate SQLite → PostgreSQL (better constraint support)
+- computers/show.html.erb redesign (deprioritised Session 11)
 
 ---
 
