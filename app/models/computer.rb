@@ -1,16 +1,17 @@
 # decor/app/models/computer.rb
-# version 1.3
-# Updated association: belongs_to :condition → belongs_to :computer_condition
-# The underlying column was renamed condition_id → computer_condition_id in
-# migration 20260225120000. Rails derives the FK column name automatically
-# from the association name, so no explicit foreign_key: option is needed.
+# version 1.4
+# Changed: has_many :components, dependent: :nullify → dependent: :destroy
+# Rationale: deleting a computer now cascades and destroys all its components.
+# The database-level ON DELETE CASCADE will be added in a later migration;
+# this Rails-level dependent: :destroy is the application-layer enforcement
+# that is in effect until then.
 
 class Computer < ApplicationRecord
   belongs_to :owner
   belongs_to :computer_model
   belongs_to :computer_condition, optional: true
   belongs_to :run_status, optional: true
-  has_many :components, dependent: :nullify
+  has_many :components, dependent: :destroy
 
   # Validations
   validates :serial_number, presence: true

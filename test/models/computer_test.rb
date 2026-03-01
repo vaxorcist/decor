@@ -1,12 +1,7 @@
 # decor/test/models/computer_test.rb
-# version 1.2
-# Updated all references following the conditions → computer_conditions rename:
-#   conditions(:label)        → computer_conditions(:label)
-#   condition: ...            → computer_condition: ...
-#   computer.condition        → computer.computer_condition
-#   Condition class           → ComputerCondition class
-#   "belongs to condition"    → "belongs to computer_condition"
-#   "condition returns name"  → "computer_condition returns name"
+# version 1.3
+# Added: "destroying a computer destroys its components" — verifies dependent: :destroy
+# behaviour added in computer.rb v1.4 (Session 12).
 
 require "test_helper"
 
@@ -89,5 +84,17 @@ class ComputerTest < ActiveSupport::TestCase
     computer = computers(:alice_pdp11)
     assert_respond_to computer, :run_status
     assert_instance_of RunStatus, computer.run_status
+  end
+
+  test "destroying a computer destroys its components" do
+    # alice_pdp11 has two components in fixtures: pdp11_memory and pdp11_cpu.
+    # Verifies that dependent: :destroy cascades — no orphaned components remain.
+    computer = computers(:alice_pdp11)
+    component_ids = computer.components.pluck(:id)
+    assert component_ids.any?, "Fixture must have at least one component for this test to be meaningful"
+
+    computer.destroy
+    surviving = Component.where(id: component_ids).count
+    assert_equal 0, surviving, "Expected all components to be destroyed with the computer"
   end
 end
