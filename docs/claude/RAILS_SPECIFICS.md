@@ -1,13 +1,12 @@
 # RAILS_SPECIFICS.md
-# version 1.6
-# Added: Rails-specific Pre-Implementation Verification section (moved from COMMON_BEHAVIOR.md)
-# Added: Association rename grep sweep rule (lesson from Session 7)
-# Added: VARCHAR/TEXT cross-reference note for SQLite CHECK constraint requirement
-# Added: ERB + whitespace-pre-wrap literal whitespace gotcha (lesson from Session 9)
+# version 1.8
+# decor/docs/claude/RAILS_SPECIFICS.md
+# Added (Session 11): Arel.sql() required for multi-table ORDER BY strings —
+#   Rails rejects raw strings containing dots or SQL keywords as a safety guard.
 
 **Ruby on Rails Specific Patterns and Best Practices**
 
-**Last Updated:** February 25, 2026 (v1.5: Rails pre-implementation verification moved here from COMMON_BEHAVIOR.md; grep sweep rule; VARCHAR/TEXT note)
+**Last Updated:** March 1, 2026 (v1.8: Arel.sql() rule for multi-table ORDER BY added)
 
 ---
 
@@ -86,6 +85,13 @@ Rails-specific requirements. Follow these BEFORE writing any code.
       Check existing code for styling, structure, naming.
 - [ ] **Understand the project's naming and styling conventions**
       Naming conventions, CSS classes, button styles, auth patterns.
+- [ ] **Verify the correct authentication before_action for every new controller**
+      Check what auth guard other controllers use and apply the same.
+      In DECOR: `before_action :require_login` for any owner-facing controller,
+      `before_action :require_admin` for admin controllers.
+      Omitting this leaves all actions publicly accessible — a security hole.
+      Real example (Session 10): DataTransfersController shipped without
+      `require_login`; all three actions were reachable without login.
 - [ ] **Run a grep sweep for ALL affected accessors/methods BEFORE writing files**
       See "Association Rename Grep Sweep" section below.
 
@@ -229,44 +235,12 @@ end
 
 ## Geared Pagination Pattern
 
-### Controller
-```ruby
-def index
-  items = Model.includes(:associations).where(...)
-  paginate items
-end
-```
-
-### Views Access Data via @page.records
-```erb
-<% @page.records.each do |item| %>
-  <%= render "item", item: item %>
-<% end %>
-```
+Use `paginate` helper from geared_pagination gem.
+See existing controllers (computers, components, owners) for the established pattern.
 
 ---
 
-## Turbo Stream Pagination Pattern
-
-### CRITICAL: ID Must Be on <tbody>
-
-**index.html.erb:**
-```erb
-<table>
-  <thead>...</thead>
-  <tbody id="items" class="...">
-    <% @page.records.each do |item| %>
-      <%= render "item", item: item %>
-    <% end %>
-  </tbody>
-</table>
-```
-
----
-
-## Rails Git Workflow Commands
-
-Steps 4–6 of the general git workflow (PROGRAMMING_GENERAL.md) for Rails projects:
+## Rails Commands Reference
 
 ```
 Step 4: Run full test suite      bin/rails test
@@ -460,6 +434,92 @@ opening HTML tag — no newline, no leading spaces between them.
 `text-align: left` and `vertical-align: top` inline styles with no effect.
 Root cause was the newline + indentation between `<dd>` and `<%= %>` being
 rendered literally by `whitespace-pre-wrap`. Fixed by collapsing to one line.
+
+---
+
+## File Uploads in Integration Tests — Use Rack::Test::UploadedFile
+
+**When writing integration tests that upload files via `post params:`:**
+
+Use `Rack::Test::UploadedFile`, NOT `ActionDispatch::Http::UploadedFile`.
+
+**Wrong — ActionDispatch::Http::UploadedFile gets stringified in the HTTP layer:**
+```ruby
+# This causes NoMethodError: undefined method 'content_type' for an instance of String
+upload = ActionDispatch::Http::UploadedFile.new(
+  tempfile:  tempfile,
+  filename:  "file.csv",
+  type:      "text/csv"
+)
+post path, params: { file: upload }  # upload arrives as a String in the controller
+```
+
+**Correct — Rack::Test::UploadedFile survives the integration test HTTP layer:**
+```ruby
+tempfile = Tempfile.new(["prefix", ".csv"])
+tempfile.write(csv_content)
+tempfile.rewind
+tempfile.close
+
+upload = Rack::Test::UploadedFile.new(tempfile.path, "text/csv", false,
+                                       original_filename: "file.csv")
+post path, params: { file: upload }  # controller receives a proper UploadedFile
+```
+
+**Why the difference:**
+Integration tests encode params through the full Rack/HTTP stack. `ActionDispatch::Http::UploadedFile`
+is not designed to survive that encoding and gets collapsed to its string representation.
+`Rack::Test::UploadedFile` is designed for exactly this context and maintains its interface
+(`.path`, `.content_type`, `.original_filename`, `.size`) through the test request.
+
+**Note:** This does NOT affect unit/service tests that call service objects directly —
+those pass the object without HTTP encoding, so either class works. The issue is
+specific to `ActionDispatch::IntegrationTest` using `post`/`patch` etc.
+
+**Real example (Session 10, February 28, 2026):**
+`DataTransfersControllerTest` — three import tests failed with
+`NoMethodError: undefined method 'content_type' for an instance of String`
+because `ActionDispatch::Http::UploadedFile` was used. Switching to
+`Rack::Test::UploadedFile.new(path, content_type)` fixed all three.
+
+---
+
+## multi-table ORDER BY — Wrap in Arel.sql()
+
+**Rails rejects raw ORDER BY strings that reference joined table columns.**
+
+Any `.order()` argument containing a dot (`table.column`), a SQL keyword
+(`NULLS LAST`, `ASC`, `DESC` with spaces), or anything that is not a simple
+attribute name will raise `ActiveRecord::UnknownAttributeReference` with:
+
+> Dangerous query method called with non-attribute argument(s): "..."
+
+**Wrong — bare string causes UnknownAttributeReference:**
+```ruby
+.order("computer_models.name ASC NULLS LAST, computers.serial_number ASC")
+```
+
+**Correct — wrap in Arel.sql() to declare the string as developer-controlled:**
+```ruby
+.order(Arel.sql("computer_models.name ASC NULLS LAST, computers.serial_number ASC"))
+```
+
+**When Arel.sql() is required:**
+- Multi-table references: `"joined_table.column_name"`
+- `NULLS LAST` / `NULLS FIRST`
+- Any expression that is not a bare column symbol (`:created_at`) or hash (`created_at: :asc`)
+
+**When it is NOT required:**
+- `.order(:column_name)` — symbol form, always safe
+- `.order(column_name: :asc)` — hash form, always safe
+
+**Safety note:** `Arel.sql()` is an explicit whitelist declaration.
+Only wrap strings that are fully hardcoded in the application — NEVER wrap
+user-supplied input (request params, model attributes) in `Arel.sql()`.
+
+**Real example (Session 11, March 1, 2026):**
+`OwnersController#show` raised `UnknownAttributeReference` on the component
+ordering query. Fixed by wrapping both ORDER BY strings in `Arel.sql()`.
 
 ---
 

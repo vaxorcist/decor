@@ -1,9 +1,7 @@
-# decor/app/controllers/computers_controller.rb - version 1.5
-# Updated all condition_id references → computer_condition_id following the
-# conditions → computer_conditions table/model rename (Session 7, Feb 25, 2026):
-#   - includes(:condition)           → includes(:computer_condition)
-#   - params[:condition_id]          → params[:computer_condition_id]
-#   - permit(:condition_id)          → permit(:computer_condition_id)
+# decor/app/controllers/computers_controller.rb - version 1.6
+# destroy: capture owner before destroy; redirect to owner_path when source=owner
+#   (same source-param pattern as components_controller source=computer).
+# Previous (v1.5): condition_id → computer_condition_id references updated.
 
 class ComputersController < ApplicationController
   before_action :set_computer, only: %i[show edit update destroy]
@@ -88,8 +86,16 @@ class ComputersController < ApplicationController
   end
 
   def destroy
+    # Capture owner before destroy so we can redirect to their page if source=owner.
+    # Follows the same source-param pattern used by components_controller (source=computer).
+    owner = @computer.owner
     @computer.destroy
-    redirect_to computers_path, notice: "Computer was successfully deleted."
+
+    if params[:source] == "owner"
+      redirect_to owner_path(owner), notice: "Computer was successfully deleted."
+    else
+      redirect_to computers_path, notice: "Computer was successfully deleted."
+    end
   end
 
   private

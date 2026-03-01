@@ -1,6 +1,7 @@
-# decor/app/controllers/components_controller.rb - version 1.3
-# Added serial_number, order_number, component_condition_id to strong params
-# so that the new database columns can be written via the component form.
+# decor/app/controllers/components_controller.rb - version 1.4
+# destroy: capture owner before destroy; redirect to owner_path when source=owner.
+#   source=owner branch added before existing source=computer branch.
+# Previous (v1.3): serial_number, order_number, component_condition_id added to strong params.
 
 class ComponentsController < ApplicationController
   before_action :set_component, only: %i[show edit update destroy]
@@ -79,12 +80,16 @@ class ComponentsController < ApplicationController
   end
 
   def destroy
-    # Capture computer before destroy in case we need to redirect to its edit page
+    # Capture owner and computer before destroy for redirect decisions.
+    # Follows the same source-param pattern as create/update (source=computer).
+    owner = @component.owner
     computer = @component.computer
 
     @component.destroy
 
-    if params[:source] == "computer" && computer.present?
+    if params[:source] == "owner"
+      redirect_to owner_path(owner), notice: "Component was successfully deleted."
+    elsif params[:source] == "computer" && computer.present?
       # Redirect back to the computer edit page when deleting from embedded form
       redirect_to edit_computer_path(computer), notice: "Component was successfully deleted."
     else
