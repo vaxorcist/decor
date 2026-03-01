@@ -1,8 +1,8 @@
-<%# decor/app/views/owners/show.html.erb - version 1.3 %>
-<%# Added: "Export / Import" button in the top-right button group, shown only to %>
-<%#         the current owner (same visibility guard as "Edit Profile" and "Logout"). %>
-<%# Previous changes (v1.2): Model column links to computer_path; Type column links %>
-<%#   to component_path; "View" replaced by owner-only "Edit" in rightmost column. %>
+<%# decor/app/views/owners/show.html.erb - version 1.4 %>
+<%# Computers section: ordered by model name; Order Number column added between Model and %>
+<%#   Serial; Delete button added next to Edit (owner only, with turbo confirm). %>
+<%# Components section: ordered by computer model / serial / type; columns reordered to %>
+<%#   Computer (model–serial), Type, Order No., Serial No., Description; Delete button added. %>
 
 <div class="max-w-7xl mx-auto">
   <div class="flex justify-between items-start mb-4">
@@ -64,6 +64,7 @@
           <thead class="bg-stone-50">
             <tr>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Model</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Order</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Serial</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Condition</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Status</th>
@@ -77,13 +78,21 @@
                 <td class="px-4 py-3 whitespace-nowrap font-medium">
                   <%= link_to computer.computer_model.name, computer_path(computer), class: "text-indigo-600 hover:text-indigo-900" %>
                 </td>
+                <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= computer.order_number || "—" %></td>
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= computer.serial_number %></td>
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= computer.computer_condition&.name || "—" %></td>
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= computer.run_status&.name || "—" %></td>
-                <%# Actions — Edit shown to owner only %>
+                <%# Actions — Edit and Delete shown to owner only %>
                 <td class="px-4 py-3 whitespace-nowrap text-right">
                   <% if Current.owner == @owner %>
-                    <%= link_to "Edit", edit_computer_path(computer), class: "text-indigo-600 hover:text-indigo-900" %>
+                    <div class="flex items-center justify-end gap-3">
+                      <%= link_to "Edit", edit_computer_path(computer), class: "text-indigo-600 hover:text-indigo-900" %>
+                      <%= button_to "Delete", computer_path(computer), method: :delete,
+                            data: { turbo_confirm: "Delete #{computer.computer_model.name} (#{computer.serial_number})? This cannot be undone." },
+                            params: { source: "owner" },
+                            class: "text-red-600 hover:text-red-900 bg-transparent border-0 p-0 cursor-pointer",
+                            form: { style: "display:inline" } %>
+                    </div>
                   <% end %>
                 </td>
               </tr>
@@ -110,31 +119,45 @@
         <table class="min-w-full divide-y divide-stone-200">
           <thead class="bg-stone-50">
             <tr>
-              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Type</th>
-              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Description</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Computer</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Type</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Order No.</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Serial No.</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Description</th>
               <th class="px-4 py-2"></th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-stone-200 text-sm">
             <% @components.each do |component| %>
               <tr class="hover:bg-stone-50">
-                <%# Type — clickable, navigates to component show page %>
-                <td class="px-4 py-3 whitespace-nowrap font-medium">
-                  <%= link_to component.component_type.name, component_path(component), class: "text-indigo-600 hover:text-indigo-900" %>
-                </td>
-                <td class="px-4 py-3 text-stone-600"><%= truncate(component.description, length: 50) || "—" %></td>
+                <%# Computer — model name hyphen serial number; "Spare" if unattached %>
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600">
                   <% if component.computer %>
-                    <%= link_to component.computer.computer_model.name, computer_path(component.computer), class: "text-indigo-600 hover:text-indigo-900" %>
+                    <%= link_to "#{component.computer.computer_model.name} – #{component.computer.serial_number}",
+                          computer_path(component.computer),
+                          class: "text-indigo-600 hover:text-indigo-900" %>
                   <% else %>
                     <span class="text-stone-400">Spare</span>
                   <% end %>
                 </td>
-                <%# Actions — Edit shown to owner only %>
+                <%# Type — clickable, navigates to component show page %>
+                <td class="px-4 py-3 whitespace-nowrap font-medium">
+                  <%= link_to component.component_type.name, component_path(component), class: "text-indigo-600 hover:text-indigo-900" %>
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.order_number || "—" %></td>
+                <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.serial_number || "—" %></td>
+                <td class="px-4 py-3 text-stone-600"><%= truncate(component.description, length: 50) || "—" %></td>
+                <%# Actions — Edit and Delete shown to owner only %>
                 <td class="px-4 py-3 whitespace-nowrap text-right">
                   <% if Current.owner == @owner %>
-                    <%= link_to "Edit", edit_component_path(component), class: "text-indigo-600 hover:text-indigo-900" %>
+                    <div class="flex items-center justify-end gap-3">
+                      <%= link_to "Edit", edit_component_path(component), class: "text-indigo-600 hover:text-indigo-900" %>
+                      <%= button_to "Delete", component_path(component), method: :delete,
+                            data: { turbo_confirm: "Delete this #{component.component_type.name}? This cannot be undone." },
+                            params: { source: "owner" },
+                            class: "text-red-600 hover:text-red-900 bg-transparent border-0 p-0 cursor-pointer",
+                            form: { style: "display:inline" } %>
+                    </div>
                   <% end %>
                 </td>
               </tr>

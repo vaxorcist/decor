@@ -1,7 +1,9 @@
-# app/controllers/owners_controller.rb - version 1.3
-# Added destroy action for account self-deletion
-# User can only delete their own account, requires password confirmation
-# Automatically logs out user and destroys all associated computers and components
+# decor/app/controllers/owners_controller.rb - version 1.4
+# show action: computers ordered by model name; components ordered by computer model name,
+# computer serial number, component type name.
+# eager_load used (instead of includes + left_joins) so that joined table columns are
+# available in ORDER BY in a single query. NULLS LAST puts spare components after
+# computer-attached ones.
 
 class OwnersController < ApplicationController
   before_action :set_owner, only: %i[show edit update destroy]
@@ -46,8 +48,28 @@ class OwnersController < ApplicationController
   end
 
   def show
-    @computers = @owner.computers.includes(:computer_model)
-    @components = @owner.components.includes(:component_type, :computer)
+    # Computers: ordered by model name (eager_load forces LEFT OUTER JOIN, enabling ORDER BY
+    # on the joined table; inner join is fine here since computer_model is always present)
+    @computers = @owner.computers
+                       .eager_load(:computer_model)
+                       .order(Arel.sql("computer_models.name ASC"))
+
+    # Components: ordered by computer model name, then computer serial number, then component
+    # type name. eager_load generates LEFT OUTER JOINs for all associations in one query,
+    # which is required to ORDER BY columns on optionally-present associations (computer,
+    # computer_model). NULLS LAST ensures spare components (no computer) sort after
+    # computer-attached ones.
+    # Arel.sql() is required for multi-table ORDER BY strings — Rails rejects raw strings
+    # that contain non-attribute references (dots, NULLS LAST) as a safety guard.
+    @components = @owner.components
+                        .eager_load(:component_type, computer: :computer_model)
+                        .order(
+                          Arel.sql(
+                            "computer_models.name ASC NULLS LAST, " \
+                            "computers.serial_number ASC NULLS LAST, " \
+                            "component_types.name ASC"
+                          )
+                        )
   end
 
   def edit
