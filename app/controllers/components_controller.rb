@@ -1,7 +1,8 @@
-# decor/app/controllers/components_controller.rb - version 1.4
-# destroy: capture owner before destroy; redirect to owner_path when source=owner.
-#   source=owner branch added before existing source=computer branch.
-# Previous (v1.3): serial_number, order_number, component_condition_id added to strong params.
+# decor/app/controllers/components_controller.rb - version 1.5
+# destroy: added source=computer_show branch → redirects to computer_path (show page).
+#   Used when deleting a component from computers/show so the user stays on that page.
+#   source=computer (edit page) behaviour unchanged.
+# Previous (v1.4): source=owner branch added; capture owner/computer before destroy.
 
 class ComponentsController < ApplicationController
   before_action :set_component, only: %i[show edit update destroy]
@@ -81,14 +82,21 @@ class ComponentsController < ApplicationController
 
   def destroy
     # Capture owner and computer before destroy for redirect decisions.
-    # Follows the same source-param pattern as create/update (source=computer).
-    owner = @component.owner
+    # source param controls where the user lands after deletion:
+    #   source=owner         → owner show page   (deleted from owners/show)
+    #   source=computer_show → computer show page (deleted from computers/show)
+    #   source=computer      → computer edit page (deleted from embedded edit form)
+    #   (none)               → components index
+    owner    = @component.owner
     computer = @component.computer
 
     @component.destroy
 
     if params[:source] == "owner"
       redirect_to owner_path(owner), notice: "Component was successfully deleted."
+    elsif params[:source] == "computer_show" && computer.present?
+      # Stay on the computer show page after deleting from computers/show
+      redirect_to computer_path(computer), notice: "Component was successfully deleted."
     elsif params[:source] == "computer" && computer.present?
       # Redirect back to the computer edit page when deleting from embedded form
       redirect_to edit_computer_path(computer), notice: "Component was successfully deleted."

@@ -1,19 +1,15 @@
-<%# decor/app/views/computers/show.html.erb - version 1.3 %>
-<%# Session 10: Redesigned to match components/show layout pattern. %>
-<%# Changes from v1.2: %>
-<%#   - max-w-7xl → max-w-5xl %>
-<%#   - Outer bg-white/border wrapper div removed; fields sit directly in container %>
-<%#   - dl rebuilt to space-y-4 with styled boxes per field, always rendered (empty → "—") %>
-<%#   - Field layout: Line 1 (3-col): Model | Order Number | Serial Number %>
-<%#                   Line 2 (2-col): Condition | Run Status %>
-<%#                   Line 3 (full):  History (whitespace-pre-wrap, min-height 4.5rem) %>
-<%#   - ERB tag on same line as opening <dd> for whitespace-pre-wrap field (History) %>
-<%#   - Components table: Type → clickable indigo link to component_path %>
-<%#   - Components table: "View" column removed %>
-<%#   - Components table: "Edit" shown to computer owner and admin only %>
-<%#   - "← Back to owner" → Stimulus Back button (back_controller.js v1.0) %>
+<%# decor/app/views/computers/show.html.erb - version 1.5 %>
+<%# Session 12 changes (v1.4→v1.5): %>
+<%#   - Delete button: source "computer" → "computer_show" so deletion stays on show page %>
+<%# Session 12 changes: %>
+<%#   - max-w-5xl → max-w-7xl (matches owners/show container width) %>
+<%#   - Components table: Order No. and Serial No. columns added %>
+<%#   - Components table: Delete button added next to Edit (owner/admin only) %>
+<%#   - Components table column order now matches owners/show: %>
+<%#       Type | Order No. | Serial No. | Description | Actions %>
+<%#   - Delete uses source: "computer" → redirects to edit_computer_path after deletion %>
 
-<div class="max-w-5xl mx-auto">
+<div class="max-w-7xl mx-auto">
 
   <%# ── Header: title + owner (left), Edit/Delete (right, owner/admin only) ── %>
   <div class="flex justify-between items-start mb-4">
@@ -82,24 +78,36 @@
         <table class="min-w-full divide-y divide-stone-200">
           <thead class="bg-stone-50">
             <tr>
-              <%# Type header — value is now a clickable link to component show page %>
+              <%# Type — value is a clickable link to component show page %>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Type</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Order No.</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Serial No.</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Description</th>
-              <%# Actions column — always rendered; Edit shown to owner/admin only %>
+              <%# Actions column — always rendered; Edit + Delete shown to owner/admin only %>
               <th class="px-4 py-2"></th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-stone-200 text-sm">
             <% @components.each do |component| %>
               <tr class="hover:bg-stone-50">
-                <%# Type as indigo link → component show page (replaces separate "View" link) %>
+                <%# Type as indigo link → component show page %>
                 <td class="px-4 py-3 whitespace-nowrap font-medium">
                   <%= link_to component.component_type.name, component_path(component), class: "text-indigo-600 hover:text-indigo-900" %>
                 </td>
+                <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.order_number.presence || "—" %></td>
+                <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.serial_number.presence || "—" %></td>
                 <td class="px-4 py-3 text-stone-600"><%= truncate(component.description, length: 80) || "—" %></td>
+                <%# Actions — Edit and Delete shown to owner/admin only %>
                 <td class="px-4 py-3 whitespace-nowrap text-right">
                   <% if Current.owner == @computer.owner || admin? %>
-                    <%= link_to "Edit", edit_component_path(component), class: "text-indigo-600 hover:text-indigo-900" %>
+                    <div class="flex items-center justify-end gap-3">
+                      <%= link_to "Edit", edit_component_path(component), class: "text-indigo-600 hover:text-indigo-900" %>
+                      <%= button_to "Delete", component_path(component), method: :delete,
+                            data: { turbo_confirm: "Delete this #{component.component_type.name}? This cannot be undone." },
+                            params: { source: "computer_show" },
+                            class: "text-red-600 hover:text-red-900 bg-transparent border-0 p-0 cursor-pointer",
+                            form: { style: "display:inline" } %>
+                    </div>
                   <% end %>
                 </td>
               </tr>
