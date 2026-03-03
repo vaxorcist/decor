@@ -1,8 +1,9 @@
 # RAILS_SPECIFICS.md
-# version 1.8
+# version 1.9
 # decor/docs/claude/RAILS_SPECIFICS.md
-# Added (Session 11): Arel.sql() required for multi-table ORDER BY strings —
-#   Rails rejects raw strings containing dots or SQL keywords as a safety guard.
+# Added (Session 13): Fixture Ownership section — derive counts from data;
+#   use a neutral owner for test-support fixtures to avoid breaking hardcoded
+#   count assertions in unrelated test files.
 
 **Ruby on Rails Specific Patterns and Best Practices**
 
@@ -107,6 +108,64 @@ Rails-specific requirements. Follow these BEFORE writing any code.
   and `conditions_controller_test.rb` existed
 - ❌ Caused 24 test errors that were 100% preventable
 - ✅ Fix: always ask "Are there test files for this model/controller?"
+
+---
+
+## Fixture Ownership — Derive Counts from Data; Use Neutral Owners for Support Fixtures
+
+### General Rule
+
+**Never hardcode a count assertion on fixture-owned records.**
+The general principle is in PROGRAMMING_GENERAL.md — Derive Test Assertions from
+Data, Not Constants. This section covers the Rails/fixture-specific consequence.
+
+When a hardcoded count assertion exists anywhere in the test suite, adding any
+new fixture to that owner breaks the count — often in a completely unrelated test
+file, with no obvious connection to the new fixture.
+
+**Bad:**
+```ruby
+assert_equal 2, @bob.computers.count   # breaks the moment a 3rd fixture is added to bob
+```
+
+**Good:**
+```ruby
+bob_computer_ids = @bob.computers.pluck(:id)
+assert bob_computer_ids.any?, "Bob must have at least one computer for this test"
+# ... perform action ...
+bob_computer_ids.each do |id|
+  assert_nil Computer.find_by(id: id), "Computer #{id} should have been deleted"
+end
+```
+
+### Neutral Owner Pattern
+
+When hardcoded counts exist in the test suite and cannot be immediately removed,
+use a **dedicated neutral owner** for any new test-support fixtures — an owner
+whose record counts no test ever asserts.
+
+In decor: `owners(:three)` / charlie is this neutral owner.
+
+- ✅ Assign all new test-support fixtures (enum test records, edge case records,
+  etc.) to the neutral owner
+- ✅ Document the intent clearly in `owners.yml`
+- ❌ Never add hardcoded count assertions for the neutral owner
+
+**Grep check before assigning a fixture to an existing owner:**
+```bash
+# Verify no hardcoded count assertions target this owner before adding a fixture
+grep -rn "\.count" decor/test/ | grep -i "alice\|bob\|owners(:one)\|owners(:two)"
+```
+
+If any hardcoded counts exist → use the neutral owner instead.
+
+**Real example (Session 13, March 3, 2026):**
+`dec_unibus_router` (appliance enum fixture) was first assigned to alice (owners(:one))
+→ broke `OwnerExportServiceTest` (computer count 3 ≠ 2). Moved to bob (owners(:two))
+→ broke `OwnersControllerDestroyTest` (computer count 3 ≠ 2). Both alice and bob had
+independent hardcoded count assertions in different test files. Fix: added
+`three` (charlie) as a neutral owner. Longer-term fix: replace all hardcoded count
+assertions with data-derived assertions (see PROGRAMMING_GENERAL.md).
 
 ---
 

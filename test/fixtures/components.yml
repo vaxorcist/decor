@@ -1,3 +1,10 @@
+# decor/test/fixtures/components.yml
+# version 1.3
+# Fixed: bob_vt100_terminal renamed to charlie_vt100_terminal, owner changed to
+# three (charlie) — a neutral owner with no hardcoded count assertions in any
+# existing test. v1.2 used owner two (bob) which broke OwnersControllerDestroyTest
+# (bob component count = 2).
+
 pdp11_memory:
   owner: one
   computer: alice_pdp11
@@ -27,3 +34,16 @@ spare_power_supply:
   computer:
   component_type: power_supply
   description: Spare H742 power supply, untested
+
+# Peripheral fixture for component_category enum tests.
+# A VT100 terminal connected to charlie's computer — external to the machine,
+# not installed inside it.
+# Assigned to owner three (charlie) — a neutral owner with no hardcoded count
+# assertions in any existing test.
+# component_category: 1 = peripheral.
+charlie_vt100_terminal:
+  owner: three
+  computer: dec_unibus_router
+  component_type: memory_board
+  description: VT100 terminal connected to charlie dec_unibus_router
+  component_category: 1

@@ -1,5 +1,5 @@
 # COMMON_BEHAVIOR.md
-# version 1.8
+# version 1.9
 # decor/docs/claude/COMMON_BEHAVIOR.md
 # Changed: Token Usage Reporting section rewritten.
 # Added (Session 10): Download file naming rule — directory prefix only when needed to
@@ -10,10 +10,13 @@
 #   In Session 10, Claude estimated ~50% when the UI showed 90%. The estimation
 #   rule is now: treat pre-warning estimates as directional only, never reassuring,
 #   and always tell the user to trust their UI over Claude's estimate.
+# Added (Session 12): Upload file naming rule — same-named files from different
+#   directories must be uploaded in separate answers; the browser uses the bare
+#   filename as the upload key, so a second upload silently overwrites the first.
 
 **Universal Rules for All Interactions with This User**
 
-**Last Updated:** February 28, 2026 (v1.8: download file naming rule added)
+**Last Updated:** March 1, 2026 (v1.9: upload file naming rule added)
 
 ---
 
@@ -50,6 +53,29 @@ Two `show.html.erb` files in the same response → download names:
   `data_transfers#show.html.erb` and `owners#show.html.erb`
 
 `routes.rb` is always unique → download name: `routes.rb` (no prefix needed)
+
+### Upload File Naming
+
+The browser uses the bare filename as the upload key. If two files with the
+same name (e.g. `show.html.erb` from different directories) are attached to
+the same message, the second silently overwrites the first — Claude only ever
+sees one of them.
+
+- ✅ Upload same-named files in **separate answers** (one file per message)
+- ✅ After each upload, Claude will confirm which file it received before asking for the next
+- ❌ Do NOT rename files before uploading — too much effort and error-prone
+- ❌ Do NOT attach two same-named files in one message
+
+**Example:**
+```
+Answer 1: attach decor/app/views/owners/show.html.erb
+Answer 2: attach decor/app/views/computers/show.html.erb
+```
+
+**Why this matters (Session 12, March 1, 2026):**
+Both `owners/show.html.erb` and `computers/show.html.erb` were attached in the
+same message. The second upload (computers) overwrote the first (owners) in the
+context, so Claude only saw one of them and had to ask for the other separately.
 
 ---
 

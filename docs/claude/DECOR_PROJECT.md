@@ -1,16 +1,19 @@
 # decor/docs/claude/DECOR_PROJECT.md
-# version 2.9
+# version 2.10
 # Session 10: DataTransfersController, OwnerExportService, OwnerImportService,
 #   data transfer tests, rule doc updates (COMMON_BEHAVIOR v1.8, PROGRAMMING_GENERAL v1.7).
 # Session 11: owners/show ordering + new columns + delete buttons;
 #   source=owner redirect in computers + components destroy actions;
 #   owners_controller_test v1.3 (12 new show tests); RAILS_SPECIFICS v1.8 (Arel.sql rule);
 #   computers_controller_test + components_controller_test created (Session 12).
+# Session 12: destroy-redirect tests finalised; computer.rb dependent: :destroy;
+#   computers/show width + components table updated; source=computer_show redirect added;
+#   COMMON_BEHAVIOR v1.9 (upload file naming rule).
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** March 1, 2026 (Session 12: DECOR_PROJECT.md brought up to date
-through Sessions 10 and 11; destroy-redirect tests finalised)
+**Last Updated:** March 1, 2026 (Session 12: computer cascade delete; computers/show
+layout updated; source=computer_show redirect; COMMON_BEHAVIOR v1.9)
 **Current Status:** Production-ready; all Session 11 work committed and deployed
 
 ---
@@ -91,7 +94,7 @@ decor/
 ├── app/
 │   ├── controllers/
 │   │   ├── computers_controller.rb          v1.6
-│   │   ├── components_controller.rb         v1.4
+│   │   ├── components_controller.rb         v1.5  ← Session 12
 │   │   ├── owners_controller.rb             v1.4
 │   │   ├── data_transfers_controller.rb     v1.0  ← Session 10
 │   │   ├── home_controller.rb
@@ -112,7 +115,7 @@ decor/
 │   │       └── back_controller.js           v1.0  ← Session 9
 │   ├── models/
 │   │   ├── owner.rb
-│   │   ├── computer.rb
+│   │   ├── computer.rb                      v1.4  ← Session 12
 │   │   ├── component.rb
 │   │   ├── computer_condition.rb
 │   │   └── component_condition.rb
@@ -124,6 +127,7 @@ decor/
 │       ├── owners/
 │       │   └── show.html.erb                v1.4  ← Session 11
 │       ├── computers/
+│       │   └── show.html.erb                v1.5  ← Session 12
 │       ├── components/
 │       └── admin/
 │           ├── conditions/
@@ -141,7 +145,7 @@ decor/
     ├── controllers/
     │   ├── admin/
     │   ├── computers_controller_test.rb     v1.0  ← Session 12
-    │   ├── components_controller_test.rb    v1.0  ← Session 12
+    │   ├── components_controller_test.rb    v1.1  ← Session 12
     │   ├── data_transfers_controller_test.rb      ← Session 10
     │   ├── owners_controller_test.rb        v1.3  ← Session 11
     │   ├── owners_controller_destroy_test.rb
@@ -360,7 +364,7 @@ or SQL keywords. Only wrap hardcoded developer strings — never user input.
 
 ## Work Completed - Session 12 (March 1, 2026)
 
-### Destroy-redirect tests — standalone test files created
+### 1. Destroy-redirect tests — standalone test files created
 
     decor/test/controllers/computers_controller_test.rb    (v1.0)
     decor/test/controllers/components_controller_test.rb   (v1.0)
@@ -368,6 +372,45 @@ or SQL keywords. Only wrap hardcoded developer strings — never user input.
 Pending additions files from Session 11 converted to proper standalone test
 files (no pre-existing controller test files existed for these controllers).
 Stale `_additions.rb` stub files deleted.
+
+### 2. Computer cascade delete (Rails layer)
+
+    decor/app/models/computer.rb    (v1.4)
+    decor/test/models/computer_test.rb    (v1.3)
+
+`has_many :components, dependent: :nullify` → `dependent: :destroy`.
+Deleting a computer now cascades and destroys all its components at the
+Rails layer. Database-level ON DELETE CASCADE to be added in a later migration.
+New test: "destroying a computer destroys its components".
+
+### 3. computers/show layout update
+
+    decor/app/views/computers/show.html.erb    (v1.5)
+
+- `max-w-5xl` → `max-w-7xl` (matches owners/show container width)
+- Components table: Order No. and Serial No. columns added
+- Components table: Delete button added next to Edit (owner/admin only)
+- Components table column order: Type | Order No. | Serial No. | Description | Actions
+- Delete uses `source=computer_show` → stays on computer show page after deletion
+
+### 4. source=computer_show redirect
+
+    decor/app/controllers/components_controller.rb    (v1.5)
+    decor/test/controllers/components_controller_test.rb    (v1.1)
+
+New `source=computer_show` branch in `destroy` redirects to `computer_path`
+(show page) rather than `edit_computer_path`. Used when deleting from
+`computers/show` so the user stays on the show page.
+New test added; existing source tests retained as regression guards.
+
+### 5. Rule set updates
+
+    decor/docs/claude/COMMON_BEHAVIOR.md    (v1.9)
+    decor/docs/claude/DECOR_PROJECT.md      (v2.10)
+
+COMMON_BEHAVIOR v1.9: Upload file naming rule added — same-named files from
+different directories must be uploaded in separate answers (one per message),
+not together. The browser overwrites the first with the second silently.
 
 ---
 
@@ -380,19 +423,20 @@ Stale `_additions.rb` stub files deleted.
   - `computer.condition` → `computer.computer_condition`
   - `component.history` field does not exist on Component model
   - `component.condition` → `component.component_condition`
+- Database-level ON DELETE CASCADE for computer → components
+  (Rails-layer dependent: :destroy added Session 12; DB migration still needed)
 - Dependabot PRs — dedicated session
 - Legal/Compliance: Impressum, Privacy Policy, GDPR, Cookie Consent, TOS
 - System tests: decor/test/system/ still empty
 - Account deletion + data export (GDPR)
 - Spam / Postmark DNS fix (awaiting Rob's dashboard findings)
-- computers/show.html.erb redesign (deprioritised Session 11)
 
 ---
 
 ## Current Deployment Status
 
 **Production Version:** Fully up to date through Session 11
-**Session 12:** Test files only — deploy after full suite passes
+**Session 12:** Test + model + view + controller changes — deploy after full suite passes
 
 ---
 
@@ -489,13 +533,14 @@ Logic:    history.back() if window.history.length > 1; else navigate to fallback
 When a record is deleted from a page other than its own index, a `source`
 param controls where the user lands after deletion:
 
-- `source=owner`    → `owner_path(owner)` — used from owners/show
-- `source=computer` → `edit_computer_path(computer)` — used from computers/edit
-                      (components only)
-- no source         → default index path (`computers_path` / `components_path`)
+- `source=owner`         → `owner_path(owner)` — used from owners/show
+- `source=computer_show` → `computer_path(computer)` — used from computers/show
+- `source=computer`      → `edit_computer_path(computer)` — used from computers/edit
+                           (components only)
+- no source              → default index path (`computers_path` / `components_path`)
 
-Implemented in: `computers_controller.rb` (v1.6), `components_controller.rb` (v1.4).
-Owner is captured in a `before_action` before the record is destroyed.
+Implemented in: `computers_controller.rb` (v1.6), `components_controller.rb` (v1.5).
+Owner/computer captured in a `before_action` before the record is destroyed.
 
 ---
 

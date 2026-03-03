@@ -1,8 +1,10 @@
 # decor/test/fixtures/computers.yml
-# version 1.3
-# Updated: condition: → computer_condition: for all entries, matching the
-# column rename condition_id → computer_condition_id in migration 20260225120000.
-# Test passwords defined in test/support/authentication_helper.rb
+# version 1.6
+# Fixed: dec_unibus_router owner changed to three (charlie) — a neutral owner
+# with no hardcoded count assertions in any existing test.
+# v1.5 used owner two (bob) which broke OwnersControllerDestroyTest (bob count = 2).
+# device_type values: 0 = computer (default), 1 = appliance.
+# All pre-existing fixtures omit device_type — they receive the DB default (0 = computer).
 
 alice_pdp11:
   owner: one
@@ -49,3 +51,18 @@ unassigned_condition_test:
   computer_condition: built
   run_status: defective
   history:
+
+# Appliance fixture for device_type enum tests.
+# Represents an autonomous network device that operates without a host computer.
+# Assigned to owner three (charlie) — a neutral owner with no hardcoded count
+# assertions in any existing test.
+# device_type: 1 = appliance (placeholder name until final UI label is decided).
+dec_unibus_router:
+  owner: three
+  computer_model: pdp11_70
+  serial_number: RTR-001
+  order_number: ORD-RTR-001
+  computer_condition: original
+  run_status: working
+  device_type: 1
+  history: Standalone UNIBUS-attached routing device.
