@@ -1,9 +1,6 @@
 <%# decor/app/views/layouts/admin.html.erb %>
-<%# version 1.2 %>
-<%# Replaced flat nav links with click-to-open dropdown menus (Stimulus dropdown_controller). %>
-<%# Dropdowns: Owners | Computers | Appliances | Components | Import/Export %>
-<%# "Appliance Models" disabled (no route yet — greyed out, cursor-not-allowed). %>
-<%# "Exit Admin" unchanged, far right. %>
+<%# version 1.3 %>
+<%# Appliance Models link activated now that admin_appliance_models_path exists. %>
 <!DOCTYPE html>
 <html>
   <head>
@@ -75,7 +72,6 @@
             </div>
 
             <%# ── Appliances ──────────────────────────────────────────────── %>
-            <%# "Appliance Models" is disabled — no admin route exists yet. %>
             <div class="relative" data-controller="dropdown">
               <button data-action="click->dropdown#toggle"
                       class="flex items-center gap-1 px-3 py-2 font-medium text-stone-700
@@ -89,8 +85,9 @@
               <div data-dropdown-target="menu"
                    class="hidden absolute top-full left-0 mt-1 bg-white border border-stone-200
                           rounded shadow-md py-1 z-50 min-w-max">
-                <span class="block px-4 py-2 text-sm text-stone-400 cursor-not-allowed select-none"
-                      title="Not yet implemented">Appliance Models</span>
+                <%# Now active — admin_appliance_models_path added in routes v1.3 %>
+                <%= link_to "Appliance Models", admin_appliance_models_path,
+                      class: "block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50 hover:text-stone-900" %>
               </div>
             </div>
 

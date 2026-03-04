@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_03_100001) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_03_110000) do
   create_table "component_conditions", force: :cascade do |t|
     t.string "condition", limit: 40, null: false
     t.datetime "created_at", precision: nil, null: false
@@ -53,8 +53,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_03_100001) do
 
   create_table "computer_models", force: :cascade do |t|
     t.datetime "created_at", precision: nil, null: false
+    t.integer "device_type", default: 0, null: false
     t.string "name", limit: 40, null: false
     t.datetime "updated_at", precision: nil, null: false
+    t.index ["device_type"], name: "index_computer_models_on_device_type"
     t.index ["name"], name: "index_computer_models_on_name", unique: true
   end
 

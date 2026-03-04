@@ -580,6 +580,53 @@ user-supplied input (request params, model attributes) in `Arel.sql()`.
 `OwnersController#show` raised `UnknownAttributeReference` on the component
 ordering query. Fixed by wrapping both ORDER BY strings in `Arel.sql()`.
 
+
+---
+
+## Directory Tree Maintenance — MANDATORY
+
+The `## Directory Tree` section in `DECOR_PROJECT.md` is the authoritative
+record of the project's file structure. It must be kept current.
+
+### When to update
+
+Update `DECOR_PROJECT.md` (Directory Tree + Key file versions table) whenever:
+- A new file is created (migration, controller, view, helper, JS controller, test, etc.)
+- A file is deleted
+- A file's version number changes
+
+### How to update
+
+1. Claude updates the **Key file versions** table in `DECOR_PROJECT.md` inline
+   (adding new rows, bumping version numbers) after every file change.
+2. The full tree block is replaced only when the user re-runs the tree command
+   and uploads a fresh `decor_tree.txt`. This happens:
+   - At the start of each new session (recommended)
+   - After any session that adds or removes files
+
+### Tree command (run from parent of decor/)
+
+```bash
+tree decor/ \
+  -I "node_modules|.git|tmp|storage|log|.DS_Store|*.lock|assets|cache|pids|sockets" \
+  --dirsfirst -F --prune -L 6 \
+  > decor_tree.txt
+```
+
+Upload `decor_tree.txt` and Claude will replace the tree block in
+`DECOR_PROJECT.md` and present the updated file for download.
+
+### What Claude must NOT do
+
+- ❌ Ask for files that Claude itself created or modified in the current session
+- ❌ Leave the Key file versions table stale after creating/modifying files
+- ❌ Omit new files from the versions table
+
+**Real example (Session 14, March 3, 2026):**
+The tree command and upload procedure was established this session. From Session 15
+onwards, the user will upload a fresh `decor_tree.txt` at session start; Claude
+will replace the tree block and update the versions table in `DECOR_PROJECT.md`.
+
 ---
 
 **End of RAILS_SPECIFICS.md**

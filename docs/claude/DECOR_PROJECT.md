@@ -1,159 +1,367 @@
 # decor/docs/claude/DECOR_PROJECT.md
-# version 2.10
-# Session 10: DataTransfersController, OwnerExportService, OwnerImportService,
-#   data transfer tests, rule doc updates (COMMON_BEHAVIOR v1.8, PROGRAMMING_GENERAL v1.7).
-# Session 11: owners/show ordering + new columns + delete buttons;
-#   source=owner redirect in computers + components destroy actions;
-#   owners_controller_test v1.3 (12 new show tests); RAILS_SPECIFICS v1.8 (Arel.sql rule);
-#   computers_controller_test + components_controller_test created (Session 12).
-# Session 12: destroy-redirect tests finalised; computer.rb dependent: :destroy;
-#   computers/show width + components table updated; source=computer_show redirect added;
-#   COMMON_BEHAVIOR v1.9 (upload file naming rule).
+# version 2.11
+# Session 13: device_type on computers, component_category on components; enum tests.
+# Session 14: DRY Computer/Appliance Models admin pages; dropdown nav (admin.html.erb v1.3);
+#   device_type on computer_models; routes :appliance_models; dropdown_controller.js.
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** March 1, 2026 (Session 12: computer cascade delete; computers/show
-layout updated; source=computer_show redirect; COMMON_BEHAVIOR v1.9)
-**Current Status:** Production-ready; all Session 11 work committed and deployed
+**Last Updated:** March 3, 2026 (Session 14: DRY Computer/Appliance Models; dropdown nav)
+**Current Status:** Session 13 committed; Session 14 in progress
 
 ---
 
-## Project Overview
+## Directory Tree
 
-**Name:** DEC Owner's Registry (DECOR)
-**Purpose:** Community-driven registry of Digital Equipment Corporation (DEC) computers and their owners
-**URL:** https://decorweb.net/
-**Project Directory:** `decor/`
-**Database:** SQLite (development and production)
-
-**Operators:**
-- English operator (holds domain, primary)
-- German partner (website development)
-
-**Status:**
-- Non-commercial
-- Hobbyist/community use
-- Privacy-conscious (visibility controls)
-
----
-
-## Technology Stack
-
-**Framework:** Ruby on Rails 8.1.2
-**Ruby Version:** 3.4
-**CSS Framework:** Tailwind CSS
-**JavaScript:** Turbo/Hotwire, Stimulus
-**Pagination:** geared_pagination gem
-**Deployment:** Kamal (Docker-based)
-**Authentication:** has_secure_password (BCrypt)
-**Server:** Ubuntu 24 Linux (46.224.178.173)
-
-**Key Gems:**
-- geared_pagination
-- tailwindcss-rails
-- turbo-rails
-- stimulus-rails
-- bcrypt
-- zxcvbn-ruby (password strength validation)
-- kamal
-- brakeman 8.0.3
-
----
-
-## Security & Authentication
-
-### Authentication Method
-**System:** `has_secure_password` with BCrypt
-**Password Storage:** BCrypt digests with cost factor 12
-**Session Management:** Rails session cookies
-
-### Password Requirements
-
-**Length:** Minimum 12 characters
-**Strength:** Minimum zxcvbn score of 3 (strong/very strong)
-
-**Test Passwords** (centralized in `decor/test/support/authentication_helper.rb`):
-```ruby
-TEST_PASSWORD_ALICE = "DecorAdmin2026!".freeze   # Admin user
-TEST_PASSWORD_BOB   = "DecorUser2026!".freeze    # Regular user
-TEST_PASSWORD_VALID = "ValidTest2026!".freeze    # Generic valid
+**Command to regenerate** (run from parent of decor/, pipe to decor_tree.txt and upload):
+```bash
+tree decor/ -I "node_modules|.git|tmp|storage|log|.DS_Store|*.lock|assets|cache|pids|sockets" --dirsfirst -F --prune -L 6 > decor_tree.txt
 ```
 
-### User Features
-- Password reset via email (2-hour token expiry)
-- Password change with current password verification
-- Account self-deletion with password confirmation
-- Password generator in UI (16-char secure passwords)
-
----
-
-## File Structure
-
+**Current tree** (as of Session 14, March 3, 2026):
 ```
-decor/
+decor//
 ├── app/
-│   ├── controllers/
-│   │   ├── computers_controller.rb          v1.6
-│   │   ├── components_controller.rb         v1.5  ← Session 12
-│   │   ├── owners_controller.rb             v1.4
-│   │   ├── data_transfers_controller.rb     v1.0  ← Session 10
-│   │   ├── home_controller.rb
-│   │   └── admin/
-│   │       ├── base_controller.rb
-│   │       ├── conditions_controller.rb
-│   │       ├── component_conditions_controller.rb
-│   │       ├── component_types_controller.rb
-│   │       ├── computer_models_controller.rb
-│   │       └── run_statuses_controller.rb
-│   ├── helpers/
-│   │   ├── application_helper.rb
-│   │   ├── style_helper.rb                  ← field_classes, button_classes
-│   │   ├── computers_helper.rb
-│   │   └── components_helper.rb
-│   ├── javascript/
-│   │   └── controllers/
-│   │       └── back_controller.js           v1.0  ← Session 9
-│   ├── models/
-│   │   ├── owner.rb
-│   │   ├── computer.rb                      v1.4  ← Session 12
-│   │   ├── component.rb
-│   │   ├── computer_condition.rb
-│   │   └── component_condition.rb
-│   ├── services/                            ← Session 10
-│   │   ├── owner_export_service.rb
-│   │   └── owner_import_service.rb
-│   └── views/
-│       ├── home/
-│       ├── owners/
-│       │   └── show.html.erb                v1.4  ← Session 11
-│       ├── computers/
-│       │   └── show.html.erb                v1.5  ← Session 12
-│       ├── components/
-│       └── admin/
-│           ├── conditions/
-│           └── component_conditions/
+│   ├── controllers/
+│   │   ├── admin/
+│   │   │   ├── base_controller.rb
+│   │   │   ├── bulk_uploads_controller.rb
+│   │   │   ├── component_conditions_controller.rb
+│   │   │   ├── component_types_controller.rb
+│   │   │   ├── computer_models_controller.rb
+│   │   │   ├── conditions_controller.rb
+│   │   │   ├── invites_controller.rb
+│   │   │   ├── owners_controller.rb
+│   │   │   └── run_statuses_controller.rb
+│   │   ├── concerns/
+│   │   │   ├── authentication.rb
+│   │   │   └── pagination.rb
+│   │   ├── application_controller.rb
+│   │   ├── components_controller.rb
+│   │   ├── computers_controller.rb
+│   │   ├── data_transfers_controller.rb
+│   │   ├── home_controller.rb
+│   │   ├── owners_controller.rb
+│   │   ├── password_resets_controller.rb
+│   │   └── sessions_controller.rb
+│   ├── helpers/
+│   │   ├── application_helper.rb
+│   │   ├── components_helper.rb
+│   │   ├── computers_helper.rb
+│   │   ├── navigation_helper.rb
+│   │   ├── owners_helper.rb
+│   │   └── style_helper.rb
+│   ├── javascript/
+│   │   ├── controllers/
+│   │   │   ├── application.js
+│   │   │   ├── back_controller.js
+│   │   │   ├── computer_select_controller.js
+│   │   │   ├── hello_controller.js
+│   │   │   ├── index.js
+│   │   │   ├── load_more_controller.js
+│   │   │   └── password_generator_controller.js
+│   │   └── application.js
+│   ├── jobs/
+│   │   ├── application_job.rb
+│   │   └── invite_reminder_job.rb
+│   ├── mailers/
+│   │   ├── application_mailer.rb
+│   │   ├── invite_mailer.rb
+│   │   └── password_reset_mailer.rb
+│   ├── models/
+│   │   ├── decor/
+│   │   │   └── routes.rb
+│   │   ├── application_record.rb
+│   │   ├── component_condition.rb
+│   │   ├── component.rb
+│   │   ├── component_type.rb
+│   │   ├── computer_condition.rb
+│   │   ├── computer_model.rb
+│   │   ├── computer.rb
+│   │   ├── current.rb
+│   │   ├── invite.rb
+│   │   ├── owner.rb
+│   │   └── run_status.rb
+│   ├── services/
+│   │   ├── bulk_upload_service.rb
+│   │   ├── owner_export_service.rb
+│   │   └── owner_import_service.rb
+│   └── views/
+│       ├── admin/
+│       │   ├── bulk_uploads/
+│       │   │   └── new.html.erb
+│       │   ├── component_conditions/
+│       │   │   ├── edit.html.erb
+│       │   │   ├── _form.html.erb
+│       │   │   ├── index.html.erb
+│       │   │   └── new.html.erb
+│       │   ├── component_types/
+│       │   │   ├── edit.html.erb
+│       │   │   ├── _form.html.erb
+│       │   │   ├── index.html.erb
+│       │   │   └── new.html.erb
+│       │   ├── computer_models/
+│       │   │   ├── edit.html.erb
+│       │   │   ├── _form.html.erb
+│       │   │   ├── index.html.erb
+│       │   │   └── new.html.erb
+│       │   ├── conditions/
+│       │   │   ├── edit.html.erb
+│       │   │   ├── _form.html.erb
+│       │   │   ├── index.html.erb
+│       │   │   └── new.html.erb
+│       │   ├── invites/
+│       │   │   ├── index.html.erb
+│       │   │   └── new.html.erb
+│       │   ├── owners/
+│       │   │   ├── edit.html.erb
+│       │   │   └── index.html.erb
+│       │   └── run_statuses/
+│       │       ├── edit.html.erb
+│       │       ├── _form.html.erb
+│       │       ├── index.html.erb
+│       │       └── new.html.erb
+│       ├── common/
+│       │   ├── _flashes.html.erb
+│       │   ├── _footer.html.erb
+│       │   ├── _navigation.html.erb
+│       │   └── _record_errors.html.erb
+│       ├── components/
+│       │   ├── _component.html.erb
+│       │   ├── edit.html.erb
+│       │   ├── _filters.html.erb
+│       │   ├── _form.html.erb
+│       │   ├── index.html.erb
+│       │   ├── index.turbo_stream.erb
+│       │   ├── new.html.erb
+│       │   └── show.html.erb
+│       ├── computers/
+│       │   ├── _computer_component_form.html.erb
+│       │   ├── _computer.html.erb
+│       │   ├── edit.html.erb
+│       │   ├── _filters.html.erb
+│       │   ├── _form.html.erb
+│       │   ├── index.html.erb
+│       │   ├── index.turbo_stream.erb
+│       │   ├── new.html.erb
+│       │   └── show.html.erb
+│       ├── data_transfers/
+│       │   └── show.html.erb
+│       ├── home/
+│       │   └── index.html.erb
+│       ├── layouts/
+│       │   ├── admin.html.erb
+│       │   ├── application.html.erb
+│       │   ├── mailer.html.erb
+│       │   └── mailer.text.erb
+│       ├── mailers/
+│       │   ├── invite_mailer/
+│       │   │   ├── invite_email.html.erb
+│       │   │   ├── invite_email.text.erb
+│       │   │   ├── reminder_email.html.erb
+│       │   │   └── reminder_email.text.erb
+│       │   └── password_reset_mailer/
+│       │       ├── invite_email.html.erb
+│       │       └── reset_email.html.erb
+│       ├── owners/
+│       │   ├── edit.html.erb
+│       │   ├── _filters.html.erb
+│       │   ├── _form.html.erb
+│       │   ├── index.html.erb
+│       │   ├── index.turbo_stream.erb
+│       │   ├── new.html.erb
+│       │   ├── _owner.html.erb
+│       │   └── show.html.erb
+│       ├── password_resets/
+│       │   ├── edit.html.erb
+│       │   └── new.html.erb
+│       ├── pwa/
+│       │   ├── manifest.json.erb
+│       │   └── service-worker.js
+│       ├── sessions/
+│       │   └── new.html.erb
+│       └── shared/
+│           └── _load_more.html.erb
+├── bin/
+│   ├── brakeman*
+│   ├── bundler-audit*
+│   ├── ci*
+│   ├── dev*
+│   ├── docker-entrypoint*
+│   ├── importmap*
+│   ├── jobs*
+│   ├── kamal*
+│   ├── rails*
+│   ├── rake*
+│   ├── rubocop*
+│   ├── setup*
+│   └── thrust*
 ├── config/
-│   ├── deploy.yml
-│   ├── routes.rb
-│   └── master.key (NEVER commit!)
+│   ├── environments/
+│   │   ├── development.rb
+│   │   ├── production.rb
+│   │   └── test.rb
+│   ├── initializers/
+│   │   ├── assets.rb
+│   │   ├── content_security_policy.rb
+│   │   ├── filter_parameter_logging.rb
+│   │   ├── inflections.rb
+│   │   └── require_csv.rb
+│   ├── locales/
+│   │   └── en.yml
+│   ├── application.rb
+│   ├── boot.rb
+│   ├── brakeman.ignore
+│   ├── bundler-audit.yml
+│   ├── cable.yml
+│   ├── cache.yml
+│   ├── ci.rb
+│   ├── credentials.yml.enc
+│   ├── database.yml
+│   ├── deploy.yml
+│   ├── environment.rb
+│   ├── importmap.rb
+│   ├── master.key
+│   ├── puma.rb
+│   ├── queue.yml
+│   ├── recurring.yml
+│   ├── routes.rb
+│   ├── secrets.yml
+│   └── storage.yml
 ├── db/
-│   └── migrate/
+│   ├── migrate/
+│   │   ├── 20251223133731_create_owners.rb
+│   │   ├── 20251223140358_create_computer_models.rb
+│   │   ├── 20251223140432_create_computers.rb
+│   │   ├── 20251223140517_create_component_types.rb
+│   │   ├── 20251223140542_create_components.rb
+│   │   ├── 20251223144611_add_password_reset_to_owners.rb
+│   │   ├── 20251223145711_add_admin_to_owners.rb
+│   │   ├── 20251223173121_create_invites.rb
+│   │   ├── 20251229120631_create_conditions.rb
+│   │   ├── 20251229120632_create_run_statuses.rb
+│   │   ├── 20251229120709_migrate_computer_conditions_and_run_statuses.rb
+│   │   ├── 20251231133644_add_history_and_condition_to_components.rb
+│   │   ├── 20251231133716_make_condition_and_run_status_optional_in_computers.rb
+│   │   ├── 20260212135907_make_serial_number_required.rb
+│   │   ├── 20260220093615_rename_description_to_order_number_on_computers.rb
+│   │   ├── 20260220140000_add_reminder_sent_at_to_invites.rb
+│   │   ├── 20260225120000_component_conditions_and_type_cleanup.rb
+│   │   ├── 20260303100000_add_device_type_to_computers.rb
+│   │   └── 20260303100001_add_component_category_to_components.rb
+│   ├── cable_schema.rb
+│   ├── cache_schema.rb
+│   ├── queue_schema.rb
+│   ├── schema.rb
+│   └── seeds.rb
 ├── docs/
-│   └── claude/
-└── test/
-    ├── fixtures/
-    ├── controllers/
-    │   ├── admin/
-    │   ├── computers_controller_test.rb     v1.0  ← Session 12
-    │   ├── components_controller_test.rb    v1.1  ← Session 12
-    │   ├── data_transfers_controller_test.rb      ← Session 10
-    │   ├── owners_controller_test.rb        v1.3  ← Session 11
-    │   ├── owners_controller_destroy_test.rb
-    │   └── owners_controller_password_test.rb
-    └── services/                            ← Session 10
-        ├── owner_export_service_test.rb
-        └── owner_import_service_test.rb
+│   └── claude/
+│       ├── COMMON_BEHAVIOR.md
+│       ├── DECOR_PROJECT.md
+│       ├── PROGRAMMING_GENERAL.md
+│       ├── RAILS_SPECIFICS.md
+│       └── SESSION_HANDOVER.md
+├── public/
+│   ├── 400.html
+│   ├── 404.html
+│   ├── 406-unsupported-browser.html
+│   ├── 422.html
+│   ├── 500.html
+│   ├── icon.png
+│   ├── icon.svg
+│   └── robots.txt
+├── script/
+│   └── generate_fixture_passwords.rb
+├── test/
+│   ├── controllers/
+│   │   ├── admin/
+│   │   │   ├── admin_owners_controller_test.rb
+│   │   │   ├── component_conditions_controller_test.rb
+│   │   │   ├── component_types_controller_test.rb
+│   │   │   ├── computer_models_controller_test.rb
+│   │   │   ├── conditions_controller_test.rb
+│   │   │   ├── invites_controller_test.rb
+│   │   │   └── run_statuses_controller_test.rb
+│   │   ├── components_controller_test.rb
+│   │   ├── computers_controller_test.rb
+│   │   ├── data_transfers_controller_test.rb
+│   │   ├── owners_controller_destroy_test.rb
+│   │   ├── owners_controller_password_test.rb
+│   │   ├── owners_controller_test.rb
+│   │   └── password_resets_controller_test.rb
+│   ├── fixtures/
+│   │   ├── component_conditions.yml
+│   │   ├── components.yml
+│   │   ├── component_types.yml
+│   │   ├── computer_conditions.yml
+│   │   ├── computer_models.yml
+│   │   ├── computers.yml
+│   │   ├── invites.yml
+│   │   ├── owners.yml
+│   │   └── run_statuses.yml
+│   ├── jobs/
+│   │   └── invite_reminder_job_test.rb
+│   ├── mailers/
+│   │   ├── previews/
+│   │   │   └── invite_mailer_preview.rb
+│   │   ├── invite_mailer_test.rb
+│   │   └── password_reset_mailer_test.rb
+│   ├── models/
+│   │   ├── component_test.rb
+│   │   ├── component_type_test.rb
+│   │   ├── computer_condition_test.rb
+│   │   ├── computer_model_test.rb
+│   │   ├── computer_test.rb
+│   │   ├── invite_test.rb
+│   │   ├── owner_test.rb
+│   │   └── run_status_test.rb
+│   ├── services/
+│   │   ├── owner_export_service_test.rb
+│   │   └── owner_import_service_test.rb
+│   ├── support/
+│   │   └── authentication_helper.rb
+│   ├── application_system_test_case.rb
+│   └── test_helper.rb
+├── config.ru
+├── Dockerfile
+├── Gemfile
+├── Procfile.dev
+├── Rakefile
+├── README.md
+└── rich.html
+
+58 directories, 251 files
 ```
+
+**Key file versions** (updated each session):
+
+    decor/app/controllers/admin/computer_models_controller.rb   v1.1  ← Session 14 (DRY)
+    decor/app/models/computer_model.rb                          v1.1  ← Session 14 (device_type enum)
+    decor/app/models/computer.rb                                v1.5  ← Session 13
+    decor/app/models/component.rb                               v1.3  ← Session 13
+    decor/app/views/admin/computer_models/index.html.erb        v1.1  ← Session 14
+    decor/app/views/admin/computer_models/new.html.erb          v1.1  ← Session 14
+    decor/app/views/admin/computer_models/edit.html.erb         v1.1  ← Session 14
+    decor/app/views/admin/computer_models/_form.html.erb        v1.1  ← Session 14
+    decor/app/views/layouts/admin.html.erb                      v1.3  ← Session 14 (Appliances link active)
+    decor/app/javascript/controllers/dropdown_controller.js     v1.0  ← Session 14 (new)
+    decor/config/routes.rb                                      v1.3  ← Session 14 (:appliance_models)
+    decor/db/migrate/20260303110000_add_device_type_to_computer_models.rb  v1.0  ← Session 14 (new)
+    decor/app/controllers/computers_controller.rb               v1.6  ← Session 11
+    decor/app/controllers/components_controller.rb              v1.5  ← Session 12
+    decor/app/controllers/owners_controller.rb                  v1.4  ← Session 11
+    decor/app/controllers/data_transfers_controller.rb          v1.0  ← Session 10
+    decor/app/views/owners/show.html.erb                        v1.4  ← Session 11
+    decor/app/views/computers/show.html.erb                     v1.5  ← Session 12
+    decor/test/models/computer_test.rb                          v1.4  ← Session 13
+    decor/test/models/component_test.rb                         v1.3  ← Session 13
+    decor/test/controllers/computers_controller_test.rb         v1.0  ← Session 12
+    decor/test/controllers/components_controller_test.rb        v1.1  ← Session 12
+    decor/test/controllers/owners_controller_test.rb            v1.3  ← Session 11
+    decor/test/fixtures/owners.yml                              v2.1  ← Session 13
+    decor/test/fixtures/computers.yml                           v1.6  ← Session 13
+    decor/test/fixtures/components.yml                          v1.3  ← Session 13
+
 
 ---
 
