@@ -1,5 +1,5 @@
 # RAILS_SPECIFICS.md
-# version 1.9
+# version 2.0
 # decor/docs/claude/RAILS_SPECIFICS.md
 # Added (Session 13): Fixture Ownership section — derive counts from data;
 #   use a neutral owner for test-support fixtures to avoid breaking hardcoded
@@ -7,7 +7,7 @@
 
 **Ruby on Rails Specific Patterns and Best Practices**
 
-**Last Updated:** March 1, 2026 (v1.8: Arel.sql() rule for multi-table ORDER BY added)
+**Last Updated:** March 3, 2026 (v2.0: enum assertion rule; directory tree maintenance rule; both Session 14)
 
 ---
 
@@ -626,6 +626,50 @@ Upload `decor_tree.txt` and Claude will replace the tree block in
 The tree command and upload procedure was established this session. From Session 15
 onwards, the user will upload a fresh `decor_tree.txt` at session start; Claude
 will replace the tree block and update the versions table in `DECOR_PROJECT.md`.
+
+
+---
+
+## Enum Assertions in Tests — Use String or Predicate, Not Integer
+
+**Rails enum accessors always return the mapped string label, never the raw integer.**
+This applies to ALL access methods: `.device_type`, `read_attribute(:device_type)`,
+and `model[:device_type]` — all return `"computer"` or `"appliance"`, not `0` or `1`.
+
+**Wrong — all three forms return the string, not the integer:**
+```ruby
+assert_equal 0, model.read_attribute(:device_type)   # returns "computer"
+assert_equal 0, model[:device_type]                  # returns "computer"
+assert_equal 0, model.device_type                    # returns "computer"
+```
+
+**Correct — two acceptable forms:**
+```ruby
+# Form 1: assert against the string label (explicit, readable)
+assert_equal "computer", model.device_type
+assert_equal "appliance", created.device_type
+
+# Form 2: use the generated predicate (most idiomatic)
+assert model.device_type_computer?
+assert_not model.device_type_appliance?
+```
+
+**When to use which form:**
+- Predicate form (`device_type_computer?`) — preferred for boolean pass/fail assertions
+- String form (`assert_equal "computer", model.device_type`) — preferred when the
+  test is specifically verifying that the correct value was stamped (e.g. create action)
+
+**To read the raw integer (rare — only if you genuinely need the DB value):**
+```ruby
+model.read_attribute_before_type_cast(:device_type)   # returns 0 or 1
+```
+
+**Real example (Session 14, March 3, 2026):**
+`computer_model_test.rb` and `computer_models_controller_test.rb` both used
+`read_attribute(:device_type)` and `model[:device_type]` expecting integers.
+Both returned strings. Three test failures across two rounds of fixes.
+The correct pattern was already present in `computer_test.rb` v1.4 (Session 13) —
+reading that file before writing the parallel test would have prevented all failures.
 
 ---
 

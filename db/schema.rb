@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_03_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_04_120000) do
   create_table "component_conditions", force: :cascade do |t|
     t.string "condition", limit: 40, null: false
     t.datetime "created_at", precision: nil, null: false
@@ -123,7 +123,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_03_110000) do
 
   add_foreign_key "components", "component_conditions"
   add_foreign_key "components", "component_types"
-  add_foreign_key "components", "computers"
+  add_foreign_key "components", "computers", on_delete: :cascade
   add_foreign_key "components", "owners"
   add_foreign_key "computers", "computer_conditions"
   add_foreign_key "computers", "computer_models"

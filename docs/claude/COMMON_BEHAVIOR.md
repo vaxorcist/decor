@@ -1,22 +1,92 @@
 # COMMON_BEHAVIOR.md
-# version 1.9
+# version 2.0
 # decor/docs/claude/COMMON_BEHAVIOR.md
-# Changed: Token Usage Reporting section rewritten.
-# Added (Session 10): Download file naming rule — directory prefix only when needed to
-#   distinguish same-named files; "#" as separator instead of "_".
-# Lesson (Session 10): Pre-warning estimates are fundamentally unreliable.
-#   Claude cannot see the system prompt, tool definitions, or API overhead —
-#   all of which form a large fixed base cost invisible to Claude's counting.
-#   In Session 10, Claude estimated ~50% when the UI showed 90%. The estimation
-#   rule is now: treat pre-warning estimates as directional only, never reassuring,
-#   and always tell the user to trust their UI over Claude's estimate.
-# Added (Session 12): Upload file naming rule — same-named files from different
-#   directories must be uploaded in separate answers; the browser uses the bare
-#   filename as the upload key, so a second upload silently overwrites the first.
+# Session 14: Major reliability update.
+#   - Added "Reading Rule Documents" section — MANDATORY use of bash cat, never view tool.
+#     view tool truncates files silently above ~16,000 characters. cat always returns complete content.
+#   - Added "AI Forgetfulness — Why It Happens and How to Prevent It" section.
+#   - Token estimate floor raised: 5+ large documents at session start → minimum 40% estimate.
+#   - Added rule: always specify full paths when referring to or requesting files.
 
 **Universal Rules for All Interactions with This User**
 
-**Last Updated:** March 1, 2026 (v1.9: upload file naming rule added)
+**Last Updated:** March 3, 2026 (v2.0: reliability rules; reading rules; AI forgetfulness documented)
+
+---
+
+## Reading Rule Documents — MANDATORY
+
+### ALWAYS use bash cat, NEVER the view tool for rule documents
+
+The `view` tool truncates files that exceed ~16,000 characters and shows a
+"truncated" notice — but only in Claude's internal output, not visibly to the user.
+A truncated read is a partial read. Partial reads of rule documents mean rules are
+missed. Missed rules cause failures that waste the user's time and tokens.
+
+**RULE: Read ALL rule documents using `bash cat` at the start of every session.**
+
+```bash
+cat /mnt/user-data/uploads/COMMON_BEHAVIOR.md
+cat /mnt/user-data/uploads/RAILS_SPECIFICS.md
+cat /mnt/user-data/uploads/PROGRAMMING_GENERAL.md
+cat /mnt/user-data/uploads/DECOR_PROJECT.md
+cat /mnt/user-data/uploads/SESSION_HANDOVER.md
+```
+
+After reading each document, Claude MUST log the line count as confirmation:
+`Read FILENAME — N lines, complete.`
+
+**RULE: Read any other uploaded code or config file using `bash cat` as well.**
+
+`view` MAY be used for directory listings only — never for reading file content
+that feeds into rule compliance or implementation decisions.
+
+**Real example (Session 14, March 3, 2026):**
+DECOR_PROJECT.md (636 lines) was read with the `view` tool. Lines 215–422 were
+silently truncated. Claude completed a partial read and proceeded without noticing.
+This is unacceptable — the rules set exists precisely to be read completely.
+
+---
+
+## AI Forgetfulness — Why It Happens and How to Prevent It
+
+### Why AIs are not simply "better at remembering than humans"
+
+This is a common and reasonable assumption — but it is only partially true.
+
+**What AIs genuinely do better:**
+- Perfect recall of everything currently in the context window
+- No fatigue, mood, or distraction effects
+- Consistent application of explicit rules when they are actively in focus
+
+**What AIs do poorly — and why:**
+- **Attention is not uniform across the context window.** Transformer-based models
+  like Claude do not read a 600-line document the way a human reads sequentially.
+  Content from the middle or end of a long document competes with content from
+  hundreds of thousands of tokens of conversation history. Recent content and
+  content near task instructions tends to dominate attention.
+- **Rules read at session start decay in influence as the session grows.** By the
+  time a test is being written at turn 20, the rule document read at turn 1 is
+  competing with everything that followed. It is still in the context window —
+  but its influence on generation is diluted.
+- **Rules are not automatically cross-referenced at task time.** Claude does not
+  automatically ask "what rule applies here?" before every action. Unless a rule
+  is actively triggered by a task keyword or checklist step, it can be bypassed.
+- **Truncated reads compound the problem.** If a rule was never fully read, it
+  cannot be applied — regardless of attention.
+
+**What this means in practice:**
+The rules set is not self-enforcing. It requires:
+1. Complete reads (bash cat, not view)
+2. Explicit checklists that force rule recall at task time
+3. The user's active intervention when rules are violated
+
+**Claude's commitment:**
+- Read all rule documents completely at session start (bash cat)
+- Re-read the relevant sections of RAILS_SPECIFICS.md before writing tests
+- Apply the Pre-Implementation Verification checklist without skipping steps
+- When a rule failure occurs: acknowledge it specifically, correct it, and add it
+  to the rule documents before end of session
 
 ---
 
@@ -34,6 +104,22 @@
 **Why this matters:**
 The user needs to place files directly into the project. A download link is faster,
 safer, and less error-prone than manual copy/paste from a code block.
+
+### Always Specify Complete Paths
+
+- ✅ ALWAYS specify the complete path (beginning with the project directory) when
+  referring to, requesting, or delivering any file
+- ✅ Format: `decor/path/to/filename.ext`
+- ❌ NEVER refer to a file by its bare name only (e.g. `routes.rb` with no path)
+- ❌ NEVER ask for a file without specifying its full path
+
+Rails projects have many files with identical names in different directories
+(`show.html.erb`, `_form.html.erb`, `index.html.erb`, etc.). Bare filenames
+cause placement errors. Always give the full path.
+
+**Real example (Session 14, March 3, 2026):**
+After delivering 11 files, the placement instructions listed bare filenames only.
+User had to ask for the full paths explicitly.
 
 ### Download File Naming
 
@@ -103,6 +189,11 @@ will always be a significant undercount. In Session 10 (February 27, 2026),
 Claude estimated ~50% when the UI showed 90% — a gap large enough to cause
 poor planning decisions.
 
+**Session-start floor rule:**
+When 5 or more large rule/project documents are uploaded at session start,
+the token estimate must NEVER be below 40% — the fixed base cost alone
+justifies this floor before any conversation content is counted.
+
 **Rules:**
 
 ✅ When a system warning IS visible:
@@ -114,6 +205,7 @@ poor planning decisions.
 ✅ When NO system warning is visible:
 - Provide an estimate, but label it explicitly as rough and likely an undercount
 - Apply a correction factor: multiply naive visible-content estimate by ~2
+- Apply session-start floor: never below 40% when 5+ large documents are loaded
 - Format: `**Token Usage (estimate):** ~X / 200,000 (~Y% used) — rough estimate only; likely an undercount; trust your UI`
 - Err HIGH rather than falsely reassuring
 - Remind the user that the UI is the only reliable source
@@ -137,12 +229,10 @@ System warning present:
   Correct report: **Token Usage:** ~93,000 / 190,000 (49% used, ~97,000 remaining)
   WRONG:          **Token Usage:** ~18,600 / 190,000 (9.8% used) ← contradicts warning
 
-No system warning:
-  Correct: **Token Usage (estimate):** ~70,000 / 200,000 (~35% used) — rough estimate
+No system warning, 5 large docs loaded:
+  Correct: **Token Usage (estimate):** ~80,000 / 200,000 (~40% used) — rough estimate
            only; likely an undercount; trust your UI over this number
-  WRONG:   [silent / omitted]
-  WRONG:   **Token Usage (estimate):** ~35,000 / 200,000 (~18% used) ← too low,
-           gives false reassurance
+  WRONG:   **Token Usage (estimate):** ~8,000 / 200,000 (~4% used) ← ignores base cost
 ```
 
 ---
@@ -192,6 +282,10 @@ document for detailed checklists (e.g. RAILS_SPECIFICS.md for Ruby on Rails).
       Do not assume fixture names, record counts, or data values.
 - [ ] **I have seen existing test patterns to follow**
       Use the project's established patterns — do not invent new ones.
+- [ ] **I have READ THE ACTUAL PARALLEL TEST FILE — not just the handover summary**
+      Reading `computer_test.rb` before writing `computer_model_test.rb` would
+      have immediately shown the correct enum assertion pattern. Summaries lie by
+      omission. Always read the file.
 
 ### For Implementing Features (generic):
 - [ ] **I have all files involved in this change**
