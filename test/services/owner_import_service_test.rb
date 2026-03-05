@@ -1,4 +1,8 @@
-# decor/test/services/owner_import_service_test.rb - version 1.0
+# decor/test/services/owner_import_service_test.rb - version 1.1
+# Session 16: Added tests for "appliance" record_type:
+#   - Importing an "appliance" row creates a computer with device_type: 1
+#   - "appliance" is accepted as a valid record_type (not treated as unknown)
+#
 # Tests for OwnerImportService — verifies CSV import behaviour including the
 # two-pass strategy, duplicate skipping, atomicity, and error handling.
 #
@@ -7,7 +11,8 @@
 # .original_filename interface it expects.
 #
 # Fixture baseline used in tests:
-#   computer_models: pdp11_70 ("PDP-11/70"), pdp8 ("PDP-8"), vt100 ("VT100")
+#   computer_models: pdp11_70 ("PDP-11/70"), pdp8 ("PDP-8"), vt100 ("VT100"),
+#                    hsc50 ("HSC50", device_type: 1)
 #   component_types: memory_board ("Memory Board"), cpu_board ("CPU Board")
 #   computer_conditions: original ("Completely original")
 #   component_conditions: working (condition: "Working")
@@ -91,6 +96,54 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
     assert result[:success]
     assert_equal 1, result[:computer_count]
     assert_equal 1, result[:component_count]
+  end
+
+  # ── device_type: appliance ────────────────────────────────────────────────
+
+  test "importing an 'appliance' row creates a computer with device_type appliance" do
+    csv = build_csv([
+      ["appliance", "HSC50", "APP-ORD-001", "APP-SN-001",
+       nil, nil, "Storage controller",
+       nil, nil, nil, nil, nil]
+    ])
+
+    assert_difference "@alice.computers.count", 1 do
+      result = OwnerImportService.process(@alice, csv_upload(csv))
+      assert result[:success], "Expected success, got: #{result[:error]}"
+      assert_equal 1, result[:computer_count]
+    end
+
+    appliance = @alice.computers.find_by!(serial_number: "APP-SN-001")
+    assert appliance.device_type_appliance?,
+           "Imported 'appliance' record_type should produce device_type: appliance"
+    assert_equal "HSC50", appliance.computer_model.name
+    assert_equal "Storage controller", appliance.history
+  end
+
+  test "'appliance' record_type is not treated as unknown" do
+    # This test verifies that "appliance" does not trigger the unknown-record_type
+    # error path — it must be accepted and processed without error.
+    csv = build_csv([
+      ["appliance", "HSC50", nil, "APP-SN-VALID", nil, nil, nil,
+       nil, nil, nil, nil, nil]
+    ])
+
+    result = OwnerImportService.process(@alice, csv_upload(csv))
+    assert result[:success], "Expected 'appliance' to be a valid record_type, got: #{result[:error]}"
+  end
+
+  test "importing a 'computer' row still creates device_type: computer" do
+    # Regression: adding appliance support must not affect the existing computer path.
+    csv = build_csv([
+      ["computer", "PDP-11/70", nil, "COMPUTER-TYPE-SN", nil, nil, nil,
+       nil, nil, nil, nil, nil]
+    ])
+
+    OwnerImportService.process(@alice, csv_upload(csv))
+
+    computer = @alice.computers.find_by!(serial_number: "COMPUTER-TYPE-SN")
+    assert computer.device_type_computer?,
+           "Imported 'computer' record_type should produce device_type: computer"
   end
 
   # ── Two-pass strategy ────────────────────────────────────────────────────
@@ -322,7 +375,7 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
   # ── Header validation ─────────────────────────────────────────────────────
 
   test "CSV with missing required headers fails" do
-    bad_csv = "record_type,computer_model\ncomputer,PDP-11/70\n"
+    bad_csv = "record_type,computer_model\\ncomputer,PDP-11/70\\n"
 
     result = OwnerImportService.process(@alice, csv_upload(bad_csv))
     refute result[:success]
@@ -332,6 +385,7 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
   # ── Unknown record_type ───────────────────────────────────────────────────
 
   test "unknown record_type value fails with descriptive error" do
+    # "widget" is not a valid record_type — must trigger an error containing the bad value
     csv = build_csv([
       ["widget", "PDP-11/70", nil, "UNKNOWN-TYPE-SN", nil, nil, nil,
        nil, nil, nil, nil, nil]

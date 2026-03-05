@@ -1,12 +1,13 @@
 # decor/docs/claude/DECOR_PROJECT.md
-# version 2.11
+# version 2.12
 # Session 13: device_type on computers, component_category on components; enum tests.
 # Session 14: DRY Computer/Appliance Models admin pages; dropdown nav (admin.html.erb v1.3);
 #   device_type on computer_models; routes :appliance_models; dropdown_controller.js.
+# Session 16: device_type in export/import — "appliance" as third record_type value.
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** March 3, 2026 (Session 14: DRY Computer/Appliance Models; dropdown nav)
+**Last Updated:** March 4, 2026 (Session 16: device_type in export/import; "appliance" record_type)
 **Current Status:** Session 13 committed; Session 14 in progress
 
 ---
@@ -339,18 +340,22 @@ decor//
     decor/app/models/computer_model.rb                          v1.1  ← Session 14 (device_type enum)
     decor/app/models/computer.rb                                v1.5  ← Session 13
     decor/app/models/component.rb                               v1.3  ← Session 13
+    decor/app/services/owner_export_service.rb                  v1.1  ← Session 16 (appliance record_type)
+    decor/app/services/owner_import_service.rb                  v1.1  ← Session 16 (appliance record_type)
     decor/app/views/admin/computer_models/index.html.erb        v1.1  ← Session 14
     decor/app/views/admin/computer_models/new.html.erb          v1.1  ← Session 14
     decor/app/views/admin/computer_models/edit.html.erb         v1.1  ← Session 14
     decor/app/views/admin/computer_models/_form.html.erb        v1.1  ← Session 14
+    decor/app/views/data_transfers/show.html.erb                v1.5  ← Session 16 (appliance record_type)
     decor/app/views/layouts/admin.html.erb                      v1.3  ← Session 14 (Appliances link active)
     decor/app/javascript/controllers/dropdown_controller.js     v1.0  ← Session 14 (new)
     decor/config/routes.rb                                      v1.3  ← Session 14 (:appliance_models)
     decor/db/migrate/20260303110000_add_device_type_to_computer_models.rb  v1.0  ← Session 14 (new)
+    decor/db/migrate/20260304120000_add_cascade_delete_components_computer.rb  v1.1  ← Session 15 (new)
     decor/app/controllers/computers_controller.rb               v1.6  ← Session 11
     decor/app/controllers/components_controller.rb              v1.5  ← Session 12
     decor/app/controllers/owners_controller.rb                  v1.4  ← Session 11
-    decor/app/controllers/data_transfers_controller.rb          v1.0  ← Session 10
+    decor/app/controllers/data_transfers_controller.rb          v1.1  ← Session 10
     decor/app/views/owners/show.html.erb                        v1.4  ← Session 11
     decor/app/views/computers/show.html.erb                     v1.5  ← Session 12
     decor/test/models/computer_test.rb                          v1.4  ← Session 13
@@ -358,6 +363,8 @@ decor//
     decor/test/controllers/computers_controller_test.rb         v1.0  ← Session 12
     decor/test/controllers/components_controller_test.rb        v1.1  ← Session 12
     decor/test/controllers/owners_controller_test.rb            v1.3  ← Session 11
+    decor/test/services/owner_export_service_test.rb            v1.1  ← Session 16 (appliance tests)
+    decor/test/services/owner_import_service_test.rb            v1.1  ← Session 16 (appliance tests)
     decor/test/fixtures/owners.yml                              v2.1  ← Session 13
     decor/test/fixtures/computers.yml                           v1.6  ← Session 13
     decor/test/fixtures/components.yml                          v1.3  ← Session 13
@@ -619,6 +626,42 @@ New test added; existing source tests retained as regression guards.
 COMMON_BEHAVIOR v1.9: Upload file naming rule added — same-named files from
 different directories must be uploaded in separate answers (one per message),
 not together. The browser overwrites the first with the second silently.
+
+---
+
+## Work Completed - Session 16 (March 4, 2026)
+
+### 1. device_type in Export / Import
+
+    decor/app/services/owner_export_service.rb            (v1.1)
+    decor/app/services/owner_import_service.rb            (v1.1)
+    decor/app/views/data_transfers/show.html.erb          (v1.5)
+    decor/test/services/owner_export_service_test.rb      (v1.1)
+    decor/test/services/owner_import_service_test.rb      (v1.1)
+
+`"appliance"` added as a third valid `record_type` value alongside `"computer"`
+and `"component"`. No new CSV column — `record_type` encodes `device_type` directly:
+`"computer"` → `device_type: 0`, `"appliance"` → `device_type: 1`.
+
+Export: `device_type_appliance?` predicate selects the emitted string.
+Import: `"appliance"` routes into the existing `computer_rows` bucket with a
+`:appliance` tag; `process_computer_row` receives `device_type` as a third
+argument and passes it to `build`.
+
+UI (`show.html.erb`): `record_type` column description updated; example CSV
+gains an appliance row.
+
+### 2. Rule Document Updates
+
+    decor/docs/claude/COMMON_BEHAVIOR.md              (v2.2)
+    decor-session-rules skill                         (v1.1)
+
+Two new rules added this session:
+- "Skill and Rule Document Changes": must propose before modifying; present
+  result as downloadable file; never modify silently.
+- "Tool Availability — Never Infer, Always Test": run `echo "bash_tool OK"`
+  as step 0 at every session start; never infer tool availability from
+  environment context strings.
 
 ---
 

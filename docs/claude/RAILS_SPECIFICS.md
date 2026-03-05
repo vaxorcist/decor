@@ -1,13 +1,16 @@
 # RAILS_SPECIFICS.md
-# version 2.0
+# version 2.1
 # decor/docs/claude/RAILS_SPECIFICS.md
 # Added (Session 13): Fixture Ownership section — derive counts from data;
 #   use a neutral owner for test-support fixtures to avoid breaking hardcoded
 #   count assertions in unrelated test files.
+# Added (Session 15): SQLite table recreation — always use explicit column names
+#   in INSERT/SELECT, never SELECT *. Positional copy fails silently when
+#   schema.rb column order differs from SQLite storage order.
 
 **Ruby on Rails Specific Patterns and Best Practices**
 
-**Last Updated:** March 3, 2026 (v2.0: enum assertion rule; directory tree maintenance rule; both Session 14)
+**Last Updated:** March 4, 2026 (v2.1: explicit column names rule in SQLite table recreation; Session 15)
 
 ---
 
@@ -409,7 +412,9 @@ Use backup-in-migration pattern for safety.
 **Migration pattern for SQLite table recreation:**
 1. `PRAGMA foreign_keys = OFF`
 2. `CREATE TABLE new_name (...)`
-3. `INSERT INTO new_name SELECT ... FROM old_name`
+3. `INSERT INTO new_name (col1, col2, ...) SELECT col1, col2, ... FROM old_name`
+   — ALWAYS use explicit column names on both sides; never `SELECT *`
+     (see "SQLite Table Recreation — Always Use Explicit Column Names" below)
 4. `DROP TABLE old_name`
 5. `ALTER TABLE new_name RENAME TO old_name`
 6. Recreate all indexes
@@ -670,6 +675,44 @@ model.read_attribute_before_type_cast(:device_type)   # returns 0 or 1
 Both returned strings. Three test failures across two rounds of fixes.
 The correct pattern was already present in `computer_test.rb` v1.4 (Session 13) —
 reading that file before writing the parallel test would have prevented all failures.
+
+---
+
+## SQLite Table Recreation — Always Use Explicit Column Names
+
+**RULE: Never use `SELECT *` in the INSERT step of a SQLite table recreation
+migration. Always name every column explicitly on both sides.**
+
+SQLite stores columns in the order they were added by successive migrations.
+`schema.rb` lists columns alphabetically. These two orderings frequently differ.
+`SELECT *` returns columns in storage order; if the new table definition uses a
+different order, data lands in the wrong columns — silently, with no warning
+unless a NOT NULL or type constraint happens to catch it.
+
+**Wrong — positional copy, order mismatch causes silent data corruption:**
+```ruby
+execute "INSERT INTO components_new SELECT * FROM components"
+```
+
+**Correct — name-based copy, immune to column order differences:**
+```ruby
+COLUMNS = %w[id component_category component_condition_id component_type_id
+             computer_id created_at description history order_number
+             owner_id serial_number updated_at].freeze
+
+col_list = COLUMNS.join(", ")
+execute "INSERT INTO components_new (#{col_list}) SELECT #{col_list} FROM components"
+```
+
+The COLUMNS constant also serves as self-documentation of the table's structure
+at migration time, and makes the `down` method a straightforward copy of `up`.
+
+**Real example (Session 15, March 4, 2026):**
+`AddCascadeDeleteComponentsComputer` (v1.0) used `SELECT *`. The INSERT failed
+with `NOT NULL constraint failed: components_new.component_type_id` even though
+the source data had no NULL values — the data was correct but landed in the wrong
+column due to storage-order vs. schema.rb-order mismatch. Fixed in v1.1 by using
+explicit column names on both sides.
 
 ---
 

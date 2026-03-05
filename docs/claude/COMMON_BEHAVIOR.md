@@ -1,5 +1,5 @@
 # COMMON_BEHAVIOR.md
-# version 2.0
+# version 2.2
 # decor/docs/claude/COMMON_BEHAVIOR.md
 # Session 14: Major reliability update.
 #   - Added "Reading Rule Documents" section — MANDATORY use of bash cat, never view tool.
@@ -7,10 +7,65 @@
 #   - Added "AI Forgetfulness — Why It Happens and How to Prevent It" section.
 #   - Token estimate floor raised: 5+ large documents at session start → minimum 40% estimate.
 #   - Added rule: always specify full paths when referring to or requesting files.
+# Session 16: Added "Tool Availability — Never Infer, Always Test" rule.
+#   - Documented failure mode: bash_tool available but unused due to false inference
+#     from environment context description. One sanity-check command prevents this.
+# Session 16: Added "Skill and Rule Document Changes" rule.
+#   - Must propose before modifying; present result as downloadable file; never modify silently.
 
 **Universal Rules for All Interactions with This User**
 
-**Last Updated:** March 3, 2026 (v2.0: reliability rules; reading rules; AI forgetfulness documented)
+**Last Updated:** March 4, 2026 (v2.2: skill/rule doc change protocol; Session 16)
+
+---
+
+## Skill and Rule Document Changes — MANDATORY PROTOCOL
+
+### Before modifying any skill or rule document:
+- ✅ Present the proposed change and explain the reasoning
+- ✅ Wait for explicit user approval before making any edit
+- ❌ NEVER modify a skill or rule document without prior approval
+
+### After modifying any skill or rule document:
+- ✅ Present the complete updated file as a downloadable file using present_files
+- ✅ The user cannot inspect skill files directly in the web UI — a download is the only way they can review what changed
+- ❌ NEVER assume the user can see the change without a download link
+
+**Real example (Session 16, March 4, 2026):**
+The `decor-session-rules` skill was modified twice in one session without prior
+approval. The user could not see the changes in the web UI and had to explicitly
+ask for a downloadable file. Both the approval step and the download step were
+missing. This rule exists to prevent both failures.
+
+---
+
+## Tool Availability — Never Infer, Always Test
+
+### NEVER assume a tool is unavailable based on environment context descriptions
+
+Environment context strings like "web interface", "mobile", or "chat" describe
+the user-facing product — they say nothing about which tools are available to
+Claude internally. Inferring tool availability from these descriptions is wrong
+and causes silent fallback to incorrect alternatives.
+
+**The failure mode (Session 16, March 4, 2026):**
+The system context said "web or mobile chat interface." Claude inferred (incorrectly)
+that `bash_tool` was unavailable and attempted `web_fetch` with `file://` URLs instead.
+`web_fetch` cannot access local filesystem paths. The correct tool — `bash_tool` —
+was available and working the entire time. It was simply never attempted.
+
+**The fix: test, don't reason.**
+
+At every session start, run a trivial command before doing anything else:
+```bash
+echo "bash_tool OK"
+```
+
+- If it works → proceed normally
+- If it fails → report the failure explicitly; do NOT silently substitute another tool
+
+**RULE: A tool is unavailable only when a test command confirms it fails — not
+because environment context suggests it might not be present.**
 
 ---
 
