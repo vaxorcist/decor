@@ -1,13 +1,9 @@
-<%# decor/app/views/computers/show.html.erb - version 1.5 %>
-<%# Session 12 changes (v1.4→v1.5): %>
-<%#   - Delete button: source "computer" → "computer_show" so deletion stays on show page %>
-<%# Session 12 changes: %>
-<%#   - max-w-5xl → max-w-7xl (matches owners/show container width) %>
-<%#   - Components table: Order No. and Serial No. columns added %>
-<%#   - Components table: Delete button added next to Edit (owner/admin only) %>
-<%#   - Components table column order now matches owners/show: %>
-<%#       Type | Order No. | Serial No. | Description | Actions %>
-<%#   - Delete uses source: "computer" → redirects to edit_computer_path after deletion %>
+<%# decor/app/views/computers/show.html.erb - version 1.6 %>
+<%# v1.6 (Session 17): "No components attached to this computer." now uses %>
+<%#   @computer.device_type so it reads "...this computer." or "...this appliance." %>
+<%# v1.5 (Session 12): Delete source "computer" → "computer_show". %>
+<%# v1.4 (Session 12): max-w-5xl → max-w-7xl; Order No. + Serial No. columns added; %>
+<%#   Delete button added; column order aligned with owners/show. %>
 
 <div class="max-w-7xl mx-auto">
 
@@ -78,26 +74,22 @@
         <table class="min-w-full divide-y divide-stone-200">
           <thead class="bg-stone-50">
             <tr>
-              <%# Type — value is a clickable link to component show page %>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Type</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Order No.</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Serial No.</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Description</th>
-              <%# Actions column — always rendered; Edit + Delete shown to owner/admin only %>
               <th class="px-4 py-2"></th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-stone-200 text-sm">
             <% @components.each do |component| %>
               <tr class="hover:bg-stone-50">
-                <%# Type as indigo link → component show page %>
                 <td class="px-4 py-3 whitespace-nowrap font-medium">
                   <%= link_to component.component_type.name, component_path(component), class: "text-indigo-600 hover:text-indigo-900" %>
                 </td>
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.order_number.presence || "—" %></td>
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.serial_number.presence || "—" %></td>
                 <td class="px-4 py-3 text-stone-600"><%= truncate(component.description, length: 80) || "—" %></td>
-                <%# Actions — Edit and Delete shown to owner/admin only %>
                 <td class="px-4 py-3 whitespace-nowrap text-right">
                   <% if Current.owner == @computer.owner || admin? %>
                     <div class="flex items-center justify-end gap-3">
@@ -116,7 +108,8 @@
         </table>
       </div>
     <% else %>
-      <p class="text-sm text-stone-500">No components attached to this computer.</p>
+      <%# device_type ("computer"/"appliance") used directly — no capitalisation needed here %>
+      <p class="text-sm text-stone-500">No components attached to this <%= @computer.device_type %>.</p>
     <% end %>
   </div>
 

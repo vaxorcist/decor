@@ -1,9 +1,14 @@
 # decor/config/routes.rb
-# version 1.3
-# Added: resources :appliance_models pointing to the computer_models controller.
-# The defaults: { device_context: "appliance" } param tells the controller
-# which device type context it is operating in, without path-sniffing.
-# computer_models also gets defaults: { device_context: "computer" } for symmetry.
+# version 1.4
+# v1.4 (Session 17): Added resources :appliances (index only) pointing to the
+#   computers controller with device_context: "appliance". Individual record
+#   CRUD always routes through computers_* paths, so only :index is needed here.
+#   Added device_context: "computer" default to resources :computers for symmetry —
+#   the before_action in the controller uses this to distinguish contexts.
+# v1.3: resources :appliance_models pointing to the computer_models controller.
+#   The defaults: { device_context: "appliance" } param tells the controller
+#   which device type context it is operating in, without path-sniffing.
+#   computer_models also gets defaults: { device_context: "computer" } for symmetry.
 
 Rails.application.routes.draw do
   default_url_options(host: Decor::Routes.host, protocol: Decor::Routes.protocol)
@@ -11,7 +16,15 @@ Rails.application.routes.draw do
   root "home#index"
 
   resources :owners
-  resources :computers
+  resources :computers,  defaults: { device_context: "computer" }
+
+  # Appliances index — shares the computers controller; device_context param
+  # tells the controller to lock the device_type filter to "appliance".
+  # Only :index is needed here — individual records are always accessed via
+  # their computers_* routes (show, edit, update, destroy).
+  resources :appliances, controller: "computers", only: [:index],
+                         defaults: { device_context: "appliance" }
+
   resources :components
 
   # Owner data export / import — always scoped to Current.owner (no id in URL).

@@ -1,8 +1,13 @@
-<%# decor/app/views/computers/_filters.html.erb - version 1.1 %>
-<%# Updated: condition_id → computer_condition_id following the %>
-<%# conditions → computer_conditions table rename (Session 7, Feb 25, 2026). %>
+<%# decor/app/views/computers/_filters.html.erb - version 1.3 %>
+<%# v1.3 (Session 17): Form action and Reset link use @index_path so the filter %>
+<%#   panel works correctly on both /computers and /appliances. The Type selector %>
+<%#   is hidden on the Appliances page — device_type is locked there by the %>
+<%#   controller and showing the selector would be confusing and non-functional. %>
+<%# v1.2: Added "Type" filter selector (device_type) between Sort and Model. %>
+<%# v1.1: condition_id → computer_condition_id following the %>
+<%#   conditions → computer_conditions table rename (Session 7). %>
 
-<%= form_with url: computers_path, method: :get, local: true, class: "col-span-1 self-start flex flex-col gap-4 mb-4 p-4 bg-stone-100" do |form| %>
+<%= form_with url: @index_path, method: :get, local: true, class: "col-span-1 self-start flex flex-col gap-4 mb-4 p-4 bg-stone-100" do |form| %>
   <div class="-mb-2 font-medium">Filters</div>
 
   <div>
@@ -15,6 +20,16 @@
     <%= form.label :sort, "Sort", class: "text-sm text-stone-600 font-medium" %>
     <%= form.select :sort, computer_sort_options, { selected: computer_sort_selected }, { class: field_classes } %>
   </div>
+
+  <%# Type filter is only relevant on the Computers page. On the Appliances page %>
+  <%# device_type is locked to "appliance" by the controller — the selector would %>
+  <%# have no effect and would mislead the user. %>
+  <% unless @device_context == "appliance" %>
+    <div class="flex flex-col">
+      <%= form.label :device_type, "Type", class: "text-sm text-stone-600 font-medium" %>
+      <%= form.select :device_type, computer_filter_device_type_options, { selected: computer_filter_device_type_selected, include_blank: "Any" }, { class: field_classes } %>
+    </div>
+  <% end %>
 
   <div class="flex flex-col">
     <%= form.label :model, "Model", class: "text-sm text-stone-600 font-medium" %>
@@ -32,7 +47,7 @@
   </div>
 
   <div class="flex justify-end gap-2">
-    <%= link_to "Reset", computers_path, class: button_classes(style: :secondary) %>
+    <%= link_to "Reset", @index_path, class: button_classes(style: :secondary) %>
     <%= form.submit "Apply", class: button_classes(style: :secondary) %>
   </div>
 <% end %>

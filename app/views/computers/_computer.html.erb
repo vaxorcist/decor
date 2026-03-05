@@ -1,9 +1,13 @@
-<%# decor/app/views/computers/_computer.html.erb - version 1.6 %>
-<%# Updated: computer.condition → computer.computer_condition following the %>
-<%# conditions → computer_conditions table/model rename (Session 7, Feb 25, 2026). %>
+<%# decor/app/views/computers/_computer.html.erb - version 1.8 %>
+<%# v1.8 (Session 17): Type column cell hidden when @device_context == "appliance", %>
+<%#   matching the Type column header visibility in index.html.erb v1.7. %>
+<%#   Every row on the Appliances page is an appliance, so the column adds no value. %>
+<%# v1.7: Added "Type" column after Model, showing device_type as a capitalised string. %>
+<%# v1.6: computer.condition → computer.computer_condition following the %>
+<%#   conditions → computer_conditions table/model rename (Session 7, Feb 25, 2026). %>
 
 <tr id="<%= dom_id computer %>" class="hover:bg-stone-50">
-  <!-- Owner - first column; blue link consistent with Model -->
+  <!-- Owner -->
   <td class="px-4 py-3 whitespace-nowrap text-stone-600">
     <%= link_to computer.owner.user_name, computer.owner, class: "text-indigo-600 hover:text-indigo-900" %>
   </td>
@@ -13,7 +17,14 @@
     <%= link_to computer.computer_model.name, computer, class: "text-indigo-600 hover:text-indigo-900" %>
   </td>
 
-  <!-- Order Number - short field, no truncation needed -->
+  <%# Type cell matches the header: hidden on the Appliances page, visible on Computers. %>
+  <% unless @device_context == "appliance" %>
+    <td class="px-4 py-3 whitespace-nowrap text-stone-600">
+      <%= computer.device_type.capitalize %>
+    </td>
+  <% end %>
+
+  <!-- Order Number -->
   <td class="px-4 py-3 whitespace-nowrap text-stone-600">
     <%= computer.order_number.presence || "—" %>
   </td>
@@ -33,7 +44,7 @@
     <%= computer.run_status&.name || "—" %>
   </td>
 
-  <!-- Actions - blue links consistent with other clickable values -->
+  <!-- Actions -->
   <td class="px-4 py-3 whitespace-nowrap text-right">
     <% if Current.owner == computer.owner %>
       <%= link_to "Edit", edit_computer_path(computer), class: "text-indigo-600 hover:text-indigo-900" %>

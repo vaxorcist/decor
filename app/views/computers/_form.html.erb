@@ -1,7 +1,12 @@
-<%# decor/app/views/computers/_form.html.erb - version 1.9 %>
-<%# Session 10: Added Stimulus Back button alongside submit buttons so users %>
-<%# don't have to scroll past the component section to reach the back button. %>
-<%# Fallback URL mirrors the "Done" link: show page for existing, index for new. %>
+<%# decor/app/views/computers/_form.html.erb - version 2.0 %>
+<%# v2.0 (Session 17): All hardcoded "Computer" strings replaced with %>
+<%#   computer.device_type.capitalize so the form reads "Update Computer" / %>
+<%#   "Update Appliance", "Add Computer's Component" / "Add Appliance's Component", %>
+<%#   etc., depending on the record's actual device_type. %>
+<%#   f.submit label is now explicit (overrides Rails default) for the same reason. %>
+<%# v1.9 (Session 10): Added Stimulus Back button alongside submit buttons so users %>
+<%#   don't have to scroll past the component section to reach the back button. %>
+<%#   Fallback URL mirrors the "Done" link: show page for existing, index for new. %>
 
 <%= form_with model: computer, class: "space-y-4", style: "width: 80%;" do |f| %>
   <%= render "common/record_errors", record: computer %>
@@ -53,9 +58,10 @@
   </div>
 
   <%# Button row — submit + secondary actions + Back button %>
-  <%# Back button placed here so it's visible without scrolling past the component section %>
+  <%# f.submit label is explicit to avoid the Rails default "Create/Update Computer" %>
+  <%# regardless of device_type. %>
   <div class="flex gap-3 items-center">
-    <%= f.submit class: button_classes(style: :primary) %>
+    <%= f.submit "#{computer.persisted? ? "Update" : "Create"} #{computer.device_type.capitalize}", class: button_classes(style: :primary) %>
     <% unless computer.persisted? %>
       <%= f.submit "Create and add another", name: "add_another", class: button_classes(style: :secondary) %>
     <% end %>
@@ -72,26 +78,26 @@
 
 <%# ─────────────────────────────────────────────────────────────────────────── %>
 <%# Component section — outside the computer form (nested forms are invalid HTML) %>
-<%# Only shown for existing computers (new computer has no id yet) %>
+<%# Only shown for existing computers/appliances (new record has no id yet) %>
 <%# Full width: inherits max-w-5xl from the edit.html.erb container %>
 <%# ─────────────────────────────────────────────────────────────────────────── %>
 <% if computer.persisted? %>
   <hr class="my-8 border-stone-200" />
 
-  <%# Add / Edit Computer's Component — shown ABOVE the component list %>
+  <%# Add / Edit [Device]'s Component — shown ABOVE the component list %>
   <div class="mb-8">
     <% if @edit_component %>
-      <h2 class="text-xl font-semibold mb-4">Edit Computer's Component</h2>
+      <h2 class="text-xl font-semibold mb-4">Edit <%= computer.device_type.capitalize %>'s Component</h2>
       <%= render "computer_component_form", component: @edit_component, computer: computer %>
     <% else %>
-      <h2 class="text-xl font-semibold mb-4">Add Computer's Component</h2>
+      <h2 class="text-xl font-semibold mb-4">Add <%= computer.device_type.capitalize %>'s Component</h2>
       <%= render "computer_component_form", component: @new_component, computer: computer %>
     <% end %>
   </div>
 
-  <%# Computer's Components list — below the add/edit form %>
+  <%# [Device]'s Components list — below the add/edit form %>
   <div>
-    <h2 class="text-xl font-semibold mb-4">Computer's Components</h2>
+    <h2 class="text-xl font-semibold mb-4"><%= computer.device_type.capitalize %>'s Components</h2>
 
     <% if computer.components.any? %>
       <div class="bg-white border border-stone-200 rounded overflow-auto">

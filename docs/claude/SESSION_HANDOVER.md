@@ -1,26 +1,26 @@
 # decor/docs/claude/SESSION_HANDOVER.md
-# version 16.0
+# version 17.0
 
-**Date:** March 4, 2026
-**Branch:** main (session 15 work not yet committed — see Git State below)
-**Status:** DB-level ON DELETE CASCADE added; skill created; rule doc updated;
-            tests passing.
+**Date:** March 5, 2026
+**Branch:** feature/add-independent-devices-and-peripherals
+**Status:** Session 16 work in progress — not yet committed.
 
 ---
 
 ## !! RELIABILITY NOTICE — READ FIRST !!
 
-Session 15 repeated the separator and token-reporting violations from Session 14
-— this time at turn 1, before any project work. Root cause: rules were not active
-constraints during response generation; they were treated as content to report on.
-
-A `decor-session-rules` skill has been created and installed to address this.
-It must be consulted before composing any response.
+The `decor-session-rules` skill (v1.1) is installed. Its description contains
+the first mandatory action — read it from the available_skills context before
+doing anything else.
 
 **MANDATORY at every session start:**
-Read ALL rule documents using `bash cat` — never the `view` tool for file content.
-After each document, log: `Read FILENAME — N lines, complete.`
 
+STEP 0 — Tool sanity check (from skill description — visible without reading file):
+```bash
+echo "bash_tool OK"
+```
+
+STEP 1 — Read ALL five rule documents via bash cat:
 ```bash
 cat /mnt/user-data/uploads/COMMON_BEHAVIOR.md
 cat /mnt/user-data/uploads/RAILS_SPECIFICS.md
@@ -28,133 +28,166 @@ cat /mnt/user-data/uploads/PROGRAMMING_GENERAL.md
 cat /mnt/user-data/uploads/DECOR_PROJECT.md
 cat /mnt/user-data/uploads/SESSION_HANDOVER.md
 ```
+After each: log "Read FILENAME — N lines, complete."
 
 ---
 
 ## Session Summary
 
-Session 15 delivered:
-1. Reliability analysis — token/memory diagram (PNG); honest discussion of AI
-   limitations for safety-critical systems
-2. `decor-session-rules` skill — pre-response checklist (separators, token
-   reporting, bash cat) packaged and installed
-3. DB-level ON DELETE CASCADE for components → computers FK (migration)
-4. RAILS_SPECIFICS.md v2.1 — new rule: explicit column names in SQLite
-   table recreation migrations
+Session 16 delivered:
+1. Session start failure analysis — bash_tool not used due to false inference
+   from environment context string. Skill v1.1 and COMMON_BEHAVIOR.md v2.2
+   updated with two new rules: tool sanity check (step 0) and skill/rule doc
+   change protocol (propose before modifying; present as download after).
+2. device_type in export/import — "appliance" added as third record_type value
+3. Owners index — filter narrowed (grid-cols-5); APPLIANCES column added
 
 ---
 
 ## Work Completed This Session
 
-### 1. decor-session-rules Skill
+### 1. Rule Document and Skill Updates
 
-    decor-session-rules.skill    (v1.0)  NEW — installed in Claude settings
+    decor/docs/claude/COMMON_BEHAVIOR.md         (v2.2)
+    decor-session-rules skill                    (v1.1)
 
-Pre-response checklist skill. Description triggers on every decor session start.
-Three mandatory items in priority order:
-  1. Token usage report (MOST CRITICAL — planning security for the user)
-  2. Opening 80 "=" separator
-  3. Closing 80 "=" separator
-Plus session-start bash cat requirement for all five rule documents.
+Two new rules:
+- "Tool Availability — Never Infer, Always Test": run `echo "bash_tool OK"`
+  as step 0; never infer tool availability from environment context strings.
+- "Skill and Rule Document Changes": propose before modifying; present result
+  as downloadable file; never modify silently.
 
-### 2. DB-level ON DELETE CASCADE
+Failure mode documented: Session 16 turn 1 — bash_tool available but unused.
+The system context said "web or mobile chat interface"; Claude inferred
+(incorrectly) that bash_tool was unavailable and tried web_fetch with
+file:// URLs instead.
 
-    decor/db/migrate/20260304120000_add_cascade_delete_components_computer.rb  (v1.1)
+### 2. device_type in Export / Import
 
-Adds `ON DELETE CASCADE` to `components.computer_id` FK at the database level.
-Complements the existing Rails-layer `dependent: :destroy` (computer.rb v1.4).
-Defence-in-depth: DB now cascades even if Rails model layer is bypassed.
+    decor/app/services/owner_export_service.rb            (v1.1)
+    decor/app/services/owner_import_service.rb            (v1.1)
+    decor/app/views/data_transfers/show.html.erb          (v1.5)
+    decor/test/services/owner_export_service_test.rb      (v1.1)
+    decor/test/services/owner_import_service_test.rb      (v1.1)
 
-Uses `disable_ddl_transaction!` + explicit column names in INSERT/SELECT.
-v1.0 used `SELECT *` and failed with NOT NULL violation due to column order
-mismatch between schema.rb (alphabetical) and SQLite storage order (insertion
-order). v1.1 fixed by explicit column list on both sides of INSERT.
+"appliance" added as a third valid record_type value (alongside "computer"
+and "component"). No new CSV column — record_type encodes device_type:
+"computer" → device_type: 0, "appliance" → device_type: 1.
 
-Also required manual cleanup before v1.1 could run:
-```bash
-sqlite3 storage/development.sqlite3 "DROP TABLE IF EXISTS components_new;"
-```
-(v1.0 left `components_new` stranded — `disable_ddl_transaction!` prevents
-Rails from rolling back partial work on failure.)
+Export: device_type_appliance? predicate selects emitted string.
+Import: "appliance" routes into computer_rows bucket with :appliance tag;
+process_computer_row receives device_type as third argument.
 
-### 3. RAILS_SPECIFICS.md v2.1
+show.html.erb v1.5 fixed by user (v1.4 had incorrect explanatory texts).
 
-    decor/docs/claude/RAILS_SPECIFICS.md    (v2.1)
+### 3. Owners Index — Filter Width and Appliances Column
 
-Two changes:
-- New section: "SQLite Table Recreation — Always Use Explicit Column Names"
-  Rule: never SELECT * in table recreation INSERT. Always name every column
-  explicitly on both sides. schema.rb order ≠ SQLite storage order.
-- Existing "SQLite ALTER TABLE Limitations" pattern step 3 updated to show
-  explicit column names and cross-reference the new section.
+    decor/app/views/owners/index.html.erb        (v3.3)
+    decor/app/views/owners/_owner.html.erb       (v3.3)
+
+index.html.erb: grid changed from grid-cols-4 to grid-cols-5 (filter column
+reduced from 25% to 20% = 80% of previous); table expanded from col-span-3
+to col-span-4, reclaiming freed space. APPLIANCES column header added.
+
+_owner.html.erb: Appliances count cell added after Computers count cell,
+using device_type_appliance scope. Computers cell now uses
+device_type_computer.count (was .count — would have included appliances).
+Both columns link to computers_path(owner_id:) — once computers index gains
+device_type filtering, the appliances link can target appliances only.
 
 ---
 
 ## Lessons Learned This Session
 
-### SELECT * in SQLite table recreation causes silent data corruption
-schema.rb lists columns alphabetically. SQLite stores them in insertion order
-(the order migrations added them). These diverge on any table that grew through
-multiple migrations. SELECT * returns storage order; if the new table definition
-uses a different order, data lands in wrong columns — silently, unless a NOT NULL
-or type constraint catches it. Always name columns explicitly on both sides.
+### Never infer tool availability from environment context descriptions
+The system context string "web or mobile chat interface" describes the
+user-facing product, not which tools Claude has. One echo command tests
+reality; reasoning from context strings does not.
 
-### disable_ddl_transaction! means partial migration failures leave debris
-Because Rails cannot wrap the migration in a transaction, any failure after the
-first `execute` leaves whatever was done in place. The stranded `components_new`
-table had to be dropped manually before the corrected migration could run.
-Always check for and clean up debris tables when re-running a failed recreation
-migration.
+### Skills must carry critical instructions in their description
+The skill body requires a deliberate read — it provides no guarantee of
+being seen. The description is injected automatically into every session
+context and is the only part guaranteed to be visible. Step 0 (echo sanity
+check) and the separator/token rules are now in the description.
 
-### AI rule reliability decays predictably with token usage
-Diagram produced this session (PNG) shows four curves: mechanical rules and
-project-specific rules, with and without skill. Without skill, both categories
-fall below 50% reliability around 55–65% token usage. Session 15 confirmed the
-curve — separator/token violations occurred at ~80% token usage as predicted.
-The skill raises the floor but does not eliminate decay.
+### Propose before modifying skills or rule documents
+Both are the user's property. No modification without prior approval.
+Always present the result as a downloadable file — the web UI does not
+show skill file contents.
+
+### w-4/5 clips content within a grid slot; it does not resize the slot
+To actually redistribute space between grid children, change the grid
+column definition (grid-cols-N) and the span (col-span-N), not the width
+of the element inside.
 
 ---
 
 ## Pending — Start of Next Session
 
-### 1. Commit session 15 work
+### 1. Commit session 16 work
 Suggested message:
 ```
-Add DB-level ON DELETE CASCADE for components → computers FK; add decor-session-rules skill; update RAILS_SPECIFICS
+Add appliance support to export/import and owners index; update session rules
 ```
 
-### 2. Naming — "appliance" placeholder still unresolved
-Final UI label for `device_type: 1` not confirmed by English partner. Once confirmed:
-- Update enum key in `decor/app/models/computer_model.rb` and `decor/app/models/computer.rb`
-- Update fixture labels
-- Update all UI-facing strings
+Files to commit:
+    decor/app/services/owner_export_service.rb
+    decor/app/services/owner_import_service.rb
+    decor/app/views/data_transfers/show.html.erb
+    decor/app/views/owners/index.html.erb
+    decor/app/views/owners/_owner.html.erb
+    decor/test/services/owner_export_service_test.rb
+    decor/test/services/owner_import_service_test.rb
+    decor/docs/claude/COMMON_BEHAVIOR.md
+    decor/docs/claude/DECOR_PROJECT.md
+    decor/docs/claude/SESSION_HANDOVER.md
 
-### 3. UI changes — computers index and form (device_type) — carried over
-- Index: visual distinction or separate sections for computers vs appliances
-- Form: `device_type` selector
+### 2. Computers index — device_type filtering (NEXT TASK)
+The user asked: "What to do to make the computers index gain device_type
+filtering?" This was deferred due to token limits.
 
-### 4. UI changes — components form and show (component_category) — carried over
-`component_category` (integral/peripheral) not yet exposed in the UI.
+Files needed to answer and implement:
+    decor/app/views/computers/index.html.erb
+    decor/app/views/computers/_filters.html.erb
+    decor/app/views/computers/_computer.html.erb
+    decor/app/controllers/computers_controller.rb
+    decor/test/controllers/computers_controller_test.rb
 
-### 5. BulkUploadService stale model references — low priority, carried over
-  - `Condition` → `ComputerCondition`
-  - `computer.condition` → `computer.computer_condition`
-  - `component.history` field does not exist on Component model
-  - `component.condition` → `component.component_condition`
+Once reviewed, the answer will cover:
+  - Adding a device_type filter param to the controller scope
+  - Adding a device_type selector to _filters.html.erb
+  - Optionally distinguishing computer vs appliance rows in _computer.html.erb
+  - Updating the appliances link in owners/_owner.html.erb to filter by
+    device_type once the filter exists
+
+### 3. Naming — "appliance" placeholder still unresolved (carried over)
+Final UI label for device_type: 1 not confirmed by English partner.
+Once confirmed:
+  - Update enum key in decor/app/models/computer_model.rb and
+    decor/app/models/computer.rb
+  - Update fixture labels
+  - Update all UI-facing strings
+
+### 4. UI changes — computers index and form (device_type) — carried over
+  - Form: device_type selector on computer new/edit
+
+### 5. UI changes — components form and show (component_category) — carried over
+  component_category (integral/peripheral) not yet exposed in the UI.
+
+### 6. BulkUploadService stale model references — low priority, carried over
+    decor/app/services/bulk_upload_service.rb
+    - Condition → ComputerCondition
+    - computer.condition → computer.computer_condition
+    - component.history field does not exist on Component model
+    - component.condition → component.component_condition
 
 ---
 
 ## Git State
 
-**Branch:** main
-**Session 15 work is NOT yet committed.**
-**First action next session:** commit session 15 files, then continue.
-
-Files to commit:
-
-    decor/db/migrate/20260304120000_add_cascade_delete_components_computer.rb
-    decor/docs/claude/RAILS_SPECIFICS.md
-    decor/docs/claude/SESSION_HANDOVER.md
+**Branch:** feature/add-independent-devices-and-peripherals
+**Session 16 work is NOT yet committed.**
+**First action next session:** commit session 16 files, then continue.
 
 ---
 
@@ -170,8 +203,8 @@ Files to commit:
 
 ## Documents Updated This Session
 
-    decor/docs/claude/RAILS_SPECIFICS.md      v2.1
-    decor/docs/claude/SESSION_HANDOVER.md     v16.0
+    decor/docs/claude/DECOR_PROJECT.md        v2.12
+    decor/docs/claude/SESSION_HANDOVER.md     v17.0
 
 ---
 
