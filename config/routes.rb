@@ -1,19 +1,24 @@
 # decor/config/routes.rb
-# version 1.4
+# version 1.5
+# v1.5 (Session 18): Added public readme route and admin site_texts resource.
+#   readme → site_texts#show (public, no login required).
+#   admin/site_texts: new, create (upload/replace), destroy (delete by key).
+#   param: :key lets destroy use /admin/site_texts/readme rather than an integer id.
 # v1.4 (Session 17): Added resources :appliances (index only) pointing to the
 #   computers controller with device_context: "appliance". Individual record
 #   CRUD always routes through computers_* paths, so only :index is needed here.
 #   Added device_context: "computer" default to resources :computers for symmetry —
 #   the before_action in the controller uses this to distinguish contexts.
 # v1.3: resources :appliance_models pointing to the computer_models controller.
-#   The defaults: { device_context: "appliance" } param tells the controller
-#   which device type context it is operating in, without path-sniffing.
-#   computer_models also gets defaults: { device_context: "computer" } for symmetry.
 
 Rails.application.routes.draw do
   default_url_options(host: Decor::Routes.host, protocol: Decor::Routes.protocol)
 
   root "home#index"
+
+  # Public Read Me page — publicly visible (no login required).
+  # Additional text pages can follow the same pattern with a different key.
+  get "readme", to: "site_texts#show", defaults: { key: "readme" }, as: :readme
 
   resources :owners
   resources :computers,  defaults: { device_context: "computer" }
@@ -55,6 +60,11 @@ Rails.application.routes.draw do
     resources :component_conditions,  only: %i[index new create edit update destroy]
     resources :run_statuses,          only: %i[index new create edit update destroy]
     resources :bulk_uploads,          only: %i[new create]
+
+    # Site text management — upload and delete named text pages (README etc.).
+    # param: :key uses the text's key in the URL rather than a numeric id,
+    # e.g. DELETE /admin/site_texts/readme.
+    resources :site_texts, only: %i[new create destroy], param: :key
   end
 
   get "up" => "rails/health#show", as: :rails_health_check
