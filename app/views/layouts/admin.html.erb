@@ -1,6 +1,9 @@
 <%# decor/app/views/layouts/admin.html.erb %>
-<%# version 1.3 %>
-<%# Appliance Models link activated now that admin_appliance_models_path exists. %>
+<%# version 1.4 %>
+<%# v1.4 (Session 18): Added "Texts" dropdown right of Import/Export with two items: %>
+<%#   "Upload Read Me" → new_admin_site_text_path(key: "readme") %>
+<%#   "Delete Read Me" → button_to DELETE admin_site_text_path("readme") with turbo confirm %>
+<%# v1.3: Appliance Models link activated now that admin_appliance_models_path exists. %>
 <!DOCTYPE html>
 <html>
   <head>
@@ -128,6 +131,36 @@
                           rounded shadow-md py-1 z-50 min-w-max">
                 <%= link_to "Bulk Import Data", new_admin_bulk_upload_path,
                       class: "block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50 hover:text-stone-900" %>
+              </div>
+            </div>
+
+            <%# ── Texts ───────────────────────────────────────────────────── %>
+            <%# Manages text-only pages (Read Me, etc.) uploaded as .md files. %>
+            <div class="relative" data-controller="dropdown">
+              <button data-action="click->dropdown#toggle"
+                      class="flex items-center gap-1 px-3 py-2 font-medium text-stone-700
+                             hover:text-stone-900 hover:bg-stone-50 rounded">
+                Texts
+                <svg class="w-3 h-3 mt-0.5" fill="none" stroke="currentColor"
+                     viewBox="0 0 24 24" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                </svg>
+              </button>
+              <div data-dropdown-target="menu"
+                   class="hidden absolute top-full left-0 mt-1 bg-white border border-stone-200
+                          rounded shadow-md py-1 z-50 min-w-max">
+                <%= link_to "Upload Read Me", new_admin_site_text_path(key: "readme"),
+                      class: "block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50 hover:text-stone-900" %>
+                <%# Delete uses button_to (requires DELETE method) styled to match link items. %>
+                <%# turbo_confirm prompts before destroying. form: { class: "w-full" } ensures %>
+                <%# the form wrapper does not collapse the button width. %>
+                <%= button_to "Delete Read Me", admin_site_text_path("readme"),
+                      method: :delete,
+                      data: { turbo_confirm: "Delete the Read Me text? This cannot be undone." },
+                      class: "block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50
+                              hover:text-stone-900 bg-transparent border-0 cursor-pointer
+                              w-full text-left",
+                      form: { class: "w-full" } %>
               </div>
             </div>
 

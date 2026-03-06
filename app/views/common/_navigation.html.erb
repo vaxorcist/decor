@@ -1,10 +1,13 @@
-<%# app/views/common/_navigation.html.erb - version 1.2 %>
+<%# app/views/common/_navigation.html.erb - version 1.3 %>
+<%# v1.3 (Session 18): Added "Read Me" as the leftmost navigation link. %>
+<%#   Points to readme_path (GET /readme, public — no login required). %>
 <%# v1.2 (Session 17): Added Appliances navigation link between Computers and Components. %>
 <%# v1.1: Admin link now only shows to users where admin? returns true. %>
 <%#   Previous version showed Admin to ALL logged-in users (missing admin? check). %>
 
 <nav class="grid grid-cols-3 items-center gap-2 px-6 py-4">
   <div class="flex items-center justify-start gap-6">
+    <%= navigation_link_to "Read Me", readme_path %>
     <%= navigation_link_to "Owners", owners_path %>
     <%= navigation_link_to "Computers", computers_path %>
     <%= navigation_link_to "Appliances", appliances_path %>

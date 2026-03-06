@@ -13,6 +13,7 @@ gem "jbuilder"
 gem "bcrypt"
 gem "zxcvbn-ruby", require: "zxcvbn"
 gem "countries"
+gem "redcarpet"             # Markdown rendering for site text pages (README etc.)
 gem "geared_pagination"
 gem "tzinfo-data", platforms: %i[ windows jruby ]
 gem "solid_cache"

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_04_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_06_100000) do
   create_table "component_conditions", force: :cascade do |t|
     t.string "condition", limit: 40, null: false
     t.datetime "created_at", precision: nil, null: false
@@ -119,6 +119,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_04_120000) do
     t.string "name", limit: 40
     t.datetime "updated_at", precision: nil, null: false
     t.index ["name"], name: "index_run_statuses_on_name", unique: true
+  end
+
+  create_table "site_texts", force: :cascade do |t|
+    t.text "content", null: false
+    t.datetime "created_at", null: false
+    t.string "key", limit: 40, null: false
+    t.datetime "updated_at", null: false
+    t.index ["key"], name: "index_site_texts_on_key", unique: true
   end
 
   add_foreign_key "components", "component_conditions"
