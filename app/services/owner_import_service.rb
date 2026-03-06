@@ -1,18 +1,23 @@
 # decor/app/services/owner_import_service.rb
-# version 1.0
+# version 1.1
+# Session 16: device_type support — "appliance" is now a third valid record_type
+#   alongside "computer" and "component". Appliance rows are processed through the
+#   same computer_row path as "computer" rows, but with device_type: :appliance
+#   passed through to the build call. No new CSV column is needed.
+#
 # Service object that parses a CSV file and creates computers and components
 # for the given owner.
 #
 # Expected CSV format: as produced by OwnerExportService (see that file for
-# full column reference). record_type must be "computer" or "component".
+# full column reference). record_type must be "computer", "appliance", or "component".
 #
 # Processing strategy:
-#   - Two-pass within one transaction: all computer rows processed first, then
-#     all component rows. This allows component rows to reference computers that
+#   - Two-pass within one transaction: all computer/appliance rows processed first,
+#     then all component rows. This allows component rows to reference computers that
 #     were just created in the same import (via computer_serial_number FK).
 #   - Duplicate handling:
-#       Computer: skipped (no error) if the owner already has a computer with
-#                 the same serial_number.
+#       Computer/Appliance: skipped (no error) if the owner already has a computer
+#                 with the same serial_number.
 #       Component: skipped (no error) if the owner already has a component with
 #                  the same serial_number (when serial_number is present).
 #                  Components without a serial_number are always created.
@@ -114,26 +119,36 @@ class OwnerImportService
 
     # Separate rows into two buckets for the two-pass strategy.
     # Preserve original row numbers (index + 2 because headers occupy row 1).
+    # Computer rows carry a device_type symbol (:computer or :appliance) so
+    # process_computer_row can set the correct enum value on build.
     computer_rows  = []
     component_rows = []
 
     csv_data.each_with_index do |row, index|
       row_num = index + 2
       case row["record_type"]&.strip&.downcase
-      when "computer"  then computer_rows  << [row, row_num]
-      when "component" then component_rows << [row, row_num]
+      when "computer"
+        # device_type: 0 — general-purpose computer
+        computer_rows  << [row, row_num, :computer]
+      when "appliance"
+        # device_type: 1 — autonomous device (router, switch, terminal server, etc.)
+        # Processed through the same path as "computer" rows; device_type differs.
+        computer_rows  << [row, row_num, :appliance]
+      when "component"
+        component_rows << [row, row_num]
       else
         # Blank rows (all fields nil) are silently skipped.
         # Unknown record_type values get a warning.
         unless row.fields.all?(&:nil?)
-          @errors << "Row #{row_num}: unknown record_type '#{row['record_type']}' (expected 'computer' or 'component')"
+          @errors << "Row #{row_num}: unknown record_type '#{row['record_type']}' " \
+                     "(expected 'computer', 'appliance', or 'component')"
         end
       end
     end
 
-    # Pass 1: computers — so that pass 2 can find them by serial number.
-    computer_rows.each  { |row, row_num| process_computer_row(row, row_num) }
-    # Pass 2: components — can reference computers created in pass 1.
+    # Pass 1: computers/appliances — so that pass 2 can find them by serial number.
+    computer_rows.each  { |row, row_num, device_type| process_computer_row(row, row_num, device_type) }
+    # Pass 2: components — can reference computers/appliances created in pass 1.
     component_rows.each { |row, row_num| process_component_row(row, row_num) }
   end
 
@@ -148,7 +163,9 @@ class OwnerImportService
 
   # ── Computer row processing ────────────────────────────────────────────────
 
-  def process_computer_row(row, row_num)
+  # Processes a computer or appliance row.
+  # device_type: :computer (default) or :appliance — derived from record_type in the CSV.
+  def process_computer_row(row, row_num, device_type = :computer)
     serial_number = row["computer_serial_number"]&.strip
     model_name    = row["computer_model"]&.strip
 
@@ -188,7 +205,8 @@ class OwnerImportService
       history:            row["computer_history"]&.strip.presence,
       computer_model:     model,
       computer_condition: condition,
-      run_status:         run_status
+      run_status:         run_status,
+      device_type:        device_type   # :computer (0) or :appliance (1) from record_type
     )
 
     if computer.save
@@ -222,7 +240,7 @@ class OwnerImportService
     end
 
     # Resolve component_condition (optional).
-    # Note: ComponentCondition uses column "condition", not "name".
+    # Note: ComponentCondition uses column "condition", not "name" — different table.
     condition = resolve_component_condition(row["component_condition"]&.strip, row_num)
     return if @errors.last&.start_with?("Row #{row_num}")
 

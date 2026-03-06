@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_25_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_04_120000) do
   create_table "component_conditions", force: :cascade do |t|
     t.string "condition", limit: 40, null: false
     t.datetime "created_at", precision: nil, null: false
@@ -26,6 +26,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_25_120000) do
   end
 
   create_table "components", force: :cascade do |t|
+    t.integer "component_category", default: 0, null: false
     t.integer "component_condition_id"
     t.integer "component_type_id", null: false
     t.integer "computer_id"
@@ -36,6 +37,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_25_120000) do
     t.integer "owner_id", null: false
     t.string "serial_number", limit: 20
     t.datetime "updated_at", precision: nil, null: false
+    t.index ["component_category"], name: "index_components_on_component_category"
     t.index ["component_condition_id"], name: "index_components_on_component_condition_id"
     t.index ["component_type_id"], name: "index_components_on_component_type_id"
     t.index ["computer_id"], name: "index_components_on_computer_id"
@@ -51,8 +53,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_25_120000) do
 
   create_table "computer_models", force: :cascade do |t|
     t.datetime "created_at", precision: nil, null: false
+    t.integer "device_type", default: 0, null: false
     t.string "name", limit: 40, null: false
     t.datetime "updated_at", precision: nil, null: false
+    t.index ["device_type"], name: "index_computer_models_on_device_type"
     t.index ["name"], name: "index_computer_models_on_name", unique: true
   end
 
@@ -60,6 +64,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_25_120000) do
     t.integer "computer_condition_id"
     t.integer "computer_model_id", null: false
     t.datetime "created_at", precision: nil, null: false
+    t.integer "device_type", default: 0, null: false
     t.text "history"
     t.string "order_number", limit: 20
     t.integer "owner_id", null: false
@@ -68,6 +73,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_25_120000) do
     t.datetime "updated_at", precision: nil, null: false
     t.index ["computer_condition_id"], name: "index_computers_on_computer_condition_id"
     t.index ["computer_model_id"], name: "index_computers_on_computer_model_id"
+    t.index ["device_type"], name: "index_computers_on_device_type"
     t.index ["owner_id"], name: "index_computers_on_owner_id"
     t.index ["run_status_id"], name: "index_computers_on_run_status_id"
   end
@@ -117,7 +123,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_25_120000) do
 
   add_foreign_key "components", "component_conditions"
   add_foreign_key "components", "component_types"
-  add_foreign_key "components", "computers"
+  add_foreign_key "components", "computers", on_delete: :cascade
   add_foreign_key "components", "owners"
   add_foreign_key "computers", "computer_conditions"
   add_foreign_key "computers", "computer_models"

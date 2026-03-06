@@ -1,14 +1,32 @@
+# decor/test/fixtures/computer_models.yml
+# version 1.1
+# Added device_type to all entries (explicit is better than relying on DB default).
+# Added hsc50 (appliance, device_type: 1) assigned to no owner — computer_models
+# are reference data with no owner column, so neutral-owner pattern does not apply.
+# Existing computer model fixtures all use device_type: 0 (computer).
+
 pdp11_70:
   name: PDP-11/70
+  device_type: 0
 
 pdp8:
   name: PDP-8
+  device_type: 0
 
 vax11_780:
   name: VAX-11/780
+  device_type: 0
 
 pdp10:
   name: PDP-10
+  device_type: 0
 
 vt100:
   name: VT100
+  device_type: 0
+
+# Appliance model fixture — used by computer_model_test.rb and
+# computer_models_controller_test.rb to test the appliance context.
+hsc50:
+  name: HSC50
+  device_type: 1

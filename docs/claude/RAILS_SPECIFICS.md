@@ -1,12 +1,16 @@
 # RAILS_SPECIFICS.md
-# version 1.8
+# version 2.1
 # decor/docs/claude/RAILS_SPECIFICS.md
-# Added (Session 11): Arel.sql() required for multi-table ORDER BY strings —
-#   Rails rejects raw strings containing dots or SQL keywords as a safety guard.
+# Added (Session 13): Fixture Ownership section — derive counts from data;
+#   use a neutral owner for test-support fixtures to avoid breaking hardcoded
+#   count assertions in unrelated test files.
+# Added (Session 15): SQLite table recreation — always use explicit column names
+#   in INSERT/SELECT, never SELECT *. Positional copy fails silently when
+#   schema.rb column order differs from SQLite storage order.
 
 **Ruby on Rails Specific Patterns and Best Practices**
 
-**Last Updated:** March 1, 2026 (v1.8: Arel.sql() rule for multi-table ORDER BY added)
+**Last Updated:** March 4, 2026 (v2.1: explicit column names rule in SQLite table recreation; Session 15)
 
 ---
 
@@ -107,6 +111,64 @@ Rails-specific requirements. Follow these BEFORE writing any code.
   and `conditions_controller_test.rb` existed
 - ❌ Caused 24 test errors that were 100% preventable
 - ✅ Fix: always ask "Are there test files for this model/controller?"
+
+---
+
+## Fixture Ownership — Derive Counts from Data; Use Neutral Owners for Support Fixtures
+
+### General Rule
+
+**Never hardcode a count assertion on fixture-owned records.**
+The general principle is in PROGRAMMING_GENERAL.md — Derive Test Assertions from
+Data, Not Constants. This section covers the Rails/fixture-specific consequence.
+
+When a hardcoded count assertion exists anywhere in the test suite, adding any
+new fixture to that owner breaks the count — often in a completely unrelated test
+file, with no obvious connection to the new fixture.
+
+**Bad:**
+```ruby
+assert_equal 2, @bob.computers.count   # breaks the moment a 3rd fixture is added to bob
+```
+
+**Good:**
+```ruby
+bob_computer_ids = @bob.computers.pluck(:id)
+assert bob_computer_ids.any?, "Bob must have at least one computer for this test"
+# ... perform action ...
+bob_computer_ids.each do |id|
+  assert_nil Computer.find_by(id: id), "Computer #{id} should have been deleted"
+end
+```
+
+### Neutral Owner Pattern
+
+When hardcoded counts exist in the test suite and cannot be immediately removed,
+use a **dedicated neutral owner** for any new test-support fixtures — an owner
+whose record counts no test ever asserts.
+
+In decor: `owners(:three)` / charlie is this neutral owner.
+
+- ✅ Assign all new test-support fixtures (enum test records, edge case records,
+  etc.) to the neutral owner
+- ✅ Document the intent clearly in `owners.yml`
+- ❌ Never add hardcoded count assertions for the neutral owner
+
+**Grep check before assigning a fixture to an existing owner:**
+```bash
+# Verify no hardcoded count assertions target this owner before adding a fixture
+grep -rn "\.count" decor/test/ | grep -i "alice\|bob\|owners(:one)\|owners(:two)"
+```
+
+If any hardcoded counts exist → use the neutral owner instead.
+
+**Real example (Session 13, March 3, 2026):**
+`dec_unibus_router` (appliance enum fixture) was first assigned to alice (owners(:one))
+→ broke `OwnerExportServiceTest` (computer count 3 ≠ 2). Moved to bob (owners(:two))
+→ broke `OwnersControllerDestroyTest` (computer count 3 ≠ 2). Both alice and bob had
+independent hardcoded count assertions in different test files. Fix: added
+`three` (charlie) as a neutral owner. Longer-term fix: replace all hardcoded count
+assertions with data-derived assertions (see PROGRAMMING_GENERAL.md).
 
 ---
 
@@ -350,7 +412,9 @@ Use backup-in-migration pattern for safety.
 **Migration pattern for SQLite table recreation:**
 1. `PRAGMA foreign_keys = OFF`
 2. `CREATE TABLE new_name (...)`
-3. `INSERT INTO new_name SELECT ... FROM old_name`
+3. `INSERT INTO new_name (col1, col2, ...) SELECT col1, col2, ... FROM old_name`
+   — ALWAYS use explicit column names on both sides; never `SELECT *`
+     (see "SQLite Table Recreation — Always Use Explicit Column Names" below)
 4. `DROP TABLE old_name`
 5. `ALTER TABLE new_name RENAME TO old_name`
 6. Recreate all indexes
@@ -520,6 +584,135 @@ user-supplied input (request params, model attributes) in `Arel.sql()`.
 **Real example (Session 11, March 1, 2026):**
 `OwnersController#show` raised `UnknownAttributeReference` on the component
 ordering query. Fixed by wrapping both ORDER BY strings in `Arel.sql()`.
+
+
+---
+
+## Directory Tree Maintenance — MANDATORY
+
+The `## Directory Tree` section in `DECOR_PROJECT.md` is the authoritative
+record of the project's file structure. It must be kept current.
+
+### When to update
+
+Update `DECOR_PROJECT.md` (Directory Tree + Key file versions table) whenever:
+- A new file is created (migration, controller, view, helper, JS controller, test, etc.)
+- A file is deleted
+- A file's version number changes
+
+### How to update
+
+1. Claude updates the **Key file versions** table in `DECOR_PROJECT.md` inline
+   (adding new rows, bumping version numbers) after every file change.
+2. The full tree block is replaced only when the user re-runs the tree command
+   and uploads a fresh `decor_tree.txt`. This happens:
+   - At the start of each new session (recommended)
+   - After any session that adds or removes files
+
+### Tree command (run from parent of decor/)
+
+```bash
+tree decor/ \
+  -I "node_modules|.git|tmp|storage|log|.DS_Store|*.lock|assets|cache|pids|sockets" \
+  --dirsfirst -F --prune -L 6 \
+  > decor_tree.txt
+```
+
+Upload `decor_tree.txt` and Claude will replace the tree block in
+`DECOR_PROJECT.md` and present the updated file for download.
+
+### What Claude must NOT do
+
+- ❌ Ask for files that Claude itself created or modified in the current session
+- ❌ Leave the Key file versions table stale after creating/modifying files
+- ❌ Omit new files from the versions table
+
+**Real example (Session 14, March 3, 2026):**
+The tree command and upload procedure was established this session. From Session 15
+onwards, the user will upload a fresh `decor_tree.txt` at session start; Claude
+will replace the tree block and update the versions table in `DECOR_PROJECT.md`.
+
+
+---
+
+## Enum Assertions in Tests — Use String or Predicate, Not Integer
+
+**Rails enum accessors always return the mapped string label, never the raw integer.**
+This applies to ALL access methods: `.device_type`, `read_attribute(:device_type)`,
+and `model[:device_type]` — all return `"computer"` or `"appliance"`, not `0` or `1`.
+
+**Wrong — all three forms return the string, not the integer:**
+```ruby
+assert_equal 0, model.read_attribute(:device_type)   # returns "computer"
+assert_equal 0, model[:device_type]                  # returns "computer"
+assert_equal 0, model.device_type                    # returns "computer"
+```
+
+**Correct — two acceptable forms:**
+```ruby
+# Form 1: assert against the string label (explicit, readable)
+assert_equal "computer", model.device_type
+assert_equal "appliance", created.device_type
+
+# Form 2: use the generated predicate (most idiomatic)
+assert model.device_type_computer?
+assert_not model.device_type_appliance?
+```
+
+**When to use which form:**
+- Predicate form (`device_type_computer?`) — preferred for boolean pass/fail assertions
+- String form (`assert_equal "computer", model.device_type`) — preferred when the
+  test is specifically verifying that the correct value was stamped (e.g. create action)
+
+**To read the raw integer (rare — only if you genuinely need the DB value):**
+```ruby
+model.read_attribute_before_type_cast(:device_type)   # returns 0 or 1
+```
+
+**Real example (Session 14, March 3, 2026):**
+`computer_model_test.rb` and `computer_models_controller_test.rb` both used
+`read_attribute(:device_type)` and `model[:device_type]` expecting integers.
+Both returned strings. Three test failures across two rounds of fixes.
+The correct pattern was already present in `computer_test.rb` v1.4 (Session 13) —
+reading that file before writing the parallel test would have prevented all failures.
+
+---
+
+## SQLite Table Recreation — Always Use Explicit Column Names
+
+**RULE: Never use `SELECT *` in the INSERT step of a SQLite table recreation
+migration. Always name every column explicitly on both sides.**
+
+SQLite stores columns in the order they were added by successive migrations.
+`schema.rb` lists columns alphabetically. These two orderings frequently differ.
+`SELECT *` returns columns in storage order; if the new table definition uses a
+different order, data lands in the wrong columns — silently, with no warning
+unless a NOT NULL or type constraint happens to catch it.
+
+**Wrong — positional copy, order mismatch causes silent data corruption:**
+```ruby
+execute "INSERT INTO components_new SELECT * FROM components"
+```
+
+**Correct — name-based copy, immune to column order differences:**
+```ruby
+COLUMNS = %w[id component_category component_condition_id component_type_id
+             computer_id created_at description history order_number
+             owner_id serial_number updated_at].freeze
+
+col_list = COLUMNS.join(", ")
+execute "INSERT INTO components_new (#{col_list}) SELECT #{col_list} FROM components"
+```
+
+The COLUMNS constant also serves as self-documentation of the table's structure
+at migration time, and makes the `down` method a straightforward copy of `up`.
+
+**Real example (Session 15, March 4, 2026):**
+`AddCascadeDeleteComponentsComputer` (v1.0) used `SELECT *`. The INSERT failed
+with `NOT NULL constraint failed: components_new.component_type_id` even though
+the source data had no NULL values — the data was correct but landed in the wrong
+column due to storage-order vs. schema.rb-order mismatch. Fixed in v1.1 by using
+explicit column names on both sides.
 
 ---
 

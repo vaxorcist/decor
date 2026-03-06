@@ -1,4 +1,8 @@
-# decor/test/services/owner_export_service_test.rb - version 1.0
+# decor/test/services/owner_export_service_test.rb - version 1.1
+# Session 16: Added tests for device_type / record_type:
+#   - Appliance (device_type: 1) exports with record_type "appliance"
+#   - Computer (device_type: 0) still exports with record_type "computer"
+#
 # Tests for OwnerExportService — verifies CSV output structure and content.
 #
 # Fixture baseline (alice = owners(:one)):
@@ -8,6 +12,10 @@
 #   Components: pdp11_memory (attached alice_pdp11, Memory Board, no serial/condition in fixture)
 #               pdp11_cpu    (attached alice_pdp11, CPU Board,    no serial/condition in fixture)
 #               spare_disk   (spare — no computer,  Disk Drive,   no serial/condition in fixture)
+#
+# Fixture baseline (charlie = owners(:three)):
+#   Computers:  dec_unibus_router (RTR-001, ORD-RTR-001, PDP-11/70, original, working,
+#               device_type: 1 = appliance)
 
 require "test_helper"
 require "csv"
@@ -28,8 +36,8 @@ class OwnerExportServiceTest < ActiveSupport::TestCase
   # ── Row counts ──────────────────────────────────────────────────────────────
 
   test "exports correct number of computer rows" do
+    # "computer" record_type only — alice's computers are all device_type: 0
     computer_rows = @csv.select { |row| row["record_type"] == "computer" }
-    # Alice has 3 computers from fixtures
     assert_equal 3, computer_rows.size
   end
 
@@ -41,6 +49,41 @@ class OwnerExportServiceTest < ActiveSupport::TestCase
 
   test "total row count is computers + components" do
     assert_equal @alice.computers.count + @alice.components.count, @csv.size
+  end
+
+  # ── device_type / record_type mapping ───────────────────────────────────────
+
+  test "appliance (device_type: 1) exports with record_type 'appliance'" do
+    # dec_unibus_router belongs to charlie (owners(:three)), device_type: 1
+    charlie = owners(:three)
+    csv = CSV.parse(OwnerExportService.export(charlie), headers: true)
+
+    appliance_rows = csv.select { |row| row["record_type"] == "appliance" }
+    assert_equal 1, appliance_rows.size, "Expected exactly one appliance row in charlie's export"
+    assert_equal "RTR-001", appliance_rows.first["computer_serial_number"]
+  end
+
+  test "computer (device_type: 0) exports with record_type 'computer'" do
+    # All of alice's computers are device_type: 0 — none should export as "appliance"
+    appliance_rows = @csv.select { |row| row["record_type"] == "appliance" }
+    assert_equal 0, appliance_rows.size, "No appliance rows expected in alice's export"
+  end
+
+  test "appliance row carries correct model name" do
+    charlie = owners(:three)
+    csv = CSV.parse(OwnerExportService.export(charlie), headers: true)
+
+    appliance_row = csv.find { |row| row["record_type"] == "appliance" }
+    assert_equal "PDP-11/70", appliance_row["computer_model"]
+  end
+
+  test "appliance row has blank component columns" do
+    charlie = owners(:three)
+    csv = CSV.parse(OwnerExportService.export(charlie), headers: true)
+
+    appliance_row = csv.find { |row| row["record_type"] == "appliance" }
+    assert_nil appliance_row["component_type"].presence
+    assert_nil appliance_row["component_description"].presence
   end
 
   # ── Computer row content ─────────────────────────────────────────────────────

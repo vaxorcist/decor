@@ -1,12 +1,12 @@
 # PROGRAMMING_GENERAL.md
-# version 1.7
-# Updated: bin/rails test → [full test suite command] (projects may not be Rails)
-# Added: Database Column Types section — VARCHAR with length required; TEXT requires approval
-# Added: End-of-task test coverage check — mandatory proactive review after every implementation
+# version 1.8
+# Added: "Derive Test Assertions from Data, Not Constants" rule in Test Data Management.
+# General principle: never hardcode in a test a value that the test data can provide.
+# Cross-referenced in RAILS_SPECIFICS.md — Fixture Ownership section.
 
 **General Programming Rules for All Technical Projects**
 
-**Last Updated:** February 28, 2026 (v1.7: end-of-task test coverage check added)
+**Last Updated:** March 3, 2026 (v1.8: derive-assertions-from-data rule added)
 
 ---
 
@@ -223,6 +223,45 @@ grep -rn "ModelName\.(new\|create)" test/
 # Find password references
 grep -rn "password.*[:=]" test/
 ```
+
+### Derive Test Assertions from Data, Not Constants
+
+**RULE:** Never hardcode in a test a value that the test data can provide.
+
+A hardcoded assertion is one that encodes an assumption about the current state of
+the test data as a fixed number. When the test data changes — even in an unrelated
+file — the assertion breaks, often far from the change that caused it.
+
+**Bad — hardcoded count breaks whenever a fixture is added to this owner:**
+```ruby
+assert_equal 2, @bob.computers.count
+```
+
+**Good — derives baseline from data, asserts the specific outcome that matters:**
+```ruby
+bob_computer_ids = @bob.computers.pluck(:id)
+assert bob_computer_ids.any?, "Bob must have at least one computer for this test to be meaningful"
+# ... perform action ...
+bob_computer_ids.each do |id|
+  assert_nil Computer.find_by(id: id), "Computer #{id} should have been deleted"
+end
+```
+
+The good form tests what actually matters — that bob's specific records were acted
+on correctly — without caring how many there are. A new fixture added to bob has
+zero impact on this test.
+
+**When hardcoded counts ARE acceptable:**
+- `assert_difference("Model.count", -1)` — this is a relative change, not an
+  absolute count, and remains correct regardless of how many records exist.
+- Counts on records created within the test itself (not sourced from fixtures).
+
+**Applies beyond tests:** the same principle applies to configuration, seed data,
+and any code that embeds an assumption about quantity or identity that could change.
+If a value comes from data, read it from the data — don't copy it into the code.
+
+**Cross-reference:** See RAILS_SPECIFICS.md — Fixture Ownership section for the
+Rails/fixture-specific elaboration including the neutral-owner pattern.
 
 ---
 

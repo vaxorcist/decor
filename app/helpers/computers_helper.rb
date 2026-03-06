@@ -1,6 +1,13 @@
 # decor/app/helpers/computers_helper.rb
-# version 1.1
-# Updated following the conditions → computer_conditions rename (Session 7):
+# version 1.3
+# v1.3 (Session 18): Added computer_form_device_type_options for use by the
+#   device_type selector on the new/edit form. Reuses COMPUTER_DEVICE_TYPE_FILTER_OPTIONS
+#   so the option list is defined in exactly one place for both the filter
+#   sidebar and the record form.
+# v1.2 (Session 17): Added computer_filter_device_type_options and
+#   computer_filter_device_type_selected to support the new device_type
+#   filter selector in _filters.html.erb.
+# v1.1: conditions → computer_conditions rename (Session 7):
 #   Condition.order(:name)   → ComputerCondition.order(:name)
 #   params[:condition_id]    → params[:computer_condition_id]
 
@@ -11,6 +18,16 @@ module ComputersHelper
     model_asc: "Model (A-Z)",
     model_desc: "Model (Z-A)"
   }.freeze
+
+  # Device type options shared between the filter sidebar and the record form.
+  # Values are the enum string keys as used by ActiveRecord — Rails translates
+  # these to the underlying integers when building the WHERE clause or setting
+  # attributes on a record.
+  # "appliance" label is a placeholder until the final UI name is confirmed.
+  COMPUTER_DEVICE_TYPE_FILTER_OPTIONS = [
+    ["Computer", "computer"],
+    ["Appliance", "appliance"]
+  ].freeze
 
   def computer_sort_options
     COMPUTER_SORT_OPTIONS.map { |key, value| [value, key.to_s] }
@@ -46,5 +63,24 @@ module ComputersHelper
 
   def computer_filter_run_statuses_selected
     params[:run_status_id]
+  end
+
+  # Returns the pre-built options array for the device_type filter selector
+  # (used in _filters.html.erb).
+  def computer_filter_device_type_options
+    COMPUTER_DEVICE_TYPE_FILTER_OPTIONS
+  end
+
+  # Returns the currently selected device_type value from params, or nil
+  # when no filter is active (which causes the "Any" blank option to be selected).
+  def computer_filter_device_type_selected
+    params[:device_type]
+  end
+
+  # Returns the pre-built options array for the device_type form selector
+  # (used in _form.html.erb). Reuses the same constant as the filter selector
+  # so the option labels are defined in exactly one place.
+  def computer_form_device_type_options
+    COMPUTER_DEVICE_TYPE_FILTER_OPTIONS
   end
 end

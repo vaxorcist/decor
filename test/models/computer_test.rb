@@ -1,7 +1,6 @@
 # decor/test/models/computer_test.rb
-# version 1.3
-# Added: "destroying a computer destroys its components" — verifies dependent: :destroy
-# behaviour added in computer.rb v1.4 (Session 12).
+# version 1.4
+# Added: device_type enum tests — default, predicates, and scope filtering.
 
 require "test_helper"
 
@@ -96,5 +95,62 @@ class ComputerTest < ActiveSupport::TestCase
     computer.destroy
     surviving = Component.where(id: component_ids).count
     assert_equal 0, surviving, "Expected all components to be destroyed with the computer"
+  end
+
+  # --- device_type enum tests ---
+
+  test "device_type defaults to computer" do
+    # A new record without an explicit device_type must default to computer (0).
+    computer = Computer.new(
+      owner: owners(:one),
+      computer_model: computer_models(:pdp11_70),
+      serial_number: "TEST-SN-DTYPE-001"
+    )
+    assert_equal "computer", computer.device_type
+  end
+
+  test "device_type_computer? is true for default record" do
+    computer = Computer.new(
+      owner: owners(:one),
+      computer_model: computer_models(:pdp11_70),
+      serial_number: "TEST-SN-DTYPE-002"
+    )
+    assert computer.device_type_computer?
+    assert_not computer.device_type_appliance?
+  end
+
+  test "device_type can be set to appliance" do
+    computer = Computer.new(
+      owner: owners(:one),
+      computer_model: computer_models(:pdp11_70),
+      serial_number: "TEST-SN-DTYPE-003",
+      device_type: :appliance
+    )
+    assert_equal "appliance", computer.device_type
+    assert computer.device_type_appliance?
+    assert_not computer.device_type_computer?
+  end
+
+  test "device_type_appliance? is true for appliance fixture" do
+    # dec_unibus_router fixture has device_type: 1 (appliance).
+    appliance = computers(:dec_unibus_router)
+    assert appliance.device_type_appliance?
+    assert_not appliance.device_type_computer?
+  end
+
+  test "device_type_computer scope excludes appliances" do
+    # The dec_unibus_router fixture is an appliance and must not appear in this scope.
+    computers = Computer.device_type_computer
+    assert_not computers.exists?(computers(:dec_unibus_router).id),
+      "device_type_computer scope must not include appliances"
+  end
+
+  test "device_type_appliance scope excludes computers" do
+    # alice_pdp11 is a computer and must not appear in the appliance scope.
+    appliances = Computer.device_type_appliance
+    assert appliances.exists?(computers(:dec_unibus_router).id),
+      "device_type_appliance scope must include the appliance fixture"
+    assert_not appliances.exists?(computers(:alice_pdp11).id),
+      "device_type_appliance scope must not include computers"
   end
 end

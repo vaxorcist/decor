@@ -1,6 +1,8 @@
-# decor/test/fixtures/owners.yml - version 2.0
-# Updated for stronger test passwords that meet zxcvbn requirements
-# Password digests below must be regenerated - see instructions
+# decor/test/fixtures/owners.yml
+# version 2.1
+# Added: three (charlie) — a neutral owner used exclusively for test-support
+# fixtures (e.g. enum test records) that must not disturb alice's or bob's
+# hardcoded record counts in existing tests.
 
 # IMPORTANT: Before running tests, generate new BCrypt digests:
 # Run: ruby script/generate_fixture_passwords.rb
@@ -27,3 +29,18 @@ two:
   real_name_visibility: members_only
   country_visibility: public
   email_visibility: private
+
+# Neutral owner for test-support fixtures only.
+# No existing test queries charlie's record counts — safe to add records here
+# without breaking hardcoded assertions in OwnerExportServiceTest,
+# OwnersControllerDestroyTest, or any other test that counts alice/bob records.
+three:
+  user_name: charlie
+  email: charlie@example.com
+  password_digest: <%= BCrypt::Password.create("DecorTest2026!", cost: 12) %>
+  admin: false
+  real_name: Charlie Test
+  country: DE
+  real_name_visibility: public
+  country_visibility: public
+  email_visibility: public

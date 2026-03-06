@@ -1,12 +1,18 @@
-<%# decor/app/views/computers/index.turbo_stream.erb - version 1.0 %>
-<%# Fixed: Appends to tbody#computers instead of div#computers %>
+<%# decor/app/views/computers/index.turbo_stream.erb - version 1.1 %>
+<%# v1.1 (Session 17): Replaced all hardcoded computers-specific values with %>
+<%#   controller instance variables so load-more works on both /computers and %>
+<%#   /appliances without duplicating this template: %>
+<%#     :computers           → @turbo_tbody_id (append target tbody id) %>
+<%#     :load_more_computers → @load_more_id   (replace target id) %>
+<%#     computers_path       → @index_path     (path for the refreshed load_more partial) %>
+<%# v1.0: Appends to tbody#computers instead of div#computers. %>
 
-<%= turbo_stream.append :computers do %>
+<%= turbo_stream.append @turbo_tbody_id do %>
   <% @page.records.each do |computer| %>
-    <%= render "computer", computer: %>
+    <%= render "computer", computer: computer %>
   <% end %>
 <% end %>
 
-<%= turbo_stream.replace :load_more_computers do %>
-  <%= render "shared/load_more", id: :load_more_computers, page: @page, path: computers_path %>
+<%= turbo_stream.replace @load_more_id do %>
+  <%= render "shared/load_more", id: @load_more_id, page: @page, path: @index_path %>
 <% end %>

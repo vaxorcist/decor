@@ -1,12 +1,20 @@
 # decor/app/services/owner_export_service.rb
-# version 1.0
+# version 1.1
+# Session 16: device_type support — appliance computers now export with
+#   record_type "appliance" instead of "computer". No new column is needed;
+#   the record_type value itself encodes device_type (0 = computer, 1 = appliance).
+#
 # Service object that serialises all of an owner's computers and components
 # into a CSV string suitable for download and later re-import.
 #
 # CSV format — one row per record, record type indicated by the first column:
 #
-#   record_type               "computer" or "component"
-#   computer_model            model name (required for computer rows)
+#   record_type               "computer", "appliance", or "component"
+#                             "computer"  → device_type: 0 (general-purpose computer)
+#                             "appliance" → device_type: 1 (autonomous device: router,
+#                                           switch, terminal server, printer, etc.)
+#                             "component" → a component attached to or spare from a computer
+#   computer_model            model name (required for computer/appliance rows)
 #   computer_order_number     order number of the computer (may be blank)
 #   computer_serial_number    serial number of the computer; also used in component
 #                             rows as the FK reference to the parent computer
@@ -20,14 +28,14 @@
 #   component_condition       condition value (may be blank)
 #   component_description     description text (may be blank)
 #
-# Computer rows have blank values in all component_* columns.
+# Computer/appliance rows have blank values in all component_* columns.
 # Component rows have blank values in computer_model / computer_order_number /
 #   computer_condition / computer_run_status / computer_history columns.
 #   computer_serial_number in a component row is the parent computer's serial (FK).
 #
-# Export order: all computers (sorted by model name, then serial number),
-#   then all components (attached first sorted by computer serial then type name,
-#   then spare components sorted by type name).
+# Export order: all computers/appliances mixed together (sorted by model name,
+#   then serial number), then all components (attached first sorted by computer
+#   serial then type name, then spare components sorted by type name).
 
 require "csv"
 
@@ -68,21 +76,27 @@ class OwnerExportService
 
   def export_computers(csv)
     # Preload all associations so we don't hit N+1 queries.
+    # Computers and appliances are mixed together in the same table and exported
+    # in the same pass — distinguished only by the record_type value in the CSV.
     computers = @owner.computers
       .includes(:computer_model, :computer_condition, :run_status)
       .joins(:computer_model)
       .order("computer_models.name ASC", serial_number: :asc)
 
     computers.each do |computer|
+      # device_type: 1 (appliance) → "appliance"; device_type: 0 (computer) → "computer".
+      # This encodes the device_type into the record_type column without adding a new column.
+      record_type = computer.device_type_appliance? ? "appliance" : "computer"
+
       csv << [
-        "computer",
+        record_type,
         computer.computer_model.name,
         computer.order_number,
         computer.serial_number,
         computer.computer_condition&.name,
         computer.run_status&.name,
         computer.history,
-        nil, nil, nil, nil, nil  # component columns left blank
+        nil, nil, nil, nil, nil  # component columns left blank for computer/appliance rows
       ]
     end
   end

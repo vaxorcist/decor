@@ -1,4 +1,7 @@
+<%# decor/app/views/admin/computer_models/new.html.erb %>
+<%# version 1.1 %>
+<%# @model_label set by set_device_context — renders "Computer" or "Appliance". %>
 <div class="max-w-md mx-auto">
-  <h1 class="text-2xl font-semibold mb-4">New Computer Model</h1>
+  <h1 class="text-2xl font-semibold mb-4">New <%= @model_label %> Model</h1>
   <%= render "form", computer_model: @computer_model %>
 </div>

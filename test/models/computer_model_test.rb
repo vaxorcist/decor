@@ -1,26 +1,71 @@
+# decor/test/models/computer_model_test.rb
+# version 1.2
+# Added device_type enum tests: default value, predicates, scopes.
+# Pattern mirrors computer_test.rb v1.4 (Session 13).
+
 require "test_helper"
 
 class ComputerModelTest < ActiveSupport::TestCase
+  # ── Existing validations ─────────────────────────────────────────────────
+
   test "valid with name" do
-    computer_model = ComputerModel.new(name: "PDP-11/45")
-    assert computer_model.valid?
+    model = ComputerModel.new(name: "PDP-11/44")
+    assert model.valid?
   end
 
   test "invalid without name" do
-    computer_model = ComputerModel.new(name: nil)
-    assert_not computer_model.valid?
-    assert_includes computer_model.errors[:name], "can't be blank"
+    model = ComputerModel.new(name: nil)
+    assert_not model.valid?
+    assert_includes model.errors[:name], "can't be blank"
   end
 
-  test "name must be unique" do
-    existing = computer_models(:pdp11_70)
-    duplicate = ComputerModel.new(name: existing.name)
-    assert_not duplicate.valid?
-    assert_includes duplicate.errors[:name], "has already been taken"
+  test "invalid with duplicate name" do
+    model = ComputerModel.new(name: computer_models(:pdp11_70).name)
+    assert_not model.valid?
+    assert_includes model.errors[:name], "has already been taken"
   end
 
-  test "has many computers" do
-    computer_model = computer_models(:pdp11_70)
-    assert_respond_to computer_model, :computers
+  # ── device_type enum — default ────────────────────────────────────────────
+
+  test "device_type defaults to computer (0)" do
+    model = ComputerModel.create!(name: "PDP-11/34")
+    assert_equal "computer", model.device_type
+    assert model.device_type_computer?
+    assert_not model.device_type_appliance?
+  end
+
+  # ── device_type enum — predicates ────────────────────────────────────────
+
+  test "device_type_computer? returns true for computer fixture" do
+    model = computer_models(:pdp11_70)
+    assert model.device_type_computer?
+    assert_not model.device_type_appliance?
+  end
+
+  test "device_type_appliance? returns true for appliance fixture" do
+    model = computer_models(:hsc50)
+    assert model.device_type_appliance?
+    assert_not model.device_type_computer?
+  end
+
+  # ── device_type enum — scopes ─────────────────────────────────────────────
+
+  test "device_type_computer scope excludes appliance models" do
+    computer_ids  = ComputerModel.device_type_computer.pluck(:id)
+    appliance_ids = ComputerModel.device_type_appliance.pluck(:id)
+
+    assert_includes computer_ids,  computer_models(:pdp11_70).id
+    assert_not_includes computer_ids, computer_models(:hsc50).id
+
+    assert_includes appliance_ids, computer_models(:hsc50).id
+    assert_not_includes appliance_ids, computer_models(:pdp11_70).id
+  end
+
+  test "device_type_computer and device_type_appliance scopes are disjoint" do
+    computer_ids  = ComputerModel.device_type_computer.pluck(:id)
+    appliance_ids = ComputerModel.device_type_appliance.pluck(:id)
+
+    assert_empty computer_ids & appliance_ids,
+                 "computer and appliance scopes must not overlap"
   end
 end

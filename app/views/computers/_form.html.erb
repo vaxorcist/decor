@@ -1,7 +1,21 @@
-<%# decor/app/views/computers/_form.html.erb - version 1.9 %>
-<%# Session 10: Added Stimulus Back button alongside submit buttons so users %>
-<%# don't have to scroll past the component section to reach the back button. %>
-<%# Fallback URL mirrors the "Done" link: show page for existing, index for new. %>
+<%# decor/app/views/computers/_form.html.erb - version 2.2 %>
+<%# v2.2 (Session 18): Model selector now filtered by computer.device_type so the %>
+<%#   "Add/Edit Appliance" form shows only appliance models and the "Add/Edit Computer" %>
+<%#   form shows only computer models. ComputerModel.where(device_type: ...) scopes %>
+<%#   the collection; the device_type value comes from the computer local variable %>
+<%#   already available in the partial. %>
+<%# v2.1 (Session 18): Added device_type selector (Type) as the third column in %>
+<%#   Line 2. Line 2 grid expanded from grid-cols-2 to grid-cols-3. %>
+<%#   Strong params updated in computers_controller.rb to permit :device_type. %>
+<%#   Helper method computer_form_device_type_options added in computers_helper.rb. %>
+<%# v2.0 (Session 17): All hardcoded "Computer" strings replaced with %>
+<%#   computer.device_type.capitalize so the form reads "Update Computer" / %>
+<%#   "Update Appliance", "Add Computer's Component" / "Add Appliance's Component", %>
+<%#   etc., depending on the record's actual device_type. %>
+<%#   f.submit label is now explicit (overrides Rails default) for the same reason. %>
+<%# v1.9 (Session 10): Added Stimulus Back button alongside submit buttons so users %>
+<%#   don't have to scroll past the component section to reach the back button. %>
+<%#   Fallback URL mirrors the "Done" link: show page for existing, index for new. %>
 
 <%= form_with model: computer, class: "space-y-4", style: "width: 80%;" do |f| %>
   <%= render "common/record_errors", record: computer %>
@@ -12,7 +26,9 @@
       <%= f.label :computer_model_id, class: "block text-sm font-medium text-stone-700" do %>
         Model <span class="text-red-600">*</span>
       <% end %>
-      <%= f.collection_select :computer_model_id, ComputerModel.order(:name), :id, :name, { prompt: "Select a model" }, class: field_classes %>
+      <%# Model list is scoped to the record's current device_type so appliance forms %>
+      <%# show only appliance models and computer forms show only computer models. %>
+      <%= f.collection_select :computer_model_id, ComputerModel.where(device_type: computer.device_type).order(:name), :id, :name, { prompt: "Select a model" }, class: field_classes %>
       <p class="mt-1 text-xs text-stone-500">Select from list.</p>
     </div>
 
@@ -31,9 +47,10 @@
     </div>
   </div>
 
-  <!-- Line 2: Condition | Run Status -->
+  <!-- Line 2: Condition | Run Status | Type -->
   <%# computer_condition_id references the computer_conditions table (renamed from conditions) %>
-  <div class="grid grid-cols-2 gap-4">
+  <%# device_type selector added (Session 18) — was grid-cols-2, now grid-cols-3 %>
+  <div class="grid grid-cols-3 gap-4">
     <div>
       <%= f.label :computer_condition_id, "Condition", class: "block text-sm font-medium text-stone-700" %>
       <%= f.collection_select :computer_condition_id, ComputerCondition.order(:name), :id, :name, { prompt: "Select a condition" }, class: field_classes %>
@@ -42,6 +59,21 @@
     <div>
       <%= f.label :run_status_id, "Run Status", class: "block text-sm font-medium text-stone-700" %>
       <%= f.collection_select :run_status_id, RunStatus.order(:name), :id, :name, { prompt: "Select a run status" }, class: field_classes %>
+    </div>
+
+    <div>
+      <%# Type — maps to the device_type enum (computer: 0, appliance: 1). %>
+      <%# f.select submits the string key ("computer" / "appliance"); Rails enum %>
+      <%# translates to the integer on assignment. No blank prompt — a device %>
+      <%# must always have a type; the model default is "computer". %>
+      <%= f.label :device_type, class: "block text-sm font-medium text-stone-700" do %>
+        Type <span class="text-red-600">*</span>
+      <% end %>
+      <%= f.select :device_type,
+            options_for_select(computer_form_device_type_options, computer.device_type),
+            {},
+            class: field_classes %>
+      <p class="mt-1 text-xs text-stone-500">Computer or Appliance.</p>
     </div>
   </div>
 
@@ -53,9 +85,10 @@
   </div>
 
   <%# Button row — submit + secondary actions + Back button %>
-  <%# Back button placed here so it's visible without scrolling past the component section %>
+  <%# f.submit label is explicit to avoid the Rails default "Create/Update Computer" %>
+  <%# regardless of device_type. %>
   <div class="flex gap-3 items-center">
-    <%= f.submit class: button_classes(style: :primary) %>
+    <%= f.submit "#{computer.persisted? ? "Update" : "Create"} #{computer.device_type.capitalize}", class: button_classes(style: :primary) %>
     <% unless computer.persisted? %>
       <%= f.submit "Create and add another", name: "add_another", class: button_classes(style: :secondary) %>
     <% end %>
@@ -72,26 +105,26 @@
 
 <%# ─────────────────────────────────────────────────────────────────────────── %>
 <%# Component section — outside the computer form (nested forms are invalid HTML) %>
-<%# Only shown for existing computers (new computer has no id yet) %>
+<%# Only shown for existing computers/appliances (new record has no id yet) %>
 <%# Full width: inherits max-w-5xl from the edit.html.erb container %>
 <%# ─────────────────────────────────────────────────────────────────────────── %>
 <% if computer.persisted? %>
   <hr class="my-8 border-stone-200" />
 
-  <%# Add / Edit Computer's Component — shown ABOVE the component list %>
+  <%# Add / Edit [Device]'s Component — shown ABOVE the component list %>
   <div class="mb-8">
     <% if @edit_component %>
-      <h2 class="text-xl font-semibold mb-4">Edit Computer's Component</h2>
+      <h2 class="text-xl font-semibold mb-4">Edit <%= computer.device_type.capitalize %>'s Component</h2>
       <%= render "computer_component_form", component: @edit_component, computer: computer %>
     <% else %>
-      <h2 class="text-xl font-semibold mb-4">Add Computer's Component</h2>
+      <h2 class="text-xl font-semibold mb-4">Add <%= computer.device_type.capitalize %>'s Component</h2>
       <%= render "computer_component_form", component: @new_component, computer: computer %>
     <% end %>
   </div>
 
-  <%# Computer's Components list — below the add/edit form %>
+  <%# [Device]'s Components list — below the add/edit form %>
   <div>
-    <h2 class="text-xl font-semibold mb-4">Computer's Components</h2>
+    <h2 class="text-xl font-semibold mb-4"><%= computer.device_type.capitalize %>'s Components</h2>
 
     <% if computer.components.any? %>
       <div class="bg-white border border-stone-200 rounded overflow-auto">

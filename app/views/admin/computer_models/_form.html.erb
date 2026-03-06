@@ -1,4 +1,12 @@
-<%= form_with model: [:admin, computer_model], class: "space-y-4" do |f| %>
+<%# decor/app/views/admin/computer_models/_form.html.erb %>
+<%# version 1.2 %>
+<%# Fix: pass explicit url: to form_with so submissions route to the correct %>
+<%# resource (/admin/appliance_models vs /admin/computer_models). %>
+<%# Without this, form_with model: [:admin, computer_model] always resolves %>
+<%# to /admin/computer_models because Rails derives the URL from the class name. %>
+<%# @create_path and @update_path_for are set by set_device_context. %>
+<% form_url = computer_model.new_record? ? @create_path : @update_path_for.call(computer_model) %>
+<%= form_with model: [:admin, computer_model], url: form_url, class: "space-y-4" do |f| %>
   <%= render "common/record_errors", record: computer_model %>
 
   <div>
@@ -7,7 +15,8 @@
   </div>
 
   <div class="flex gap-3">
-    <%= f.submit class: button_classes(style: :primary) %>
-    <%= link_to "Cancel", admin_computer_models_path, class: button_classes(style: :secondary) %>
+    <% submit_label = computer_model.new_record? ? "Create #{@model_label} Model" : "Update #{@model_label} Model" %>
+    <%= f.submit submit_label, class: button_classes(style: :primary) %>
+    <%= link_to "Cancel", @index_path, class: button_classes(style: :secondary) %>
   </div>
 <% end %>
