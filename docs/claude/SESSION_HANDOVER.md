@@ -1,9 +1,9 @@
 # decor/docs/claude/SESSION_HANDOVER.md
-# version 17.0
+# version 18.0
 
 **Date:** March 5, 2026
 **Branch:** feature/add-independent-devices-and-peripherals
-**Status:** Session 16 work in progress — not yet committed.
+**Status:** Session 17 work committed.
 
 ---
 
@@ -34,147 +34,127 @@ After each: log "Read FILENAME — N lines, complete."
 
 ## Session Summary
 
-Session 16 delivered:
-1. Session start failure analysis — bash_tool not used due to false inference
-   from environment context string. Skill v1.1 and COMMON_BEHAVIOR.md v2.2
-   updated with two new rules: tool sanity check (step 0) and skill/rule doc
-   change protocol (propose before modifying; present as download after).
-2. device_type in export/import — "appliance" added as third record_type value
-3. Owners index — filter narrowed (grid-cols-5); APPLIANCES column added
+Session 17 delivered:
+1. Session 16 commit (first action)
+2. device_type filter on Computers index — Type selector in sidebar; Type column
+   in table; Computers page defaults to device_type=computer (appliances excluded)
+3. Appliances page — /appliances route (computers controller, device_context param);
+   nav link between Computers and Components; Type filter + column hidden; load-more
+   fully dynamic via @turbo_tbody_id / @load_more_id / @index_path
+4. Edit/show pages — all hardcoded "Computer" strings replaced with device_type
 
 ---
 
 ## Work Completed This Session
 
-### 1. Rule Document and Skill Updates
+### 1. device_type Filtering on Computers Index
 
-    decor/docs/claude/COMMON_BEHAVIOR.md         (v2.2)
-    decor-session-rules skill                    (v1.1)
+    decor/app/helpers/computers_helper.rb                    (v1.2)
+    decor/app/views/computers/_filters.html.erb              (v1.3)
+    decor/app/controllers/computers_controller.rb            (v1.7 → 1.8 → 1.9)
 
-Two new rules:
-- "Tool Availability — Never Infer, Always Test": run `echo "bash_tool OK"`
-  as step 0; never infer tool availability from environment context strings.
-- "Skill and Rule Document Changes": propose before modifying; present result
-  as downloadable file; never modify silently.
+helpers: COMPUTER_DEVICE_TYPE_FILTER_OPTIONS constant; two new helper methods
+(computer_filter_device_type_options, computer_filter_device_type_selected).
 
-Failure mode documented: Session 16 turn 1 — bash_tool available but unused.
-The system context said "web or mobile chat interface"; Claude inferred
-(incorrectly) that bash_tool was unavailable and tried web_fetch with
-file:// URLs instead.
+_filters.html.erb: Type selector added between Sort and Model.
 
-### 2. device_type in Export / Import
+Controller iterations:
+- v1.7: device_type filter reads from params[:device_type]
+- v1.8: set_device_context before_action added; appliances route locks device_type
+- v1.9 (bug fix): Computers page now defaults device_type to "computer" when no
+  param is present — appliances no longer appeared on the unfiltered Computers page.
 
-    decor/app/services/owner_export_service.rb            (v1.1)
-    decor/app/services/owner_import_service.rb            (v1.1)
-    decor/app/views/data_transfers/show.html.erb          (v1.5)
-    decor/test/services/owner_export_service_test.rb      (v1.1)
-    decor/test/services/owner_import_service_test.rb      (v1.1)
+Key insight: `params[:device_type].presence || "computer"` on the computers route
+means the sidebar filter still works (explicit "appliance" selection is honoured)
+but the default always excludes appliances from the Computers page.
 
-"appliance" added as a third valid record_type value (alongside "computer"
-and "component"). No new CSV column — record_type encodes device_type:
-"computer" → device_type: 0, "appliance" → device_type: 1.
+### 2. Appliances Page
 
-Export: device_type_appliance? predicate selects emitted string.
-Import: "appliance" routes into computer_rows bucket with :appliance tag;
-process_computer_row receives device_type as third argument.
+    decor/config/routes.rb                                   (v1.4)
+    decor/app/controllers/computers_controller.rb            (v1.9)
+    decor/app/views/computers/index.html.erb                 (v1.7)
+    decor/app/views/computers/_filters.html.erb              (v1.3)
+    decor/app/views/computers/_computer.html.erb             (v1.8)
+    decor/app/views/computers/index.turbo_stream.erb         (v1.1)
+    decor/app/views/common/_navigation.html.erb              (v1.2)
+    decor/app/views/owners/_owner.html.erb                   (v3.4)
+    decor/test/controllers/computers_controller_test.rb      (v1.3)
 
-show.html.erb v1.5 fixed by user (v1.4 had incorrect explanatory texts).
+routes.rb: `resources :appliances, controller: "computers", only: [:index],
+defaults: { device_context: "appliance" }`. Individual record CRUD always
+stays on computers_* routes; only :index needed.
 
-### 3. Owners Index — Filter Width and Appliances Column
+Controller: set_device_context before_action reads params[:device_context]
+(injected by route defaults) and sets @device_context, @page_title,
+@index_path, @turbo_tbody_id, @load_more_id for all shared views.
 
-    decor/app/views/owners/index.html.erb        (v3.3)
-    decor/app/views/owners/_owner.html.erb       (v3.3)
+Views: all context-specific strings and IDs come from those instance variables.
+Type filter hidden on Appliances page (@device_context == "appliance").
+Type column hidden on Appliances page (same condition).
+load_more turbo stream fully dynamic — works on both pages.
 
-index.html.erb: grid changed from grid-cols-4 to grid-cols-5 (filter column
-reduced from 25% to 20% = 80% of previous); table expanded from col-span-3
-to col-span-4, reclaiming freed space. APPLIANCES column header added.
+_navigation.html.erb: Appliances link added between Computers and Components.
 
-_owner.html.erb: Appliances count cell added after Computers count cell,
-using device_type_appliance scope. Computers cell now uses
-device_type_computer.count (was .count — would have included appliances).
-Both columns link to computers_path(owner_id:) — once computers index gains
-device_type filtering, the appliances link can target appliances only.
+_owner.html.erb (v3.4): Computers link now passes device_type: "computer";
+Appliances link now passes device_type: "appliance" — both properly filtered.
+
+### 3. Edit / Show Pages — device_type-Aware Labels
+
+    decor/app/views/computers/edit.html.erb                  (v1.3)
+    decor/app/views/computers/_form.html.erb                 (v2.0)
+    decor/app/views/computers/show.html.erb                  (v1.6)
+
+All hardcoded "Computer" / "computer" strings replaced with
+`@computer.device_type.capitalize` / `computer.device_type.capitalize`
+so pages read "Edit Appliance", "Update Appliance", "Add Appliance's Component",
+etc., depending on the record's actual device_type.
+
+f.submit label is now explicit in _form.html.erb to override Rails' default
+"Create/Update Computer" which does not respect device_type.
+
+_computer_component_form.html.erb — no changes needed (no user-visible
+"Computer" strings in that partial).
 
 ---
 
 ## Lessons Learned This Session
 
-### Never infer tool availability from environment context descriptions
-The system context string "web or mobile chat interface" describes the
-user-facing product, not which tools Claude has. One echo command tests
-reality; reasoning from context strings does not.
+### Route defaults inject params, not instance variables
+`defaults: { device_context: "appliance" }` in routes.rb makes
+`params[:device_context]` available to the controller action, not `@device_context`.
+The before_action translates the param into instance variables for the views.
 
-### Skills must carry critical instructions in their description
-The skill body requires a deliberate read — it provides no guarantee of
-being seen. The description is injected automatically into every session
-context and is the only part guaranteed to be visible. Step 0 (echo sanity
-check) and the separator/token rules are now in the description.
+### Computers page default must be explicit, not open
+Without a default, `params[:device_type].presence` is nil when no filter is
+active — so all records (including appliances) were returned. The fix:
+`params[:device_type].presence || "computer"` makes the default filter
+explicit while still allowing the sidebar "Appliance" filter to override it.
 
-### Propose before modifying skills or rule documents
-Both are the user's property. No modification without prior approval.
-Always present the result as a downloadable file — the web UI does not
-show skill file contents.
-
-### w-4/5 clips content within a grid slot; it does not resize the slot
-To actually redistribute space between grid children, change the grid
-column definition (grid-cols-N) and the span (col-span-N), not the width
-of the element inside.
+### f.submit label does not respect model enum values
+Rails generates the f.submit label from the model class name ("Create Computer",
+"Update Computer") regardless of device_type. Must pass an explicit string label
+when the label needs to reflect the record's actual device type.
 
 ---
 
 ## Pending — Start of Next Session
 
-### 1. Commit session 16 work
-Suggested message:
-```
-Add appliance support to export/import and owners index; update session rules
-```
-
-Files to commit:
-    decor/app/services/owner_export_service.rb
-    decor/app/services/owner_import_service.rb
-    decor/app/views/data_transfers/show.html.erb
-    decor/app/views/owners/index.html.erb
-    decor/app/views/owners/_owner.html.erb
-    decor/test/services/owner_export_service_test.rb
-    decor/test/services/owner_import_service_test.rb
-    decor/docs/claude/COMMON_BEHAVIOR.md
-    decor/docs/claude/DECOR_PROJECT.md
-    decor/docs/claude/SESSION_HANDOVER.md
-
-### 2. Computers index — device_type filtering (NEXT TASK)
-The user asked: "What to do to make the computers index gain device_type
-filtering?" This was deferred due to token limits.
-
-Files needed to answer and implement:
-    decor/app/views/computers/index.html.erb
-    decor/app/views/computers/_filters.html.erb
-    decor/app/views/computers/_computer.html.erb
-    decor/app/controllers/computers_controller.rb
-    decor/test/controllers/computers_controller_test.rb
-
-Once reviewed, the answer will cover:
-  - Adding a device_type filter param to the controller scope
-  - Adding a device_type selector to _filters.html.erb
-  - Optionally distinguishing computer vs appliance rows in _computer.html.erb
-  - Updating the appliances link in owners/_owner.html.erb to filter by
-    device_type once the filter exists
-
-### 3. Naming — "appliance" placeholder still unresolved (carried over)
+### 1. Naming — "appliance" placeholder still unresolved (carried over)
 Final UI label for device_type: 1 not confirmed by English partner.
 Once confirmed:
   - Update enum key in decor/app/models/computer_model.rb and
     decor/app/models/computer.rb
   - Update fixture labels
-  - Update all UI-facing strings
+  - Update all UI-facing strings (currently uses .capitalize on "appliance")
 
-### 4. UI changes — computers index and form (device_type) — carried over
-  - Form: device_type selector on computer new/edit
+### 2. UI changes — computers/appliances new/edit form: device_type selector
+Currently device_type is set at import time or via fixture only.
+A device_type selector on the new/edit form would allow users to change it.
 
-### 5. UI changes — components form and show (component_category) — carried over
+### 3. UI changes — components form and show (component_category) — carried over
   component_category (integral/peripheral) not yet exposed in the UI.
 
-### 6. BulkUploadService stale model references — low priority, carried over
+### 4. BulkUploadService stale model references — low priority, carried over
     decor/app/services/bulk_upload_service.rb
     - Condition → ComputerCondition
     - computer.condition → computer.computer_condition
@@ -186,8 +166,7 @@ Once confirmed:
 ## Git State
 
 **Branch:** feature/add-independent-devices-and-peripherals
-**Session 16 work is NOT yet committed.**
-**First action next session:** commit session 16 files, then continue.
+**Session 17 work is committed.**
 
 ---
 
@@ -203,8 +182,9 @@ Once confirmed:
 
 ## Documents Updated This Session
 
-    decor/docs/claude/DECOR_PROJECT.md        v2.12
-    decor/docs/claude/SESSION_HANDOVER.md     v17.0
+    decor/docs/claude/DECOR_PROJECT.md        v2.14
+    decor/docs/claude/SESSION_HANDOVER.md     v18.0
+    decor-session-rules skill                 v1.2
 
 ---
 

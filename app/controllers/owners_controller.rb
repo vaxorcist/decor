@@ -1,9 +1,12 @@
-# decor/app/controllers/owners_controller.rb - version 1.4
-# show action: computers ordered by model name; components ordered by computer model name,
-# computer serial number, component type name.
-# eager_load used (instead of includes + left_joins) so that joined table columns are
-# available in ORDER BY in a single query. NULLS LAST puts spare components after
-# computer-attached ones.
+# decor/app/controllers/owners_controller.rb - version 1.5
+# v1.5 (Session 18): show action: split @computers into @computers (device_type:
+#   computer) and @appliances (device_type: appliance) so the owner show page can
+#   render a separate Appliances table between the Computers table and Components table.
+#   Both queries use the same eager_load + Arel.sql ordering pattern as before.
+# v1.4: show action: computers ordered by model name; components ordered by computer
+#   model name, computer serial number, component type name. eager_load used so joined
+#   table columns are available in ORDER BY. NULLS LAST puts spare components after
+#   computer-attached ones.
 
 class OwnersController < ApplicationController
   before_action :set_owner, only: %i[show edit update destroy]
@@ -48,19 +51,24 @@ class OwnersController < ApplicationController
   end
 
   def show
-    # Computers: ordered by model name (eager_load forces LEFT OUTER JOIN, enabling ORDER BY
-    # on the joined table; inner join is fine here since computer_model is always present)
+    # Computers (device_type: computer) — ordered by model name.
+    # eager_load forces LEFT OUTER JOIN so ORDER BY on computer_models.name works
+    # in a single query (inner join would suffice since computer_model is always
+    # present, but eager_load is the established pattern here).
     @computers = @owner.computers
+                       .where(device_type: :computer)
                        .eager_load(:computer_model)
                        .order(Arel.sql("computer_models.name ASC"))
 
-    # Components: ordered by computer model name, then computer serial number, then component
-    # type name. eager_load generates LEFT OUTER JOINs for all associations in one query,
-    # which is required to ORDER BY columns on optionally-present associations (computer,
-    # computer_model). NULLS LAST ensures spare components (no computer) sort after
-    # computer-attached ones.
-    # Arel.sql() is required for multi-table ORDER BY strings — Rails rejects raw strings
-    # that contain non-attribute references (dots, NULLS LAST) as a safety guard.
+    # Appliances (device_type: appliance) — same ordering as computers.
+    @appliances = @owner.computers
+                        .where(device_type: :appliance)
+                        .eager_load(:computer_model)
+                        .order(Arel.sql("computer_models.name ASC"))
+
+    # Components: ordered by computer model name, then computer serial number, then
+    # component type name. NULLS LAST puts spare components (no computer) after
+    # computer-attached ones. Arel.sql() required for multi-table ORDER BY strings.
     @components = @owner.components
                         .eager_load(:component_type, computer: :computer_model)
                         .order(

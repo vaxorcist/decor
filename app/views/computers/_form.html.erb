@@ -1,4 +1,13 @@
-<%# decor/app/views/computers/_form.html.erb - version 2.0 %>
+<%# decor/app/views/computers/_form.html.erb - version 2.2 %>
+<%# v2.2 (Session 18): Model selector now filtered by computer.device_type so the %>
+<%#   "Add/Edit Appliance" form shows only appliance models and the "Add/Edit Computer" %>
+<%#   form shows only computer models. ComputerModel.where(device_type: ...) scopes %>
+<%#   the collection; the device_type value comes from the computer local variable %>
+<%#   already available in the partial. %>
+<%# v2.1 (Session 18): Added device_type selector (Type) as the third column in %>
+<%#   Line 2. Line 2 grid expanded from grid-cols-2 to grid-cols-3. %>
+<%#   Strong params updated in computers_controller.rb to permit :device_type. %>
+<%#   Helper method computer_form_device_type_options added in computers_helper.rb. %>
 <%# v2.0 (Session 17): All hardcoded "Computer" strings replaced with %>
 <%#   computer.device_type.capitalize so the form reads "Update Computer" / %>
 <%#   "Update Appliance", "Add Computer's Component" / "Add Appliance's Component", %>
@@ -17,7 +26,9 @@
       <%= f.label :computer_model_id, class: "block text-sm font-medium text-stone-700" do %>
         Model <span class="text-red-600">*</span>
       <% end %>
-      <%= f.collection_select :computer_model_id, ComputerModel.order(:name), :id, :name, { prompt: "Select a model" }, class: field_classes %>
+      <%# Model list is scoped to the record's current device_type so appliance forms %>
+      <%# show only appliance models and computer forms show only computer models. %>
+      <%= f.collection_select :computer_model_id, ComputerModel.where(device_type: computer.device_type).order(:name), :id, :name, { prompt: "Select a model" }, class: field_classes %>
       <p class="mt-1 text-xs text-stone-500">Select from list.</p>
     </div>
 
@@ -36,9 +47,10 @@
     </div>
   </div>
 
-  <!-- Line 2: Condition | Run Status -->
+  <!-- Line 2: Condition | Run Status | Type -->
   <%# computer_condition_id references the computer_conditions table (renamed from conditions) %>
-  <div class="grid grid-cols-2 gap-4">
+  <%# device_type selector added (Session 18) — was grid-cols-2, now grid-cols-3 %>
+  <div class="grid grid-cols-3 gap-4">
     <div>
       <%= f.label :computer_condition_id, "Condition", class: "block text-sm font-medium text-stone-700" %>
       <%= f.collection_select :computer_condition_id, ComputerCondition.order(:name), :id, :name, { prompt: "Select a condition" }, class: field_classes %>
@@ -47,6 +59,21 @@
     <div>
       <%= f.label :run_status_id, "Run Status", class: "block text-sm font-medium text-stone-700" %>
       <%= f.collection_select :run_status_id, RunStatus.order(:name), :id, :name, { prompt: "Select a run status" }, class: field_classes %>
+    </div>
+
+    <div>
+      <%# Type — maps to the device_type enum (computer: 0, appliance: 1). %>
+      <%# f.select submits the string key ("computer" / "appliance"); Rails enum %>
+      <%# translates to the integer on assignment. No blank prompt — a device %>
+      <%# must always have a type; the model default is "computer". %>
+      <%= f.label :device_type, class: "block text-sm font-medium text-stone-700" do %>
+        Type <span class="text-red-600">*</span>
+      <% end %>
+      <%= f.select :device_type,
+            options_for_select(computer_form_device_type_options, computer.device_type),
+            {},
+            class: field_classes %>
+      <p class="mt-1 text-xs text-stone-500">Computer or Appliance.</p>
     </div>
   </div>
 

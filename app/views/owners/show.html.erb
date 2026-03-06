@@ -1,8 +1,13 @@
-<%# decor/app/views/owners/show.html.erb - version 1.4 %>
-<%# Computers section: ordered by model name; Order Number column added between Model and %>
-<%#   Serial; Delete button added next to Edit (owner only, with turbo confirm). %>
-<%# Components section: ordered by computer model / serial / type; columns reordered to %>
-<%#   Computer (model–serial), Type, Order No., Serial No., Description; Delete button added. %>
+<%# decor/app/views/owners/show.html.erb - version 1.6 %>
+<%# v1.6 (Session 18): "Add Appliance" link now passes device_type: "appliance" so %>
+<%#   the new action pre-builds the record as an appliance. Heading and form selector %>
+<%#   pre-selection both derive from @computer.device_type and work automatically. %>
+<%# v1.5 (Session 18): Appliances section added between Computers and Components. %>
+<%#   @computers now contains only device_type: computer records; @appliances contains %>
+<%#   only device_type: appliance records (both split in owners_controller.rb v1.5). %>
+<%#   Appliances table has identical columns and actions to the Computers table. %>
+<%# v1.4: Computers section: ordered by model name; Order Number column; Delete button. %>
+<%#   Components section: ordered by computer model / serial / type; columns reordered. %>
 
 <div class="max-w-7xl mx-auto">
   <div class="flex justify-between items-start mb-4">
@@ -50,6 +55,7 @@
   </div>
 
   <%# ---- Computers ---- %>
+  <%# @computers contains only device_type: computer records (appliances excluded). %>
   <div class="mb-6">
     <div class="flex justify-between items-center mb-3">
       <h2 class="text-lg font-semibold">Computers (<%= @computers.count %>)</h2>
@@ -102,6 +108,64 @@
       </div>
     <% else %>
       <p class="text-sm text-stone-500">No computers registered.</p>
+    <% end %>
+  </div>
+
+  <%# ---- Appliances ---- %>
+  <%# @appliances contains only device_type: appliance records. %>
+  <%# Same columns and actions as the Computers table above. %>
+  <div class="mb-6">
+    <div class="flex justify-between items-center mb-3">
+      <h2 class="text-lg font-semibold">Appliances (<%= @appliances.count %>)</h2>
+      <% if Current.owner == @owner %>
+        <%= link_to "Add Appliance", new_computer_path(device_type: "appliance"), class: button_classes(style: :secondary) %>
+      <% end %>
+    </div>
+
+    <% if @appliances.any? %>
+      <div class="bg-white border border-stone-200 rounded">
+        <table class="min-w-full divide-y divide-stone-200">
+          <thead class="bg-stone-50">
+            <tr>
+              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Model</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Order</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Serial</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Condition</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Status</th>
+              <th class="px-4 py-2"></th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-stone-200 text-sm">
+            <% @appliances.each do |appliance| %>
+              <tr class="hover:bg-stone-50">
+                <%# Model — clickable, navigates to computer show page (appliances use computers_* routes) %>
+                <td class="px-4 py-3 whitespace-nowrap font-medium">
+                  <%= link_to appliance.computer_model.name, computer_path(appliance), class: "text-indigo-600 hover:text-indigo-900" %>
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= appliance.order_number || "—" %></td>
+                <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= appliance.serial_number %></td>
+                <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= appliance.computer_condition&.name || "—" %></td>
+                <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= appliance.run_status&.name || "—" %></td>
+                <%# Actions — Edit and Delete shown to owner only %>
+                <td class="px-4 py-3 whitespace-nowrap text-right">
+                  <% if Current.owner == @owner %>
+                    <div class="flex items-center justify-end gap-3">
+                      <%= link_to "Edit", edit_computer_path(appliance), class: "text-indigo-600 hover:text-indigo-900" %>
+                      <%= button_to "Delete", computer_path(appliance), method: :delete,
+                            data: { turbo_confirm: "Delete #{appliance.computer_model.name} (#{appliance.serial_number})? This cannot be undone." },
+                            params: { source: "owner" },
+                            class: "text-red-600 hover:text-red-900 bg-transparent border-0 p-0 cursor-pointer",
+                            form: { style: "display:inline" } %>
+                    </div>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <p class="text-sm text-stone-500">No appliances registered.</p>
     <% end %>
   </div>
 

@@ -1,4 +1,19 @@
-# decor/app/controllers/computers_controller.rb - version 1.9
+# decor/app/controllers/computers_controller.rb - version 1.13
+# v1.13 (Session 18): new action: build() without device_type first, then assign
+#   it only if the param is present. v1.12's .presence fix was wrong — nil.presence
+#   is still nil, so build(device_type: nil) was still called and still overrode
+#   the enum default. The key must be absent from the hash entirely, not present
+#   with a nil value.
+# v1.12 (Session 18): new action: params[:device_type].presence — incorrect fix.
+# v1.11 (Session 18): new action reads params[:device_type] when building the record
+#   so "Add Appliance" (which passes device_type=appliance) pre-sets the type correctly.
+#   The heading (new.html.erb v1.4) and form selector (_form.html.erb v2.1) both derive
+#   from @computer.device_type and update automatically — no view changes needed.
+# v1.10 (Session 18): Permitted :device_type in computer_params so the new form
+#   selector can set it on create/update. Flash messages in create, update, and
+#   destroy are now device_type-aware (e.g. "Appliance was successfully updated."
+#   instead of hardcoded "Computer"). device_label captured before destroy so the
+#   message is available after the record is gone.
 # v1.9 (Session 17): Fixed: appliances appeared on the Computers page when no
 #   device_type filter param was present. On the computers route, device_type
 #   now defaults to "computer" when the param is absent, so the Computers page
@@ -61,17 +76,27 @@ class ComputersController < ApplicationController
   end
 
   def new
+    # Build with the model default (computer: 0), then override device_type only
+    # when the param is explicitly present (e.g. "Add Appliance" passes
+    # device_type=appliance). Passing device_type: nil to build() would override
+    # the enum default and cause .capitalize to fail in the view — the key must
+    # be absent from the hash entirely, not present with a nil value.
     @computer = Current.owner.computers.build
+    @computer.device_type = params[:device_type] if params[:device_type].present?
   end
 
   def create
     @computer = Current.owner.computers.build(computer_params)
 
     if @computer.save
+      # Use the record's actual device_type in the flash so "Appliance was
+      # successfully created." is shown when that type is selected.
+      device_label = @computer.device_type.capitalize
+
       if params[:add_another]
-        redirect_to new_computer_path, notice: "Computer was successfully created. Add another!"
+        redirect_to new_computer_path, notice: "#{device_label} was successfully created. Add another!"
       else
-        redirect_to edit_computer_path(@computer), notice: "Computer was successfully created. You can now add components below."
+        redirect_to edit_computer_path(@computer), notice: "#{device_label} was successfully created. You can now add components below."
       end
     else
       render :new, status: :unprocessable_entity
@@ -88,7 +113,7 @@ class ComputersController < ApplicationController
 
   def update
     if @computer.update(computer_params)
-      redirect_to computer_path(@computer), notice: "Computer was successfully updated."
+      redirect_to computer_path(@computer), notice: "#{@computer.device_type.capitalize} was successfully updated."
     else
       @new_component = Current.owner.components.new(computer_id: @computer.id)
       render :edit, status: :unprocessable_entity
@@ -96,14 +121,16 @@ class ComputersController < ApplicationController
   end
 
   def destroy
-    # Capture owner before destroy so we can redirect to their page if source=owner.
-    owner = @computer.owner
+    # Capture owner and device label before destroy — both are unavailable
+    # after the record is deleted.
+    owner        = @computer.owner
+    device_label = @computer.device_type.capitalize
     @computer.destroy
 
     if params[:source] == "owner"
-      redirect_to owner_path(owner), notice: "Computer was successfully deleted."
+      redirect_to owner_path(owner), notice: "#{device_label} was successfully deleted."
     else
-      redirect_to computers_path, notice: "Computer was successfully deleted."
+      redirect_to computers_path, notice: "#{device_label} was successfully deleted."
     end
   end
 
@@ -136,6 +163,14 @@ class ComputersController < ApplicationController
   end
 
   def computer_params
-    params.require(:computer).permit(:computer_model_id, :serial_number, :computer_condition_id, :run_status_id, :order_number, :history)
+    params.require(:computer).permit(
+      :computer_model_id,
+      :serial_number,
+      :computer_condition_id,
+      :run_status_id,
+      :order_number,
+      :history,
+      :device_type   # permitted since Session 18: device_type selector on new/edit form
+    )
   end
 end
