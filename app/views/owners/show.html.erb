@@ -1,4 +1,9 @@
-<%# decor/app/views/owners/show.html.erb - version 1.6 %>
+<%# decor/app/views/owners/show.html.erb - version 1.7 %>
+<%# v1.7 (Session 19): Components table column changes: %>
+<%#   - Header "Computer" renamed to "Computer-Serial No." (cell already rendered %>
+<%#     as "Model – serial", so data unchanged). %>
+<%#   - "Description" moved before "Order No." and "Serial No.". %>
+<%#   - Final order: Computer-Serial No. | Type | Description | Order No. | Serial No. %>
 <%# v1.6 (Session 18): "Add Appliance" link now passes device_type: "appliance" so %>
 <%#   the new action pre-builds the record as an appliance. Heading and form selector %>
 <%#   pre-selection both derive from @computer.device_type and work automatically. %>
@@ -183,21 +188,24 @@
         <table class="min-w-full divide-y divide-stone-200">
           <thead class="bg-stone-50">
             <tr>
-              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Computer</th>
+              <%# Header renamed from "Computer" to "Computer-Serial No." to match %>
+              <%# the combined model–serial format rendered in each cell. %>
+              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Computer-Serial No.</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Type</th>
+              <%# Description moved before Order No. and Serial No. %>
+              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Description</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Order No.</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Serial No.</th>
-              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Description</th>
               <th class="px-4 py-2"></th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-stone-200 text-sm">
             <% @components.each do |component| %>
               <tr class="hover:bg-stone-50">
-                <%# Computer — model name hyphen serial number; "Spare" if unattached %>
+                <%# Computer-Serial No. — model name hyphen serial number; "Spare" if unattached %>
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600">
                   <% if component.computer %>
-                    <%= link_to "#{component.computer.computer_model.name} – #{component.computer.serial_number}",
+                    <%= link_to "#{component.computer.computer_model.name} \u2013 #{component.computer.serial_number}",
                           computer_path(component.computer),
                           class: "text-indigo-600 hover:text-indigo-900" %>
                   <% else %>
@@ -208,9 +216,10 @@
                 <td class="px-4 py-3 whitespace-nowrap font-medium">
                   <%= link_to component.component_type.name, component_path(component), class: "text-indigo-600 hover:text-indigo-900" %>
                 </td>
+                <%# Description — truncated; moved before Order No. and Serial No. %>
+                <td class="px-4 py-3 text-stone-600"><%= truncate(component.description, length: 50) || "—" %></td>
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.order_number || "—" %></td>
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.serial_number || "—" %></td>
-                <td class="px-4 py-3 text-stone-600"><%= truncate(component.description, length: 50) || "—" %></td>
                 <%# Actions — Edit and Delete shown to owner only %>
                 <td class="px-4 py-3 whitespace-nowrap text-right">
                   <% if Current.owner == @owner %>

@@ -1,15 +1,15 @@
 # decor/docs/claude/SESSION_HANDOVER.md
-# version 18.0
+# version 20.0
 
-**Date:** March 5, 2026
-**Branch:** feature/add-independent-devices-and-peripherals
-**Status:** Session 17 work committed.
+**Date:** March 7, 2026
+**Branch:** feature/component-table-columns (to be created and committed)
+**Status:** Session 19 work complete, not yet committed.
 
 ---
 
 ## !! RELIABILITY NOTICE — READ FIRST !!
 
-The `decor-session-rules` skill (v1.1) is installed. Its description contains
+The `decor-session-rules` skill (v1.2) is installed. Its description contains
 the first mandatory action — read it from the available_skills context before
 doing anything else.
 
@@ -34,127 +34,74 @@ After each: log "Read FILENAME — N lines, complete."
 
 ## Session Summary
 
-Session 17 delivered:
-1. Session 16 commit (first action)
-2. device_type filter on Computers index — Type selector in sidebar; Type column
-   in table; Computers page defaults to device_type=computer (appliances excluded)
-3. Appliances page — /appliances route (computers controller, device_context param);
-   nav link between Computers and Components; Type filter + column hidden; load-more
-   fully dynamic via @turbo_tbody_id / @load_more_id / @index_path
-4. Edit/show pages — all hardcoded "Computer" strings replaced with device_type
+Session 19 delivered:
+1. Component table column reorder + additions on three pages
+   (/components, /owners/show, /computers/edit)
+2. "By Order No." sort option on /components
 
 ---
 
 ## Work Completed This Session
 
-### 1. device_type Filtering on Computers Index
+### 1. Component Table Column Reorder + Order No. Added
 
-    decor/app/helpers/computers_helper.rb                    (v1.2)
-    decor/app/views/computers/_filters.html.erb              (v1.3)
-    decor/app/controllers/computers_controller.rb            (v1.7 → 1.8 → 1.9)
+    decor/app/views/components/index.html.erb                (v1.2 → v1.3)
+    decor/app/views/components/_component.html.erb           (v1.4 → v1.5)
+    decor/app/views/owners/show.html.erb                     (v1.6 → v1.7)
+    decor/app/views/computers/_form.html.erb                 (v2.2 → v2.3)
 
-helpers: COMPUTER_DEVICE_TYPE_FILTER_OPTIONS constant; two new helper methods
-(computer_filter_device_type_options, computer_filter_device_type_selected).
+/components: "Computer" (model name only) and "Serial Number" (computer's serial)
+were two separate columns — merged into one "Computer-Serial No." cell rendering
+as "Model – serial" link (or "Spare"). Component's own Order No. and Serial No.
+added. Final column order: Computer-Serial No. | Type | Description | Order No. |
+Serial No. | Owner.
 
-_filters.html.erb: Type selector added between Sort and Model.
+/owners/show components table: header "Computer" renamed to "Computer-Serial No."
+(cell data was already combined format — header was stale). Description moved
+before Order No. and Serial No. Final order: Computer-Serial No. | Type |
+Description | Order No. | Serial No.
 
-Controller iterations:
-- v1.7: device_type filter reads from params[:device_type]
-- v1.8: set_device_context before_action added; appliances route locks device_type
-- v1.9 (bug fix): Computers page now defaults device_type to "computer" when no
-  param is present — appliances no longer appeared on the unfiltered Computers page.
+/computers/edit components table: Description and Order No. were missing — added.
+Condition moved from second position to last. "Serial Number" shortened to
+"Serial No." for consistency. Final order: Type | Description | Order No. |
+Serial No. | Condition.
 
-Key insight: `params[:device_type].presence || "computer"` on the computers route
-means the sidebar filter still works (explicit "appliance" selection is honoured)
-but the default always excludes appliances from the Computers page.
+### 2. "By Order No." Sort on /components
 
-### 2. Appliances Page
+    decor/app/helpers/components_helper.rb                   (v1.1 → v1.2)
+    decor/app/controllers/components_controller.rb           (v1.5 → v1.6)
 
-    decor/config/routes.rb                                   (v1.4)
-    decor/app/controllers/computers_controller.rb            (v1.9)
-    decor/app/views/computers/index.html.erb                 (v1.7)
-    decor/app/views/computers/_filters.html.erb              (v1.3)
-    decor/app/views/computers/_computer.html.erb             (v1.8)
-    decor/app/views/computers/index.turbo_stream.erb         (v1.1)
-    decor/app/views/common/_navigation.html.erb              (v1.2)
-    decor/app/views/owners/_owner.html.erb                   (v3.4)
-    decor/test/controllers/computers_controller_test.rb      (v1.3)
-
-routes.rb: `resources :appliances, controller: "computers", only: [:index],
-defaults: { device_context: "appliance" }`. Individual record CRUD always
-stays on computers_* routes; only :index needed.
-
-Controller: set_device_context before_action reads params[:device_context]
-(injected by route defaults) and sets @device_context, @page_title,
-@index_path, @turbo_tbody_id, @load_more_id for all shared views.
-
-Views: all context-specific strings and IDs come from those instance variables.
-Type filter hidden on Appliances page (@device_context == "appliance").
-Type column hidden on Appliances page (same condition).
-load_more turbo stream fully dynamic — works on both pages.
-
-_navigation.html.erb: Appliances link added between Computers and Components.
-
-_owner.html.erb (v3.4): Computers link now passes device_type: "computer";
-Appliances link now passes device_type: "appliance" — both properly filtered.
-
-### 3. Edit / Show Pages — device_type-Aware Labels
-
-    decor/app/views/computers/edit.html.erb                  (v1.3)
-    decor/app/views/computers/_form.html.erb                 (v2.0)
-    decor/app/views/computers/show.html.erb                  (v1.6)
-
-All hardcoded "Computer" / "computer" strings replaced with
-`@computer.device_type.capitalize` / `computer.device_type.capitalize`
-so pages read "Edit Appliance", "Update Appliance", "Add Appliance's Component",
-etc., depending on the record's actual device_type.
-
-f.submit label is now explicit in _form.html.erb to override Rails' default
-"Create/Update Computer" which does not respect device_type.
-
-_computer_component_form.html.erb — no changes needed (no user-visible
-"Computer" strings in that partial).
+order_asc added to COMPONENT_SORT_OPTIONS constant in helper.
+Controller case: `components.order(Arel.sql("components.order_number ASC NULLS LAST"))`.
+No join needed — order_number is on components table directly.
+Arel.sql() required for NULLS LAST keyword phrase (bare string rejected by Rails).
+NULLs sort last: components without an order number appear at the bottom.
 
 ---
 
 ## Lessons Learned This Session
 
-### Route defaults inject params, not instance variables
-`defaults: { device_context: "appliance" }` in routes.rb makes
-`params[:device_context]` available to the controller action, not `@device_context`.
-The before_action translates the param into instance variables for the views.
-
-### Computers page default must be explicit, not open
-Without a default, `params[:device_type].presence` is nil when no filter is
-active — so all records (including appliances) were returned. The fix:
-`params[:device_type].presence || "computer"` makes the default filter
-explicit while still allowing the sidebar "Appliance" filter to override it.
-
-### f.submit label does not respect model enum values
-Rails generates the f.submit label from the model class name ("Create Computer",
-"Update Computer") regardless of device_type. Must pass an explicit string label
-when the label needs to reflect the record's actual device type.
+None — clean session, no bugs or surprises. All patterns followed from existing
+codebase (Arel.sql for NULLS LAST already documented in RAILS_SPECIFICS.md).
 
 ---
 
 ## Pending — Start of Next Session
 
-### 1. Naming — "appliance" placeholder still unresolved (carried over)
-Final UI label for device_type: 1 not confirmed by English partner.
-Once confirmed:
-  - Update enum key in decor/app/models/computer_model.rb and
-    decor/app/models/computer.rb
-  - Update fixture labels
-  - Update all UI-facing strings (currently uses .capitalize on "appliance")
+### 1. Commit Session 19 work
+Branch name suggestion: feature/component-table-columns
+Files to commit:
+  decor/app/views/components/index.html.erb
+  decor/app/views/components/_component.html.erb
+  decor/app/views/owners/show.html.erb
+  decor/app/views/computers/_form.html.erb
+  decor/app/helpers/components_helper.rb
+  decor/app/controllers/components_controller.rb
 
-### 2. UI changes — computers/appliances new/edit form: device_type selector
-Currently device_type is set at import time or via fixture only.
-A device_type selector on the new/edit form would allow users to change it.
-
-### 3. UI changes — components form and show (component_category) — carried over
+### 2. UI changes — components form and show (component_category) — carried over
   component_category (integral/peripheral) not yet exposed in the UI.
 
-### 4. BulkUploadService stale model references — low priority, carried over
+### 3. BulkUploadService stale model references — low priority, carried over
     decor/app/services/bulk_upload_service.rb
     - Condition → ComputerCondition
     - computer.condition → computer.computer_condition
@@ -165,8 +112,9 @@ A device_type selector on the new/edit form would allow users to change it.
 
 ## Git State
 
-**Branch:** feature/add-independent-devices-and-peripherals
-**Session 17 work is committed.**
+**Branch:** Session 19 work not yet committed.
+**Suggested branch:** feature/component-table-columns
+**Next session:** create branch from main, place six files, run tests, commit, deploy.
 
 ---
 
@@ -182,9 +130,8 @@ A device_type selector on the new/edit form would allow users to change it.
 
 ## Documents Updated This Session
 
-    decor/docs/claude/DECOR_PROJECT.md        v2.14
-    decor/docs/claude/SESSION_HANDOVER.md     v18.0
-    decor-session-rules skill                 v1.2
+    decor/docs/claude/DECOR_PROJECT.md        v2.16
+    decor/docs/claude/SESSION_HANDOVER.md     v20.0
 
 ---
 

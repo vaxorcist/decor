@@ -1,12 +1,16 @@
-# decor/app/helpers/components_helper.rb - version 1.1
-# Added sort options: By Owner (A-Z) and By Type (A-Z)
+# decor/app/helpers/components_helper.rb - version 1.2
+# v1.2 (Session 19): Added sort option "By Order No. (A-Z)" (key: order_asc).
+#   order_number is on the components table — no join required. NULLs sort last
+#   via NULLS LAST so components without an order number appear at the bottom.
+# v1.1: Added sort options: By Owner (A-Z) and By Type (A-Z)
 
 module ComponentsHelper
   COMPONENT_SORT_OPTIONS = {
     added_desc: "Added (Newest First)",
     added_asc: "Added (Oldest First)",
     owner_asc: "By Owner (A-Z)",
-    type_asc: "By Type (A-Z)"
+    type_asc: "By Type (A-Z)",
+    order_asc: "By Order No. (A-Z)"
   }.freeze
 
   def component_sort_options

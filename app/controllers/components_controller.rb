@@ -1,5 +1,10 @@
-# decor/app/controllers/components_controller.rb - version 1.5
-# destroy: added source=computer_show branch → redirects to computer_path (show page).
+# decor/app/controllers/components_controller.rb - version 1.6
+# v1.6 (Session 19): Added sort case "order_asc" — sorts by components.order_number
+#   ASC NULLS LAST. order_number is on the components table itself so no join is
+#   needed. Arel.sql() required because the ORDER BY string contains NULLS LAST
+#   (a SQL keyword phrase that Rails rejects as a bare string). NULLs sort last so
+#   components without an order number appear at the bottom of the list.
+# v1.5: destroy: added source=computer_show branch → redirects to computer_path (show page).
 #   Used when deleting a component from computers/show so the user stays on that page.
 #   source=computer (edit page) behaviour unchanged.
 # Previous (v1.4): source=owner branch added; capture owner/computer before destroy.
@@ -27,12 +32,17 @@ class ComponentsController < ApplicationController
 
     # Sort by owner joins the owners table to sort by user_name alphabetically.
     # Sort by type joins the component_types table to sort by name alphabetically.
-    # Both use joins (not includes) because the ORDER BY clause references the joined table.
+    # Sort by order_asc uses Arel.sql() because NULLS LAST is a SQL keyword phrase
+    # that Rails rejects as a bare string in .order(). order_number lives on the
+    # components table so no join is needed.
+    # Both joins-based sorts use bare strings (also wrapped via Arel.sql for safety
+    # since they reference table.column notation).
     components = case params[:sort]
     when "added_asc"  then components.order(created_at: :asc)
     when "added_desc" then components.order(created_at: :desc)
     when "owner_asc"  then components.joins(:owner).order("owners.user_name asc")
     when "type_asc"   then components.joins(:component_type).order("component_types.name asc")
+    when "order_asc"  then components.order(Arel.sql("components.order_number ASC NULLS LAST"))
     else
       components.order(created_at: :desc)
     end

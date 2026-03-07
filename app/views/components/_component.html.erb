@@ -1,40 +1,52 @@
-<%# decor/app/views/components/_component.html.erb - version 1.4 %>
-<%# Removed redundant "View" link from actions column %>
-<%# "Edit" link retained, shown only for the logged-in owner %>
+<%# decor/app/views/components/_component.html.erb - version 1.5 %>
+<%# v1.5 (Session 19): Column changes to match index.html.erb v1.3: %>
+<%#   - Computer and computer-serial cells merged into one "Computer-Serial No." cell. %>
+<%#     Renders as "Model Name – serial" (link) or "Spare" (unattached), matching the %>
+<%#     format already used in the owners/show components table. %>
+<%#   - Column order: Computer-Serial No. | Type | Description | Order No. | Serial No. | Owner %>
+<%#   - Order No. cell added (component.order_number). %>
+<%#   - Serial No. cell now shows component's own serial_number (was computer's serial). %>
 
 <tr id="<%= dom_id component %>" class="hover:bg-stone-50">
-  <!-- Computer - blue link consistent with Type -->
+  <%# Computer-Serial No. — "Model – serial" link when attached; "Spare" when unattached %>
   <td class="px-4 py-3 whitespace-nowrap text-stone-600">
     <% if component.computer %>
-      <%= link_to component.computer.computer_model.name, component.computer, class: "text-indigo-600 hover:text-indigo-900" %>
+      <%= link_to "#{component.computer.computer_model.name} \u2013 #{component.computer.serial_number}",
+            component.computer,
+            class: "text-indigo-600 hover:text-indigo-900" %>
     <% else %>
       <span class="text-stone-400">Spare</span>
     <% end %>
   </td>
 
-  <!-- Serial Number (from computer) -->
-  <td class="px-4 py-3 whitespace-nowrap text-stone-600">
-    <%= component.computer&.serial_number.presence || "—" %>
-  </td>
-
-  <!-- Type -->
+  <%# Type — clickable, navigates to component show page %>
   <td class="px-4 py-3 whitespace-nowrap font-medium text-stone-900">
     <%= link_to component.component_type.name, component, class: "text-indigo-600 hover:text-indigo-900" %>
   </td>
 
-  <!-- Description - with max-width to prevent layout breaking -->
+  <%# Description — truncated with max-width to prevent layout breaking %>
   <td class="px-4 py-3 text-stone-600" style="max-width: 300px;">
     <div class="truncate">
       <%= component.description.presence || "—" %>
     </div>
   </td>
 
-  <!-- Owner - blue link consistent with Type -->
+  <%# Order No. — component's own order number %>
+  <td class="px-4 py-3 whitespace-nowrap text-stone-600">
+    <%= component.order_number.presence || "—" %>
+  </td>
+
+  <%# Serial No. — component's own serial number %>
+  <td class="px-4 py-3 whitespace-nowrap text-stone-600">
+    <%= component.serial_number.presence || "—" %>
+  </td>
+
+  <%# Owner — link to owner show page %>
   <td class="px-4 py-3 whitespace-nowrap text-stone-600">
     <%= link_to component.owner.user_name, component.owner, class: "text-indigo-600 hover:text-indigo-900" %>
   </td>
 
-  <!-- Actions - blue links consistent with other clickable values -->
+  <%# Actions — Edit shown to the record's owner only %>
   <td class="px-4 py-3 whitespace-nowrap text-right">
     <% if Current.owner == component.owner %>
       <%= link_to "Edit", edit_component_path(component), class: "text-indigo-600 hover:text-indigo-900" %>
