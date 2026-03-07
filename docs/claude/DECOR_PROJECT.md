@@ -1,21 +1,20 @@
 # decor/docs/claude/DECOR_PROJECT.md
-# version 2.14
+# version 2.16
 # Session 13: device_type on computers, component_category on components; enum tests.
 # Session 14: DRY Computer/Appliance Models admin pages; dropdown nav (admin.html.erb v1.3);
 #   device_type on computer_models; routes :appliance_models; dropdown_controller.js.
 # Session 16: device_type in export/import — "appliance" as third record_type value.
 # Session 17: Appliances page; device_type filtering on Computers index;
 #   edit/show pages use device_type for all labels.
-# Session 17 (tree update): corrected tree block — removed stray
-#   decor/app/views/computers/_owner.html.erb; added three files missing from
-#   previous block: dropdown_controller.js,
-#   20260303110000_add_device_type_to_computer_models.rb,
-#   20260304120000_add_cascade_delete_components_computer.rb.
+# Session 18: device_type selector on new/edit form; owner show page splits computers
+#   and appliances; site_texts table + Read Me page; redcarpet gem.
+# Session 19: Components table column reorder + Order No. added on all three pages;
+#   "By Order No." sort option on /components.
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** March 5, 2026 (Session 17: tree corrected; Appliances page)
-**Current Status:** Sessions 1–17 committed.
+**Last Updated:** March 7, 2026 (Session 19: component table columns; sort by order no.)
+**Current Status:** Sessions 1–18 committed and deployed. Session 19 ready to commit.
 
 ---
 
@@ -26,7 +25,7 @@
 tree decor/ -I "node_modules|.git|tmp|storage|log|.DS_Store|*.lock|assets|cache|pids|sockets" --dirsfirst -F --prune -L 6 > decor_tree.txt
 ```
 
-**Current tree** (as of Session 17, March 5, 2026):
+**Current tree** (as of Session 18, March 6, 2026):
 ```
 decor//
 ├── app/
@@ -40,7 +39,8 @@ decor//
 │   │   │   ├── conditions_controller.rb
 │   │   │   ├── invites_controller.rb
 │   │   │   ├── owners_controller.rb
-│   │   │   └── run_statuses_controller.rb
+│   │   │   ├── run_statuses_controller.rb
+│   │   │   └── site_texts_controller.rb
 │   │   ├── concerns/
 │   │   │   ├── authentication.rb
 │   │   │   └── pagination.rb
@@ -51,7 +51,8 @@ decor//
 │   │   ├── home_controller.rb
 │   │   ├── owners_controller.rb
 │   │   ├── password_resets_controller.rb
-│   │   └── sessions_controller.rb
+│   │   ├── sessions_controller.rb
+│   │   └── site_texts_controller.rb
 │   ├── helpers/
 │   │   ├── application_helper.rb
 │   │   ├── components_helper.rb
@@ -90,7 +91,8 @@ decor//
 │   │   ├── current.rb
 │   │   ├── invite.rb
 │   │   ├── owner.rb
-│   │   └── run_status.rb
+│   │   ├── run_status.rb
+│   │   └── site_text.rb
 │   ├── services/
 │   │   ├── bulk_upload_service.rb
 │   │   ├── owner_export_service.rb
@@ -125,10 +127,12 @@ decor//
 │       │   ├── owners/
 │       │   │   ├── edit.html.erb
 │       │   │   └── index.html.erb
-│       │   └── run_statuses/
-│       │       ├── edit.html.erb
-│       │       ├── _form.html.erb
-│       │       ├── index.html.erb
+│       │   ├── run_statuses/
+│       │   │   ├── edit.html.erb
+│       │   │   ├── _form.html.erb
+│       │   │   ├── index.html.erb
+│       │   │   └── new.html.erb
+│       │   └── site_texts/
 │       │       └── new.html.erb
 │       ├── common/
 │       │   ├── _flashes.html.erb
@@ -189,8 +193,10 @@ decor//
 │       │   └── service-worker.js
 │       ├── sessions/
 │       │   └── new.html.erb
-│       └── shared/
-│           └── _load_more.html.erb
+│       ├── shared/
+│       │   └── _load_more.html.erb
+│       └── site_texts/
+│           └── show.html.erb
 ├── bin/
 │   ├── brakeman*
 │   ├── bundler-audit*
@@ -259,7 +265,8 @@ decor//
 │   │   ├── 20260303100000_add_device_type_to_computers.rb
 │   │   ├── 20260303100001_add_component_category_to_components.rb
 │   │   ├── 20260303110000_add_device_type_to_computer_models.rb
-│   │   └── 20260304120000_add_cascade_delete_components_computer.rb
+│   │   ├── 20260304120000_add_cascade_delete_components_computer.rb
+│   │   └── 20260306100000_create_site_texts.rb
 │   ├── cable_schema.rb
 │   ├── cache_schema.rb
 │   ├── queue_schema.rb
@@ -341,24 +348,40 @@ decor//
 ├── README.md
 └── rich.html
 
-58 directories, 255 files
+60 directories, 260 files
 ```
 
 **Key file versions** (updated each session):
 
-    decor/config/routes.rb                                      v1.4  ← Session 17 (appliances route)
-    decor/app/controllers/computers_controller.rb               v1.9  ← Session 17 (device_context; default filter)
-    decor/app/helpers/computers_helper.rb                       v1.2  ← Session 17 (device_type filter helpers)
+    decor/app/controllers/components_controller.rb              v1.6  ← Session 19 (order_asc sort)
+    decor/app/helpers/components_helper.rb                      v1.2  ← Session 19 (order_asc option)
+    decor/app/views/components/index.html.erb                   v1.3  ← Session 19 (col reorder; Computer-Serial No.)
+    decor/app/views/components/_component.html.erb              v1.5  ← Session 19 (col reorder; Order No. + Serial No.)
+    decor/app/views/owners/show.html.erb                        v1.7  ← Session 19 (components: Description before Order/Serial)
+    decor/app/views/computers/_form.html.erb                    v2.3  ← Session 19 (components table: add Desc/Order; Condition last)
+    decor/Gemfile                                               MOD  ← Session 18 (redcarpet)
+    decor/config/routes.rb                                      v1.5  ← Session 18 (readme + admin/site_texts)
+    decor/app/controllers/computers_controller.rb               v1.13 ← Session 18 (device_type form; flash)
+    decor/app/controllers/owners_controller.rb                  v1.5  ← Session 18 (@computers/@appliances split)
+    decor/app/controllers/site_texts_controller.rb              v1.0  ← Session 18 (new)
+    decor/app/controllers/admin/site_texts_controller.rb        v1.0  ← Session 18 (new)
+    decor/app/helpers/computers_helper.rb                       v1.3  ← Session 18 (form device_type options)
+    decor/app/helpers/application_helper.rb                     v1.1  ← Session 18 (render_markdown)
+    decor/app/models/site_text.rb                               v1.0  ← Session 18 (new)
+    decor/app/views/computers/new.html.erb                      v1.4  ← Session 18 (device_type heading)
+    decor/app/views/common/_navigation.html.erb                 v1.3  ← Session 18 (Read Me link leftmost)
+    decor/app/views/layouts/admin.html.erb                      v1.4  ← Session 18 (Texts dropdown)
+    decor/app/views/site_texts/show.html.erb                    v1.0  ← Session 18 (new)
+    decor/app/views/admin/site_texts/new.html.erb               v1.0  ← Session 18 (new)
+    decor/db/migrate/20260306100000_create_site_texts.rb        v1.0  ← Session 18 (new)
+    decor/test/controllers/computers_controller_test.rb         v1.5  ← Session 18 (device_type flash tests)
     decor/app/views/computers/index.html.erb                    v1.7  ← Session 17 (dynamic title/ids)
     decor/app/views/computers/index.turbo_stream.erb            v1.1  ← Session 17 (fully dynamic)
     decor/app/views/computers/_filters.html.erb                 v1.3  ← Session 17 (Type selector; @index_path)
     decor/app/views/computers/_computer.html.erb                v1.8  ← Session 17 (Type cell conditional)
     decor/app/views/computers/edit.html.erb                     v1.3  ← Session 17 (device_type heading)
-    decor/app/views/computers/_form.html.erb                    v2.0  ← Session 17 (device_type labels)
     decor/app/views/computers/show.html.erb                     v1.6  ← Session 17 (device_type empty state)
-    decor/app/views/common/_navigation.html.erb                 v1.2  ← Session 17 (Appliances link)
     decor/app/views/owners/_owner.html.erb                      v3.4  ← Session 17 (device_type params on links)
-    decor/test/controllers/computers_controller_test.rb         v1.3  ← Session 17 (appliances route tests)
     decor/app/controllers/admin/computer_models_controller.rb   v1.1  ← Session 14 (DRY)
     decor/app/models/computer_model.rb                          v1.1  ← Session 14 (device_type enum)
     decor/app/models/computer.rb                                v1.5  ← Session 13
@@ -370,14 +393,11 @@ decor//
     decor/app/views/admin/computer_models/edit.html.erb         v1.1  ← Session 14
     decor/app/views/admin/computer_models/_form.html.erb        v1.1  ← Session 14
     decor/app/views/data_transfers/show.html.erb                v1.5  ← Session 16 (appliance record_type)
-    decor/app/views/layouts/admin.html.erb                      v1.3  ← Session 14 (Appliances link active)
     decor/app/javascript/controllers/dropdown_controller.js     v1.0  ← Session 14 (new)
     decor/db/migrate/20260303110000_add_device_type_to_computer_models.rb  v1.0  ← Session 14 (new)
     decor/db/migrate/20260304120000_add_cascade_delete_components_computer.rb  v1.1  ← Session 15 (new)
     decor/app/controllers/components_controller.rb              v1.5  ← Session 12
-    decor/app/controllers/owners_controller.rb                  v1.4  ← Session 11
     decor/app/controllers/data_transfers_controller.rb          v1.1  ← Session 10
-    decor/app/views/owners/show.html.erb                        v1.4  ← Session 11
     decor/test/models/computer_test.rb                          v1.4  ← Session 13
     decor/test/models/component_test.rb                         v1.3  ← Session 13
     decor/test/controllers/components_controller_test.rb        v1.1  ← Session 12
@@ -422,6 +442,12 @@ decor//
 - belongs_to component_condition (optional)
 - Fields: description (TEXT), serial_number VARCHAR(20), order_number VARCHAR(20)
 
+### SiteText
+- key VARCHAR(40) UNIQUE NOT NULL — internal identifier ("readme", "about", etc.)
+- content TEXT NOT NULL — raw markdown uploaded by admin
+- Managed via Admin → Texts dropdown; rendered as HTML on the public /readme route
+- Extensible: additional text pages require only a new route + key mapping in the controllers
+
 ### ComputerCondition
 - Table: computer_conditions
 - has_many computers, dependent: :restrict_with_error
@@ -459,6 +485,11 @@ The `device_context` default param is read by `set_device_context` before_action
 which locks device_type to "appliance" and sets all context instance variables
 (@page_title, @index_path, @turbo_tbody_id, @load_more_id) for the shared views.
 Individual record CRUD (show/edit/update/destroy) always routes through computers_*.
+
+`get "readme", to: "site_texts#show", defaults: { key: "readme" }` — public,
+no login required. Additional text pages follow the same pattern with a different key.
+`resources :site_texts, only: [:new, :create, :destroy], param: :key` under the
+admin namespace — managed by Admin::SiteTextsController.
 
 ---
 
@@ -561,9 +592,6 @@ Key milestones:
     decor/app/views/computers/_filters.html.erb              (v1.3)
     decor/app/controllers/computers_controller.rb            (v1.9)
 
-Type selector in sidebar. Computers page defaults to device_type=computer —
-appliances excluded by default. Bug fix: `params[:device_type].presence || "computer"`.
-
 ### 2. Appliances Page
     decor/config/routes.rb                                   (v1.4)
     decor/app/views/computers/index.html.erb                 (v1.7)
@@ -573,28 +601,68 @@ appliances excluded by default. Bug fix: `params[:device_type].presence || "comp
     decor/app/views/owners/_owner.html.erb                   (v3.4)
     decor/test/controllers/computers_controller_test.rb      (v1.3)
 
-/appliances route; Type filter + column hidden; load-more fully dynamic;
-nav link between Computers and Components; owner links properly filtered.
-
 ### 3. Edit / Show Pages — device_type-Aware Labels
     decor/app/views/computers/edit.html.erb                  (v1.3)
     decor/app/views/computers/_form.html.erb                 (v2.0)
     decor/app/views/computers/show.html.erb                  (v1.6)
 
-All hardcoded "Computer" strings replaced with device_type.capitalize.
+---
 
-### 4. Session-End Checklist — decor-session-rules skill (v1.2)
-Tree update prompt, key file versions table update, and doc download
-delivery added as a formal session-end checklist.
+## Work Completed - Session 18 (March 6, 2026)
+
+### 1. device_type Selector on New/Edit Form
+    decor/app/views/computers/_form.html.erb                 (v2.2)
+    decor/app/helpers/computers_helper.rb                    (v1.3)
+    decor/app/controllers/computers_controller.rb            (v1.13)
+    decor/app/views/computers/new.html.erb                   (v1.4)
+    decor/test/controllers/computers_controller_test.rb      (v1.5)
+
+### 2. Owner Show Page — Separate Appliances Table
+    decor/app/controllers/owners_controller.rb               (v1.5)
+    decor/app/views/owners/show.html.erb                     (v1.6)
+
+### 3. Read Me Page + Site Texts Infrastructure
+    decor/Gemfile                                            (redcarpet added)
+    decor/db/migrate/20260306100000_create_site_texts.rb     (v1.0)
+    decor/app/models/site_text.rb                            (v1.0)
+    decor/app/helpers/application_helper.rb                  (v1.1)
+    decor/config/routes.rb                                   (v1.5)
+    decor/app/controllers/site_texts_controller.rb           (v1.0)
+    decor/app/controllers/admin/site_texts_controller.rb     (v1.0)
+    decor/app/views/site_texts/show.html.erb                 (v1.0)
+    decor/app/views/admin/site_texts/new.html.erb            (v1.0)
+    decor/app/views/common/_navigation.html.erb              (v1.3)
+    decor/app/views/layouts/admin.html.erb                   (v1.4)
+
+---
+
+## Work Completed - Session 19 (March 7, 2026)
+
+### 1. Component Table Column Reorder + Order No. Added
+    decor/app/views/components/index.html.erb                (v1.3)
+    decor/app/views/components/_component.html.erb           (v1.5)
+    decor/app/views/owners/show.html.erb                     (v1.7)
+    decor/app/views/computers/_form.html.erb                 (v2.3)
+
+/components: Computer+Serial merged into "Computer-Serial No."; columns reordered
+to Computer-Serial No. | Type | Description | Order No. | Serial No. | Owner.
+/owners/show components: header renamed; Description moved before Order/Serial.
+/computers/edit components table: Description + Order No. added; Condition moved last.
+Column order: Type | Description | Order No. | Serial No. | Condition.
+
+### 2. "By Order No." Sort on /components
+    decor/app/helpers/components_helper.rb                   (v1.2)
+    decor/app/controllers/components_controller.rb           (v1.6)
+
+order_asc case added: `components.order(Arel.sql("components.order_number ASC NULLS LAST"))`.
+No join needed (order_number is on the components table). Arel.sql() required for
+NULLS LAST keyword phrase. NULLs sort last so blank order numbers appear at bottom.
 
 ---
 
 ## Pending — Next Session
 
-### Priority candidates
-- Naming — "appliance" placeholder still unresolved (final UI label not confirmed)
-- UI changes — computers/appliances new/edit form: device_type selector
-- UI changes — components form and show (component_category) — carried over
+- UI changes — components form and show (component_category integral/peripheral) — carried over
 - BulkUploadService stale model references (low priority, carried over)
 - Dependabot PRs — dedicated session
 - Legal/Compliance: Impressum, Privacy Policy, GDPR, Cookie Consent, TOS
@@ -606,8 +674,8 @@ delivery added as a formal session-end checklist.
 
 ## Current Deployment Status
 
-**Production Version:** Fully up to date through Session 11
-**Sessions 12–17:** Committed; deploy when ready.
+**Production Version:** Fully up to date through Session 18.
+**Session 19:** Ready to commit and deploy.
 
 ---
 
@@ -645,12 +713,12 @@ Field boxes: flex items-center w-full h-10 p-3 rounded border border-stone-300 b
 Back button: Stimulus back_controller, history.back() + fallback URL
 ```
 
-### Edit/New Form Pattern (Computers — unchanged)
+### Edit/New Form Pattern (Computers — Session 18)
 ```
 Container:  max-w-5xl mx-auto
 Form:       width: 80%
 Line 1:     grid grid-cols-3 gap-4  (model, order_number, serial_number)
-Line 2:     grid grid-cols-2 gap-4  (computer_condition, run_status)
+Line 2:     grid grid-cols-3 gap-4  (computer_condition, run_status, device_type)
 Line 3:     full width textarea      (history, 3 rows)
 ```
 
@@ -673,6 +741,15 @@ Line 3:     full width textarea      (history, 3 rows)
 </div>
 ```
 
+### Component Table Column Order (established Session 19)
+```
+/components index:           Computer-Serial No. | Type | Description | Order No. | Serial No. | Owner
+/owners/show components:     Computer-Serial No. | Type | Description | Order No. | Serial No.
+/computers/edit components:  Type | Description | Order No. | Serial No. | Condition
+```
+"Computer-Serial No." renders as "Model – serial" link (or "Spare" when unattached).
+Order No. and Serial No. always refer to the component's own fields (not the computer's).
+
 ### device_context Pattern (Computers / Appliances shared views)
 ```
 Route:       resources :appliances, controller: "computers", only: [:index],
@@ -691,6 +768,18 @@ Index filter: appliances route locks device_type to "appliance"
 
 Views:       all context-specific values come from instance variables
              Type filter and Type column hidden when @device_context == "appliance"
+```
+
+### Site Text Pattern (Read Me and future text pages)
+```
+Model:       SiteText — key VARCHAR(40), content TEXT
+Route:       get "readme", to: "site_texts#show", defaults: { key: "readme" }
+             admin: resources :site_texts, only: [:new, :create, :destroy], param: :key
+Public ctrl: SiteTextsController#show — no login required
+Admin ctrl:  Admin::SiteTextsController — new/create (upsert), destroy
+Rendering:   render_markdown(content) helper — redcarpet gem
+             Markdown links work: [text](/path) internal, [text](https://...) external
+Empty state: displays "== Empty ==" when no record uploaded yet
 ```
 
 ### Table Styling
@@ -758,6 +847,17 @@ Use `gh pr merge --merge` (not `--squash`).
 Rails raises `ActiveRecord::UnknownAttributeReference` for `.order()` strings
 containing dots or SQL keywords. Wrap in `Arel.sql()`.
 See RAILS_SPECIFICS.md.
+
+### build(device_type: nil) Overrides Enum Default
+`Computer.build(device_type: nil)` explicitly sets device_type to nil, bypassing
+the enum default (computer: 0). Calling `.capitalize` on nil then raises NoMethodError.
+Fix: build without the key, then assign conditionally:
+  @computer = Current.owner.computers.build
+  @computer.device_type = params[:device_type] if params[:device_type].present?
+
+### New Gem Requires Server Restart
+Adding a gem to Gemfile and running `bundle install` is not enough for a running
+Rails server. The server process must be restarted to load the new gem.
 
 ---
 

@@ -1,4 +1,10 @@
-<%# decor/app/views/computers/_form.html.erb - version 2.2 %>
+<%# decor/app/views/computers/_form.html.erb - version 2.3 %>
+<%# v2.3 (Session 19): Components table column changes: %>
+<%#   - Column order: Type | Description | Order No. | Serial No. | Condition %>
+<%#   - "Description" added (was missing from this table). %>
+<%#   - "Order No." added (was missing from this table). %>
+<%#   - "Serial No." renamed from "Serial Number" for consistency with other tables. %>
+<%#   - "Condition" moved from second position to last (before actions). %>
 <%# v2.2 (Session 18): Model selector now filtered by computer.device_type so the %>
 <%#   "Add/Edit Appliance" form shows only appliance models and the "Add/Edit Computer" %>
 <%#   form shows only computer models. ComputerModel.where(device_type: ...) scopes %>
@@ -123,6 +129,7 @@
   </div>
 
   <%# [Device]'s Components list — below the add/edit form %>
+  <%# Column order: Type | Description | Order No. | Serial No. | Condition %>
   <div>
     <h2 class="text-xl font-semibold mb-4"><%= computer.device_type.capitalize %>'s Components</h2>
 
@@ -132,19 +139,34 @@
           <thead class="bg-stone-50">
             <tr>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Type</th>
-              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Condition</th>
-              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Serial Number</th>
+              <%# Description added (was missing); moved before Order No. and Serial No. %>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Description</th>
+              <%# Order No. added (was missing) %>
+              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Order No.</th>
+              <%# Serial No. renamed from "Serial Number" for consistency %>
+              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Serial No.</th>
+              <%# Condition moved from second position to last (before actions) %>
+              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Condition</th>
               <th class="px-4 py-2"></th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-stone-200 text-sm">
             <% computer.components.includes(:component_type, :component_condition).each do |component| %>
               <tr class="hover:bg-stone-50">
-                <td class="px-4 py-3 whitespace-nowrap"><%= link_to component.component_type.name, component_path(component), class: "text-indigo-600 hover:text-indigo-900" %></td>
-                <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.component_condition&.condition %></td>
-                <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.serial_number %></td>
-                <td class="px-4 py-3 text-stone-600"><%= component.description %></td>
+                <%# Type — clickable, navigates to component show page %>
+                <td class="px-4 py-3 whitespace-nowrap">
+                  <%= link_to component.component_type.name, component_path(component), class: "text-indigo-600 hover:text-indigo-900" %>
+                </td>
+                <%# Description — added; truncated to prevent layout overflow %>
+                <td class="px-4 py-3 text-stone-600" style="max-width: 250px;">
+                  <div class="truncate"><%= component.description.presence || "—" %></div>
+                </td>
+                <%# Order No. — added %>
+                <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.order_number.presence || "—" %></td>
+                <%# Serial No. — component's own serial number %>
+                <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.serial_number.presence || "—" %></td>
+                <%# Condition — moved from second to last position %>
+                <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.component_condition&.condition || "—" %></td>
                 <%# Edit and Delete side by side %>
                 <td class="px-4 py-3 whitespace-nowrap text-right">
                   <div class="flex justify-end gap-4">

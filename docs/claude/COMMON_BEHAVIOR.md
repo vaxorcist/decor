@@ -1,5 +1,5 @@
 # COMMON_BEHAVIOR.md
-# version 2.2
+# version 2.3
 # decor/docs/claude/COMMON_BEHAVIOR.md
 # Session 14: Major reliability update.
 #   - Added "Reading Rule Documents" section — MANDATORY use of bash cat, never view tool.
@@ -12,10 +12,14 @@
 #     from environment context description. One sanity-check command prevents this.
 # Session 16: Added "Skill and Rule Document Changes" rule.
 #   - Must propose before modifying; present result as downloadable file; never modify silently.
+# Session 18: Reinforced Response Formatting rules with real examples from Session 18.
+#   - Four formatting violations in one response: missing separators, missing token estimate,
+#     unnecessary directory prefix, and wrong separator character. Rules already existed.
+#     Real examples added to each rule to reinforce them.
 
 **Universal Rules for All Interactions with This User**
 
-**Last Updated:** March 4, 2026 (v2.2: skill/rule doc change protocol; Session 16)
+**Last Updated:** March 6, 2026 (v2.3: Response Formatting rules reinforced; Session 18)
 
 ---
 
@@ -184,7 +188,8 @@ User had to ask for the full paths explicitly.
 - ✅ Use `#` as the separator between directory and filename
   (e.g. `data_transfers#show.html.erb`, `owners#show.html.erb`)
 - ❌ Do NOT add a directory prefix when the filename is already unique in the response
-- ❌ Do NOT use `_` as the separator (indistinguishable from underscores in the filename)
+- ❌ Do NOT use `_` or `/` as the separator (indistinguishable from underscores
+  in the filename; `/` implies a path)
 
 **Examples:**
 
@@ -194,6 +199,13 @@ Two `show.html.erb` files in the same response → download names:
   `data_transfers#show.html.erb` and `owners#show.html.erb`
 
 `routes.rb` is always unique → download name: `routes.rb` (no prefix needed)
+
+**Real example (Session 18, March 6, 2026):**
+When delivering 11 files, several files received unnecessary directory prefixes
+(e.g. `admin#site_texts_controller.rb` when no naming collision existed) and
+used the wrong separator character. Three rules were broken simultaneously:
+no prefix when unique; use `#` not `_`; and separators are only for collisions.
+All three rules already existed — they were simply not checked before naming.
 
 ### Upload File Naming
 
@@ -226,6 +238,14 @@ context, so Claude only saw one of them and had to ask for the other separately.
 - ✅ Start EVERY response with 80 "=" (equals signs) characters
 - ✅ End EVERY response with 80 "=" (equals signs) characters
 - Format: `================================================================================`
+- ❌ NEVER omit the separators — not for short responses, not for wrap-up responses
+
+**Real example (Session 18, March 6, 2026):**
+The first substantive response of the session (delivering 11 files) omitted both
+the leading and trailing separator lines. The response was not short. The rule
+simply was not checked before writing. Four formatting rules were violated in
+the same response — the separator rule, the token estimate rule, the prefix rule,
+and the separator character rule. All four rules already existed.
 
 ### Token Usage Reporting
 
@@ -261,12 +281,13 @@ justifies this floor before any conversation content is counted.
 - Provide an estimate, but label it explicitly as rough and likely an undercount
 - Apply a correction factor: multiply naive visible-content estimate by ~2
 - Apply session-start floor: never below 40% when 5+ large documents are loaded
-- Format: `**Token Usage (estimate):** ~X / 200,000 (~Y% used) — rough estimate only; likely an undercount; trust your UI`
+- Format: `**Token Usage (estimate):** ~X / 200,000 (~Y% used) — rough estimate only; trust your UI`
 - Err HIGH rather than falsely reassuring
 - Remind the user that the UI is the only reliable source
 
 ❌ NEVER:
 - Stay silent just because no system warning is visible
+- Omit the token estimate on a response that follows a file delivery
 - Report 0% or "unknown"
 - Suggest remaining capacity is comfortable based on an estimate alone
 - Use estimates to reassure the user that there is plenty of room left
@@ -286,7 +307,7 @@ System warning present:
 
 No system warning, 5 large docs loaded:
   Correct: **Token Usage (estimate):** ~80,000 / 200,000 (~40% used) — rough estimate
-           only; likely an undercount; trust your UI over this number
+           only; trust your UI over this number
   WRONG:   **Token Usage (estimate):** ~8,000 / 200,000 (~4% used) ← ignores base cost
 ```
 
