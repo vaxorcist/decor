@@ -1,5 +1,9 @@
 # decor/app/helpers/computers_helper.rb
-# version 1.3
+# version 1.4
+# v1.4 (Session 20): Removed computer_form_device_type_options — dead code now that
+#   the device_type selector has been removed from _form.html.erb. The form uses a
+#   hidden field instead; no options array is needed. COMPUTER_DEVICE_TYPE_FILTER_OPTIONS
+#   and the filter helpers are retained for the index filter sidebar.
 # v1.3 (Session 18): Added computer_form_device_type_options for use by the
 #   device_type selector on the new/edit form. Reuses COMPUTER_DEVICE_TYPE_FILTER_OPTIONS
 #   so the option list is defined in exactly one place for both the filter
@@ -19,10 +23,9 @@ module ComputersHelper
     model_desc: "Model (Z-A)"
   }.freeze
 
-  # Device type options shared between the filter sidebar and the record form.
+  # Device type options used by the index filter sidebar.
   # Values are the enum string keys as used by ActiveRecord — Rails translates
-  # these to the underlying integers when building the WHERE clause or setting
-  # attributes on a record.
+  # these to the underlying integers when building the WHERE clause.
   # "appliance" label is a placeholder until the final UI name is confirmed.
   COMPUTER_DEVICE_TYPE_FILTER_OPTIONS = [
     ["Computer", "computer"],
@@ -75,12 +78,5 @@ module ComputersHelper
   # when no filter is active (which causes the "Any" blank option to be selected).
   def computer_filter_device_type_selected
     params[:device_type]
-  end
-
-  # Returns the pre-built options array for the device_type form selector
-  # (used in _form.html.erb). Reuses the same constant as the filter selector
-  # so the option labels are defined in exactly one place.
-  def computer_form_device_type_options
-    COMPUTER_DEVICE_TYPE_FILTER_OPTIONS
   end
 end

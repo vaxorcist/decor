@@ -1,4 +1,12 @@
-<%# decor/app/views/computers/_form.html.erb - version 2.3 %>
+<%# decor/app/views/computers/_form.html.erb - version 2.4 %>
+<%# v2.4 (Session 20): Removed visible device_type (Type) selector from Line 2. %>
+<%#   Type must not be changeable after creation — switching a computer to appliance %>
+<%#   or vice versa would create records that belong to neither category. %>
+<%#   Replaced with f.hidden_field :device_type so the correct type is still submitted %>
+<%#   on create (pre-set by the new action from the params[:device_type] link). %>
+<%#   On edit the hidden field simply echoes the current value — no change is possible. %>
+<%#   Line 2 grid reverted from grid-cols-3 to grid-cols-2 (Condition | Run Status). %>
+<%#   computer_form_device_type_options helper removed from computers_helper.rb (dead code). %>
 <%# v2.3 (Session 19): Components table column changes: %>
 <%#   - Column order: Type | Description | Order No. | Serial No. | Condition %>
 <%#   - "Description" added (was missing from this table). %>
@@ -10,10 +18,6 @@
 <%#   form shows only computer models. ComputerModel.where(device_type: ...) scopes %>
 <%#   the collection; the device_type value comes from the computer local variable %>
 <%#   already available in the partial. %>
-<%# v2.1 (Session 18): Added device_type selector (Type) as the third column in %>
-<%#   Line 2. Line 2 grid expanded from grid-cols-2 to grid-cols-3. %>
-<%#   Strong params updated in computers_controller.rb to permit :device_type. %>
-<%#   Helper method computer_form_device_type_options added in computers_helper.rb. %>
 <%# v2.0 (Session 17): All hardcoded "Computer" strings replaced with %>
 <%#   computer.device_type.capitalize so the form reads "Update Computer" / %>
 <%#   "Update Appliance", "Add Computer's Component" / "Add Appliance's Component", %>
@@ -25,6 +29,11 @@
 
 <%= form_with model: computer, class: "space-y-4", style: "width: 80%;" do |f| %>
   <%= render "common/record_errors", record: computer %>
+
+  <%# device_type is fixed at creation time — not editable after the record exists. %>
+  <%# Hidden field carries the correct type through on create; on edit it echoes the %>
+  <%# current value so the param is present but causes no change. %>
+  <%= f.hidden_field :device_type %>
 
   <!-- Line 1: Model | Order Number | Serial Number -->
   <div class="grid grid-cols-3 gap-4">
@@ -53,10 +62,11 @@
     </div>
   </div>
 
-  <!-- Line 2: Condition | Run Status | Type -->
+  <!-- Line 2: Condition | Run Status -->
+  <%# device_type selector removed (Session 20) — type is fixed at creation. %>
+  <%# Grid reverted from grid-cols-3 to grid-cols-2. %>
   <%# computer_condition_id references the computer_conditions table (renamed from conditions) %>
-  <%# device_type selector added (Session 18) — was grid-cols-2, now grid-cols-3 %>
-  <div class="grid grid-cols-3 gap-4">
+  <div class="grid grid-cols-2 gap-4">
     <div>
       <%= f.label :computer_condition_id, "Condition", class: "block text-sm font-medium text-stone-700" %>
       <%= f.collection_select :computer_condition_id, ComputerCondition.order(:name), :id, :name, { prompt: "Select a condition" }, class: field_classes %>
@@ -65,21 +75,6 @@
     <div>
       <%= f.label :run_status_id, "Run Status", class: "block text-sm font-medium text-stone-700" %>
       <%= f.collection_select :run_status_id, RunStatus.order(:name), :id, :name, { prompt: "Select a run status" }, class: field_classes %>
-    </div>
-
-    <div>
-      <%# Type — maps to the device_type enum (computer: 0, appliance: 1). %>
-      <%# f.select submits the string key ("computer" / "appliance"); Rails enum %>
-      <%# translates to the integer on assignment. No blank prompt — a device %>
-      <%# must always have a type; the model default is "computer". %>
-      <%= f.label :device_type, class: "block text-sm font-medium text-stone-700" do %>
-        Type <span class="text-red-600">*</span>
-      <% end %>
-      <%= f.select :device_type,
-            options_for_select(computer_form_device_type_options, computer.device_type),
-            {},
-            class: field_classes %>
-      <p class="mt-1 text-xs text-stone-500">Computer or Appliance.</p>
     </div>
   </div>
 

@@ -132,6 +132,7 @@ Files to commit:
 
     decor/docs/claude/DECOR_PROJECT.md        v2.16
     decor/docs/claude/SESSION_HANDOVER.md     v20.0
+    decor/docs/claude/RAILS_SPECIFICS.md      v2.2
 
 ---
 

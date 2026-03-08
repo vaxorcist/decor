@@ -1,9 +1,11 @@
 # RAILS_SPECIFICS.md
-# version 2.1
+# version 2.2
 # decor/docs/claude/RAILS_SPECIFICS.md
 # Added (Session 13): Fixture Ownership section — derive counts from data;
 #   use a neutral owner for test-support fixtures to avoid breaking hardcoded
 #   count assertions in unrelated test files.
+# Session 19: Task-type file checklists added — five task types with file lists
+#   and reasoning prompts to eliminate incremental file-requesting.
 # Added (Session 15): SQLite table recreation — always use explicit column names
 #   in INSERT/SELECT, never SELECT *. Positional copy fails silently when
 #   schema.rb column order differs from SQLite storage order.
@@ -715,5 +717,113 @@ column due to storage-order vs. schema.rb-order mismatch. Fixed in v1.1 by using
 explicit column names on both sides.
 
 ---
+
+
+---
+
+## Task-Type File Checklists
+
+These checklists answer "which files do I need before starting?" for the most
+common task types in this project. They encode the reasoning that should happen
+before any file is requested — not a full dependency map, but the key chains
+that are easy to miss.
+
+### Table Column Changes (reorder / add / remove columns)
+
+A column change touches header + row in lock-step. Sub-tables on other pages
+must be found by asking "where else is this model displayed as a table?"
+
+```
+Always need:
+  [ ] The index view                    app/views/MODEL/index.html.erb
+  [ ] The row partial                   app/views/MODEL/_MODEL.html.erb
+  [ ] Turbo stream (check: does it      app/views/MODEL/index.turbo_stream.erb
+      render the partial? usually no
+      header change needed)
+
+Ask: "Is this model also shown as a sub-table on another page?"
+  Components appear in:
+    [ ] app/views/owners/show.html.erb          (Components section)
+    [ ] app/views/computers/_form.html.erb       (Computer's Components section)
+  Computers appear in:
+    [ ] app/views/owners/show.html.erb          (Computers + Appliances sections)
+
+Ask: "Does edit.html.erb render _form.html.erb?"
+  If yes → _form.html.erb contains the sub-table, NOT edit.html.erb itself.
+  Always get _form.html.erb, not edit.html.erb, for sub-table changes.
+```
+
+### Sort / Filter Changes (add or modify sort options or filter selectors)
+
+Sort and filter options span exactly three files in this project — no exceptions.
+
+```
+Always need (all three):
+  [ ] app/views/MODEL/_filters.html.erb    — the filter/sort UI selector
+  [ ] app/helpers/MODEL_helper.rb          — sort/filter option constants + helpers
+  [ ] app/controllers/MODEL_controller.rb  — the case/when sort logic
+
+Key patterns to check in the controller:
+  - Does the new sort reference a joined table?  → need .joins(:assoc)
+  - Does ORDER BY contain a dot or SQL keyword?  → need Arel.sql()
+  - Does it reference the model's own column?    → no join; Arel.sql() only if NULLS LAST
+```
+
+### Controller Action Changes (new action, redirect logic, flash messages, params)
+
+```
+Always need:
+  [ ] app/controllers/MODEL_controller.rb
+  [ ] test/controllers/MODEL_controller_test.rb  (existing tests to avoid breaking)
+  [ ] test/fixtures/MODELs.yml                   (to know available test data)
+
+If the action renders a view:
+  [ ] app/views/MODEL/ACTION.html.erb
+
+If the action involves a form (create/update):
+  [ ] app/views/MODEL/_form.html.erb             (strong params must match form fields)
+
+If auth behaviour is changing:
+  [ ] app/controllers/concerns/authentication.rb (check before_action names)
+```
+
+### Model / Association Changes (new field, rename, validation, enum)
+
+```
+Always need:
+  [ ] app/models/MODEL.rb
+  [ ] test/models/MODEL_test.rb                  (existing tests to avoid breaking)
+  [ ] test/fixtures/MODELs.yml                   (values must satisfy new validations)
+
+Run grep sweep BEFORE writing any files:
+  grep -rn ".OLD_NAME"         app/        (accessor used in views/helpers/controllers)
+  grep -rn "OldClassName"      app/ test/  (class name references)
+  grep -rn ":OLD_NAME"         app/ test/  (symbol form in params, scopes, fixtures)
+  grep -rn "old_name_id"       app/        (FK column references)
+
+If adding a migration:
+  [ ] db/schema.rb (read after migration to verify result)
+  [ ] Check for SQLite limitations (ALTER TABLE, CHECK constraints, explicit column
+      names in INSERT/SELECT) — see SQLite sections in this file.
+```
+
+### New Page / Route (new controller action + view + navigation entry)
+
+```
+Always need:
+  [ ] config/routes.rb
+  [ ] The controller file (existing or new)
+  [ ] app/views/layouts/application.html.erb     (public nav)
+        OR app/views/layouts/admin.html.erb      (admin nav)
+        OR app/views/common/_navigation.html.erb (shared nav partial)
+
+If it is a public page requiring no login:
+  [ ] Verify no before_action :require_login covers the new action
+  [ ] Add to navigation partial (leftmost = most prominent)
+
+If it is an admin page:
+  [ ] app/controllers/admin/base_controller.rb   (check inherited auth guard)
+  [ ] app/views/layouts/admin.html.erb           (dropdown menu)
+```
 
 **End of RAILS_SPECIFICS.md**
