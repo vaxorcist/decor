@@ -1,0 +1,73 @@
+<%# decor/app/views/admin/site_texts/delete_confirm.html.erb - version 1.0 %>
+<%# v1.0 (Session 20): Generic delete confirmation page for any named text page. %>
+<%#   Admin selects which text to delete from a selector driven by SiteText::KNOWN_TEXTS. %>
+<%#   Uses button_to with DELETE method — standard turbo confirm keeps the guard. %>
+<%#   No JavaScript required beyond standard Turbo confirm dialog. %>
+
+<div class="max-w-2xl">
+  <h1 class="text-2xl font-semibold mb-6">Delete Text</h1>
+
+  <div class="mb-6 p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-800">
+    The selected text page will be permanently deleted and will display
+    <strong>== Empty ==</strong> until a new file is uploaded.
+  </div>
+
+  <%# Wrap the selector and delete button together so the key is submitted with the form. %>
+  <%# button_to always generates its own form — we use a plain form here instead %>
+  <%# so the selector and submit button share the same form submission. %>
+  <%= form_with url: "#",
+                method: :delete,
+                data: { turbo: false },
+                class: "space-y-4" do |f| %>
+
+    <%# Key selector — driven by SiteText::KNOWN_TEXTS %>
+    <div>
+      <label class="block text-sm font-medium text-stone-700 mb-1">
+        Text page <span class="text-red-600">*</span>
+      </label>
+      <select name="selected_key"
+              id="delete_key_selector"
+              required
+              class="<%= field_classes %>">
+        <% @known_texts.each do |title, key| %>
+          <option value="<%= key %>" <%= "selected" if key == @default_key %>>
+            <%= title %>
+          </option>
+        <% end %>
+      </select>
+    </div>
+
+    <%# The delete button submits to the correct destroy route via JS redirect. %>
+    <%# We use a plain link styled as a button, navigating to the destroy path %>
+    <%# for the currently selected key. A small inline script updates the href %>
+    <%# when the selector changes — no Stimulus controller needed. %>
+    <div class="flex gap-3 items-center">
+      <%# Initial href points to first key; JS keeps it in sync with the selector. %>
+      <a id="delete_confirm_btn"
+         href="<%= admin_site_text_path(@default_key) %>"
+         data-turbo-method="delete"
+         data-turbo-confirm="Delete this text page? This cannot be undone."
+         class="<%= button_classes(style: :primary) %> bg-red-600 hover:bg-red-700">
+        Delete
+      </a>
+      <%= link_to "Cancel", admin_owners_path, class: button_classes(style: :secondary) %>
+    </div>
+  <% end %>
+</div>
+
+<%# Inline script — keeps the delete button's href in sync with the selector. %>
+<%# No Stimulus controller needed: one event listener on a single page element. %>
+<script>
+  (function () {
+    const selector = document.getElementById("delete_key_selector");
+    const btn      = document.getElementById("delete_confirm_btn");
+
+    if (!selector || !btn) return;
+
+    selector.addEventListener("change", function () {
+      // Rebuild the destroy path by replacing the last path segment with the new key.
+      const base = btn.href.replace(/\/[^/]+$/, "");
+      btn.href = base + "/" + encodeURIComponent(selector.value);
+    });
+  })();
+</script>

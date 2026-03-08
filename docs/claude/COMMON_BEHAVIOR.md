@@ -1,5 +1,5 @@
 # COMMON_BEHAVIOR.md
-# version 2.3
+# version 2.4
 # decor/docs/claude/COMMON_BEHAVIOR.md
 # Session 14: Major reliability update.
 #   - Added "Reading Rule Documents" section — MANDATORY use of bash cat, never view tool.
@@ -16,6 +16,8 @@
 #   - Four formatting violations in one response: missing separators, missing token estimate,
 #     unnecessary directory prefix, and wrong separator character. Rules already existed.
 #     Real examples added to each rule to reinforce them.
+# Session 20: Download File Naming — added explicit "NEVER prefix when filename is unique"
+#   rule with real example of violation (admin_site_texts_controller.rb prefixed needlessly).
 
 **Universal Rules for All Interactions with This User**
 
@@ -188,8 +190,14 @@ User had to ask for the full paths explicitly.
 - ✅ Use `#` as the separator between directory and filename
   (e.g. `data_transfers#show.html.erb`, `owners#show.html.erb`)
 - ❌ Do NOT add a directory prefix when the filename is already unique in the response
+- ❌ NEVER prefix a file that lives in a subdirectory if its filename is unique —
+  the subdirectory path is irrelevant to the download name
 - ❌ Do NOT use `_` or `/` as the separator (indistinguishable from underscores
   in the filename; `/` implies a path)
+
+**The prefix rule in one sentence:**
+A prefix exists solely to resolve a filename collision. If there is no collision,
+there is no prefix — regardless of where the file lives in the project tree.
 
 **Examples:**
 
@@ -200,12 +208,20 @@ Two `show.html.erb` files in the same response → download names:
 
 `routes.rb` is always unique → download name: `routes.rb` (no prefix needed)
 
+`admin/site_texts_controller.rb` is the only controller in the response →
+  download name: `site_texts_controller.rb` (not `admin#site_texts_controller.rb`)
+
 **Real example (Session 18, March 6, 2026):**
 When delivering 11 files, several files received unnecessary directory prefixes
 (e.g. `admin#site_texts_controller.rb` when no naming collision existed) and
 used the wrong separator character. Three rules were broken simultaneously:
 no prefix when unique; use `#` not `_`; and separators are only for collisions.
 All three rules already existed — they were simply not checked before naming.
+
+**Real example (Session 20, March 8, 2026):**
+`admin/site_texts_controller.rb` was the only controller delivered in the response.
+It was named `admin_site_texts_controller.rb` in the download — unnecessary prefix,
+wrong separator. One controller, no collision, no prefix needed.
 
 ### Upload File Naming
 

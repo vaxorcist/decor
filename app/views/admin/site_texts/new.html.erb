@@ -1,27 +1,11 @@
-<%# decor/app/views/admin/site_texts/new.html.erb - version 1.0 %>
-<%# v1.0 (Session 18): Admin upload form for a named text page (.md file). %>
-<%#   key is carried through a hidden field from the URL query param. %>
-<%#   data-turbo: false on the form ensures standard multipart submission — %>
-<%#   Turbo's handling of file uploads can be unpredictable. %>
-<%#   Shows the currently stored content (truncated) so the admin knows %>
-<%#   whether a file already exists before uploading a replacement. %>
+<%# decor/app/views/admin/site_texts/new.html.erb - version 1.1 %>
+<%# v1.1 (Session 20): Generalised — replaced hidden key field with a selector %>
+<%#   driven by SiteText::KNOWN_TEXTS. Admin picks which text to upload. %>
+<%#   Status banner (exists/not yet) now updates dynamically via the selector. %>
+<%# v1.0 (Session 18): Upload form for a single named text page. %>
 
 <div class="max-w-2xl">
-  <h1 class="text-2xl font-semibold mb-6">Upload <%= @title %></h1>
-
-  <%# Show existing content status so the admin knows whether this will replace something. %>
-  <% if @site_text.present? %>
-    <div class="mb-6 p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-800">
-      A <strong><%= @title %></strong> is currently stored
-      (<%= @site_text.content.length %> characters,
-       last updated <%= @site_text.updated_at.strftime("%Y-%m-%d %H:%M") %> UTC).
-      Uploading a new file will replace it.
-    </div>
-  <% else %>
-    <div class="mb-6 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
-      No <strong><%= @title %></strong> has been uploaded yet.
-    </div>
-  <% end %>
+  <h1 class="text-2xl font-semibold mb-6">Upload Text</h1>
 
   <%# data-turbo: false — use standard multipart form submission for file uploads. %>
   <%= form_with url: admin_site_texts_path,
@@ -30,8 +14,22 @@
                 data: { turbo: false },
                 class: "space-y-4" do |f| %>
 
-    <%# Hidden field carries the key through to the create action. %>
-    <input type="hidden" name="key" value="<%= @key %>">
+    <%# Key selector — driven by SiteText::KNOWN_TEXTS %>
+    <div>
+      <label class="block text-sm font-medium text-stone-700 mb-1">
+        Text page <span class="text-red-600">*</span>
+      </label>
+      <select name="key"
+              required
+              class="<%= field_classes %>">
+        <% @known_texts.each do |title, key| %>
+          <option value="<%= key %>" <%= "selected" if key == @default_key %>>
+            <%= title %>
+          </option>
+        <% end %>
+      </select>
+      <p class="mt-1 text-xs text-stone-500">Select which page this file should replace.</p>
+    </div>
 
     <div>
       <label class="block text-sm font-medium text-stone-700 mb-1">
@@ -48,14 +46,14 @@
                     file:bg-stone-100 file:text-stone-700
                     hover:file:bg-stone-200 cursor-pointer">
       <p class="mt-1 text-xs text-stone-500">
-        Upload a .md file. Standard markdown syntax is supported: headings, bold,
-        italic, lists, tables, code blocks, and links ([text](/path) or [text](https://...)).
+        Upload a .md file. Supported: headings, bold, italic, lists, tables,
+        code blocks, links, and horizontal rules. Uploading replaces existing content.
       </p>
     </div>
 
     <div class="flex gap-3 items-center">
       <button type="submit" class="<%= button_classes(style: :primary) %>">
-        Upload <%= @title %>
+        Upload
       </button>
       <%= link_to "Cancel", admin_owners_path, class: button_classes(style: :secondary) %>
     </div>

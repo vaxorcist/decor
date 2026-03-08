@@ -1,8 +1,11 @@
 # PROGRAMMING_GENERAL.md
-# version 1.8
+# version 1.9
 # Added: "Derive Test Assertions from Data, Not Constants" rule in Test Data Management.
 # General principle: never hardcode in a test a value that the test data can provide.
 # Cross-referenced in RAILS_SPECIFICS.md — Fixture Ownership section.
+# Session 20: Reinforced End-of-Task Test Coverage Check — rule already existed but
+#   was not being applied proactively. Added explicit wording that the check must be
+#   offered after EVERY implementation task without waiting for the user to ask.
 
 **General Programming Rules for All Technical Projects**
 
@@ -428,12 +431,12 @@ end
 
 ### MANDATORY: End-of-Task Test Coverage Check
 
-**After completing ANY implementation task, Claude MUST explicitly ask:**
+**After completing ANY implementation task, Claude MUST explicitly offer:**
 
-> "Did we add or change anything that should have an automated test?"
+> "Does this change need automated tests? Here is my analysis: ..."
 
-This check is NOT optional and must happen at the end of every session or task,
-regardless of whether tests were mentioned in the original request.
+This check is NOT optional and must happen proactively — without the user asking.
+If the user has to prompt Claude to consider tests, the rule has already been violated.
 
 **What to check:**
 - ✅ New service objects / business logic classes → always testable, always test
@@ -469,6 +472,11 @@ After implementing OwnerExportService, OwnerImportService, and DataTransfersCont
 no tests were produced and no check was offered — the user had to ask explicitly.
 This is a recurring failure pattern: implementation work is complete and the session
 moves on without anyone asking whether tests should follow.
+
+**Reinforced (Session 20, March 8, 2026):**
+The rule existed but Claude still waited to be asked after delivering the
+Admin::SiteTextsController generalisation. The check must be proactive — always
+offered by Claude, never prompted by the user.
 
 ---
 
