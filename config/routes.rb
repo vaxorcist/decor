@@ -1,14 +1,11 @@
 # decor/config/routes.rb
-# version 1.5
+# version 1.7
+# v1.7 (Session 20): Added delete_confirm collection route under admin/site_texts
+#   so the generic "Delete Text" page has a clean URL (/admin/site_texts/delete_confirm).
+#   The actual destroy still uses DELETE /admin/site_texts/:key (unchanged).
+# v1.6 (Session 20): Added news, barter_trade, privacy public routes.
 # v1.5 (Session 18): Added public readme route and admin site_texts resource.
-#   readme → site_texts#show (public, no login required).
-#   admin/site_texts: new, create (upload/replace), destroy (delete by key).
-#   param: :key lets destroy use /admin/site_texts/readme rather than an integer id.
-# v1.4 (Session 17): Added resources :appliances (index only) pointing to the
-#   computers controller with device_context: "appliance". Individual record
-#   CRUD always routes through computers_* paths, so only :index is needed here.
-#   Added device_context: "computer" default to resources :computers for symmetry —
-#   the before_action in the controller uses this to distinguish contexts.
+# v1.4 (Session 17): Added resources :appliances and device_context defaults.
 # v1.3: resources :appliance_models pointing to the computer_models controller.
 
 Rails.application.routes.draw do
@@ -16,17 +13,18 @@ Rails.application.routes.draw do
 
   root "home#index"
 
-  # Public Read Me page — publicly visible (no login required).
-  # Additional text pages can follow the same pattern with a different key.
-  get "readme", to: "site_texts#show", defaults: { key: "readme" }, as: :readme
+  # Public text pages — all served by site_texts#show (no login required).
+  # The key default param selects the SiteText record to render.
+  get "readme",       to: "site_texts#show", defaults: { key: "readme" },       as: :readme
+  get "news",         to: "site_texts#show", defaults: { key: "news" },         as: :news
+  get "barter_trade", to: "site_texts#show", defaults: { key: "barter_trade" }, as: :barter_trade
+  get "privacy",      to: "site_texts#show", defaults: { key: "privacy" },      as: :privacy
 
   resources :owners
   resources :computers,  defaults: { device_context: "computer" }
 
   # Appliances index — shares the computers controller; device_context param
   # tells the controller to lock the device_type filter to "appliance".
-  # Only :index is needed here — individual records are always accessed via
-  # their computers_* routes (show, edit, update, destroy).
   resources :appliances, controller: "computers", only: [:index],
                          defaults: { device_context: "appliance" }
 
@@ -47,9 +45,6 @@ Rails.application.routes.draw do
     resources :invites, only: %i[index new create destroy]
     resources :component_types, only: %i[index new create edit update destroy]
 
-    # Computer Models and Appliance Models share the same controller.
-    # The device_context default param tells the controller which type it
-    # is serving; no path-sniffing or subclassing required.
     resources :computer_models,  only: %i[index new create edit update destroy],
                                  defaults: { device_context: "computer" }
     resources :appliance_models, only: %i[index new create edit update destroy],
@@ -61,10 +56,14 @@ Rails.application.routes.draw do
     resources :run_statuses,          only: %i[index new create edit update destroy]
     resources :bulk_uploads,          only: %i[new create]
 
-    # Site text management — upload and delete named text pages (README etc.).
-    # param: :key uses the text's key in the URL rather than a numeric id,
-    # e.g. DELETE /admin/site_texts/readme.
-    resources :site_texts, only: %i[new create destroy], param: :key
+    # Site text management — generic upload and delete pages for all named texts.
+    # delete_confirm: GET /admin/site_texts/delete_confirm — key selector page;
+    #   actual destroy uses DELETE /admin/site_texts/:key (param: :key).
+    resources :site_texts, only: %i[new create destroy], param: :key do
+      collection do
+        get :delete_confirm
+      end
+    end
   end
 
   get "up" => "rails/health#show", as: :rails_health_check

@@ -1,3 +1,9 @@
+<%# decor/app/views/admin/owners/index.html.erb - version 1.1 %>
+<%# v1.1 (Session 20): Added "Last Login" column immediately right of Username. %>
+<%#   Displays last_login_at formatted as "07 Mar 2026 14:35" (day month year, 24h). %>
+<%#   Shows "—" for owners who have never logged in since the column was added. %>
+<%# v1.0: Initial admin owners table (Username, Email, Admin, Computers, Components). %>
+
 <div class="max-w-7xl mx-auto">
   <div class="mb-4">
     <h1 class="text-2xl font-semibold">Manage Owners</h1>
@@ -8,6 +14,8 @@
       <thead class="bg-stone-50">
         <tr>
           <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Username</th>
+          <%# Last Login added (Session 20) — stamped by SessionsController#create %>
+          <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Last Login</th>
           <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Email</th>
           <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Admin</th>
           <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Computers</th>
@@ -20,6 +28,10 @@
           <tr>
             <td class="px-4 py-3 whitespace-nowrap font-medium">
               <%= link_to owner.user_name, owner, class: "text-stone-700 hover:text-stone-900" %>
+            </td>
+            <%# NULL (never logged in) renders as "—"; otherwise formatted datetime %>
+            <td class="px-4 py-3 whitespace-nowrap text-stone-600">
+              <%= owner.last_login_at ? owner.last_login_at.strftime("%d %b %Y %H:%M") : "—" %>
             </td>
             <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= owner.email %></td>
             <td class="px-4 py-3 whitespace-nowrap">
