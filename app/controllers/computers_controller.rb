@@ -1,4 +1,8 @@
-# decor/app/controllers/computers_controller.rb - version 1.13
+# decor/app/controllers/computers_controller.rb - version 1.14
+# v1.14 (Session 20): Removed device_type selector from the form (_form.html.erb v2.4).
+#   device_type is now a hidden field — fixed at creation, not editable afterwards.
+#   :device_type kept in strong params so the hidden field value is accepted on create.
+#   On update the hidden field echoes the current value, causing no change.
 # v1.13 (Session 18): new action: build() without device_type first, then assign
 #   it only if the param is present. v1.12's .presence fix was wrong — nil.presence
 #   is still nil, so build(device_type: nil) was still called and still overrode
@@ -170,7 +174,7 @@ class ComputersController < ApplicationController
       :run_status_id,
       :order_number,
       :history,
-      :device_type   # permitted since Session 18: device_type selector on new/edit form
+      :device_type   # hidden field only — type is fixed at creation, not editable via UI
     )
   end
 end
