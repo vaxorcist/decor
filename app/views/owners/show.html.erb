@@ -1,304 +1,66 @@
-<%# decor/app/views/owners/show.html.erb - version 1.8 %>
-<%# v1.8 (Session 22): Added "Trade" column to all three sub-tables (Computers, %>
-<%#   Appliances, Components). Both <th> and <td> are wrapped in %>
-<%#   - if logged_in? — barter data is member-only and must be completely %>
-<%#   absent for unauthenticated visitors. %>
-<%#   Computers / Appliances: Trade after Status, before Actions. %>
-<%#   Components: no Owner column on this page (owner is implicit), so Trade %>
-<%#   goes after Serial No., before Actions. %>
-<%#   Colour coding: offered → text-green-700, wanted → text-amber-600, %>
-<%#   no_barter → text-stone-400 (dash). %>
-<%# v1.7 (Session 19): Components table column changes: %>
-<%#   - Header "Computer" renamed to "Computer-Serial No." (cell already rendered %>
-<%#     as "Model – serial", so data unchanged). %>
-<%#   - "Description" moved before "Order No." and "Serial No.". %>
-<%#   - Final order: Computer-Serial No. | Type | Description | Order No. | Serial No. %>
-<%# v1.6 (Session 18): "Add Appliance" link now passes device_type: "appliance" so %>
-<%#   the new action pre-builds the record as an appliance. Heading and form selector %>
-<%#   pre-selection both derive from @computer.device_type and work automatically. %>
-<%# v1.5 (Session 18): Appliances section added between Computers and Components. %>
-<%#   @computers now contains only device_type: computer records; @appliances contains %>
-<%#   only device_type: appliance records (both split in owners_controller.rb v1.5). %>
-<%#   Appliances table has identical columns and actions to the Computers table. %>
-<%# v1.4: Computers section: ordered by model name; Order Number column; Delete button. %>
-<%#   Components section: ordered by computer model / serial / type; columns reordered. %>
+<%# decor/app/views/owners/show.html.erb - version 1.9 %>
+<%# v1.9 (Session 23): Replaced the three inline tables with a summary card view. %>
+<%#   Profile header and info panel extracted to owners/_profile.html.erb. %>
+<%#   Three cards (Computers / Appliances / Components) show item counts and link %>
+<%#   to the corresponding sub-pages (/owners/:id/computers etc.). %>
+<%#   Owner of the account also sees an "Add" link on each card. %>
+<%#   The source=owner redirect (from computers_controller / components_controller) %>
+<%#   still lands here; the user can navigate onward via the cards. %>
 
-<div class="max-w-7xl mx-auto">
-  <div class="flex justify-between items-start mb-4">
-    <div>
-      <h1 class="text-2xl font-semibold"><%= @owner.user_name %></h1>
-      <% if (real_name = visible_field(@owner, :real_name)).present? %>
-        <p class="text-sm text-stone-600"><%= real_name %></p>
-      <% end %>
-    </div>
-    <div class="flex items-center gap-2">
-      <% if Current.owner == @owner || admin? %>
-        <%= link_to "Edit Profile", edit_owner_path(@owner), class: button_classes(style: :secondary) %>
-      <% end %>
-      <%# Export / Import — only the owner needs access to their own data transfer page %>
-      <% if Current.owner == @owner %>
-        <%= link_to "Export / Import", data_transfer_path, class: button_classes(style: :secondary) %>
-      <% end %>
-      <% if Current.owner == @owner %>
-        <%= button_to "Logout", session_path, method: :delete, class: button_classes(style: :secondary) %>
-      <% end %>
-    </div>
-  </div>
+<div class="max-w-5xl mx-auto">
+  <%# Profile header + info panel (shared with sub-pages) %>
+  <%= render "profile" %>
 
-  <div class="bg-white border border-stone-200 rounded p-4 mb-6">
-    <dl class="grid grid-cols-2 gap-3 text-sm">
-      <% if (country = visible_field(@owner, :country) { @owner.country_name }).present? %>
-        <div>
-          <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider">Country</dt>
-          <dd class="mt-1"><%= country %></dd>
-        </div>
-      <% end %>
-      <% if (email = visible_field(@owner, :email)).present? %>
-        <div>
-          <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider">Email</dt>
-          <dd class="mt-1"><%= mail_to email %></dd>
-        </div>
-      <% end %>
-      <% if @owner.website.present? %>
-        <div>
-          <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider">Website</dt>
-          <dd class="mt-1"><%= link_to @owner.website, @owner.website, target: "_blank", class: "text-stone-700 hover:text-stone-900" %></dd>
-        </div>
-      <% end %>
-    </dl>
-  </div>
+  <%# Section cards: one per collection, showing count + navigation %>
+  <div class="grid grid-cols-3 gap-4">
 
-  <%# ---- Computers ---- %>
-  <%# @computers contains only device_type: computer records (appliances excluded). %>
-  <div class="mb-6">
-    <div class="flex justify-between items-center mb-3">
-      <h2 class="text-lg font-semibold">Computers (<%= @computers.count %>)</h2>
-      <% if Current.owner == @owner %>
-        <%= link_to "Add Computer", new_computer_path, class: button_classes(style: :secondary) %>
-      <% end %>
-    </div>
-
-    <% if @computers.any? %>
-      <div class="bg-white border border-stone-200 rounded">
-        <table class="min-w-full divide-y divide-stone-200">
-          <thead class="bg-stone-50">
-            <tr>
-              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Model</th>
-              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Order</th>
-              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Serial</th>
-              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Condition</th>
-              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Status</th>
-              <%# Trade header — visible to logged-in members only %>
-              <% if logged_in? %>
-                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Trade</th>
-              <% end %>
-              <th class="px-4 py-2"></th>
-            </tr>
-          </thead>
-          <tbody class="bg-white divide-y divide-stone-200 text-sm">
-            <% @computers.each do |computer| %>
-              <tr class="hover:bg-stone-50">
-                <%# Model — clickable, navigates to computer show page %>
-                <td class="px-4 py-3 whitespace-nowrap font-medium">
-                  <%= link_to computer.computer_model.name, computer_path(computer), class: "text-indigo-600 hover:text-indigo-900" %>
-                </td>
-                <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= computer.order_number || "—" %></td>
-                <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= computer.serial_number %></td>
-                <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= computer.computer_condition&.name || "—" %></td>
-                <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= computer.run_status&.name || "—" %></td>
-                <%# Trade cell — visible to logged-in members only %>
-                <% if logged_in? %>
-                  <td class="px-4 py-3 whitespace-nowrap">
-                    <% if computer.barter_status_offered? %>
-                      <span class="text-green-700">Offered</span>
-                    <% elsif computer.barter_status_wanted? %>
-                      <span class="text-amber-600">Wanted</span>
-                    <% else %>
-                      <span class="text-stone-400">—</span>
-                    <% end %>
-                  </td>
-                <% end %>
-                <%# Actions — Edit and Delete shown to owner only %>
-                <td class="px-4 py-3 whitespace-nowrap text-right">
-                  <% if Current.owner == @owner %>
-                    <div class="flex items-center justify-end gap-3">
-                      <%= link_to "Edit", edit_computer_path(computer), class: "text-indigo-600 hover:text-indigo-900" %>
-                      <%= button_to "Delete", computer_path(computer), method: :delete,
-                            data: { turbo_confirm: "Delete #{computer.computer_model.name} (#{computer.serial_number})? This cannot be undone." },
-                            params: { source: "owner" },
-                            class: "text-red-600 hover:text-red-900 bg-transparent border-0 p-0 cursor-pointer",
-                            form: { style: "display:inline" } %>
-                    </div>
-                  <% end %>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
+    <%# Computers card %>
+    <div class="bg-white border border-stone-200 rounded p-5">
+      <div class="flex justify-between items-start mb-3">
+        <h2 class="font-semibold text-stone-700">Computers</h2>
+        <span class="text-2xl font-bold text-stone-300"><%= @computer_count %></span>
       </div>
-    <% else %>
-      <p class="text-sm text-stone-500">No computers registered.</p>
-    <% end %>
-  </div>
-
-  <%# ---- Appliances ---- %>
-  <%# @appliances contains only device_type: appliance records. %>
-  <%# Same columns and actions as the Computers table above. %>
-  <div class="mb-6">
-    <div class="flex justify-between items-center mb-3">
-      <h2 class="text-lg font-semibold">Appliances (<%= @appliances.count %>)</h2>
-      <% if Current.owner == @owner %>
-        <%= link_to "Add Appliance", new_computer_path(device_type: "appliance"), class: button_classes(style: :secondary) %>
-      <% end %>
+      <div class="flex items-center justify-between">
+        <%= link_to "View →", computers_owner_path(@owner),
+              class: "text-sm text-indigo-600 hover:text-indigo-900" %>
+        <% if Current.owner == @owner %>
+          <%= link_to "+ Add", new_computer_path,
+                class: "text-sm text-indigo-600 hover:text-indigo-900" %>
+        <% end %>
+      </div>
     </div>
 
-    <% if @appliances.any? %>
-      <div class="bg-white border border-stone-200 rounded">
-        <table class="min-w-full divide-y divide-stone-200">
-          <thead class="bg-stone-50">
-            <tr>
-              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Model</th>
-              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Order</th>
-              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Serial</th>
-              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Condition</th>
-              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Status</th>
-              <%# Trade header — visible to logged-in members only %>
-              <% if logged_in? %>
-                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Trade</th>
-              <% end %>
-              <th class="px-4 py-2"></th>
-            </tr>
-          </thead>
-          <tbody class="bg-white divide-y divide-stone-200 text-sm">
-            <% @appliances.each do |appliance| %>
-              <tr class="hover:bg-stone-50">
-                <%# Model — clickable, navigates to computer show page (appliances use computers_* routes) %>
-                <td class="px-4 py-3 whitespace-nowrap font-medium">
-                  <%= link_to appliance.computer_model.name, computer_path(appliance), class: "text-indigo-600 hover:text-indigo-900" %>
-                </td>
-                <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= appliance.order_number || "—" %></td>
-                <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= appliance.serial_number %></td>
-                <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= appliance.computer_condition&.name || "—" %></td>
-                <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= appliance.run_status&.name || "—" %></td>
-                <%# Trade cell — visible to logged-in members only %>
-                <% if logged_in? %>
-                  <td class="px-4 py-3 whitespace-nowrap">
-                    <% if appliance.barter_status_offered? %>
-                      <span class="text-green-700">Offered</span>
-                    <% elsif appliance.barter_status_wanted? %>
-                      <span class="text-amber-600">Wanted</span>
-                    <% else %>
-                      <span class="text-stone-400">—</span>
-                    <% end %>
-                  </td>
-                <% end %>
-                <%# Actions — Edit and Delete shown to owner only %>
-                <td class="px-4 py-3 whitespace-nowrap text-right">
-                  <% if Current.owner == @owner %>
-                    <div class="flex items-center justify-end gap-3">
-                      <%= link_to "Edit", edit_computer_path(appliance), class: "text-indigo-600 hover:text-indigo-900" %>
-                      <%= button_to "Delete", computer_path(appliance), method: :delete,
-                            data: { turbo_confirm: "Delete #{appliance.computer_model.name} (#{appliance.serial_number})? This cannot be undone." },
-                            params: { source: "owner" },
-                            class: "text-red-600 hover:text-red-900 bg-transparent border-0 p-0 cursor-pointer",
-                            form: { style: "display:inline" } %>
-                    </div>
-                  <% end %>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
+    <%# Appliances card %>
+    <div class="bg-white border border-stone-200 rounded p-5">
+      <div class="flex justify-between items-start mb-3">
+        <h2 class="font-semibold text-stone-700">Appliances</h2>
+        <span class="text-2xl font-bold text-stone-300"><%= @appliance_count %></span>
       </div>
-    <% else %>
-      <p class="text-sm text-stone-500">No appliances registered.</p>
-    <% end %>
-  </div>
-
-  <%# ---- Components ---- %>
-  <div>
-    <div class="flex justify-between items-center mb-3">
-      <h2 class="text-lg font-semibold">Components (<%= @components.count %>)</h2>
-      <% if Current.owner == @owner %>
-        <%= link_to "Add Component", new_component_path, class: button_classes(style: :secondary) %>
-      <% end %>
+      <div class="flex items-center justify-between">
+        <%= link_to "View →", appliances_owner_path(@owner),
+              class: "text-sm text-indigo-600 hover:text-indigo-900" %>
+        <% if Current.owner == @owner %>
+          <%= link_to "+ Add", new_computer_path(device_type: "appliance"),
+                class: "text-sm text-indigo-600 hover:text-indigo-900" %>
+        <% end %>
+      </div>
     </div>
 
-    <% if @components.any? %>
-      <div class="bg-white border border-stone-200 rounded">
-        <table class="min-w-full divide-y divide-stone-200">
-          <thead class="bg-stone-50">
-            <tr>
-              <%# Header renamed from "Computer" to "Computer-Serial No." to match %>
-              <%# the combined model–serial format rendered in each cell. %>
-              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Computer-Serial No.</th>
-              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Type</th>
-              <%# Description moved before Order No. and Serial No. %>
-              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Description</th>
-              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Order No.</th>
-              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Serial No.</th>
-              <%# Trade header — visible to logged-in members only. %>
-              <%# No Owner column on this page (owner is implicit), so Trade sits %>
-              <%# after Serial No., before Actions — the last data column position. %>
-              <% if logged_in? %>
-                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Trade</th>
-              <% end %>
-              <th class="px-4 py-2"></th>
-            </tr>
-          </thead>
-          <tbody class="bg-white divide-y divide-stone-200 text-sm">
-            <% @components.each do |component| %>
-              <tr class="hover:bg-stone-50">
-                <%# Computer-Serial No. — model name hyphen serial number; "Spare" if unattached %>
-                <td class="px-4 py-3 whitespace-nowrap text-stone-600">
-                  <% if component.computer %>
-                    <%= link_to "#{component.computer.computer_model.name} \u2013 #{component.computer.serial_number}",
-                          computer_path(component.computer),
-                          class: "text-indigo-600 hover:text-indigo-900" %>
-                  <% else %>
-                    <span class="text-stone-400">Spare</span>
-                  <% end %>
-                </td>
-                <%# Type — clickable, navigates to component show page %>
-                <td class="px-4 py-3 whitespace-nowrap font-medium">
-                  <%= link_to component.component_type.name, component_path(component), class: "text-indigo-600 hover:text-indigo-900" %>
-                </td>
-                <%# Description — truncated; moved before Order No. and Serial No. %>
-                <td class="px-4 py-3 text-stone-600"><%= truncate(component.description, length: 50) || "—" %></td>
-                <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.order_number || "—" %></td>
-                <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.serial_number || "—" %></td>
-                <%# Trade cell — visible to logged-in members only %>
-                <% if logged_in? %>
-                  <td class="px-4 py-3 whitespace-nowrap">
-                    <% if component.barter_status_offered? %>
-                      <span class="text-green-700">Offered</span>
-                    <% elsif component.barter_status_wanted? %>
-                      <span class="text-amber-600">Wanted</span>
-                    <% else %>
-                      <span class="text-stone-400">—</span>
-                    <% end %>
-                  </td>
-                <% end %>
-                <%# Actions — Edit and Delete shown to owner only %>
-                <td class="px-4 py-3 whitespace-nowrap text-right">
-                  <% if Current.owner == @owner %>
-                    <div class="flex items-center justify-end gap-3">
-                      <%= link_to "Edit", edit_component_path(component), class: "text-indigo-600 hover:text-indigo-900" %>
-                      <%= button_to "Delete", component_path(component), method: :delete,
-                            data: { turbo_confirm: "Delete this #{component.component_type.name}? This cannot be undone." },
-                            params: { source: "owner" },
-                            class: "text-red-600 hover:text-red-900 bg-transparent border-0 p-0 cursor-pointer",
-                            form: { style: "display:inline" } %>
-                    </div>
-                  <% end %>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
+    <%# Components card %>
+    <div class="bg-white border border-stone-200 rounded p-5">
+      <div class="flex justify-between items-start mb-3">
+        <h2 class="font-semibold text-stone-700">Components</h2>
+        <span class="text-2xl font-bold text-stone-300"><%= @component_count %></span>
       </div>
-    <% else %>
-      <p class="text-sm text-stone-500">No components registered.</p>
-    <% end %>
+      <div class="flex items-center justify-between">
+        <%= link_to "View →", components_owner_path(@owner),
+              class: "text-sm text-indigo-600 hover:text-indigo-900" %>
+        <% if Current.owner == @owner %>
+          <%= link_to "+ Add", new_component_path,
+                class: "text-sm text-indigo-600 hover:text-indigo-900" %>
+        <% end %>
+      </div>
+    </div>
+
   </div>
 </div>

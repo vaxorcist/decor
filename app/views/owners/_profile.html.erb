@@ -1,0 +1,58 @@
+<%# decor/app/views/owners/_profile.html.erb - version 1.1 %>
+<%# v1.0 (Session 23): New partial extracted from owners/show.html.erb v1.8. %>
+<%#   Renders the owner profile header (username, real name, action buttons) and %>
+<%#   the info panel (country, email, website). %>
+<%#   Used by owners/show.html.erb, owners/computers.html.erb, %>
+<%#   owners/appliances.html.erb, and owners/components.html.erb. %>
+<%#   All content renders from @owner (set by set_owner before_action). %>
+
+<div class="flex justify-between items-start mb-4">
+  <div>
+    <h1 class="text-2xl font-semibold"><%= @owner.user_name %></h1>
+    <% if (real_name = visible_field(@owner, :real_name)).present? %>
+      <p class="text-sm text-stone-600"><%= real_name %></p>
+    <% end %>
+  </div>
+  <div class="flex items-center gap-2">
+    <% if Current.owner == @owner || admin? %>
+      <%= link_to "Edit Profile", edit_owner_path(@owner), class: button_classes(style: :secondary) %>
+    <% end %>
+    <%# Export / Import — only the owner needs access to their own data transfer page %>
+    <% if Current.owner == @owner %>
+      <%= link_to "Export / Import", data_transfer_path, class: button_classes(style: :secondary) %>
+    <% end %>
+    <% if Current.owner == @owner %>
+      <%= button_to "Logout", session_path, method: :delete, class: button_classes(style: :secondary) %>
+    <% end %>
+  </div>
+</div>
+
+<%# Info panel — country / email / website, each gated by the owner's visibility setting %>
+<% has_country = (country = visible_field(@owner, :country) { @owner.country_name }).present? %>
+<% has_email   = (email   = visible_field(@owner, :email)).present? %>
+<% has_website = @owner.website.present? %>
+
+<% if has_country || has_email || has_website %>
+  <div class="bg-white border border-stone-200 rounded p-4 mb-6">
+    <dl class="grid grid-cols-2 gap-3 text-sm">
+      <% if has_country %>
+        <div>
+          <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider">Country</dt>
+          <dd class="mt-1"><%= country %></dd>
+        </div>
+      <% end %>
+      <% if has_email %>
+        <div>
+          <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider">Email</dt>
+          <dd class="mt-1"><%= mail_to email %></dd>
+        </div>
+      <% end %>
+      <% if has_website %>
+        <div>
+          <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider">Website</dt>
+          <dd class="mt-1"><%= link_to @owner.website, sanitize(@owner.website), target: "_blank", rel: "noopener noreferrer", class: "text-stone-700 hover:text-stone-900" %></dd>
+        </div>
+      <% end %>
+    </dl>
+  </div>
+<% end %>

@@ -1,8 +1,12 @@
 # decor/config/routes.rb
-# version 1.7
-# v1.7 (Session 20): Added delete_confirm collection route under admin/site_texts
-#   so the generic "Delete Text" page has a clean URL (/admin/site_texts/delete_confirm).
-#   The actual destroy still uses DELETE /admin/site_texts/:key (unchanged).
+# version 1.8
+# v1.8 (Session 23): Added member routes under :owners for the three sub-pages:
+#   GET /owners/:id/computers  → owners#computers  (computers_owner_path)
+#   GET /owners/:id/appliances → owners#appliances (appliances_owner_path)
+#   GET /owners/:id/components → owners#components (components_owner_path)
+#   The owners#show action now renders a compact summary card view; the three
+#   sub-pages each show a single section (computers / appliances / components).
+# v1.7 (Session 20): Added delete_confirm collection route under admin/site_texts.
 # v1.6 (Session 20): Added news, barter_trade, privacy public routes.
 # v1.5 (Session 18): Added public readme route and admin site_texts resource.
 # v1.4 (Session 17): Added resources :appliances and device_context defaults.
@@ -20,7 +24,16 @@ Rails.application.routes.draw do
   get "barter_trade", to: "site_texts#show", defaults: { key: "barter_trade" }, as: :barter_trade
   get "privacy",      to: "site_texts#show", defaults: { key: "privacy" },      as: :privacy
 
-  resources :owners
+  # Owner sub-pages: each shows one section of the owner's profile.
+  # show remains the summary/profile card view.
+  resources :owners do
+    member do
+      get :computers   # /owners/:id/computers  — computers table
+      get :appliances  # /owners/:id/appliances — appliances table
+      get :components  # /owners/:id/components — components table
+    end
+  end
+
   resources :computers,  defaults: { device_context: "computer" }
 
   # Appliances index — shares the computers controller; device_context param

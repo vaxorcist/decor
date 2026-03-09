@@ -1,15 +1,21 @@
-# decor/app/controllers/owners_controller.rb - version 1.5
+# decor/app/controllers/owners_controller.rb - version 1.6
+# v1.6 (Session 23): Split owner show page into three sub-pages.
+#   - show action: now loads only counts for the summary card view (no full eager_load).
+#   - Added computers action: loads @computers (device_type: computer) with eager_load.
+#   - Added appliances action: loads @appliances (device_type: appliance) with eager_load.
+#   - Added components action: loads @components with eager_load.
+#   - set_owner before_action extended to cover all three new actions.
+#   Query patterns (eager_load, Arel.sql ORDER BY) carried over unchanged from v1.5.
 # v1.5 (Session 18): show action: split @computers into @computers (device_type:
 #   computer) and @appliances (device_type: appliance) so the owner show page can
 #   render a separate Appliances table between the Computers table and Components table.
-#   Both queries use the same eager_load + Arel.sql ordering pattern as before.
 # v1.4: show action: computers ordered by model name; components ordered by computer
 #   model name, computer serial number, component type name. eager_load used so joined
 #   table columns are available in ORDER BY. NULLS LAST puts spare components after
 #   computer-attached ones.
 
 class OwnersController < ApplicationController
-  before_action :set_owner, only: %i[show edit update destroy]
+  before_action :set_owner, only: %i[show edit update destroy computers appliances components]
   before_action -> { require_owner(@owner) }, only: %i[edit update destroy]
   before_action :load_invite, only: %i[new create]
 
@@ -50,25 +56,36 @@ class OwnersController < ApplicationController
     end
   end
 
+  # Summary page — shows profile info and section counts only.
+  # Full tables live in the computers / appliances / components sub-pages.
   def show
-    # Computers (device_type: computer) — ordered by model name.
-    # eager_load forces LEFT OUTER JOIN so ORDER BY on computer_models.name works
-    # in a single query (inner join would suffice since computer_model is always
-    # present, but eager_load is the established pattern here).
+    @computer_count  = @owner.computers.where(device_type: :computer).count
+    @appliance_count = @owner.computers.where(device_type: :appliance).count
+    @component_count = @owner.components.count
+  end
+
+  # Sub-page: owner's computers (device_type: computer).
+  # Ordered by model name; eager_load required for ORDER BY on joined table.
+  def computers
     @computers = @owner.computers
                        .where(device_type: :computer)
                        .eager_load(:computer_model)
                        .order(Arel.sql("computer_models.name ASC"))
+  end
 
-    # Appliances (device_type: appliance) — same ordering as computers.
+  # Sub-page: owner's appliances (device_type: appliance).
+  # Same ordering pattern as computers.
+  def appliances
     @appliances = @owner.computers
                         .where(device_type: :appliance)
                         .eager_load(:computer_model)
                         .order(Arel.sql("computer_models.name ASC"))
+  end
 
-    # Components: ordered by computer model name, then computer serial number, then
-    # component type name. NULLS LAST puts spare components (no computer) after
-    # computer-attached ones. Arel.sql() required for multi-table ORDER BY strings.
+  # Sub-page: owner's components.
+  # Ordered by computer model name, then serial number, then component type.
+  # NULLS LAST keeps spare components (no computer) at the bottom.
+  def components
     @components = @owner.components
                         .eager_load(:component_type, computer: :computer_model)
                         .order(
