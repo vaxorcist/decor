@@ -1,10 +1,16 @@
-<%# decor/app/views/computers/_computer.html.erb - version 1.8 %>
-<%# v1.8 (Session 17): Type column cell hidden when @device_context == "appliance", %>
-<%#   matching the Type column header visibility in index.html.erb v1.7. %>
-<%#   Every row on the Appliances page is an appliance, so the column adds no value. %>
-<%# v1.7: Added "Type" column after Model, showing device_type as a capitalised string. %>
-<%# v1.6: computer.condition → computer.computer_condition following the %>
-<%#   conditions → computer_conditions table/model rename (Session 7, Feb 25, 2026). %>
+<%# decor/app/views/computers/_computer.html.erb - version 1.10 %>
+<%# v1.10 (Session 22): Removed the Type column cell entirely. The Type column %>
+<%#   header was removed from index.html.erb at the same time — the Computers page %>
+<%#   always shows computers (type is implicit) and the Appliances page always shows %>
+<%#   appliances, so the column was redundant on both routes. %>
+<%# v1.9 (Session 21): Added "Barter" column (barter_status), visible to logged-in %>
+<%#   members only. Cell and its matching header (index.html.erb) are both wrapped %>
+<%#   in - if logged_in? - so the column is completely absent for visitors. %>
+<%#   Offered → green text; Wanted → amber text; no_barter → em-dash. %>
+<%#   Column position: after Run Status, before Actions. %>
+<%# v1.8 (Session 17): Type column cell hidden when @device_context == "appliance". %>
+<%# v1.7: Added "Type" column after Model. %>
+<%# v1.6: computer.condition → computer.computer_condition. %>
 
 <tr id="<%= dom_id computer %>" class="hover:bg-stone-50">
   <!-- Owner -->
@@ -16,13 +22,6 @@
   <td class="px-4 py-3 whitespace-nowrap font-medium text-stone-900">
     <%= link_to computer.computer_model.name, computer, class: "text-indigo-600 hover:text-indigo-900" %>
   </td>
-
-  <%# Type cell matches the header: hidden on the Appliances page, visible on Computers. %>
-  <% unless @device_context == "appliance" %>
-    <td class="px-4 py-3 whitespace-nowrap text-stone-600">
-      <%= computer.device_type.capitalize %>
-    </td>
-  <% end %>
 
   <!-- Order Number -->
   <td class="px-4 py-3 whitespace-nowrap text-stone-600">
@@ -43,6 +42,19 @@
   <td class="px-4 py-3 whitespace-nowrap text-stone-600">
     <%= computer.run_status&.name || "—" %>
   </td>
+
+  <%# Barter (barter_status) — members only; column absent entirely for visitors. %>
+  <% if logged_in? %>
+    <td class="px-4 py-3 whitespace-nowrap">
+      <% if computer.barter_status_offered? %>
+        <span class="text-green-700">Offered</span>
+      <% elsif computer.barter_status_wanted? %>
+        <span class="text-amber-600">Wanted</span>
+      <% else %>
+        <span class="text-stone-400">—</span>
+      <% end %>
+    </td>
+  <% end %>
 
   <!-- Actions -->
   <td class="px-4 py-3 whitespace-nowrap text-right">

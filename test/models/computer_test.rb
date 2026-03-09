@@ -1,6 +1,9 @@
 # decor/test/models/computer_test.rb
-# version 1.4
-# Added: device_type enum tests — default, predicates, and scope filtering.
+# version 1.5
+# v1.5 (Session 22): Added barter_status enum tests — default, predicates,
+#   fixture values (alice_vax: wanted, dec_unibus_router: offered, all others: no_barter).
+#   Pattern mirrors device_type tests above: string-form and predicate-form assertions.
+# v1.4: Added device_type enum tests — default, predicates, and scope filtering.
 
 require "test_helper"
 
@@ -152,5 +155,75 @@ class ComputerTest < ActiveSupport::TestCase
       "device_type_appliance scope must include the appliance fixture"
     assert_not appliances.exists?(computers(:alice_pdp11).id),
       "device_type_appliance scope must not include computers"
+  end
+
+  # --- barter_status enum tests ---
+
+  test "barter_status defaults to no_barter" do
+    # A new record without an explicit barter_status must default to no_barter (0).
+    computer = Computer.new(
+      owner: owners(:one),
+      computer_model: computer_models(:pdp11_70),
+      serial_number: "TEST-SN-BARTER-001"
+    )
+    assert_equal "no_barter", computer.barter_status
+  end
+
+  test "barter_status_no_barter? is true for default record" do
+    computer = Computer.new(
+      owner: owners(:one),
+      computer_model: computer_models(:pdp11_70),
+      serial_number: "TEST-SN-BARTER-002"
+    )
+    assert computer.barter_status_no_barter?
+    assert_not computer.barter_status_offered?
+    assert_not computer.barter_status_wanted?
+  end
+
+  test "barter_status can be set to offered" do
+    computer = Computer.new(
+      owner: owners(:one),
+      computer_model: computer_models(:pdp11_70),
+      serial_number: "TEST-SN-BARTER-003",
+      barter_status: :offered
+    )
+    assert_equal "offered", computer.barter_status
+    assert computer.barter_status_offered?
+    assert_not computer.barter_status_no_barter?
+    assert_not computer.barter_status_wanted?
+  end
+
+  test "barter_status can be set to wanted" do
+    computer = Computer.new(
+      owner: owners(:one),
+      computer_model: computer_models(:pdp11_70),
+      serial_number: "TEST-SN-BARTER-004",
+      barter_status: :wanted
+    )
+    assert_equal "wanted", computer.barter_status
+    assert computer.barter_status_wanted?
+    assert_not computer.barter_status_no_barter?
+    assert_not computer.barter_status_offered?
+  end
+
+  test "alice_vax fixture has barter_status wanted" do
+    # alice_vax was set to barter_status: 2 (wanted) in computers.yml v1.7.
+    vax = computers(:alice_vax)
+    assert_equal "wanted", vax.barter_status
+    assert vax.barter_status_wanted?
+  end
+
+  test "dec_unibus_router fixture has barter_status offered" do
+    # dec_unibus_router was set to barter_status: 1 (offered) in computers.yml v1.7.
+    router = computers(:dec_unibus_router)
+    assert_equal "offered", router.barter_status
+    assert router.barter_status_offered?
+  end
+
+  test "alice_pdp11 fixture has barter_status no_barter" do
+    # alice_pdp11 omits barter_status in the fixture, so it receives the DB default (0).
+    pdp11 = computers(:alice_pdp11)
+    assert_equal "no_barter", pdp11.barter_status
+    assert pdp11.barter_status_no_barter?
   end
 end

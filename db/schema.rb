@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_08_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_09_100001) do
   create_table "component_conditions", force: :cascade do |t|
     t.string "condition", limit: 40, null: false
     t.datetime "created_at", precision: nil, null: false
@@ -26,6 +26,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_08_100000) do
   end
 
   create_table "components", force: :cascade do |t|
+    t.integer "barter_status", default: 0, null: false
     t.integer "component_category", default: 0, null: false
     t.integer "component_condition_id"
     t.integer "component_type_id", null: false
@@ -37,6 +38,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_08_100000) do
     t.integer "owner_id", null: false
     t.string "serial_number", limit: 20
     t.datetime "updated_at", precision: nil, null: false
+    t.index ["barter_status"], name: "index_components_on_barter_status"
     t.index ["component_category"], name: "index_components_on_component_category"
     t.index ["component_condition_id"], name: "index_components_on_component_condition_id"
     t.index ["component_type_id"], name: "index_components_on_component_type_id"
@@ -61,6 +63,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_08_100000) do
   end
 
   create_table "computers", force: :cascade do |t|
+    t.integer "barter_status", default: 0, null: false
     t.integer "computer_condition_id"
     t.integer "computer_model_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -71,6 +74,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_08_100000) do
     t.integer "run_status_id"
     t.string "serial_number", limit: 20, null: false
     t.datetime "updated_at", precision: nil, null: false
+    t.index ["barter_status"], name: "index_computers_on_barter_status"
     t.index ["computer_condition_id"], name: "index_computers_on_computer_condition_id"
     t.index ["computer_model_id"], name: "index_computers_on_computer_model_id"
     t.index ["device_type"], name: "index_computers_on_device_type"

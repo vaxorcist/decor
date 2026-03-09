@@ -1,8 +1,13 @@
 # decor/app/models/component.rb
-# version 1.3
-# Changed: Added component_category enum (integral: 0, peripheral: 1).
-# "Spare" status remains implicit via computer_id IS NULL — a component
-# without a computer_id is a spare, regardless of its category.
+# version 1.4
+# v1.4 (Session 21): Added barter_status enum.
+#   0 = no_barter (default) — not available for trade
+#   1 = offered             — owner is offering this item for trade
+#   2 = wanted              — owner is looking for this item (need not be in collection)
+#   Prefix: barter_status_ → predicates: barter_status_no_barter?, barter_status_offered?, barter_status_wanted?
+#   Visibility: barter_status values are only shown to logged-in members (enforced in
+#   controllers and views, not at the model layer).
+# v1.3 (Session 13): Added component_category enum (integral: 0, peripheral: 1).
 
 class Component < ApplicationRecord
   belongs_to :owner
@@ -23,6 +28,14 @@ class Component < ApplicationRecord
   # peripheral spare. Both states are represented by category + presence of
   # computer_id together.
   enum :component_category, { integral: 0, peripheral: 1 }, prefix: true
+
+  # Barter trade status for this item.
+  # no_barter — not available for trade (the default for all records)
+  # offered   — owner is offering this item for trade
+  # wanted    — owner is looking for this item; the record need not represent a
+  #             physically owned component (special status per design spec)
+  # All barter values are only displayed to logged-in members.
+  enum :barter_status, { no_barter: 0, offered: 1, wanted: 2 }, prefix: true
 
   # Search scope that searches across component type, owner name, computer model,
   # and description.

@@ -1,13 +1,15 @@
-# decor/app/controllers/components_controller.rb - version 1.6
-# v1.6 (Session 19): Added sort case "order_asc" — sorts by components.order_number
-#   ASC NULLS LAST. order_number is on the components table itself so no join is
-#   needed. Arel.sql() required because the ORDER BY string contains NULLS LAST
-#   (a SQL keyword phrase that Rails rejects as a bare string). NULLs sort last so
-#   components without an order number appear at the bottom of the list.
-# v1.5: destroy: added source=computer_show branch → redirects to computer_path (show page).
-#   Used when deleting a component from computers/show so the user stays on that page.
-#   source=computer (edit page) behaviour unchanged.
-# Previous (v1.4): source=owner branch added; capture owner/computer before destroy.
+# decor/app/controllers/components_controller.rb
+# version 1.7
+# v1.7 (Session 21): Added barter_status filter to index.
+#   - Only applied when the user is logged in (logged_in? helper from authentication.rb).
+#   - Default for logged-in users: "0+1" (no_barter + offered).
+#   - Non-logged-in users: no barter filter applied; barter data hidden in views.
+#   - Filter param: barter_status = "0", "0+1", "1", or "2".
+#   - :barter_status added to strong params (component_params).
+#   - :component_category added to strong params (was missing — needed for form).
+# v1.6 (Session 19): Added sort case "order_asc".
+# v1.5: source=computer_show redirect.
+# v1.4: source=owner redirect; capture owner/computer before destroy.
 
 class ComponentsController < ApplicationController
   before_action :set_component, only: %i[show edit update destroy]
@@ -30,13 +32,26 @@ class ComponentsController < ApplicationController
       end
     end
 
+    # Barter status filter — members only.
+    # Non-logged-in visitors see all items with no barter information displayed.
+    # Default for logged-in users: "0+1" (no_barter + offered). This hides "wanted"
+    # items from the default listing since those records may not represent items the
+    # owner physically possesses.
+    if logged_in?
+      barter_filter = params[:barter_status].presence || "0+1"
+      components = case barter_filter
+      when "0"   then components.where(barter_status: 0)
+      when "1"   then components.where(barter_status: 1)
+      when "2"   then components.where(barter_status: 2)
+      else            components.where(barter_status: [0, 1])  # "0+1" and any unknown value
+      end
+    end
+
     # Sort by owner joins the owners table to sort by user_name alphabetically.
     # Sort by type joins the component_types table to sort by name alphabetically.
     # Sort by order_asc uses Arel.sql() because NULLS LAST is a SQL keyword phrase
     # that Rails rejects as a bare string in .order(). order_number lives on the
     # components table so no join is needed.
-    # Both joins-based sorts use bare strings (also wrapped via Arel.sql for safety
-    # since they reference table.column notation).
     components = case params[:sort]
     when "added_asc"  then components.order(created_at: :asc)
     when "added_desc" then components.order(created_at: :desc)
@@ -92,11 +107,7 @@ class ComponentsController < ApplicationController
 
   def destroy
     # Capture owner and computer before destroy for redirect decisions.
-    # source param controls where the user lands after deletion:
-    #   source=owner         → owner show page   (deleted from owners/show)
-    #   source=computer_show → computer show page (deleted from computers/show)
-    #   source=computer      → computer edit page (deleted from embedded edit form)
-    #   (none)               → components index
+    # source param controls where the user lands after deletion.
     owner    = @component.owner
     computer = @component.computer
 
@@ -105,10 +116,8 @@ class ComponentsController < ApplicationController
     if params[:source] == "owner"
       redirect_to owner_path(owner), notice: "Component was successfully deleted."
     elsif params[:source] == "computer_show" && computer.present?
-      # Stay on the computer show page after deleting from computers/show
       redirect_to computer_path(computer), notice: "Component was successfully deleted."
     elsif params[:source] == "computer" && computer.present?
-      # Redirect back to the computer edit page when deleting from embedded form
       redirect_to edit_computer_path(computer), notice: "Component was successfully deleted."
     else
       redirect_to components_path, notice: "Component was successfully deleted."
@@ -130,9 +139,11 @@ class ComponentsController < ApplicationController
       :component_type_id,
       :computer_id,
       :component_condition_id,
+      :component_category, # enum — integral/peripheral; editable on form
       :serial_number,
       :order_number,
-      :description
+      :description,
+      :barter_status       # select on new/edit forms; members only
     )
   end
 end

@@ -1,6 +1,9 @@
 # decor/test/models/component_test.rb
-# version 1.3
-# Fixed: bob_vt100_terminal → charlie_vt100_terminal to match fixture rename.
+# version 1.4
+# v1.4 (Session 22): Added barter_status enum tests — default, predicates,
+#   fixture values (spare_disk: wanted, charlie_vt100_terminal: offered, others: no_barter).
+#   Pattern mirrors component_category tests above.
+# v1.3: Fixed: bob_vt100_terminal → charlie_vt100_terminal to match fixture rename.
 # The peripheral fixture was moved to owner three (charlie) to avoid breaking
 # both OwnerExportServiceTest (alice count) and OwnersControllerDestroyTest
 # (bob count).
@@ -137,5 +140,71 @@ class ComponentTest < ActiveSupport::TestCase
     assert spare_peripheral.valid?
     assert_nil spare_peripheral.computer
     assert spare_peripheral.component_category_peripheral?
+  end
+
+  # --- barter_status enum tests ---
+
+  test "barter_status defaults to no_barter" do
+    # A new record without an explicit barter_status must default to no_barter (0).
+    component = Component.new(
+      owner: owners(:one),
+      component_type: component_types(:memory_board)
+    )
+    assert_equal "no_barter", component.barter_status
+  end
+
+  test "barter_status_no_barter? is true for default record" do
+    component = Component.new(
+      owner: owners(:one),
+      component_type: component_types(:memory_board)
+    )
+    assert component.barter_status_no_barter?
+    assert_not component.barter_status_offered?
+    assert_not component.barter_status_wanted?
+  end
+
+  test "barter_status can be set to offered" do
+    component = Component.new(
+      owner: owners(:one),
+      component_type: component_types(:memory_board),
+      barter_status: :offered
+    )
+    assert_equal "offered", component.barter_status
+    assert component.barter_status_offered?
+    assert_not component.barter_status_no_barter?
+    assert_not component.barter_status_wanted?
+  end
+
+  test "barter_status can be set to wanted" do
+    component = Component.new(
+      owner: owners(:one),
+      component_type: component_types(:memory_board),
+      barter_status: :wanted
+    )
+    assert_equal "wanted", component.barter_status
+    assert component.barter_status_wanted?
+    assert_not component.barter_status_no_barter?
+    assert_not component.barter_status_offered?
+  end
+
+  test "spare_disk fixture has barter_status wanted" do
+    # spare_disk was set to barter_status: 2 (wanted) in components.yml v1.4.
+    spare = components(:spare_disk)
+    assert_equal "wanted", spare.barter_status
+    assert spare.barter_status_wanted?
+  end
+
+  test "charlie_vt100_terminal fixture has barter_status offered" do
+    # charlie_vt100_terminal was set to barter_status: 1 (offered) in components.yml v1.4.
+    terminal = components(:charlie_vt100_terminal)
+    assert_equal "offered", terminal.barter_status
+    assert terminal.barter_status_offered?
+  end
+
+  test "pdp11_memory fixture has barter_status no_barter" do
+    # pdp11_memory omits barter_status in the fixture, so it receives the DB default (0).
+    memory = components(:pdp11_memory)
+    assert_equal "no_barter", memory.barter_status
+    assert memory.barter_status_no_barter?
   end
 end

@@ -1,19 +1,16 @@
 # decor/app/helpers/computers_helper.rb
-# version 1.4
-# v1.4 (Session 20): Removed computer_form_device_type_options — dead code now that
-#   the device_type selector has been removed from _form.html.erb. The form uses a
-#   hidden field instead; no options array is needed. COMPUTER_DEVICE_TYPE_FILTER_OPTIONS
-#   and the filter helpers are retained for the index filter sidebar.
-# v1.3 (Session 18): Added computer_form_device_type_options for use by the
-#   device_type selector on the new/edit form. Reuses COMPUTER_DEVICE_TYPE_FILTER_OPTIONS
-#   so the option list is defined in exactly one place for both the filter
-#   sidebar and the record form.
-# v1.2 (Session 17): Added computer_filter_device_type_options and
-#   computer_filter_device_type_selected to support the new device_type
-#   filter selector in _filters.html.erb.
-# v1.1: conditions → computer_conditions rename (Session 7):
-#   Condition.order(:name)   → ComputerCondition.order(:name)
-#   params[:condition_id]    → params[:computer_condition_id]
+# version 1.5
+# v1.5 (Session 21): Added barter_status filter support.
+#   COMPUTER_BARTER_STATUS_FILTER_OPTIONS — options for the barter status
+#   filter selector in _filters.html.erb (members only).
+#   computer_filter_barter_status_options — returns the options array.
+#   computer_filter_barter_status_selected — returns current param or default "0+1".
+#   The "0+1" value is a combined filter handled by the controller
+#   (WHERE barter_status IN (0, 1)) — not a raw enum value.
+# v1.4 (Session 20): Removed computer_form_device_type_options (dead code).
+# v1.3 (Session 18): Added computer_form_device_type_options.
+# v1.2 (Session 17): Added computer_filter_device_type_options/selected.
+# v1.1: conditions → computer_conditions rename.
 
 module ComputersHelper
   COMPUTER_SORT_OPTIONS = {
@@ -24,12 +21,22 @@ module ComputersHelper
   }.freeze
 
   # Device type options used by the index filter sidebar.
-  # Values are the enum string keys as used by ActiveRecord — Rails translates
-  # these to the underlying integers when building the WHERE clause.
-  # "appliance" label is a placeholder until the final UI name is confirmed.
   COMPUTER_DEVICE_TYPE_FILTER_OPTIONS = [
     ["Computer", "computer"],
     ["Appliance", "appliance"]
+  ].freeze
+
+  # Barter status filter options for the index filter sidebar (members only).
+  # Values are strings handled by a case/when in the controller:
+  #   "0"   → WHERE barter_status = 0  (no trade only)
+  #   "0+1" → WHERE barter_status IN (0, 1) (no trade + offered — the default)
+  #   "1"   → WHERE barter_status = 1  (offered only)
+  #   "2"   → WHERE barter_status = 2  (wanted only)
+  COMPUTER_BARTER_STATUS_FILTER_OPTIONS = [
+    ["No Trade + Offered", "0+1"],
+    ["No Trade Only",      "0"],
+    ["Offered Only",       "1"],
+    ["Wanted Only",        "2"]
   ].freeze
 
   def computer_sort_options
@@ -68,15 +75,25 @@ module ComputersHelper
     params[:run_status_id]
   end
 
-  # Returns the pre-built options array for the device_type filter selector
-  # (used in _filters.html.erb).
+  # Returns the options array for the device_type filter selector.
   def computer_filter_device_type_options
     COMPUTER_DEVICE_TYPE_FILTER_OPTIONS
   end
 
-  # Returns the currently selected device_type value from params, or nil
-  # when no filter is active (which causes the "Any" blank option to be selected).
+  # Returns the currently selected device_type from params, or nil (→ "Any").
   def computer_filter_device_type_selected
     params[:device_type]
+  end
+
+  # Returns the options array for the barter status filter selector.
+  def computer_filter_barter_status_options
+    COMPUTER_BARTER_STATUS_FILTER_OPTIONS
+  end
+
+  # Returns the currently selected barter status filter value.
+  # Defaults to "0+1" when no param is present — this is the default filter
+  # applied by the controller for logged-in users.
+  def computer_filter_barter_status_selected
+    params[:barter_status].presence || "0+1"
   end
 end

@@ -1,8 +1,12 @@
-# decor/app/helpers/components_helper.rb - version 1.2
+# decor/app/helpers/components_helper.rb
+# version 1.3
+# v1.3 (Session 21): Added barter_status filter support.
+#   COMPONENT_BARTER_STATUS_FILTER_OPTIONS — options for the barter status
+#   filter selector in _filters.html.erb (members only).
+#   component_filter_barter_status_options — returns the options array.
+#   component_filter_barter_status_selected — returns current param or default "0+1".
 # v1.2 (Session 19): Added sort option "By Order No. (A-Z)" (key: order_asc).
-#   order_number is on the components table — no join required. NULLs sort last
-#   via NULLS LAST so components without an order number appear at the bottom.
-# v1.1: Added sort options: By Owner (A-Z) and By Type (A-Z)
+# v1.1: Added sort options: By Owner (A-Z) and By Type (A-Z).
 
 module ComponentsHelper
   COMPONENT_SORT_OPTIONS = {
@@ -12,6 +16,19 @@ module ComponentsHelper
     type_asc: "By Type (A-Z)",
     order_asc: "By Order No. (A-Z)"
   }.freeze
+
+  # Barter status filter options for the index filter sidebar (members only).
+  # Values are strings handled by a case/when in the controller:
+  #   "0"   → WHERE barter_status = 0  (no trade only)
+  #   "0+1" → WHERE barter_status IN (0, 1) (no trade + offered — the default)
+  #   "1"   → WHERE barter_status = 1  (offered only)
+  #   "2"   → WHERE barter_status = 2  (wanted only)
+  COMPONENT_BARTER_STATUS_FILTER_OPTIONS = [
+    ["No Trade + Offered", "0+1"],
+    ["No Trade Only",      "0"],
+    ["Offered Only",       "1"],
+    ["Wanted Only",        "2"]
+  ].freeze
 
   def component_sort_options
     COMPONENT_SORT_OPTIONS.map { |key, value| [value, key.to_s] }
@@ -39,5 +56,17 @@ module ComponentsHelper
 
   def component_filter_computer_model_selected
     params[:computer_model]
+  end
+
+  # Returns the options array for the barter status filter selector.
+  def component_filter_barter_status_options
+    COMPONENT_BARTER_STATUS_FILTER_OPTIONS
+  end
+
+  # Returns the currently selected barter status filter value.
+  # Defaults to "0+1" when no param is present — this is the default filter
+  # applied by the controller for logged-in users.
+  def component_filter_barter_status_selected
+    params[:barter_status].presence || "0+1"
   end
 end

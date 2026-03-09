@@ -1,11 +1,11 @@
-<%# decor/app/views/components/_component.html.erb - version 1.5 %>
-<%# v1.5 (Session 19): Column changes to match index.html.erb v1.3: %>
-<%#   - Computer and computer-serial cells merged into one "Computer-Serial No." cell. %>
-<%#     Renders as "Model Name – serial" (link) or "Spare" (unattached), matching the %>
-<%#     format already used in the owners/show components table. %>
-<%#   - Column order: Computer-Serial No. | Type | Description | Order No. | Serial No. | Owner %>
-<%#   - Order No. cell added (component.order_number). %>
-<%#   - Serial No. cell now shows component's own serial_number (was computer's serial). %>
+<%# decor/app/views/components/_component.html.erb - version 1.6 %>
+<%# v1.6 (Session 21): Added "Trade" column (barter_status), visible to logged-in %>
+<%#   members only. Cell and its matching header (index.html.erb) are both wrapped %>
+<%#   in - if logged_in? - so the column is completely absent for visitors. %>
+<%#   Offered → green text; Wanted → amber text; no_barter → em-dash. %>
+<%#   Column position: after Owner, before Actions. %>
+<%# v1.5 (Session 19): Computer and computer-serial cells merged; column reorder; %>
+<%#   Order No. added; Serial No. now shows component's own field. %>
 
 <tr id="<%= dom_id component %>" class="hover:bg-stone-50">
   <%# Computer-Serial No. — "Model – serial" link when attached; "Spare" when unattached %>
@@ -45,6 +45,19 @@
   <td class="px-4 py-3 whitespace-nowrap text-stone-600">
     <%= link_to component.owner.user_name, component.owner, class: "text-indigo-600 hover:text-indigo-900" %>
   </td>
+
+  <%# Trade (barter_status) — members only; column absent entirely for visitors. %>
+  <% if logged_in? %>
+    <td class="px-4 py-3 whitespace-nowrap">
+      <% if component.barter_status_offered? %>
+        <span class="text-green-700">Offered</span>
+      <% elsif component.barter_status_wanted? %>
+        <span class="text-amber-600">Wanted</span>
+      <% else %>
+        <span class="text-stone-400">—</span>
+      <% end %>
+    </td>
+  <% end %>
 
   <%# Actions — Edit shown to the record's owner only %>
   <td class="px-4 py-3 whitespace-nowrap text-right">

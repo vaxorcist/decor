@@ -1,4 +1,12 @@
-<%# decor/app/views/computers/show.html.erb - version 1.6 %>
+<%# decor/app/views/computers/show.html.erb - version 1.7 %>
+<%# v1.7 (Session 22): Added "Trade Status" field in Line 2, as the third column. %>
+<%#   Mirrors _form.html.erb v2.5 (Condition | Run Status | Trade Status). %>
+<%#   The field is wrapped in <% if logged_in? %> and Line 2 expands from %>
+<%#   grid-cols-2 to grid-cols-3 accordingly. Non-logged-in visitors see the %>
+<%#   original 2-col row. Colour coding matches index row partials: %>
+<%#     offered   → text-green-700 %>
+<%#     wanted    → text-amber-600 %>
+<%#     no_barter → text-stone-400 %>
 <%# v1.6 (Session 17): "No components attached to this computer." now uses %>
 <%#   @computer.device_type so it reads "...this computer." or "...this appliance." %>
 <%# v1.5 (Session 12): Delete source "computer" → "computer_show". %>
@@ -40,8 +48,9 @@
       </div>
     </div>
 
-    <%# Line 2 (2-col): Condition | Run Status %>
-    <div class="grid grid-cols-2 gap-4">
+    <%# Line 2: Condition | Run Status | Trade Status (3-col when logged in, 2-col otherwise) %>
+    <%# Trade Status is only shown to logged-in members — barter data is member-only. %>
+    <div class="grid <%= logged_in? ? "grid-cols-3" : "grid-cols-2" %> gap-4">
       <div>
         <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider mb-1">Condition</dt>
         <dd class="flex items-center w-full h-10 p-3 rounded border border-stone-300 bg-white text-sm"><%= @computer.computer_condition&.name || "—" %></dd>
@@ -50,6 +59,20 @@
         <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider mb-1">Run Status</dt>
         <dd class="flex items-center w-full h-10 p-3 rounded border border-stone-300 bg-white text-sm"><%= @computer.run_status&.name || "—" %></dd>
       </div>
+      <% if logged_in? %>
+        <div>
+          <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider mb-1">Trade Status</dt>
+          <dd class="flex items-center w-full h-10 p-3 rounded border border-stone-300 bg-white text-sm">
+            <% if @computer.barter_status_offered? %>
+              <span class="text-green-700">Offered</span>
+            <% elsif @computer.barter_status_wanted? %>
+              <span class="text-amber-600">Wanted</span>
+            <% else %>
+              <span class="text-stone-400">—</span>
+            <% end %>
+          </dd>
+        </div>
+      <% end %>
     </div>
 
     <%# Line 3 (full): History — whitespace-pre-wrap, ERB tag on same line (no leading whitespace rendered) %>
