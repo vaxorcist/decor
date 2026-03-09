@@ -1,32 +1,20 @@
-# decor/app/controllers/computers_controller.rb - version 1.14
-# v1.14 (Session 20): Removed device_type selector from the form (_form.html.erb v2.4).
-#   device_type is now a hidden field — fixed at creation, not editable afterwards.
-#   :device_type kept in strong params so the hidden field value is accepted on create.
-#   On update the hidden field echoes the current value, causing no change.
-# v1.13 (Session 18): new action: build() without device_type first, then assign
-#   it only if the param is present. v1.12's .presence fix was wrong — nil.presence
-#   is still nil, so build(device_type: nil) was still called and still overrode
-#   the enum default. The key must be absent from the hash entirely, not present
-#   with a nil value.
-# v1.12 (Session 18): new action: params[:device_type].presence — incorrect fix.
-# v1.11 (Session 18): new action reads params[:device_type] when building the record
-#   so "Add Appliance" (which passes device_type=appliance) pre-sets the type correctly.
-#   The heading (new.html.erb v1.4) and form selector (_form.html.erb v2.1) both derive
-#   from @computer.device_type and update automatically — no view changes needed.
-# v1.10 (Session 18): Permitted :device_type in computer_params so the new form
-#   selector can set it on create/update. Flash messages in create, update, and
-#   destroy are now device_type-aware (e.g. "Appliance was successfully updated."
-#   instead of hardcoded "Computer"). device_label captured before destroy so the
-#   message is available after the record is gone.
-# v1.9 (Session 17): Fixed: appliances appeared on the Computers page when no
-#   device_type filter param was present. On the computers route, device_type
-#   now defaults to "computer" when the param is absent, so the Computers page
-#   shows computers only by default. Explicit selection of "Appliance" in the
-#   Type sidebar filter still works as expected.
-# v1.8: Added set_device_context before_action; appliances route locks device_type.
-# v1.7: Added device_type filter param to index.
-# v1.6: destroy: capture owner before destroy; redirect to owner_path when source=owner.
-# v1.5: condition_id → computer_condition_id references updated.
+# decor/app/controllers/computers_controller.rb
+# version 1.15
+# v1.15 (Session 21): Added barter_status filter to index.
+#   - Only applied when the user is logged in (logged_in? helper from authentication.rb).
+#   - Default for logged-in users: "0+1" (no_barter + offered) — hides "wanted" items
+#     from the default view since those records may not represent owned machines.
+#   - Non-logged-in users: no barter filter applied; all items visible; barter data
+#     is hidden in views.
+#   - Filter param: barter_status = "0", "0+1", "1", or "2".
+#   - :barter_status added to strong params (computer_params).
+# v1.14 (Session 20): Removed device_type selector from the form.
+# v1.13 (Session 18): build() without device_type key fix.
+# v1.10 (Session 18): Permitted :device_type; flash messages device_type-aware.
+# v1.9 (Session 17): computers route defaults device_type to "computer".
+# v1.8: set_device_context before_action; appliances route locks device_type.
+# v1.6: destroy: source=owner redirect.
+# v1.5: condition_id → computer_condition_id.
 
 class ComputersController < ApplicationController
   before_action :set_device_context
@@ -61,6 +49,21 @@ class ComputersController < ApplicationController
 
     if params[:run_status_id].present?
       computers = computers.where(run_status_id: params[:run_status_id])
+    end
+
+    # Barter status filter — members only.
+    # Non-logged-in visitors see all items with no barter information displayed.
+    # For logged-in users the default is "0+1" (no_barter and offered), which hides
+    # "wanted" items (barter_status: 2) from the default listing because those records
+    # may represent items not physically in the owner's collection.
+    if logged_in?
+      barter_filter = params[:barter_status].presence || "0+1"
+      computers = case barter_filter
+      when "0"   then computers.where(barter_status: 0)
+      when "1"   then computers.where(barter_status: 1)
+      when "2"   then computers.where(barter_status: 2)
+      else            computers.where(barter_status: [0, 1])  # "0+1" and any unknown value
+      end
     end
 
     computers = case params[:sort]
@@ -174,7 +177,8 @@ class ComputersController < ApplicationController
       :run_status_id,
       :order_number,
       :history,
-      :device_type   # hidden field only — type is fixed at creation, not editable via UI
+      :device_type,   # hidden field only — type is fixed at creation, not editable via UI
+      :barter_status  # select on new/edit forms; members only
     )
   end
 end

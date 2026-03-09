@@ -1,4 +1,13 @@
-<%# decor/app/views/owners/show.html.erb - version 1.7 %>
+<%# decor/app/views/owners/show.html.erb - version 1.8 %>
+<%# v1.8 (Session 22): Added "Trade" column to all three sub-tables (Computers, %>
+<%#   Appliances, Components). Both <th> and <td> are wrapped in %>
+<%#   <% if logged_in? %> — barter data is member-only and must be completely %>
+<%#   absent for unauthenticated visitors. %>
+<%#   Computers / Appliances: Trade after Status, before Actions. %>
+<%#   Components: no Owner column on this page (owner is implicit), so Trade %>
+<%#   goes after Serial No., before Actions. %>
+<%#   Colour coding: offered → text-green-700, wanted → text-amber-600, %>
+<%#   no_barter → text-stone-400 (dash). %>
 <%# v1.7 (Session 19): Components table column changes: %>
 <%#   - Header "Computer" renamed to "Computer-Serial No." (cell already rendered %>
 <%#     as "Model – serial", so data unchanged). %>
@@ -79,6 +88,10 @@
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Serial</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Condition</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Status</th>
+              <%# Trade header — visible to logged-in members only %>
+              <% if logged_in? %>
+                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Trade</th>
+              <% end %>
               <th class="px-4 py-2"></th>
             </tr>
           </thead>
@@ -93,6 +106,18 @@
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= computer.serial_number %></td>
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= computer.computer_condition&.name || "—" %></td>
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= computer.run_status&.name || "—" %></td>
+                <%# Trade cell — visible to logged-in members only %>
+                <% if logged_in? %>
+                  <td class="px-4 py-3 whitespace-nowrap">
+                    <% if computer.barter_status_offered? %>
+                      <span class="text-green-700">Offered</span>
+                    <% elsif computer.barter_status_wanted? %>
+                      <span class="text-amber-600">Wanted</span>
+                    <% else %>
+                      <span class="text-stone-400">—</span>
+                    <% end %>
+                  </td>
+                <% end %>
                 <%# Actions — Edit and Delete shown to owner only %>
                 <td class="px-4 py-3 whitespace-nowrap text-right">
                   <% if Current.owner == @owner %>
@@ -137,6 +162,10 @@
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Serial</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Condition</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Status</th>
+              <%# Trade header — visible to logged-in members only %>
+              <% if logged_in? %>
+                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Trade</th>
+              <% end %>
               <th class="px-4 py-2"></th>
             </tr>
           </thead>
@@ -151,6 +180,18 @@
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= appliance.serial_number %></td>
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= appliance.computer_condition&.name || "—" %></td>
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= appliance.run_status&.name || "—" %></td>
+                <%# Trade cell — visible to logged-in members only %>
+                <% if logged_in? %>
+                  <td class="px-4 py-3 whitespace-nowrap">
+                    <% if appliance.barter_status_offered? %>
+                      <span class="text-green-700">Offered</span>
+                    <% elsif appliance.barter_status_wanted? %>
+                      <span class="text-amber-600">Wanted</span>
+                    <% else %>
+                      <span class="text-stone-400">—</span>
+                    <% end %>
+                  </td>
+                <% end %>
                 <%# Actions — Edit and Delete shown to owner only %>
                 <td class="px-4 py-3 whitespace-nowrap text-right">
                   <% if Current.owner == @owner %>
@@ -196,6 +237,12 @@
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Description</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Order No.</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Serial No.</th>
+              <%# Trade header — visible to logged-in members only. %>
+              <%# No Owner column on this page (owner is implicit), so Trade sits %>
+              <%# after Serial No., before Actions — the last data column position. %>
+              <% if logged_in? %>
+                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Trade</th>
+              <% end %>
               <th class="px-4 py-2"></th>
             </tr>
           </thead>
@@ -220,6 +267,18 @@
                 <td class="px-4 py-3 text-stone-600"><%= truncate(component.description, length: 50) || "—" %></td>
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.order_number || "—" %></td>
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.serial_number || "—" %></td>
+                <%# Trade cell — visible to logged-in members only %>
+                <% if logged_in? %>
+                  <td class="px-4 py-3 whitespace-nowrap">
+                    <% if component.barter_status_offered? %>
+                      <span class="text-green-700">Offered</span>
+                    <% elsif component.barter_status_wanted? %>
+                      <span class="text-amber-600">Wanted</span>
+                    <% else %>
+                      <span class="text-stone-400">—</span>
+                    <% end %>
+                  </td>
+                <% end %>
                 <%# Actions — Edit and Delete shown to owner only %>
                 <td class="px-4 py-3 whitespace-nowrap text-right">
                   <% if Current.owner == @owner %>

@@ -1,11 +1,12 @@
-<%# decor/app/views/computers/index.html.erb - version 1.7 %>
+<%# decor/app/views/computers/index.html.erb - version 1.9 %>
+<%# v1.9 (Session 22): Removed the Type column header entirely (Type was redundant — %>
+<%#   Computers page always shows computers, Appliances page always shows appliances). %>
+<%#   Matching <td> removed from _computer.html.erb v1.10 at the same time. %>
+<%#   Renamed column header "Trade" → "Barter" to match product terminology. %>
+<%# v1.8 (Session 22): Added "Trade" <th> header after Run Status, before Actions. %>
 <%# v1.7 (Session 17): All context-specific values now come from controller instance %>
 <%#   variables set by set_device_context, so this template serves both the %>
-<%#   /computers and /appliances routes without duplication: %>
-<%#     @page_title     — heading text ("Computers" or "Appliances") %>
-<%#     @index_path     — load_more path and turbo stream target %>
-<%#     @turbo_tbody_id — tbody id used by turbo_stream.append %>
-<%#     @device_context — controls Type column header visibility %>
+<%#   /computers and /appliances routes without duplication. %>
 <%# v1.6: Added "Type" column header between Model and Order Number. %>
 <%# v1.5: Renamed Description column header to Order Number. %>
 
@@ -25,14 +26,15 @@
               <tr>
                 <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Owner</th>
                 <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Model</th>
-                <%# Type column is redundant on the Appliances page — every row is an appliance. %>
-                <% unless @device_context == "appliance" %>
-                  <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Type</th>
-                <% end %>
                 <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Order Number</th>
                 <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Serial Number</th>
                 <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Condition</th>
                 <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Run Status</th>
+                <%# Barter header — visible to logged-in members only. %>
+                <%# The matching <td> in _computer.html.erb v1.10 uses the same guard. %>
+                <% if logged_in? %>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Barter</th>
+                <% end %>
                 <th class="px-4 py-2"></th>
               </tr>
             </thead>

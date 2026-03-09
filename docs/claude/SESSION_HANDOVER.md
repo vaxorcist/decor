@@ -1,9 +1,9 @@
 # decor/docs/claude/SESSION_HANDOVER.md
-# version 20.0
+# version 22.0
 
-**Date:** March 7, 2026
-**Branch:** feature/component-table-columns (to be created and committed)
-**Status:** Session 19 work complete, not yet committed.
+**Date:** March 9, 2026
+**Branch:** feature/session-21 (not yet created — work in progress, not committed)
+**Status:** Session 21 partially complete. Back-end layer done; view layer half done.
 
 ---
 
@@ -15,7 +15,7 @@ doing anything else.
 
 **MANDATORY at every session start:**
 
-STEP 0 — Tool sanity check (from skill description — visible without reading file):
+STEP 0 — Tool sanity check:
 ```bash
 echo "bash_tool OK"
 ```
@@ -32,76 +32,226 @@ After each: log "Read FILENAME — N lines, complete."
 
 ---
 
+## !! RULE DOCUMENTS NOT UPDATED THIS SESSION !!
+
+Session 21 hit the token limit mid-feature. No rule documents were updated.
+The user explicitly requested that no rule documents be modified this session.
+COMMON_BEHAVIOR.md, PROGRAMMING_GENERAL.md, RAILS_SPECIFICS.md, and
+DECOR_PROJECT.md are all at the same versions as end of Session 20.
+
+DECOR_PROJECT.md Key file versions table has NOT been updated yet — this
+must be done at the end of Session 22 once all files are delivered.
+
+---
+
+## !! SEPARATOR / TOKEN ESTIMATE — CRITICAL NOTICE !!
+
+A line break after the leading separator was added this session (user
+requested in first response). Format for every response going forward:
+
+```
+================================================================================
+(blank line)
+**Token Usage...**
+```
+
+---
+
 ## Session Summary
 
-Session 19 delivered:
-1. Component table column reorder + additions on three pages
-   (/components, /owners/show, /computers/edit)
-2. "By Order No." sort option on /components
+Session 21 delivered the barter_status feature (partial).
+The feature adds `barter_status` (0=no_barter, 1=offered, 2=wanted) to both
+the `computers` and `components` tables. Values are visible to logged-in
+members only. A barter filter (defaulting to "0+1") appears on all index
+pages for logged-in users.
+
+**Work completed this session:**
+- Migrations (2 new files)
+- Models: computer.rb, component.rb (enum added)
+- Controllers: computers_controller.rb, components_controller.rb (filter + strong params)
+- Helpers: computers_helper.rb, components_helper.rb (filter options + helpers)
+- Fixtures: computers.yml, components.yml (barter_status values on 2 fixtures each)
+- Views (partial): _computer.html.erb, _component.html.erb, computers/_form.html.erb,
+  components/_form.html.erb
+
+**Work NOT yet done (view layer, second half):**
+- decor/app/views/computers/_filters.html.erb
+- decor/app/views/components/_filters.html.erb
+- decor/app/views/computers/show.html.erb
+- decor/app/views/components/show.html.erb
+- decor/app/views/owners/show.html.erb
+- Tests (model + controller for both computers and components)
+- DECOR_PROJECT.md update
 
 ---
 
-## Work Completed This Session
+## Barter Feature — Full Design Spec
 
-### 1. Component Table Column Reorder + Order No. Added
+This section must be read by the next Claude before touching any view file.
 
-    decor/app/views/components/index.html.erb                (v1.2 → v1.3)
-    decor/app/views/components/_component.html.erb           (v1.4 → v1.5)
-    decor/app/views/owners/show.html.erb                     (v1.6 → v1.7)
-    decor/app/views/computers/_form.html.erb                 (v2.2 → v2.3)
+### Enum definition (same on both models)
+```ruby
+enum :barter_status, { no_barter: 0, offered: 1, wanted: 2 }, prefix: true
+# Predicates: barter_status_no_barter?, barter_status_offered?, barter_status_wanted?
+```
 
-/components: "Computer" (model name only) and "Serial Number" (computer's serial)
-were two separate columns — merged into one "Computer-Serial No." cell rendering
-as "Model – serial" link (or "Spare"). Component's own Order No. and Serial No.
-added. Final column order: Computer-Serial No. | Type | Description | Order No. |
-Serial No. | Owner.
+### Filter logic (both controllers, index action)
+```ruby
+if logged_in?
+  barter_filter = params[:barter_status].presence || "0+1"
+  records = case barter_filter
+            when "0"   then records.where(barter_status: 0)
+            when "1"   then records.where(barter_status: 1)
+            when "2"   then records.where(barter_status: 2)
+            else            records.where(barter_status: [0, 1])  # "0+1" default
+            end
+end
+```
 
-/owners/show components table: header "Computer" renamed to "Computer-Serial No."
-(cell data was already combined format — header was stale). Description moved
-before Order No. and Serial No. Final order: Computer-Serial No. | Type |
-Description | Order No. | Serial No.
+### Auth rule
+- Filter only applied when `logged_in?`
+- Non-logged-in visitors: no filter, all items visible, NO barter data shown anywhere
+- Logged-in users: filter active (default "0+1"); barter data visible
 
-/computers/edit components table: Description and Order No. were missing — added.
-Condition moved from second position to last. "Serial Number" shortened to
-"Serial No." for consistency. Final order: Type | Description | Order No. |
-Serial No. | Condition.
+### Display in index row partials (already done)
+- Column name: "Trade"
+- Position: after Run Status (computers), after Owner (components), before Actions
+- `<% if logged_in? %>` wraps both `<th>` (in index.html.erb — NOT YET DONE) and
+  `<td>` (in _computer.html.erb and _component.html.erb — already done v1.9 / v1.6)
+- offered  → `<span class="text-green-700">Offered</span>`
+- wanted   → `<span class="text-amber-600">Wanted</span>`
+- no_barter → `<span class="text-stone-400">—</span>`
 
-### 2. "By Order No." Sort on /components
+### Display on show pages (NOT YET DONE)
+- Same auth rule: only show barter_status when `logged_in?`
+- Label: "Trade Status"
+- Same colour coding as index rows
 
-    decor/app/helpers/components_helper.rb                   (v1.1 → v1.2)
-    decor/app/controllers/components_controller.rb           (v1.5 → v1.6)
+### Display in _form.html.erb (already done)
+- computers/_form.html.erb v2.5: Line 2 expanded to grid-cols-3;
+  barter_status select added as third field (Condition | Run Status | Trade Status)
+- components/_form.html.erb v1.6: New Row 3 (2-col) added:
+  Component Category | Trade Status
+- Select options: [["No Trade", "no_barter"], ["Offered", "offered"], ["Wanted", "wanted"]]
+- No logged_in? guard on forms (forms always require login)
 
-order_asc added to COMPONENT_SORT_OPTIONS constant in helper.
-Controller case: `components.order(Arel.sql("components.order_number ASC NULLS LAST"))`.
-No join needed — order_number is on components table directly.
-Arel.sql() required for NULLS LAST keyword phrase (bare string rejected by Rails).
-NULLs sort last: components without an order number appear at the bottom.
+### Display in component sub-table on computers/_form.html.erb (already done)
+- Trade column added after Condition, before Actions
+- No logged_in? guard (form always requires login)
+- Same colour coding
+
+### Barter filter in _filters.html.erb (NOT YET DONE)
+Helper options (defined in both helpers):
+```ruby
+COMPUTER_BARTER_STATUS_FILTER_OPTIONS = [
+  ["No Trade + Offered", "0+1"],
+  ["No Trade Only",      "0"],
+  ["Offered Only",       "1"],
+  ["Wanted Only",        "2"]
+].freeze
+# Same constant name pattern for components: COMPONENT_BARTER_STATUS_FILTER_OPTIONS
+```
+Helper methods:
+```ruby
+computer_filter_barter_status_options   # returns the options array
+computer_filter_barter_status_selected  # returns params[:barter_status].presence || "0+1"
+# Same pattern: component_filter_barter_status_options / _selected
+```
+Filter selector: wrap the entire barter filter block in `<% if logged_in? %>` —
+the selector must be completely absent for non-logged-in visitors.
+Label: "Trade"
+Position: at the bottom of the filter sidebar, after the last existing filter.
 
 ---
 
-## Lessons Learned This Session
+## Work Completed This Session — File List
 
-None — clean session, no bugs or surprises. All patterns followed from existing
-codebase (Arel.sql for NULLS LAST already documented in RAILS_SPECIFICS.md).
+### New files
+    decor/db/migrate/20260309100000_add_barter_status_to_computers.rb   v1.0
+    decor/db/migrate/20260309100001_add_barter_status_to_components.rb  v1.0
+
+### Updated files
+    decor/app/models/computer.rb                                         v1.5 → v1.6
+    decor/app/models/component.rb                                        v1.3 → v1.4
+    decor/app/controllers/computers_controller.rb                        v1.14 → v1.15
+    decor/app/controllers/components_controller.rb                       v1.6 → v1.7
+    decor/app/helpers/computers_helper.rb                                v1.4 → v1.5
+    decor/app/helpers/components_helper.rb                               v1.2 → v1.3
+    decor/test/fixtures/computers.yml                                    v1.6 → v1.7
+    decor/test/fixtures/components.yml                                   v1.3 → v1.4
+    decor/app/views/computers/_computer.html.erb                         v1.8 → v1.9
+    decor/app/views/components/_component.html.erb                       v1.5 → v1.6
+    decor/app/views/computers/_form.html.erb                             v2.4 → v2.5
+    decor/app/views/components/_form.html.erb                            v1.5 → v1.6
+
+### Notable fix in components_controller.rb v1.7
+`:component_category` was missing from `component_params` in v1.6 — it was
+silently dropped on form submit. Added in v1.7 alongside `:barter_status`.
 
 ---
 
-## Pending — Start of Next Session
+## Pending — Start of Next Session (Session 22)
 
-### 1. Commit Session 19 work
-Branch name suggestion: feature/component-table-columns
-Files to commit:
-  decor/app/views/components/index.html.erb
-  decor/app/views/components/_component.html.erb
-  decor/app/views/owners/show.html.erb
-  decor/app/views/computers/_form.html.erb
-  decor/app/helpers/components_helper.rb
-  decor/app/controllers/components_controller.rb
+### Priority 1 — Complete the barter_status view layer
 
-### 2. UI changes — components form and show (component_category) — carried over
-  component_category (integral/peripheral) not yet exposed in the UI.
+Request these files from the user in this exact upload order
+(colliding filenames — one per message):
 
-### 3. BulkUploadService stale model references — low priority, carried over
+  Message 1 (no collision — send together):
+    decor/app/views/computers/_filters.html.erb
+    decor/app/views/components/_filters.html.erb
+
+  Actually both are named _filters.html.erb — send separately:
+  Message 1: decor/app/views/computers/_filters.html.erb
+  Message 2: decor/app/views/components/_filters.html.erb
+  Message 3: decor/app/views/computers/show.html.erb
+  Message 4: decor/app/views/components/show.html.erb
+  Message 5: decor/app/views/owners/show.html.erb
+
+  Also needed (no collision — send in one message):
+    decor/app/views/computers/index.html.erb
+    decor/app/views/components/index.html.erb
+
+  The index files are needed for the <th> Trade column header (wrapped in
+  <% if logged_in? %>) that corresponds to the already-delivered <td> cells
+  in the row partials.
+
+### Priority 2 — Tests
+
+After all views are done, write tests for:
+- decor/test/models/computer_test.rb    — barter_status enum assertions
+- decor/test/models/component_test.rb   — barter_status enum assertions
+- decor/test/controllers/computers_controller_test.rb  — barter filter (logged in / logged out)
+- decor/test/controllers/components_controller_test.rb — barter filter (logged in / logged out)
+
+Fixture data available for tests (from this session's fixture updates):
+  Computers:
+    computers(:alice_vax)          barter_status: 2 (wanted)
+    computers(:dec_unibus_router)  barter_status: 1 (offered)
+    all others                     barter_status: 0 (no_barter, DB default)
+  Components:
+    components(:spare_disk)            barter_status: 2 (wanted)
+    components(:charlie_vt100_terminal) barter_status: 1 (offered)
+    all others                          barter_status: 0 (no_barter, DB default)
+
+### Priority 3 — DECOR_PROJECT.md update
+
+Update Key file versions table and "Work Completed" section for Session 21.
+Deliver as downloadable file.
+
+### Priority 4 — SESSION_HANDOVER.md → v23.0
+
+After all Session 22 work is done.
+
+---
+
+## Carried Over from Previous Sessions
+
+### UI changes — components form and show (component_category)
+The user stated at the start of Session 21 that this was already done in a
+prior session. No action needed.
+
+### BulkUploadService stale model references — low priority
     decor/app/services/bulk_upload_service.rb
     - Condition → ComputerCondition
     - computer.condition → computer.computer_condition
@@ -112,13 +262,33 @@ Files to commit:
 
 ## Git State
 
-**Branch:** Session 19 work not yet committed.
-**Suggested branch:** feature/component-table-columns
-**Next session:** create branch from main, place six files, run tests, commit, deploy.
+Session 21 work is NOT committed. No branch created yet.
+All Session 21 files must be placed, migrations run, full test suite run,
+lint checked, and security scanned before committing.
+
+Suggested branch: feature/session-21
+
+Commit workflow (from PROGRAMMING_GENERAL.md):
+  git switch main && git pull origin main
+  git switch -c feature/session-21
+  # place all files
+  bin/rails db:migrate
+  bin/rails test
+  bundle exec rubocop -A && bundle exec rubocop
+  bin/brakeman --no-pager
+  git add -A
+  git commit -m "Add barter_status to computers and components"
+  git push origin feature/session-21
+  gh pr create --fill
+  gh pr checks feature/session-21
+  gh pr merge --merge feature/session-21
+  git switch main && git pull origin main
+  git branch -d feature/session-21
+  kamal deploy
 
 ---
 
-## Other Candidates
+## Other Candidates (unchanged from Session 20)
 
 1. Dependabot PRs — dedicated session
 2. Legal/Compliance: Impressum, Privacy Policy, GDPR, Cookie Consent, TOS
@@ -130,9 +300,11 @@ Files to commit:
 
 ## Documents Updated This Session
 
-    decor/docs/claude/DECOR_PROJECT.md        v2.16
-    decor/docs/claude/SESSION_HANDOVER.md     v20.0
-    decor/docs/claude/RAILS_SPECIFICS.md      v2.2
+    decor/docs/claude/SESSION_HANDOVER.md     v22.0  ← this file
+
+    NOTE: No other rule documents updated this session (token limit reached
+    mid-feature; user explicitly requested no rule document changes).
+    DECOR_PROJECT.md will be updated in Session 22 after feature completion.
 
 ---
 

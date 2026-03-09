@@ -1,10 +1,12 @@
 # decor/test/fixtures/computers.yml
-# version 1.6
-# Fixed: dec_unibus_router owner changed to three (charlie) — a neutral owner
-# with no hardcoded count assertions in any existing test.
-# v1.5 used owner two (bob) which broke OwnersControllerDestroyTest (bob count = 2).
+# version 1.7
+# v1.7 (Session 21): Added barter_status values to two fixtures for filter tests.
+#   dec_unibus_router: barter_status: 1 (offered) — charlie's appliance.
+#   alice_vax:         barter_status: 2 (wanted)  — alice's computer.
+#   All other fixtures: barter_status omitted → DB default 0 (no_barter).
+#   barter_status values: 0 = no_barter, 1 = offered, 2 = wanted.
+# v1.6: dec_unibus_router owner changed to three (charlie) — neutral owner.
 # device_type values: 0 = computer (default), 1 = appliance.
-# All pre-existing fixtures omit device_type — they receive the DB default (0 = computer).
 
 alice_pdp11:
   owner: one
@@ -22,6 +24,7 @@ alice_vax:
   order_number: ORD-VAX-002
   computer_condition: original_repaired
   run_status: repair
+  barter_status: 2
   history:
 
 bob_pdp8:
@@ -54,9 +57,9 @@ unassigned_condition_test:
 
 # Appliance fixture for device_type enum tests.
 # Represents an autonomous network device that operates without a host computer.
-# Assigned to owner three (charlie) — a neutral owner with no hardcoded count
-# assertions in any existing test.
-# device_type: 1 = appliance (placeholder name until final UI label is decided).
+# Assigned to owner three (charlie) — neutral owner with no hardcoded count assertions.
+# device_type: 1 = appliance.
+# barter_status: 1 = offered — used for barter filter tests.
 dec_unibus_router:
   owner: three
   computer_model: pdp11_70
@@ -65,4 +68,5 @@ dec_unibus_router:
   computer_condition: original
   run_status: working
   device_type: 1
+  barter_status: 1
   history: Standalone UNIBUS-attached routing device.

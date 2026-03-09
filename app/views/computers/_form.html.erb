@@ -1,31 +1,15 @@
-<%# decor/app/views/computers/_form.html.erb - version 2.4 %>
-<%# v2.4 (Session 20): Removed visible device_type (Type) selector from Line 2. %>
-<%#   Type must not be changeable after creation — switching a computer to appliance %>
-<%#   or vice versa would create records that belong to neither category. %>
-<%#   Replaced with f.hidden_field :device_type so the correct type is still submitted %>
-<%#   on create (pre-set by the new action from the params[:device_type] link). %>
-<%#   On edit the hidden field simply echoes the current value — no change is possible. %>
-<%#   Line 2 grid reverted from grid-cols-3 to grid-cols-2 (Condition | Run Status). %>
-<%#   computer_form_device_type_options helper removed from computers_helper.rb (dead code). %>
-<%# v2.3 (Session 19): Components table column changes: %>
-<%#   - Column order: Type | Description | Order No. | Serial No. | Condition %>
-<%#   - "Description" added (was missing from this table). %>
-<%#   - "Order No." added (was missing from this table). %>
-<%#   - "Serial No." renamed from "Serial Number" for consistency with other tables. %>
-<%#   - "Condition" moved from second position to last (before actions). %>
-<%# v2.2 (Session 18): Model selector now filtered by computer.device_type so the %>
-<%#   "Add/Edit Appliance" form shows only appliance models and the "Add/Edit Computer" %>
-<%#   form shows only computer models. ComputerModel.where(device_type: ...) scopes %>
-<%#   the collection; the device_type value comes from the computer local variable %>
-<%#   already available in the partial. %>
-<%# v2.0 (Session 17): All hardcoded "Computer" strings replaced with %>
-<%#   computer.device_type.capitalize so the form reads "Update Computer" / %>
-<%#   "Update Appliance", "Add Computer's Component" / "Add Appliance's Component", %>
-<%#   etc., depending on the record's actual device_type. %>
-<%#   f.submit label is now explicit (overrides Rails default) for the same reason. %>
-<%# v1.9 (Session 10): Added Stimulus Back button alongside submit buttons so users %>
-<%#   don't have to scroll past the component section to reach the back button. %>
-<%#   Fallback URL mirrors the "Done" link: show page for existing, index for new. %>
+<%# decor/app/views/computers/_form.html.erb - version 2.5 %>
+<%# v2.5 (Session 21): Added barter_status field and Trade column in component sub-table. %>
+<%#   Line 2 now grid-cols-3: Condition | Run Status | Trade Status. %>
+<%#   barter_status select uses Computer.barter_statuses keys to build options so the %>
+<%#   labels are human-readable rather than raw integers. %>
+<%#   Component sub-table gains a "Trade" column (after Condition) showing each %>
+<%#   component's barter_status — members only context (form always requires login). %>
+<%# v2.4 (Session 20): Removed visible device_type selector; hidden field instead. %>
+<%#   Line 2 reverted from grid-cols-3 to grid-cols-2. %>
+<%# v2.3 (Session 19): Components table column changes. %>
+<%# v2.2 (Session 18): Model selector scoped to computer.device_type. %>
+<%# v2.0 (Session 17): All hardcoded "Computer" strings replaced with device_type.capitalize. %>
 
 <%= form_with model: computer, class: "space-y-4", style: "width: 80%;" do |f| %>
   <%= render "common/record_errors", record: computer %>
@@ -62,11 +46,10 @@
     </div>
   </div>
 
-  <!-- Line 2: Condition | Run Status -->
-  <%# device_type selector removed (Session 20) — type is fixed at creation. %>
-  <%# Grid reverted from grid-cols-3 to grid-cols-2. %>
-  <%# computer_condition_id references the computer_conditions table (renamed from conditions) %>
-  <div class="grid grid-cols-2 gap-4">
+  <!-- Line 2: Condition | Run Status | Trade Status -->
+  <%# Expanded from grid-cols-2 to grid-cols-3 to accommodate barter_status. %>
+  <%# The form is only accessible to logged-in owners so no logged_in? guard is needed. %>
+  <div class="grid grid-cols-3 gap-4">
     <div>
       <%= f.label :computer_condition_id, "Condition", class: "block text-sm font-medium text-stone-700" %>
       <%= f.collection_select :computer_condition_id, ComputerCondition.order(:name), :id, :name, { prompt: "Select a condition" }, class: field_classes %>
@@ -75,6 +58,17 @@
     <div>
       <%= f.label :run_status_id, "Run Status", class: "block text-sm font-medium text-stone-700" %>
       <%= f.collection_select :run_status_id, RunStatus.order(:name), :id, :name, { prompt: "Select a run status" }, class: field_classes %>
+    </div>
+
+    <div>
+      <%= f.label :barter_status, "Trade Status", class: "block text-sm font-medium text-stone-700" %>
+      <%# Build options from the enum hash so labels are human-readable. %>
+      <%# Keys: no_barter → "No Trade", offered → "Offered", wanted → "Wanted". %>
+      <%= f.select :barter_status,
+            [["No Trade", "no_barter"], ["Offered", "offered"], ["Wanted", "wanted"]],
+            {},
+            class: field_classes %>
+      <p class="mt-1 text-xs text-stone-500">Visible to members only.</p>
     </div>
   </div>
 
@@ -124,7 +118,7 @@
   </div>
 
   <%# [Device]'s Components list — below the add/edit form %>
-  <%# Column order: Type | Description | Order No. | Serial No. | Condition %>
+  <%# Column order: Type | Description | Order No. | Serial No. | Condition | Trade | Actions %>
   <div>
     <h2 class="text-xl font-semibold mb-4"><%= computer.device_type.capitalize %>'s Components</h2>
 
@@ -134,14 +128,12 @@
           <thead class="bg-stone-50">
             <tr>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Type</th>
-              <%# Description added (was missing); moved before Order No. and Serial No. %>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Description</th>
-              <%# Order No. added (was missing) %>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Order No.</th>
-              <%# Serial No. renamed from "Serial Number" for consistency %>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Serial No.</th>
-              <%# Condition moved from second position to last (before actions) %>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Condition</th>
+              <%# Trade column — always visible here (form requires login). %>
+              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Trade</th>
               <th class="px-4 py-2"></th>
             </tr>
           </thead>
@@ -152,16 +144,26 @@
                 <td class="px-4 py-3 whitespace-nowrap">
                   <%= link_to component.component_type.name, component_path(component), class: "text-indigo-600 hover:text-indigo-900" %>
                 </td>
-                <%# Description — added; truncated to prevent layout overflow %>
+                <%# Description — truncated to prevent layout overflow %>
                 <td class="px-4 py-3 text-stone-600" style="max-width: 250px;">
                   <div class="truncate"><%= component.description.presence || "—" %></div>
                 </td>
-                <%# Order No. — added %>
+                <%# Order No. %>
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.order_number.presence || "—" %></td>
                 <%# Serial No. — component's own serial number %>
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.serial_number.presence || "—" %></td>
-                <%# Condition — moved from second to last position %>
+                <%# Condition %>
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.component_condition&.condition || "—" %></td>
+                <%# Trade (barter_status) — green for offered, amber for wanted, dash for no_barter %>
+                <td class="px-4 py-3 whitespace-nowrap">
+                  <% if component.barter_status_offered? %>
+                    <span class="text-green-700">Offered</span>
+                  <% elsif component.barter_status_wanted? %>
+                    <span class="text-amber-600">Wanted</span>
+                  <% else %>
+                    <span class="text-stone-400">—</span>
+                  <% end %>
+                </td>
                 <%# Edit and Delete side by side %>
                 <td class="px-4 py-3 whitespace-nowrap text-right">
                   <div class="flex justify-end gap-4">

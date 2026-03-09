@@ -1,5 +1,10 @@
-<%# decor/app/views/components/_filters.html.erb - version 1.0 %>
-<%# Updated: Added wildcard usage tips for search functionality %>
+<%# decor/app/views/components/_filters.html.erb - version 1.1 %>
+<%# v1.1 (Session 22): Added "Trade" barter_status filter at the bottom of the %>
+<%#   sidebar, after Computer Model, before the Reset/Apply buttons. The entire %>
+<%#   block is wrapped in - if logged_in? - so non-logged-in visitors never %>
+<%#   see it. Helper methods: component_filter_barter_status_options / _selected %>
+<%#   (defined in components_helper.rb v1.3). %>
+<%# v1.0: Added wildcard usage tips for search functionality. %>
 
 <%= form_with url: components_path, method: :get, local: true, class: "col-span-1 self-start flex flex-col gap-4 mb-4 p-4 bg-stone-100" do |form| %>
   <div class="-mb-2 font-medium">Filters</div>
@@ -24,6 +29,16 @@
     <%= form.label :computer_model, "Computer Model", class: "text-sm text-stone-600 font-medium" %>
     <%= form.select :computer_model, component_filter_computer_model_options, { selected: component_filter_computer_model_selected, include_blank: "Any" }, { class: field_classes } %>
   </div>
+
+  <%# Trade (barter_status) filter — visible to logged-in members only. %>
+  <%# Non-logged-in visitors see no barter data anywhere; this block must be %>
+  <%# completely absent (not just greyed out) for unauthenticated requests. %>
+  <% if logged_in? %>
+    <div class="flex flex-col">
+      <%= form.label :barter_status, "Trade", class: "text-sm text-stone-600 font-medium" %>
+      <%= form.select :barter_status, component_filter_barter_status_options, { selected: component_filter_barter_status_selected }, { class: field_classes } %>
+    </div>
+  <% end %>
 
   <div class="flex justify-end gap-2">
     <%= link_to "Reset", components_path, class: button_classes(style: :secondary) %>

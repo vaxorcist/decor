@@ -1,5 +1,13 @@
-<%# decor/app/views/components/show.html.erb - version 1.6 %>
-<%# Session 10: Restructured field layout per new spec: %>
+<%# decor/app/views/components/show.html.erb - version 1.7 %>
+<%# v1.7 (Session 22): Added "Trade Status" field as a new single-field row %>
+<%#   between Line 2 and the Description, wrapped in <% if logged_in? %>. %>
+<%#   Line 2 already has 4 columns — adding a 5th would be too cramped. %>
+<%#   Colour coding matches index row partials: %>
+<%#     offered   → text-green-700 %>
+<%#     wanted    → text-amber-600 %>
+<%#     no_barter → text-stone-400 %>
+<%#   Non-logged-in visitors see no barter data anywhere. %>
+<%# v1.6 (Session 10): Restructured field layout per new spec: %>
 <%#   Line 1 (3-col): Computer Model | Computer Order Number | Computer Serial Number %>
 <%#   Line 2 (4-col): Component Type | Component Order Number | Component Serial Number | Condition %>
 <%#   Line 3 (full):  Description %>
@@ -78,6 +86,26 @@
         </dd>
       </div>
     </div>
+
+    <%# Trade Status — visible to logged-in members only. %>
+    <%# Non-logged-in visitors see no barter data anywhere; this block must be %>
+    <%# completely absent (not just hidden) for unauthenticated requests. %>
+    <%# Placed between Line 2 and Description — Line 2 already has 4 columns, %>
+    <%# so a dedicated single-field row is cleaner than a cramped 5th column. %>
+    <% if logged_in? %>
+      <div>
+        <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider mb-1">Trade Status</dt>
+        <dd class="flex items-center w-full h-10 p-3 rounded border border-stone-300 bg-white text-sm">
+          <% if @component.barter_status_offered? %>
+            <span class="text-green-700">Offered</span>
+          <% elsif @component.barter_status_wanted? %>
+            <span class="text-amber-600">Wanted</span>
+          <% else %>
+            <span class="text-stone-400">—</span>
+          <% end %>
+        </dd>
+      </div>
+    <% end %>
 
     <%# Line 3 (full): Description — whitespace-pre-wrap to preserve line breaks. %>
     <%# ERB tag is on the same line as <dd> — whitespace-pre-wrap renders leading %>

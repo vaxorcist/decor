@@ -1,21 +1,14 @@
-<%# decor/app/views/components/_form.html.erb - version 1.5 %>
-<%# Session 10 (rev 2): Computer Model dropdown shows full detail while browsing; %>
-<%#   collapses to model name only once a computer is selected (order/serial are %>
-<%#   already visible in the dedicated read-only fields). %>
-<%# %>
+<%# decor/app/views/components/_form.html.erb - version 1.6 %>
+<%# v1.6 (Session 21): Added component_category and barter_status fields. %>
+<%#   New Row 3 (2-col): Component Category (integral/peripheral) | Trade Status (barter_status). %>
+<%#   Description shifts from Row 3 to Row 4 (full width, unchanged). %>
+<%#   The form is only accessible to logged-in owners so no logged_in? guard is needed %>
+<%#   for the Trade Status field. %>
+<%# v1.5 (Session 10 rev 2): Computer Model dropdown collapses to model name after selection. %>
 <%#   Row 1 (3-col): Computer Model (select) | Computer Order Number (read-only) | Computer Serial Number (read-only) %>
 <%#   Row 2 (4-col): Component Type | Component Order Number | Component Serial Number | Component Condition %>
-<%#   Row 3 (full):  Description %>
-<%# %>
-<%# Auto-fill + display-collapse mechanism: %>
-<%#   - owner_computers captured once (one query). %>
-<%#   - Each <option> carries data-model-name (short label) so the Stimulus controller %>
-<%#     can collapse to model name after selection without needing a separate lookup. %>
-<%#   - A JSON map { id => { order_number, serial_number } } is embedded as the %>
-<%#     Stimulus "computers" value; the controller writes into the two read-only inputs. %>
-<%#   - f.select (not collection_select) is used here because collection_select does not %>
-<%#     support per-option HTML data attributes. %>
-<%#   - The read-only inputs have no name attribute — they must not be submitted. %>
+<%#   Row 3 (2-col): Component Category | Trade Status                                    ← new in v1.6 %>
+<%#   Row 4 (full):  Description                                                            ← was Row 3 %>
 
 <%# Capture owner's computers once — used for the dropdown options and the JSON map. %>
 <% owner_computers = Current.owner.computers.includes(:computer_model).to_a %>
@@ -73,7 +66,6 @@
 
     <%# Computer Order Number — read-only, auto-filled by Stimulus. %>
     <%# No name attribute: must not be submitted (value belongs to the Computer record). %>
-    <%# Styled bg-stone-50 / text-stone-400 / cursor-not-allowed to signal non-editability. %>
     <div>
       <label class="block text-sm font-medium text-stone-700">Computer Order Number</label>
       <input type="text"
@@ -85,7 +77,7 @@
       <p class="mt-1 text-xs text-stone-500">Auto-filled from the selected computer.</p>
     </div>
 
-    <%# Computer Serial Number — read-only, auto-filled by Stimulus. Same as above. %>
+    <%# Computer Serial Number — read-only, auto-filled by Stimulus. %>
     <div>
       <label class="block text-sm font-medium text-stone-700">Computer Serial Number</label>
       <input type="text"
@@ -123,7 +115,31 @@
     </div>
   </div>
 
-  <%# ─── Row 3: Description — full width ─── %>
+  <%# ─── Row 3: Component Category | Trade Status ─── %>
+  <%# component_category: integral (default) or peripheral. %>
+  <%# barter_status: no_barter (default), offered, or wanted. %>
+  <%# Both are enum fields; string keys are used so labels are human-readable. %>
+  <div class="grid grid-cols-2 gap-4">
+    <div>
+      <%= f.label :component_category, "Component Category", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.select :component_category,
+            [["Integral", "integral"], ["Peripheral", "peripheral"]],
+            {},
+            class: field_classes %>
+      <p class="mt-1 text-xs text-stone-500">Integral: installed inside a device. Peripheral: connected externally.</p>
+    </div>
+
+    <div>
+      <%= f.label :barter_status, "Trade Status", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.select :barter_status,
+            [["No Trade", "no_barter"], ["Offered", "offered"], ["Wanted", "wanted"]],
+            {},
+            class: field_classes %>
+      <p class="mt-1 text-xs text-stone-500">Visible to members only.</p>
+    </div>
+  </div>
+
+  <%# ─── Row 4: Description — full width ─── %>
   <div>
     <%= f.label :description, "Component Description", class: "block text-sm font-medium text-stone-700" %>
     <%= f.text_area :description, rows: 4, style: "min-height: 4.5rem;", class: field_classes %>

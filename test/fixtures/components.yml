@@ -1,9 +1,12 @@
 # decor/test/fixtures/components.yml
-# version 1.3
-# Fixed: bob_vt100_terminal renamed to charlie_vt100_terminal, owner changed to
-# three (charlie) — a neutral owner with no hardcoded count assertions in any
-# existing test. v1.2 used owner two (bob) which broke OwnersControllerDestroyTest
-# (bob component count = 2).
+# version 1.4
+# v1.4 (Session 21): Added barter_status values to two fixtures for filter tests.
+#   charlie_vt100_terminal: barter_status: 1 (offered) — charlie's component.
+#   spare_disk:             barter_status: 2 (wanted)  — alice's spare.
+#   All other fixtures: barter_status omitted → DB default 0 (no_barter).
+#   barter_status values: 0 = no_barter, 1 = offered, 2 = wanted.
+# v1.3: charlie_vt100_terminal owner changed to three (charlie) — neutral owner.
+# component_category: 0 = integral (default), 1 = peripheral.
 
 pdp11_memory:
   owner: one
@@ -21,6 +24,7 @@ spare_disk:
   owner: one
   computer:
   component_type: disk_drive
+  barter_status: 2
   description: RL02 disk drive, spare for future restoration projects
 
 pdp8_memory:
@@ -36,14 +40,14 @@ spare_power_supply:
   description: Spare H742 power supply, untested
 
 # Peripheral fixture for component_category enum tests.
-# A VT100 terminal connected to charlie's computer — external to the machine,
-# not installed inside it.
-# Assigned to owner three (charlie) — a neutral owner with no hardcoded count
-# assertions in any existing test.
+# A VT100 terminal connected to charlie's computer.
+# Assigned to owner three (charlie) — neutral owner with no hardcoded count assertions.
 # component_category: 1 = peripheral.
+# barter_status: 1 = offered — used for barter filter tests.
 charlie_vt100_terminal:
   owner: three
   computer: dec_unibus_router
   component_type: memory_board
   description: VT100 terminal connected to charlie dec_unibus_router
   component_category: 1
+  barter_status: 1

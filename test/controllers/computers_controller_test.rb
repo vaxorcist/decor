@@ -1,31 +1,27 @@
-# decor/test/controllers/computers_controller_test.rb - version 1.5
+# decor/test/controllers/computers_controller_test.rb - version 1.6
+# v1.6 (Session 22): Added barter_status filter tests.
+#   Logged-in default ("0+1"): alice_pdp11 (no_barter) visible; alice_vax (wanted) hidden.
+#   Logged-in barter_status=2: alice_vax (wanted) visible; alice_pdp11 hidden.
+#   Logged-out: no filter applied — all records visible regardless of barter_status.
+#   All tests use /computers path (device_type=computer by default), so only
+#   computer fixtures (not dec_unibus_router appliance) appear in the response.
+#
 # v1.5 (Session 18): Fixed two failing tests — login_as owners(:three) was
 #   silently failing because charlie's password ("DecorTest2026!") is not
 #   registered in detect_password. Both charlie tests now pass the password
 #   explicitly via login_as owners(:three), password: "DecorTest2026!".
-# v1.4 (Session 18): Added tests for device_type selector on new/edit form:
-#   - create with device_type=computer  → record stamped correctly; flash "Computer…"
-#   - create with device_type=appliance → record stamped correctly; flash "Appliance…"
-#   - update computer → device_type=appliance → flash "Appliance was successfully updated."
-#   - update appliance → device_type=computer → flash "Computer was successfully updated."
-#   - destroy appliance (dec_unibus_router / charlie) → flash "Appliance was successfully deleted."
-#   Existing destroy tests for alice_pdp11 (device_type: computer) remain valid —
-#   "Computer was successfully deleted." is still the correct flash for that record.
-#
-# v1.3 (Session 17): Corrected stale test "index without device_type filter shows
-#   computers and appliances" — that described the old (wrong) behaviour. The
-#   Computers page now defaults to device_type=computer when no param is present,
-#   so appliances must NOT appear in the unfiltered response. Test updated accordingly.
-#
-# v1.2: Added two appliances route tests (GET /appliances, device_type locked).
+# v1.4 (Session 18): Added tests for device_type selector on new/edit form.
+# v1.3 (Session 17): Corrected stale filter test for unfiltered index.
+# v1.2: Added two appliances route tests.
 # v1.1: Three device_type filter tests for the computers index action.
 # v1.0 (Session 11): destroy action source-param redirect tests.
 #
 # Fixture notes:
 #   owners(:one)                   = alice (admin)
 #   owners(:three)                 = charlie (neutral owner; no hardcoded count assertions)
-#   computers(:alice_pdp11)        = alice's PDP-11/70, serial SN12345, device_type: computer
-#   computers(:dec_unibus_router)  = charlie's router, serial RTR-001, device_type: appliance
+#   computers(:alice_pdp11)        = alice's PDP-11/70, serial SN12345, device_type: computer, barter_status: 0 (no_barter)
+#   computers(:alice_vax)          = alice's VAX,       device_type: computer, barter_status: 2 (wanted)
+#   computers(:dec_unibus_router)  = charlie's router,  device_type: appliance, barter_status: 1 (offered)
 #   Each test runs in a rolled-back transaction.
 
 require "test_helper"
@@ -192,5 +188,63 @@ class ComputersControllerTest < ActionDispatch::IntegrationTest
     end
     assert_redirected_to computers_path
     assert_equal "Appliance was successfully deleted.", flash[:notice]
+  end
+
+  # ---------------------------------------------------------------------------
+  # Barter filter — logged-in users see filtered results; logged-out see all
+  # ---------------------------------------------------------------------------
+  #
+  # Fixture barter_status values on the computers index (/computers route,
+  # device_type=computer by default):
+  #   alice_pdp11  barter_status: 0 (no_barter)
+  #   alice_vax    barter_status: 2 (wanted)
+  #   (dec_unibus_router is an appliance — never shown on /computers)
+  #
+  # Default filter for logged-in users: "0+1" (no_barter + offered).
+  # alice_vax (wanted) must be hidden; alice_pdp11 (no_barter) must be visible.
+
+  test "logged-in index default barter filter hides wanted computers" do
+    # No barter_status param → controller uses default "0+1" (no_barter + offered).
+    # alice_vax has barter_status: wanted (2) → must be excluded.
+    login_as owners(:one)
+    get computers_path
+    assert_response :success
+    assert_includes     response.body, computers(:alice_pdp11).serial_number,
+      "alice_pdp11 (no_barter) should be visible under the default 0+1 filter"
+    assert_not_includes response.body, computers(:alice_vax).serial_number,
+      "alice_vax (wanted) should be hidden under the default 0+1 filter"
+  end
+
+  test "logged-in index barter_status=2 shows only wanted computers" do
+    # Explicitly requesting wanted (2) → alice_vax visible, alice_pdp11 hidden.
+    login_as owners(:one)
+    get computers_path(barter_status: "2")
+    assert_response :success
+    assert_includes     response.body, computers(:alice_vax).serial_number,
+      "alice_vax (wanted) should be visible when filtering by barter_status=2"
+    assert_not_includes response.body, computers(:alice_pdp11).serial_number,
+      "alice_pdp11 (no_barter) should be hidden when filtering by barter_status=2"
+  end
+
+  test "logged-in index barter_status=0 shows only no_barter computers" do
+    # Filtering by no_barter only → alice_pdp11 visible, alice_vax hidden.
+    login_as owners(:one)
+    get computers_path(barter_status: "0")
+    assert_response :success
+    assert_includes     response.body, computers(:alice_pdp11).serial_number,
+      "alice_pdp11 (no_barter) should be visible when filtering by barter_status=0"
+    assert_not_includes response.body, computers(:alice_vax).serial_number,
+      "alice_vax (wanted) should be hidden when filtering by barter_status=0"
+  end
+
+  test "logged-out index shows all computers regardless of barter_status" do
+    # Non-logged-in visitors: no barter filter applied.
+    # Both alice_pdp11 (no_barter) and alice_vax (wanted) must be visible.
+    get computers_path
+    assert_response :success
+    assert_includes response.body, computers(:alice_pdp11).serial_number,
+      "alice_pdp11 should be visible to logged-out visitors (no filter)"
+    assert_includes response.body, computers(:alice_vax).serial_number,
+      "alice_vax (wanted) should be visible to logged-out visitors (no filter)"
   end
 end

@@ -1,5 +1,5 @@
 # decor/docs/claude/DECOR_PROJECT.md
-# version 2.16
+# version 2.17
 # Session 13: device_type on computers, component_category on components; enum tests.
 # Session 14: DRY Computer/Appliance Models admin pages; dropdown nav (admin.html.erb v1.3);
 #   device_type on computer_models; routes :appliance_models; dropdown_controller.js.
@@ -10,11 +10,14 @@
 #   and appliances; site_texts table + Read Me page; redcarpet gem.
 # Session 19: Components table column reorder + Order No. added on all three pages;
 #   "By Order No." sort option on /components.
+# Session 20: Remove device_type selector from edit form (hidden field); with_toc_data
+#   for in-page anchor links; last_login_at on owners; Info dropdown nav; generalised
+#   text upload/delete pages; news/barter_trade/privacy routes.
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** March 7, 2026 (Session 19: component table columns; sort by order no.)
-**Current Status:** Sessions 1–18 committed and deployed. Session 19 ready to commit.
+**Last Updated:** March 8, 2026 (Session 20)
+**Current Status:** Sessions 1–19 committed and deployed. Session 20 ready to commit.
 
 ---
 
@@ -25,7 +28,7 @@
 tree decor/ -I "node_modules|.git|tmp|storage|log|.DS_Store|*.lock|assets|cache|pids|sockets" --dirsfirst -F --prune -L 6 > decor_tree.txt
 ```
 
-**Current tree** (as of Session 18, March 6, 2026):
+**Current tree** (as of Session 20, March 8, 2026):
 ```
 decor//
 ├── app/
@@ -133,6 +136,7 @@ decor//
 │       │   │   ├── index.html.erb
 │       │   │   └── new.html.erb
 │       │   └── site_texts/
+│       │       ├── delete_confirm.html.erb
 │       │       └── new.html.erb
 │       ├── common/
 │       │   ├── _flashes.html.erb
@@ -266,7 +270,8 @@ decor//
 │   │   ├── 20260303100001_add_component_category_to_components.rb
 │   │   ├── 20260303110000_add_device_type_to_computer_models.rb
 │   │   ├── 20260304120000_add_cascade_delete_components_computer.rb
-│   │   └── 20260306100000_create_site_texts.rb
+│   │   ├── 20260306100000_create_site_texts.rb
+│   │   └── 20260308100000_add_last_login_at_to_owners.rb
 │   ├── cable_schema.rb
 │   ├── cache_schema.rb
 │   ├── queue_schema.rb
@@ -299,14 +304,16 @@ decor//
 │   │   │   ├── computer_models_controller_test.rb
 │   │   │   ├── conditions_controller_test.rb
 │   │   │   ├── invites_controller_test.rb
-│   │   │   └── run_statuses_controller_test.rb
+│   │   │   ├── run_statuses_controller_test.rb
+│   │   │   └── site_texts_controller_test.rb
 │   │   ├── components_controller_test.rb
 │   │   ├── computers_controller_test.rb
 │   │   ├── data_transfers_controller_test.rb
 │   │   ├── owners_controller_destroy_test.rb
 │   │   ├── owners_controller_password_test.rb
 │   │   ├── owners_controller_test.rb
-│   │   └── password_resets_controller_test.rb
+│   │   ├── password_resets_controller_test.rb
+│   │   └── sessions_controller_test.rb
 │   ├── fixtures/
 │   │   ├── component_conditions.yml
 │   │   ├── components.yml
@@ -332,7 +339,8 @@ decor//
 │   │   ├── computer_test.rb
 │   │   ├── invite_test.rb
 │   │   ├── owner_test.rb
-│   │   └── run_status_test.rb
+│   │   ├── run_status_test.rb
+│   │   └── site_text_test.rb
 │   ├── services/
 │   │   ├── owner_export_service_test.rb
 │   │   └── owner_import_service_test.rb
@@ -348,65 +356,46 @@ decor//
 ├── README.md
 └── rich.html
 
-60 directories, 260 files
+60 directories, 265 files
 ```
 
 **Key file versions** (updated each session):
 
-    decor/app/controllers/components_controller.rb              v1.6  ← Session 19 (order_asc sort)
-    decor/app/helpers/components_helper.rb                      v1.2  ← Session 19 (order_asc option)
-    decor/app/views/components/index.html.erb                   v1.3  ← Session 19 (col reorder; Computer-Serial No.)
-    decor/app/views/components/_component.html.erb              v1.5  ← Session 19 (col reorder; Order No. + Serial No.)
-    decor/app/views/owners/show.html.erb                        v1.7  ← Session 19 (components: Description before Order/Serial)
-    decor/app/views/computers/_form.html.erb                    v2.3  ← Session 19 (components table: add Desc/Order; Condition last)
-    decor/Gemfile                                               MOD  ← Session 18 (redcarpet)
-    decor/config/routes.rb                                      v1.5  ← Session 18 (readme + admin/site_texts)
-    decor/app/controllers/computers_controller.rb               v1.13 ← Session 18 (device_type form; flash)
-    decor/app/controllers/owners_controller.rb                  v1.5  ← Session 18 (@computers/@appliances split)
-    decor/app/controllers/site_texts_controller.rb              v1.0  ← Session 18 (new)
-    decor/app/controllers/admin/site_texts_controller.rb        v1.0  ← Session 18 (new)
-    decor/app/helpers/computers_helper.rb                       v1.3  ← Session 18 (form device_type options)
-    decor/app/helpers/application_helper.rb                     v1.1  ← Session 18 (render_markdown)
-    decor/app/models/site_text.rb                               v1.0  ← Session 18 (new)
-    decor/app/views/computers/new.html.erb                      v1.4  ← Session 18 (device_type heading)
-    decor/app/views/common/_navigation.html.erb                 v1.3  ← Session 18 (Read Me link leftmost)
-    decor/app/views/layouts/admin.html.erb                      v1.4  ← Session 18 (Texts dropdown)
-    decor/app/views/site_texts/show.html.erb                    v1.0  ← Session 18 (new)
-    decor/app/views/admin/site_texts/new.html.erb               v1.0  ← Session 18 (new)
-    decor/db/migrate/20260306100000_create_site_texts.rb        v1.0  ← Session 18 (new)
-    decor/test/controllers/computers_controller_test.rb         v1.5  ← Session 18 (device_type flash tests)
-    decor/app/views/computers/index.html.erb                    v1.7  ← Session 17 (dynamic title/ids)
-    decor/app/views/computers/index.turbo_stream.erb            v1.1  ← Session 17 (fully dynamic)
-    decor/app/views/computers/_filters.html.erb                 v1.3  ← Session 17 (Type selector; @index_path)
-    decor/app/views/computers/_computer.html.erb                v1.8  ← Session 17 (Type cell conditional)
-    decor/app/views/computers/edit.html.erb                     v1.3  ← Session 17 (device_type heading)
-    decor/app/views/computers/show.html.erb                     v1.6  ← Session 17 (device_type empty state)
-    decor/app/views/owners/_owner.html.erb                      v3.4  ← Session 17 (device_type params on links)
-    decor/app/controllers/admin/computer_models_controller.rb   v1.1  ← Session 14 (DRY)
-    decor/app/models/computer_model.rb                          v1.1  ← Session 14 (device_type enum)
-    decor/app/models/computer.rb                                v1.5  ← Session 13
-    decor/app/models/component.rb                               v1.3  ← Session 13
-    decor/app/services/owner_export_service.rb                  v1.1  ← Session 16 (appliance record_type)
-    decor/app/services/owner_import_service.rb                  v1.1  ← Session 16 (appliance record_type)
-    decor/app/views/admin/computer_models/index.html.erb        v1.1  ← Session 14
-    decor/app/views/admin/computer_models/new.html.erb          v1.1  ← Session 14
-    decor/app/views/admin/computer_models/edit.html.erb         v1.1  ← Session 14
-    decor/app/views/admin/computer_models/_form.html.erb        v1.1  ← Session 14
-    decor/app/views/data_transfers/show.html.erb                v1.5  ← Session 16 (appliance record_type)
-    decor/app/javascript/controllers/dropdown_controller.js     v1.0  ← Session 14 (new)
-    decor/db/migrate/20260303110000_add_device_type_to_computer_models.rb  v1.0  ← Session 14 (new)
-    decor/db/migrate/20260304120000_add_cascade_delete_components_computer.rb  v1.1  ← Session 15 (new)
-    decor/app/controllers/components_controller.rb              v1.5  ← Session 12
-    decor/app/controllers/data_transfers_controller.rb          v1.1  ← Session 10
-    decor/test/models/computer_test.rb                          v1.4  ← Session 13
-    decor/test/models/component_test.rb                         v1.3  ← Session 13
-    decor/test/controllers/components_controller_test.rb        v1.1  ← Session 12
-    decor/test/controllers/owners_controller_test.rb            v1.3  ← Session 11
-    decor/test/services/owner_export_service_test.rb            v1.1  ← Session 16 (appliance tests)
-    decor/test/services/owner_import_service_test.rb            v1.1  ← Session 16 (appliance tests)
-    decor/test/fixtures/owners.yml                              v2.1  ← Session 13
-    decor/test/fixtures/computers.yml                           v1.6  ← Session 13
-    decor/test/fixtures/components.yml                          v1.3  ← Session 13
+    decor/app/helpers/application_helper.rb                             v1.2  ← Session 20 (with_toc_data)
+    decor/app/views/computers/_form.html.erb                            v2.4  ← Session 20 (hidden device_type)
+    decor/app/controllers/computers_controller.rb                       v1.14 ← Session 20 (comment update)
+    decor/app/helpers/computers_helper.rb                               v1.4  ← Session 20 (remove form options)
+    decor/db/migrate/20260308100000_add_last_login_at_to_owners.rb      v1.0  ← Session 20 (new)
+    decor/app/controllers/sessions_controller.rb                        v1.1  ← Session 20 (stamp last_login_at)
+    decor/app/views/admin/owners/index.html.erb                         v1.1  ← Session 20 (Last Login column)
+    decor/test/controllers/sessions_controller_test.rb                  v1.0  ← Session 20 (new)
+    decor/config/routes.rb                                              v1.7  ← Session 20 (news/barter_trade/privacy/delete_confirm)
+    decor/app/views/common/_navigation.html.erb                         v1.4  ← Session 20 (Info dropdown)
+    decor/app/models/site_text.rb                                       v1.1  ← Session 20 (KNOWN_TEXTS constant)
+    decor/app/controllers/admin/site_texts_controller.rb                v1.1  ← Session 20 (generalised; delete_confirm)
+    decor/app/views/admin/site_texts/new.html.erb                       v1.1  ← Session 20 (key selector)
+    decor/app/views/admin/site_texts/delete_confirm.html.erb            v1.0  ← Session 20 (new)
+    decor/app/views/layouts/admin.html.erb                              v1.5  ← Session 20 (Texts dropdown: 2 items)
+    decor/test/models/site_text_test.rb                                 v1.0  ← Session 20 (new)
+    decor/test/controllers/admin/site_texts_controller_test.rb          v1.0  ← Session 20 (new)
+    decor/docs/claude/COMMON_BEHAVIOR.md                                v2.4  ← Session 20 (prefix rule reinforced)
+    decor/docs/claude/PROGRAMMING_GENERAL.md                            v1.9  ← Session 20 (test coverage check reinforced)
+    decor/app/controllers/components_controller.rb                      v1.6  ← Session 19 (order_asc sort)
+    decor/app/helpers/components_helper.rb                              v1.2  ← Session 19 (order_asc option)
+    decor/app/views/components/index.html.erb                           v1.3  ← Session 19 (col reorder; Computer-Serial No.)
+    decor/app/views/components/_component.html.erb                      v1.5  ← Session 19 (col reorder; Order No. + Serial No.)
+    decor/app/views/owners/show.html.erb                                v1.7  ← Session 19 (components: Description before Order/Serial)
+    decor/Gemfile                                                        MOD  ← Session 18 (redcarpet)
+    decor/app/controllers/owners_controller.rb                          v1.5  ← Session 18 (@computers/@appliances split)
+    decor/app/helpers/owners_helper.rb                                  (unchanged)
+    decor/app/models/owner.rb                                           v1.3  ← (password strength)
+    decor/app/models/computer.rb                                        v1.5  ← Session 13
+    decor/app/models/component.rb                                       v1.3  ← Session 13
+    decor/app/services/owner_export_service.rb                          v1.1  ← Session 16
+    decor/app/services/owner_import_service.rb                          v1.1  ← Session 16
+    decor/test/fixtures/owners.yml                                      v2.1  ← Session 13
+    decor/test/fixtures/computers.yml                                   v1.6  ← Session 13
+    decor/test/fixtures/components.yml                                  v1.3  ← Session 13
 
 
 ---
@@ -657,6 +646,54 @@ Column order: Type | Description | Order No. | Serial No. | Condition.
 order_asc case added: `components.order(Arel.sql("components.order_number ASC NULLS LAST"))`.
 No join needed (order_number is on the components table). Arel.sql() required for
 NULLS LAST keyword phrase. NULLs sort last so blank order numbers appear at bottom.
+
+---
+
+## Work Completed - Session 20 (March 8, 2026)
+
+### 1. In-page anchor links for markdown pages
+    decor/app/helpers/application_helper.rb                         (v1.1 → v1.2)
+Added with_toc_data: true to render_markdown — headings now get id= attributes
+so [Section](#section) links work inside markdown pages.
+
+### 2. Remove device_type selector from edit form
+    decor/app/views/computers/_form.html.erb                        (v2.3 → v2.4)
+    decor/app/controllers/computers_controller.rb                   (v1.13 → v1.14)
+    decor/app/helpers/computers_helper.rb                           (v1.3 → v1.4)
+Type is fixed at creation — changing it after the fact would corrupt category
+membership. Replaced visible selector with hidden field. Line 2 grid-cols-3 → 2.
+computer_form_device_type_options helper removed (dead code).
+
+### 3. Last Login column on admin Manage Owners page
+    decor/db/migrate/20260308100000_add_last_login_at_to_owners.rb  (v1.0 — new)
+    decor/app/controllers/sessions_controller.rb                    (v1.0 → v1.1)
+    decor/app/views/admin/owners/index.html.erb                     (v1.0 → v1.1)
+    decor/test/controllers/sessions_controller_test.rb              (v1.0 — new)
+last_login_at stamped via update_column on successful login. NULL displays as "—".
+
+### 4. Info dropdown in public navigation
+    decor/config/routes.rb                                          (v1.5 → v1.6)
+    decor/app/views/common/_navigation.html.erb                     (v1.3 → v1.4)
+"Read Me" standalone link replaced by "Info" dropdown containing Read Me, News,
+Barter Trade, Privacy. Three new public routes added.
+
+### 5. Generalised text upload/delete pages
+    decor/app/models/site_text.rb                                   (v1.0 → v1.1)
+    decor/app/controllers/admin/site_texts_controller.rb            (v1.0 → v1.1)
+    decor/app/views/admin/site_texts/new.html.erb                   (v1.0 → v1.1)
+    decor/app/views/admin/site_texts/delete_confirm.html.erb        (v1.0 — new)
+    decor/config/routes.rb                                          (v1.6 → v1.7)
+    decor/app/views/layouts/admin.html.erb                          (v1.4 → v1.5)
+    decor/test/models/site_text_test.rb                             (v1.0 — new)
+    decor/test/controllers/admin/site_texts_controller_test.rb      (v1.0 — new)
+KNOWN_TEXTS constant on SiteText model is single source of truth for all text pages.
+Upload and delete pages now have key selectors — Texts dropdown reduced to two items.
+
+### 6. Rule document updates
+    decor/docs/claude/COMMON_BEHAVIOR.md                            (v2.3 → v2.4)
+    decor/docs/claude/PROGRAMMING_GENERAL.md                        (v1.8 → v1.9)
+Download File Naming rule reinforced with Session 20 real example.
+End-of-Task Test Coverage Check strengthened — must be proactive, not prompted.
 
 ---
 
