@@ -1,5 +1,5 @@
 # decor/docs/claude/DECOR_PROJECT.md
-# version 2.17
+# version 2.18
 # Session 13: device_type on computers, component_category on components; enum tests.
 # Session 14: DRY Computer/Appliance Models admin pages; dropdown nav (admin.html.erb v1.3);
 #   device_type on computer_models; routes :appliance_models; dropdown_controller.js.
@@ -13,11 +13,12 @@
 # Session 20: Remove device_type selector from edit form (hidden field); with_toc_data
 #   for in-page anchor links; last_login_at on owners; Info dropdown nav; generalised
 #   text upload/delete pages; news/barter_trade/privacy routes.
+# Session 21+22: barter_status enum on computers and components (full feature).
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** March 8, 2026 (Session 20)
-**Current Status:** Sessions 1–19 committed and deployed. Session 20 ready to commit.
+**Last Updated:** March 9, 2026 (Session 22)
+**Current Status:** Sessions 1–20 committed and deployed. Sessions 21–22 ready to commit (feature/session-21 branch).
 
 ---
 
@@ -28,7 +29,7 @@
 tree decor/ -I "node_modules|.git|tmp|storage|log|.DS_Store|*.lock|assets|cache|pids|sockets" --dirsfirst -F --prune -L 6 > decor_tree.txt
 ```
 
-**Current tree** (as of Session 20, March 8, 2026):
+**Current tree** (as of Session 22, March 9, 2026):
 ```
 decor//
 ├── app/
@@ -271,7 +272,9 @@ decor//
 │   │   ├── 20260303110000_add_device_type_to_computer_models.rb
 │   │   ├── 20260304120000_add_cascade_delete_components_computer.rb
 │   │   ├── 20260306100000_create_site_texts.rb
-│   │   └── 20260308100000_add_last_login_at_to_owners.rb
+│   │   ├── 20260308100000_add_last_login_at_to_owners.rb
+│   │   ├── 20260309100000_add_barter_status_to_computers.rb
+│   │   └── 20260309100001_add_barter_status_to_components.rb
 │   ├── cable_schema.rb
 │   ├── cache_schema.rb
 │   ├── queue_schema.rb
@@ -356,15 +359,38 @@ decor//
 ├── README.md
 └── rich.html
 
-60 directories, 265 files
+60 directories, 267 files
 ```
 
 **Key file versions** (updated each session):
 
+    decor/db/migrate/20260309100000_add_barter_status_to_computers.rb  v1.0  ← Session 21 (new)
+    decor/db/migrate/20260309100001_add_barter_status_to_components.rb v1.0  ← Session 21 (new)
+    decor/app/models/computer.rb                                        v1.6  ← Session 21 (barter_status enum)
+    decor/app/models/component.rb                                       v1.4  ← Session 21 (barter_status enum)
+    decor/app/controllers/computers_controller.rb                       v1.15 ← Session 21 (barter filter + strong params)
+    decor/app/controllers/components_controller.rb                      v1.7  ← Session 21 (barter filter + strong params; component_category fix)
+    decor/app/helpers/computers_helper.rb                               v1.5  ← Session 21 (barter filter options + helpers)
+    decor/app/helpers/components_helper.rb                              v1.3  ← Session 21 (barter filter options + helpers)
+    decor/test/fixtures/computers.yml                                   v1.7  ← Session 21 (barter_status on alice_vax, dec_unibus_router)
+    decor/test/fixtures/components.yml                                  v1.4  ← Session 21 (barter_status on spare_disk, charlie_vt100_terminal)
+    decor/app/views/computers/_form.html.erb                            v2.5  ← Session 21 (barter_status select; grid-cols-3 on line 2)
+    decor/app/views/components/_form.html.erb                           v1.6  ← Session 21 (barter_status select; row 3 added)
+    decor/app/views/components/_component.html.erb                      v1.6  ← Session 21 (Trade/Barter td added)
+    decor/app/views/computers/_computer.html.erb                        v1.10 ← Session 22 (Type td removed; Barter td added)
+    decor/app/views/computers/_filters.html.erb                         v1.4  ← Session 22 (Trade barter filter added)
+    decor/app/views/components/_filters.html.erb                        v1.1  ← Session 22 (Trade barter filter added)
+    decor/app/views/computers/show.html.erb                             v1.7  ← Session 22 (Trade Status field; dynamic grid-cols)
+    decor/app/views/components/show.html.erb                            v1.7  ← Session 22 (Trade Status field)
+    decor/app/views/owners/show.html.erb                                v1.8  ← Session 22 (Trade column in all 3 tables)
+    decor/app/views/computers/index.html.erb                            v1.9  ← Session 22 (Type th removed; Barter th added)
+    decor/app/views/components/index.html.erb                           v1.5  ← Session 22 (Barter th added)
+    decor/test/models/computer_test.rb                                  v1.5  ← Session 22 (barter_status enum tests)
+    decor/test/models/component_test.rb                                 v1.4  ← Session 22 (barter_status enum tests)
+    decor/test/controllers/computers_controller_test.rb                 v1.6  ← Session 22 (barter filter tests)
+    decor/test/controllers/components_controller_test.rb                v1.3  ← Session 22 (barter filter tests; nil serial fix)
+    decor/docs/claude/SESSION_HANDOVER.md                               v23.0 ← Session 22
     decor/app/helpers/application_helper.rb                             v1.2  ← Session 20 (with_toc_data)
-    decor/app/views/computers/_form.html.erb                            v2.4  ← Session 20 (hidden device_type)
-    decor/app/controllers/computers_controller.rb                       v1.14 ← Session 20 (comment update)
-    decor/app/helpers/computers_helper.rb                               v1.4  ← Session 20 (remove form options)
     decor/db/migrate/20260308100000_add_last_login_at_to_owners.rb      v1.0  ← Session 20 (new)
     decor/app/controllers/sessions_controller.rb                        v1.1  ← Session 20 (stamp last_login_at)
     decor/app/views/admin/owners/index.html.erb                         v1.1  ← Session 20 (Last Login column)
@@ -384,10 +410,6 @@ decor//
     decor/app/helpers/components_helper.rb                              v1.2  ← Session 19 (order_asc option)
     decor/app/views/components/index.html.erb                           v1.3  ← Session 19 (col reorder; Computer-Serial No.)
     decor/app/views/components/_component.html.erb                      v1.5  ← Session 19 (col reorder; Order No. + Serial No.)
-    decor/app/views/owners/show.html.erb                                v1.7  ← Session 19 (components: Description before Order/Serial)
-    decor/Gemfile                                                        MOD  ← Session 18 (redcarpet)
-    decor/app/controllers/owners_controller.rb                          v1.5  ← Session 18 (@computers/@appliances split)
-    decor/app/helpers/owners_helper.rb                                  (unchanged)
     decor/app/models/owner.rb                                           v1.3  ← (password strength)
     decor/app/models/computer.rb                                        v1.5  ← Session 13
     decor/app/models/component.rb                                       v1.3  ← Session 13
@@ -420,6 +442,8 @@ decor//
 - belongs_to run_status (optional)
 - has_many components, dependent: :destroy
 - device_type enum: 0 = computer (default), 1 = appliance (placeholder name)
+- barter_status enum: 0 = no_barter (default), 1 = offered, 2 = wanted
+  prefix: true → barter_status_no_barter?, barter_status_offered?, barter_status_wanted?
 - Validations:
   - serial_number: required, VARCHAR(20) + CHECK in DB
   - order_number: max 20 characters, optional, VARCHAR(20) + CHECK in DB
@@ -429,6 +453,9 @@ decor//
 - belongs_to computer (optional)
 - belongs_to component_type
 - belongs_to component_condition (optional)
+- component_category enum: 0 = integral (default), 1 = peripheral
+- barter_status enum: 0 = no_barter (default), 1 = offered, 2 = wanted
+  prefix: true → barter_status_no_barter?, barter_status_offered?, barter_status_wanted?
 - Fields: description (TEXT), serial_number VARCHAR(20), order_number VARCHAR(20)
 
 ### SiteText
@@ -451,6 +478,37 @@ decor//
 - Validations: condition presence + uniqueness (case_sensitive: false)
 - Managed via admin UI at /admin/component_conditions
 - Examples: Working, Defective
+
+---
+
+## Barter Status Feature (Sessions 21–22)
+
+### Design
+- `barter_status` integer column on both `computers` and `components` tables
+- Enum: `{ no_barter: 0, offered: 1, wanted: 2 }`, prefix: true
+- Default: 0 (no_barter) at DB level
+- Auth rule: barter data visible to logged-in members ONLY
+  - Index filter only applied when `logged_in?`
+  - Non-logged-in visitors: no filter (all records visible), NO barter data shown anywhere
+  - `<% if logged_in? %>` guards on every `<th>` and `<td>` in index tables and owners/show
+  - `<% if logged_in? %>` guards on show page fields
+  - No guard on forms (forms always require login)
+
+### Index filter (both controllers)
+Default when logged in: "0+1" (no_barter + offered). Wanted items hidden by default.
+Filter options: No Trade + Offered / No Trade Only / Offered Only / Wanted Only.
+Filter selector absent entirely for non-logged-in visitors.
+
+### Colour coding (consistent across all views)
+- offered   → `<span class="text-green-700">Offered</span>`
+- wanted    → `<span class="text-amber-600">Wanted</span>`
+- no_barter → `<span class="text-stone-400">—</span>`
+
+### Column/field labels
+- Index tables: "Barter" (column header)
+- Filter sidebar: "Trade" (filter label)
+- Show pages: "Trade Status" (field label)
+- Form: "Trade Status" (field label)
 
 ---
 
@@ -633,19 +691,9 @@ Key milestones:
     decor/app/views/owners/show.html.erb                     (v1.7)
     decor/app/views/computers/_form.html.erb                 (v2.3)
 
-/components: Computer+Serial merged into "Computer-Serial No."; columns reordered
-to Computer-Serial No. | Type | Description | Order No. | Serial No. | Owner.
-/owners/show components: header renamed; Description moved before Order/Serial.
-/computers/edit components table: Description + Order No. added; Condition moved last.
-Column order: Type | Description | Order No. | Serial No. | Condition.
-
 ### 2. "By Order No." Sort on /components
     decor/app/helpers/components_helper.rb                   (v1.2)
     decor/app/controllers/components_controller.rb           (v1.6)
-
-order_asc case added: `components.order(Arel.sql("components.order_number ASC NULLS LAST"))`.
-No join needed (order_number is on the components table). Arel.sql() required for
-NULLS LAST keyword phrase. NULLs sort last so blank order numbers appear at bottom.
 
 ---
 
@@ -653,29 +701,21 @@ NULLS LAST keyword phrase. NULLs sort last so blank order numbers appear at bott
 
 ### 1. In-page anchor links for markdown pages
     decor/app/helpers/application_helper.rb                         (v1.1 → v1.2)
-Added with_toc_data: true to render_markdown — headings now get id= attributes
-so [Section](#section) links work inside markdown pages.
 
 ### 2. Remove device_type selector from edit form
     decor/app/views/computers/_form.html.erb                        (v2.3 → v2.4)
     decor/app/controllers/computers_controller.rb                   (v1.13 → v1.14)
     decor/app/helpers/computers_helper.rb                           (v1.3 → v1.4)
-Type is fixed at creation — changing it after the fact would corrupt category
-membership. Replaced visible selector with hidden field. Line 2 grid-cols-3 → 2.
-computer_form_device_type_options helper removed (dead code).
 
 ### 3. Last Login column on admin Manage Owners page
     decor/db/migrate/20260308100000_add_last_login_at_to_owners.rb  (v1.0 — new)
     decor/app/controllers/sessions_controller.rb                    (v1.0 → v1.1)
     decor/app/views/admin/owners/index.html.erb                     (v1.0 → v1.1)
     decor/test/controllers/sessions_controller_test.rb              (v1.0 — new)
-last_login_at stamped via update_column on successful login. NULL displays as "—".
 
 ### 4. Info dropdown in public navigation
     decor/config/routes.rb                                          (v1.5 → v1.6)
     decor/app/views/common/_navigation.html.erb                     (v1.3 → v1.4)
-"Read Me" standalone link replaced by "Info" dropdown containing Read Me, News,
-Barter Trade, Privacy. Three new public routes added.
 
 ### 5. Generalised text upload/delete pages
     decor/app/models/site_text.rb                                   (v1.0 → v1.1)
@@ -686,33 +726,76 @@ Barter Trade, Privacy. Three new public routes added.
     decor/app/views/layouts/admin.html.erb                          (v1.4 → v1.5)
     decor/test/models/site_text_test.rb                             (v1.0 — new)
     decor/test/controllers/admin/site_texts_controller_test.rb      (v1.0 — new)
-KNOWN_TEXTS constant on SiteText model is single source of truth for all text pages.
-Upload and delete pages now have key selectors — Texts dropdown reduced to two items.
 
 ### 6. Rule document updates
     decor/docs/claude/COMMON_BEHAVIOR.md                            (v2.3 → v2.4)
     decor/docs/claude/PROGRAMMING_GENERAL.md                        (v1.8 → v1.9)
-Download File Naming rule reinforced with Session 20 real example.
-End-of-Task Test Coverage Check strengthened — must be proactive, not prompted.
+
+---
+
+## Work Completed - Sessions 21–22 (March 9, 2026)
+
+### Feature: barter_status on computers and components (full)
+
+#### Back-end layer (Session 21)
+    decor/db/migrate/20260309100000_add_barter_status_to_computers.rb   (v1.0 — new)
+    decor/db/migrate/20260309100001_add_barter_status_to_components.rb  (v1.0 — new)
+    decor/app/models/computer.rb                                         (v1.5 → v1.6)
+    decor/app/models/component.rb                                        (v1.3 → v1.4)
+    decor/app/controllers/computers_controller.rb                        (v1.14 → v1.15)
+    decor/app/controllers/components_controller.rb                       (v1.6 → v1.7)
+    decor/app/helpers/computers_helper.rb                                (v1.4 → v1.5)
+    decor/app/helpers/components_helper.rb                               (v1.2 → v1.3)
+    decor/test/fixtures/computers.yml                                    (v1.6 → v1.7)
+    decor/test/fixtures/components.yml                                   (v1.3 → v1.4)
+    decor/app/views/computers/_form.html.erb                             (v2.4 → v2.5)
+    decor/app/views/components/_form.html.erb                            (v1.5 → v1.6)
+    decor/app/views/components/_component.html.erb                       (v1.5 → v1.6)
+
+Notable fix in components_controller.rb v1.7: `:component_category` was missing
+from `component_params` in v1.6 and was silently dropped on form submit.
+
+#### View layer (Session 22)
+    decor/app/views/computers/_filters.html.erb                          (v1.3 → v1.4)
+    decor/app/views/components/_filters.html.erb                         (v1.0 → v1.1)
+    decor/app/views/computers/show.html.erb                              (v1.6 → v1.7)
+    decor/app/views/components/show.html.erb                             (v1.6 → v1.7)
+    decor/app/views/owners/show.html.erb                                 (v1.7 → v1.8)
+    decor/app/views/computers/index.html.erb                             (v1.7 → v1.9)
+    decor/app/views/computers/_computer.html.erb                         (v1.8 → v1.10)
+
+Notable changes in index/partial:
+  - Type column removed from /computers index (redundant — route already scopes type)
+  - Column header label: "Barter" (index tables); "Trade" (filter sidebar, show pages)
+
+#### Tests (Session 22)
+    decor/test/models/computer_test.rb                                   (v1.4 → v1.5)
+    decor/test/models/component_test.rb                                  (v1.3 → v1.4)
+    decor/test/controllers/computers_controller_test.rb                  (v1.5 → v1.6)
+    decor/test/controllers/components_controller_test.rb                 (v1.1 → v1.3)
+
+Note on components_controller_test: v1.2 used component.serial_number (nil in all
+fixtures) causing TypeError. Fixed in v1.3 by switching to unique description
+substrings ("256KB", "RL02", "VT100").
 
 ---
 
 ## Pending — Next Session
 
-- UI changes — components form and show (component_category integral/peripheral) — carried over
-- BulkUploadService stale model references (low priority, carried over)
+- Commit feature/session-21 branch (covers all Sessions 21+22 work)
 - Dependabot PRs — dedicated session
 - Legal/Compliance: Impressum, Privacy Policy, GDPR, Cookie Consent, TOS
 - System tests: decor/test/system/ still empty
 - Account deletion + data export (GDPR)
 - Spam / Postmark DNS fix (awaiting Rob's dashboard findings)
+- BulkUploadService stale model references (low priority)
 
 ---
 
 ## Current Deployment Status
 
-**Production Version:** Fully up to date through Session 18.
-**Session 19:** Ready to commit and deploy.
+**Production Version:** Fully up to date through Session 20.
+**Sessions 21–22:** Ready to commit (feature/session-21 branch, not yet created).
 
 ---
 
@@ -724,6 +807,9 @@ End-of-Task Test Coverage Check strengthened — must be proactive, not prompted
 - **Destructive actions (Delete):** `text-red-600 hover:text-red-900`
 - **Non-clickable data:** `text-stone-600`
 - **Table headers:** `text-stone-500 uppercase`
+- **Barter — offered:** `text-green-700`
+- **Barter — wanted:** `text-amber-600`
+- **Barter — no_barter:** `text-stone-400` (em-dash)
 
 ### Actions Column Pattern
 - "View" links are NOT used — the clickable first-column value serves this purpose
@@ -755,7 +841,7 @@ Back button: Stimulus back_controller, history.back() + fallback URL
 Container:  max-w-5xl mx-auto
 Form:       width: 80%
 Line 1:     grid grid-cols-3 gap-4  (model, order_number, serial_number)
-Line 2:     grid grid-cols-3 gap-4  (computer_condition, run_status, device_type)
+Line 2:     grid grid-cols-3 gap-4  (computer_condition, run_status, barter_status)
 Line 3:     full width textarea      (history, 3 rows)
 ```
 
@@ -780,12 +866,12 @@ Line 3:     full width textarea      (history, 3 rows)
 
 ### Component Table Column Order (established Session 19)
 ```
-/components index:           Computer-Serial No. | Type | Description | Order No. | Serial No. | Owner
-/owners/show components:     Computer-Serial No. | Type | Description | Order No. | Serial No.
-/computers/edit components:  Type | Description | Order No. | Serial No. | Condition
+/components index:           Computer-Serial No. | Type | Description | Order No. | Serial No. | Owner | [Barter]
+/owners/show components:     Computer-Serial No. | Type | Description | Order No. | Serial No. | [Barter]
+/computers/edit components:  Type | Description | Order No. | Serial No. | Condition | Trade Status
+/computers/show components:  Type | Order No. | Serial No. | Description
 ```
-"Computer-Serial No." renders as "Model – serial" link (or "Spare" when unattached).
-Order No. and Serial No. always refer to the component's own fields (not the computer's).
+[Barter] column present only when `logged_in?`.
 
 ### device_context Pattern (Computers / Appliances shared views)
 ```
@@ -804,7 +890,7 @@ Index filter: appliances route locks device_type to "appliance"
               computers route defaults to "computer" when no param present
 
 Views:       all context-specific values come from instance variables
-             Type filter and Type column hidden when @device_context == "appliance"
+             Type column removed — route already scopes the type
 ```
 
 ### Site Text Pattern (Read Me and future text pages)
@@ -895,6 +981,11 @@ Fix: build without the key, then assign conditionally:
 ### New Gem Requires Server Restart
 Adding a gem to Gemfile and running `bundle install` is not enough for a running
 Rails server. The server process must be restarted to load the new gem.
+
+### Fixture serial_number May Be Nil
+Component fixtures do not all have serial_number set. Using `component.serial_number`
+in `assert_includes response.body, ...` raises TypeError when the value is nil.
+Use a unique substring of `description` instead (e.g. "256KB", "RL02", "VT100").
 
 ---
 
