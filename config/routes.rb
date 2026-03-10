@@ -1,5 +1,10 @@
 # decor/config/routes.rb
-# version 1.8
+# version 1.9
+# v1.9 (Session 24): Added admin data_transfer routes inside namespace :admin.
+#   GET  /admin/data_transfer        → admin/data_transfers#show   (admin_data_transfer_path)
+#   GET  /admin/data_transfer/export → admin/data_transfers#export (export_admin_data_transfer_path)
+#   POST /admin/data_transfer/import → admin/data_transfers#import (import_admin_data_transfer_path)
+#   Mirrors the non-admin data_transfer route pattern (root-level, flat, singular resource).
 # v1.8 (Session 23): Added member routes under :owners for the three sub-pages:
 #   GET /owners/:id/computers  → owners#computers  (computers_owner_path)
 #   GET /owners/:id/appliances → owners#appliances (appliances_owner_path)
@@ -77,6 +82,17 @@ Rails.application.routes.draw do
         get :delete_confirm
       end
     end
+
+    # Admin data transfer — import/export of reference data and owner collections.
+    # Mirrors the non-admin data_transfer route pattern: flat singular-resource style.
+    # Scoped to the admin namespace so requires admin login via Admin::BaseController.
+    # Route helpers:
+    #   admin_data_transfer_path         — show page (selector UI)
+    #   export_admin_data_transfer_path  — export action (GET, returns CSV)
+    #   import_admin_data_transfer_path  — import action (POST, accepts CSV upload)
+    get  "data_transfer",        to: "data_transfers#show",   as: :data_transfer
+    get  "data_transfer/export", to: "data_transfers#export",  as: :export_data_transfer
+    post "data_transfer/import", to: "data_transfers#import",  as: :import_data_transfer
   end
 
   get "up" => "rails/health#show", as: :rails_health_check
