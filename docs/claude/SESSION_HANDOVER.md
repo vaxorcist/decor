@@ -69,6 +69,11 @@ Session 23 delivered three improvements:
    Brakeman's taint tracking. Resolved via `brakeman.ignore` with the new
    fingerprint `95b1e056…`.
 
+5. **Admin nav "Invite Owner" link restored** — the link to `new_admin_invite_path`
+   was present in older nav but lost when the dropdown layout was introduced in
+   admin.html.erb v1.3. Added back to the Owners dropdown (between "Manage Owners"
+   and "Pending Invites").
+
 ---
 
 ## Work Completed Session 23 — Complete File List
@@ -79,6 +84,7 @@ Session 23 delivered three improvements:
     decor/app/views/owners/show.html.erb                 v1.8 → v1.9
     decor/app/views/common/_navigation.html.erb          v1.4 → v1.5
     decor/config/brakeman.ignore                         (2 entries: 9023fba7, 95b1e056)
+    decor/app/views/layouts/admin.html.erb               v1.5 → v1.6
 
 ### New files
     decor/app/views/owners/_profile.html.erb             v1.1
