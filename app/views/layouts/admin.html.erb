@@ -1,5 +1,7 @@
 <%# decor/app/views/layouts/admin.html.erb %>
-<%# version 1.5 %>
+<%# version 1.6 %>
+<%# v1.6 (Session 23): Owners dropdown: added "Invite Owner" link (new_admin_invite_path). %>
+<%#   The link existed in older nav but was lost when the dropdown layout was introduced. %>
 <%# v1.5 (Session 20): Texts dropdown simplified to two items: %>
 <%#   "Upload Text" → new_admin_site_text_path (generic upload with key selector) %>
 <%#   "Delete Text" → delete_confirm_admin_site_texts_path (generic delete with key selector) %>
@@ -47,6 +49,8 @@
                    class="hidden absolute top-full left-0 mt-1 bg-white border border-stone-200
                           rounded shadow-md py-1 z-50 min-w-max">
                 <%= link_to "Manage Owners", admin_owners_path,
+                      class: "block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50 hover:text-stone-900" %>
+                <%= link_to "Invite Owner", new_admin_invite_path,
                       class: "block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50 hover:text-stone-900" %>
                 <%= link_to "Pending Invites", admin_invites_path,
                       class: "block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50 hover:text-stone-900" %>
