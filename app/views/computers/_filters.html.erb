@@ -1,16 +1,17 @@
-<%# decor/app/views/computers/_filters.html.erb - version 1.4 %>
-<%# v1.4 (Session 22): Added "Trade" barter_status filter at the bottom of the %>
-<%#   sidebar, after Run Status, before the Reset/Apply buttons. The entire block %>
-<%#   is wrapped in - if logged_in? - so non-logged-in visitors never see it. %>
-<%#   Helper methods: computer_filter_barter_status_options / _selected %>
-<%#   (defined in computers_helper.rb v1.5). %>
-<%# v1.3 (Session 17): Form action and Reset link use @index_path so the filter %>
-<%#   panel works correctly on both /computers and /appliances. The Type selector %>
-<%#   is hidden on the Appliances page — device_type is locked there by the %>
-<%#   controller and showing the selector would be confusing and non-functional. %>
-<%# v1.2: Added "Type" filter selector (device_type) between Sort and Model. %>
-<%# v1.1: condition_id → computer_condition_id following the %>
-<%#   conditions → computer_conditions table rename (Session 7). %>
+<%# decor/app/views/computers/_filters.html.erb - version 1.5 %>
+<%# v1.5 (Session 25): Fixed Type filter visibility condition. %>
+<%#   Was: unless @device_context == "appliance" %>
+<%#   Now: if @device_context == "computer" %>
+<%#   The old condition left the Type filter visible on the Peripherals page, %>
+<%#   where device_type is locked to "peripheral" by the controller — the %>
+<%#   selector would have no effect and would mislead the user. The correct %>
+<%#   rule is: show the Type filter ONLY on the Computers page, where the %>
+<%#   user can meaningfully filter between Computer and Appliance types. %>
+<%# v1.4 (Session 22): Added "Trade" barter_status filter. %>
+<%# v1.3 (Session 17): Form action and Reset link use @index_path. Type selector %>
+<%#   hidden on Appliances page. %>
+<%# v1.2: Added "Type" filter selector. %>
+<%# v1.1: condition_id → computer_condition_id rename. %>
 
 <%= form_with url: @index_path, method: :get, local: true, class: "col-span-1 self-start flex flex-col gap-4 mb-4 p-4 bg-stone-100" do |form| %>
   <div class="-mb-2 font-medium">Filters</div>
@@ -26,10 +27,11 @@
     <%= form.select :sort, computer_sort_options, { selected: computer_sort_selected }, { class: field_classes } %>
   </div>
 
-  <%# Type filter is only relevant on the Computers page. On the Appliances page %>
-  <%# device_type is locked to "appliance" by the controller — the selector would %>
-  <%# have no effect and would mislead the user. %>
-  <% unless @device_context == "appliance" %>
+  <%# Type filter — only meaningful on the Computers page, where the user can %>
+  <%# filter between Computer and Appliance types. On the Appliances and %>
+  <%# Peripherals pages device_type is locked by the controller; showing the %>
+  <%# selector would have no effect and would mislead the user. %>
+  <% if @device_context == "computer" %>
     <div class="flex flex-col">
       <%= form.label :device_type, "Type", class: "text-sm text-stone-600 font-medium" %>
       <%= form.select :device_type, computer_filter_device_type_options, { selected: computer_filter_device_type_selected, include_blank: "Any" }, { class: field_classes } %>

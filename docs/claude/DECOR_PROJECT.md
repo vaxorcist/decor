@@ -1,5 +1,5 @@
 # decor/docs/claude/DECOR_PROJECT.md
-# version 2.19
+# version 2.20
 # Session 13: device_type on computers, component_category on components; enum tests.
 # Session 14: DRY Computer/Appliance Models admin pages; dropdown nav (admin.html.erb v1.3);
 #   device_type on computer_models; routes :appliance_models; dropdown_controller.js.
@@ -16,11 +16,14 @@
 # Session 24: Admin Import/Export feature — Admin::DataTransfersController; five new
 #   services (ComputerModel/ComponentType export+import, AllOwnersExport); routes v1.9;
 #   admin nav "Imports/Exports" dropdown replaces old "Import/Export".
+# Session 25: Peripherals — device_type: 2 on Computer and ComputerModel models;
+#   CHECK(device_type IN (0,1,2)) migration; /peripherals index route; owner
+#   sub-page /owners/:id/peripherals; admin Peripheral Models page; nav updated.
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** March 10, 2026 (Session 24)
-**Current Status:** Sessions 1–24 committed and deployed.
+**Last Updated:** March 16, 2026 (Session 25)
+**Current Status:** Sessions 1–24 committed and deployed. Session 25 complete, ready to commit.
 
 ---
 
@@ -31,7 +34,7 @@
 tree decor/ -I "node_modules|.git|tmp|storage|log|.DS_Store|*.lock|assets|cache|pids|sockets" --dirsfirst -F --prune -L 6 > decor_tree.txt
 ```
 
-**Current tree** (as of Session 24, March 10, 2026):
+**Current tree** (as of Session 25, March 16, 2026):
 ```
 decor//
 ├── app/
@@ -202,6 +205,7 @@ decor//
 │       │   ├── index.turbo_stream.erb
 │       │   ├── new.html.erb
 │       │   ├── _owner.html.erb
+│       │   ├── peripherals.html.erb
 │       │   ├── _profile.html.erb
 │       │   └── show.html.erb
 │       ├── password_resets/
@@ -288,7 +292,8 @@ decor//
 │   │   ├── 20260306100000_create_site_texts.rb
 │   │   ├── 20260308100000_add_last_login_at_to_owners.rb
 │   │   ├── 20260309100000_add_barter_status_to_computers.rb
-│   │   └── 20260309100001_add_barter_status_to_components.rb
+│   │   ├── 20260309100001_add_barter_status_to_components.rb
+│   │   └── 20260316100000_add_device_type_check_to_computers.rb
 │   ├── cable_schema.rb
 │   ├── cache_schema.rb
 │   ├── queue_schema.rb
@@ -378,79 +383,58 @@ decor//
 ├── README.md
 └── rich.html
 
-61 directories, 283 files
+61 directories, 285 files
 ```
 
 **Key file versions** (updated each session):
 
-    decor/db/migrate/20260309100000_add_barter_status_to_computers.rb  v1.0  ← Session 21 (new)
-    decor/db/migrate/20260309100001_add_barter_status_to_components.rb v1.0  ← Session 21 (new)
-    decor/app/models/computer.rb                                        v1.6  ← Session 21 (barter_status enum)
-    decor/app/models/component.rb                                       v1.4  ← Session 21 (barter_status enum)
-    decor/app/controllers/computers_controller.rb                       v1.15 ← Session 21 (barter filter + strong params)
-    decor/app/controllers/components_controller.rb                      v1.7  ← Session 21 (barter filter + strong params; component_category fix)
-    decor/app/helpers/computers_helper.rb                               v1.5  ← Session 21 (barter filter options + helpers)
-    decor/app/helpers/components_helper.rb                              v1.3  ← Session 21 (barter filter options + helpers)
-    decor/test/fixtures/computers.yml                                   v1.7  ← Session 21 (barter_status on alice_vax, dec_unibus_router)
-    decor/test/fixtures/components.yml                                  v1.4  ← Session 21 (barter_status on spare_disk, charlie_vt100_terminal)
-    decor/app/views/computers/_form.html.erb                            v2.5  ← Session 21 (barter_status select; grid-cols-3 on line 2)
-    decor/app/views/components/_form.html.erb                           v1.6  ← Session 21 (barter_status select; row 3 added)
-    decor/app/views/components/_component.html.erb                      v1.6  ← Session 21 (Trade/Barter td added)
-    decor/app/views/computers/_computer.html.erb                        v1.10 ← Session 22 (Type td removed; Barter td added)
-    decor/app/views/computers/_filters.html.erb                         v1.4  ← Session 22 (Trade barter filter added)
-    decor/app/views/components/_filters.html.erb                        v1.1  ← Session 22 (Trade barter filter added)
-    decor/app/views/computers/show.html.erb                             v1.7  ← Session 22 (Trade Status field; dynamic grid-cols)
-    decor/app/views/components/show.html.erb                            v1.7  ← Session 22 (Trade Status field)
-    decor/app/views/owners/show.html.erb                                v1.8  ← Session 22 (Trade column in all 3 tables)
-    decor/app/views/computers/index.html.erb                            v1.9  ← Session 22 (Type th removed; Barter th added)
-    decor/app/views/components/index.html.erb                           v1.5  ← Session 22 (Barter th added)
-    decor/test/models/computer_test.rb                                  v1.5  ← Session 22 (barter_status enum tests)
-    decor/test/models/component_test.rb                                 v1.4  ← Session 22 (barter_status enum tests)
-    decor/test/controllers/computers_controller_test.rb                 v1.6  ← Session 22 (barter filter tests)
-    decor/test/controllers/components_controller_test.rb                v1.3  ← Session 22 (barter filter tests; nil serial fix)
-    decor/docs/claude/SESSION_HANDOVER.md                               v26.0 ← Session 24
-    decor/config/routes.rb                                              v1.9  ← Session 24 (admin data_transfer routes)
-    decor/app/views/layouts/admin.html.erb                              v1.7  ← Session 24 (Imports/Exports dropdown)
-    decor/app/controllers/admin/data_transfers_controller.rb            v1.0  ← Session 24 (new)
-    decor/app/views/admin/data_transfers/show.html.erb                  v1.0  ← Session 24 (new)
-    decor/app/services/computer_model_export_service.rb                 v1.0  ← Session 24 (new)
-    decor/app/services/computer_model_import_service.rb                 v1.0  ← Session 24 (new)
-    decor/app/services/component_type_export_service.rb                 v1.0  ← Session 24 (new)
-    decor/app/services/component_type_import_service.rb                 v1.0  ← Session 24 (new)
-    decor/app/services/all_owners_export_service.rb                     v1.0  ← Session 24 (new)
-    decor/test/controllers/admin/data_transfers_controller_test.rb      v1.0  ← Session 24 (new)
-    decor/test/services/computer_model_export_service_test.rb           v1.0  ← Session 24 (new)
-    decor/test/services/computer_model_import_service_test.rb           v1.1  ← Session 24 (new)
-    decor/test/services/component_type_export_service_test.rb           v1.0  ← Session 24 (new)
-    decor/test/services/component_type_import_service_test.rb           v1.0  ← Session 24 (new)
-    decor/app/helpers/application_helper.rb                             v1.2  ← Session 20 (with_toc_data)
-    decor/db/migrate/20260308100000_add_last_login_at_to_owners.rb      v1.0  ← Session 20 (new)
-    decor/app/controllers/sessions_controller.rb                        v1.1  ← Session 20 (stamp last_login_at)
-    decor/app/views/admin/owners/index.html.erb                         v1.1  ← Session 20 (Last Login column)
-    decor/test/controllers/sessions_controller_test.rb                  v1.0  ← Session 20 (new)
-    decor/config/routes.rb                                              v1.7  ← Session 20 (news/barter_trade/privacy/delete_confirm)
-    decor/app/views/common/_navigation.html.erb                         v1.4  ← Session 20 (Info dropdown)
-    decor/app/models/site_text.rb                                       v1.1  ← Session 20 (KNOWN_TEXTS constant)
-    decor/app/controllers/admin/site_texts_controller.rb                v1.1  ← Session 20 (generalised; delete_confirm)
-    decor/app/views/admin/site_texts/new.html.erb                       v1.1  ← Session 20 (key selector)
-    decor/app/views/admin/site_texts/delete_confirm.html.erb            v1.0  ← Session 20 (new)
-    decor/app/views/layouts/admin.html.erb                              v1.5  ← Session 20 (Texts dropdown: 2 items)
-    decor/test/models/site_text_test.rb                                 v1.0  ← Session 20 (new)
-    decor/test/controllers/admin/site_texts_controller_test.rb          v1.0  ← Session 20 (new)
-    decor/docs/claude/COMMON_BEHAVIOR.md                                v2.4  ← Session 20 (prefix rule reinforced)
-    decor/docs/claude/PROGRAMMING_GENERAL.md                            v1.9  ← Session 20 (test coverage check reinforced)
-    decor/app/controllers/components_controller.rb                      v1.6  ← Session 19 (order_asc sort)
-    decor/app/helpers/components_helper.rb                              v1.2  ← Session 19 (order_asc option)
-    decor/app/views/components/index.html.erb                           v1.3  ← Session 19 (col reorder; Computer-Serial No.)
-    decor/app/views/components/_component.html.erb                      v1.5  ← Session 19 (col reorder; Order No. + Serial No.)
-    decor/app/models/owner.rb                                           v1.3  ← (password strength)
-    decor/app/models/computer.rb                                        v1.5  ← Session 13
-    decor/app/models/component.rb                                       v1.3  ← Session 13
-    decor/app/services/owner_export_service.rb                          v1.1  ← Session 16
-    decor/app/services/owner_import_service.rb                          v1.1  ← Session 16
-    decor/test/fixtures/owners.yml                                      v2.1  ← Session 13
-    decor/test/fixtures/computers.yml                                   v1.6  ← Session 13
-    decor/test/fixtures/components.yml                                  v1.3  ← Session 13
+    decor/db/migrate/20260316100000_add_device_type_check_to_computers.rb  v1.0  ← Session 25 (new)
+    decor/app/models/computer.rb                                            v1.7  ← Session 25 (peripheral: 2)
+    decor/app/models/computer_model.rb                                      v1.2  ← Session 25 (peripheral: 2)
+    decor/config/routes.rb                                                  v2.2  ← Session 25
+    decor/app/controllers/owners_controller.rb                              v1.7  ← Session 25 (peripherals action)
+    decor/app/controllers/computers_controller.rb                           v1.16 ← Session 25 (peripheral context)
+    decor/app/controllers/admin/computer_models_controller.rb               v1.3  ← Session 25 (peripheral branch)
+    decor/app/views/owners/peripherals.html.erb                             v1.0  ← Session 25 (new)
+    decor/app/views/owners/computers.html.erb                               v1.1  ← Session 25 (Peripherals tab)
+    decor/app/views/owners/appliances.html.erb                              v1.1  ← Session 25 (Peripherals tab)
+    decor/app/views/owners/show.html.erb                                    v2.0  ← Session 25 (Peripherals card)
+    decor/app/views/common/_navigation.html.erb                             v1.7  ← Session 25 (Peripherals link)
+    decor/app/views/layouts/admin.html.erb                                  v1.8  ← Session 25 (Peripherals dropdown)
+    decor/app/views/computers/_filters.html.erb                             v1.5  ← Session 25 (Type filter fix)
+    decor/test/fixtures/computers.yml                                       v1.8  ← Session 25 (peripheral fixture)
+    decor/test/controllers/owners_controller_test.rb                        v1.4  ← Session 25 (peripherals smoke test)
+    decor/docs/claude/SESSION_HANDOVER.md                                   v27.0 ← Session 25
+    decor/docs/claude/DECOR_PROJECT.md                                      v2.20 ← Session 25
+    decor/app/views/layouts/admin.html.erb                                  v1.7  ← Session 24
+    decor/app/controllers/admin/data_transfers_controller.rb                v1.0  ← Session 24 (new)
+    decor/app/views/admin/data_transfers/show.html.erb                      v1.0  ← Session 24 (new)
+    decor/app/services/computer_model_export_service.rb                     v1.0  ← Session 24 (new)
+    decor/app/services/computer_model_import_service.rb                     v1.0  ← Session 24 (new)
+    decor/app/services/component_type_export_service.rb                     v1.0  ← Session 24 (new)
+    decor/app/services/component_type_import_service.rb                     v1.0  ← Session 24 (new)
+    decor/app/services/all_owners_export_service.rb                         v1.0  ← Session 24 (new)
+    decor/test/controllers/admin/data_transfers_controller_test.rb          v1.0  ← Session 24 (new)
+    decor/test/services/computer_model_export_service_test.rb               v1.0  ← Session 24 (new)
+    decor/test/services/computer_model_import_service_test.rb               v1.1  ← Session 24 (new)
+    decor/test/services/component_type_export_service_test.rb               v1.0  ← Session 24 (new)
+    decor/test/services/component_type_import_service_test.rb               v1.0  ← Session 24 (new)
+    decor/app/helpers/application_helper.rb                                 v1.2  ← Session 20
+    decor/db/migrate/20260308100000_add_last_login_at_to_owners.rb          v1.0  ← Session 20 (new)
+    decor/app/controllers/sessions_controller.rb                            v1.1  ← Session 20
+    decor/app/views/admin/owners/index.html.erb                             v1.1  ← Session 20
+    decor/test/controllers/sessions_controller_test.rb                      v1.0  ← Session 20 (new)
+    decor/app/views/common/_navigation.html.erb                             v1.4  ← Session 20
+    decor/app/models/site_text.rb                                           v1.1  ← Session 20
+    decor/app/controllers/admin/site_texts_controller.rb                    v1.1  ← Session 20
+    decor/app/views/admin/site_texts/new.html.erb                           v1.1  ← Session 20
+    decor/app/views/admin/site_texts/delete_confirm.html.erb                v1.0  ← Session 20 (new)
+    decor/app/models/owner.rb                                               v1.3  ← (password strength)
+    decor/app/models/computer.rb                                            v1.6  ← Session 21
+    decor/app/models/component.rb                                           v1.4  ← Session 21
+    decor/app/services/owner_export_service.rb                              v1.1  ← Session 16
+    decor/app/services/owner_import_service.rb                              v1.1  ← Session 16
+    decor/test/fixtures/owners.yml                                          v2.1  ← Session 13
 
 
 ---
@@ -474,12 +458,22 @@ decor//
 - belongs_to computer_condition (optional)
 - belongs_to run_status (optional)
 - has_many components, dependent: :destroy
-- device_type enum: 0 = computer (default), 1 = appliance (placeholder name)
+- device_type enum: 0 = computer (default), 1 = appliance, 2 = peripheral
+  prefix: true → device_type_computer?, device_type_appliance?, device_type_peripheral?
+  CHECK(device_type IN (0,1,2)) constraint enforced at DB level (migration 20260316100000).
 - barter_status enum: 0 = no_barter (default), 1 = offered, 2 = wanted
   prefix: true → barter_status_no_barter?, barter_status_offered?, barter_status_wanted?
 - Validations:
   - serial_number: required, VARCHAR(20) + CHECK in DB
   - order_number: max 20 characters, optional, VARCHAR(20) + CHECK in DB
+
+### ComputerModel
+- device_type enum: 0 = computer (default), 1 = appliance, 2 = peripheral
+  Mirrors Computer#device_type. Used to scope model selects in forms and in
+  the admin Computer/Appliance/Peripheral Models pages.
+  Note: no CHECK constraint yet on computer_models.device_type — pending migration.
+- has_many computers, dependent: :restrict_with_error
+- Validations: name presence + uniqueness
 
 ### Component
 - belongs_to owner
@@ -549,273 +543,83 @@ Filter selector absent entirely for non-logged-in visitors.
 
 `resources :conditions` maps to `Admin::ConditionsController` which manages the
 `computer_conditions` table (class `ComputerCondition`). The route resource name
-was intentionally kept as `:conditions` to avoid a route rename ripple. The
-controller uses explicit `url:` and `scope: :condition` in its form partial to
-bridge the class name / route name mismatch.
+was intentionally kept as `:conditions` to avoid a route rename ripple.
 
-`resources :component_conditions` maps cleanly to `Admin::ComponentConditionsController`
-(class `ComponentCondition`) — no url:/scope: workaround needed.
+`resources :component_conditions` maps cleanly to `Admin::ComponentConditionsController`.
 
 `resource :data_transfer, only: [:show]` with member routes `get :export` and
 `post :import` — managed by `DataTransfersController` (Session 10).
 
 `resources :appliances, controller: "computers", only: [:index],
 defaults: { device_context: "appliance" }` — shares the computers controller.
-The `device_context` default param is read by `set_device_context` before_action,
-which locks device_type to "appliance" and sets all context instance variables
-(@page_title, @index_path, @turbo_tbody_id, @load_more_id) for the shared views.
-Individual record CRUD (show/edit/update/destroy) always routes through computers_*.
+
+`resources :peripherals, controller: "computers", only: [:index],
+defaults: { device_context: "peripheral" }` — shares the computers controller.
+Introduced Session 25. Individual record CRUD (show/edit/update/destroy) always
+routes through computers_*.
+
+`resources :peripheral_models, controller: "computer_models",
+defaults: { device_context: "peripheral" }` under namespace :admin — shares
+Admin::ComputerModelsController. Introduced Session 25.
 
 `get "readme", to: "site_texts#show", defaults: { key: "readme" }` — public,
-no login required. Additional text pages follow the same pattern with a different key.
-`resources :site_texts, only: [:new, :create, :destroy], param: :key` under the
-admin namespace — managed by Admin::SiteTextsController.
+no login required.
 
 ---
 
-## Work Completed - Sessions 1–8
+## Work Completed - Sessions 1–24
 
-(See SESSION_HANDOVER.md v9.1 for detail on Sessions 1–8)
-
-Key milestones:
-- Session 1: Index table layouts, search, serial number required
-- Session 2: Rubocop fixes, owners page redesign
-- Session 3: Password change functionality
-- Session 4: Password strength validation, computers/components UI improvements
-- Session 5: Embedded component sub-form on computer edit page
-- Session 6: SQLite FK enforcement enabled, gem security updates, docs/claude/ directory
-- Session 7: component_conditions table; conditions→computer_conditions rename; type cleanup
-- Session 8: Admin UI for component_conditions; Computer Conditions rename in UI;
-  model validations; brakeman 8.0.3; owners/show + components/show layout (Steps 1–2)
+(See SESSION_HANDOVER.md v26.0 for detail on Sessions 1–24)
 
 ---
 
-## Work Completed - Session 9 (February 27, 2026)
+## Work Completed - Session 25 (March 16, 2026)
 
-### 1. Rule Set — RAILS_SPECIFICS.md v1.6
-### 2. components/show.html.erb — Step 3 completed (v1.5)
-### 3. Stimulus Back Controller — back_controller.js (v1.0)
-### 4. Component Edit Page — edit.html.erb (v1.1), _form.html.erb (v1.3)
+### Feature: Peripherals — device_type: 2
 
----
+#### Database + Model layer
+    decor/db/migrate/20260316100000_add_device_type_check_to_computers.rb  v1.0 (new)
+    decor/app/models/computer.rb                                            v1.7
+    decor/app/models/computer_model.rb                                      v1.2
 
-## Work Completed - Session 10 (February 28, 2026)
+#### Routes + Controllers
+    decor/config/routes.rb                                                  v2.2
+    decor/app/controllers/owners_controller.rb                              v1.7
+    decor/app/controllers/computers_controller.rb                           v1.16
+    decor/app/controllers/admin/computer_models_controller.rb               v1.3
 
-### 1. Data Transfer Feature
-    decor/app/controllers/data_transfers_controller.rb     (v1.0)
-    decor/app/services/owner_export_service.rb
-    decor/app/services/owner_import_service.rb
+#### Views
+    decor/app/views/owners/peripherals.html.erb                             v1.0 (new)
+    decor/app/views/owners/computers.html.erb                               v1.1
+    decor/app/views/owners/appliances.html.erb                              v1.1
+    decor/app/views/owners/show.html.erb                                    v2.0
+    decor/app/views/common/_navigation.html.erb                             v1.7
+    decor/app/views/layouts/admin.html.erb                                  v1.8
+    decor/app/views/computers/_filters.html.erb                             v1.5
 
-### 2. Tests
-    decor/test/controllers/data_transfers_controller_test.rb
-    decor/test/services/owner_export_service_test.rb
-    decor/test/services/owner_import_service_test.rb
+#### Tests + Fixtures
+    decor/test/fixtures/computers.yml                                       v1.8
+    decor/test/controllers/owners_controller_test.rb                        v1.4
 
-### 3. Rule Set Updates — COMMON_BEHAVIOR.md v1.8, PROGRAMMING_GENERAL.md v1.7
+#### Bug fixes during session
+- Empty Model select on peripheral new/edit form: ComputerModel enum was missing
+  peripheral: 2 — added in computer_model.rb v1.2.
+- Type filter visible on Peripherals index: `unless @device_context == "appliance"`
+  changed to `if @device_context == "computer"` in _filters.html.erb v1.5.
+- "My Peripherals" missing from owner nav dropdown — added in _navigation.html.erb v1.6/v1.7.
 
----
-
-## Work Completed - Session 11 (March 1, 2026)
-
-### 1. owners/show — Computers and Components tables
-    decor/app/views/owners/show.html.erb        (v1.4)
-    decor/app/controllers/owners_controller.rb  (v1.4)
-
-### 2. source=owner Redirect Pattern
-    decor/app/controllers/computers_controller.rb   (v1.6)
-    decor/app/controllers/components_controller.rb  (v1.4)
-
-### 3. Tests — owners_controller_test.rb (v1.3)
-
----
-
-## Work Completed - Session 12 (March 1, 2026)
-
-### 1. Destroy-redirect tests
-    decor/test/controllers/computers_controller_test.rb    (v1.0)
-    decor/test/controllers/components_controller_test.rb   (v1.0)
-
-### 2. Computer cascade delete (Rails layer)
-    decor/app/models/computer.rb    (v1.4)
-    decor/test/models/computer_test.rb    (v1.3)
-
-### 3. computers/show layout + source=computer_show
-    decor/app/views/computers/show.html.erb         (v1.5)
-    decor/app/controllers/components_controller.rb  (v1.5)
-    decor/test/controllers/components_controller_test.rb  (v1.1)
-
----
-
-## Work Completed - Session 16 (March 4, 2026)
-
-### 1. device_type in Export / Import
-    decor/app/services/owner_export_service.rb            (v1.1)
-    decor/app/services/owner_import_service.rb            (v1.1)
-    decor/app/views/data_transfers/show.html.erb          (v1.5)
-    decor/test/services/owner_export_service_test.rb      (v1.1)
-    decor/test/services/owner_import_service_test.rb      (v1.1)
-
-### 2. Owners Index — Filter Width and Appliances Column
-    decor/app/views/owners/index.html.erb        (v3.3)
-    decor/app/views/owners/_owner.html.erb       (v3.3)
-
-### 3. Rule Document Updates
-    decor/docs/claude/COMMON_BEHAVIOR.md              (v2.2)
-    decor-session-rules skill                         (v1.1)
-
----
-
-## Work Completed - Session 17 (March 5, 2026)
-
-### 1. device_type Filtering on Computers Index
-    decor/app/helpers/computers_helper.rb                    (v1.2)
-    decor/app/views/computers/_filters.html.erb              (v1.3)
-    decor/app/controllers/computers_controller.rb            (v1.9)
-
-### 2. Appliances Page
-    decor/config/routes.rb                                   (v1.4)
-    decor/app/views/computers/index.html.erb                 (v1.7)
-    decor/app/views/computers/_computer.html.erb             (v1.8)
-    decor/app/views/computers/index.turbo_stream.erb         (v1.1)
-    decor/app/views/common/_navigation.html.erb              (v1.2)
-    decor/app/views/owners/_owner.html.erb                   (v3.4)
-    decor/test/controllers/computers_controller_test.rb      (v1.3)
-
-### 3. Edit / Show Pages — device_type-Aware Labels
-    decor/app/views/computers/edit.html.erb                  (v1.3)
-    decor/app/views/computers/_form.html.erb                 (v2.0)
-    decor/app/views/computers/show.html.erb                  (v1.6)
-
----
-
-## Work Completed - Session 18 (March 6, 2026)
-
-### 1. device_type Selector on New/Edit Form
-    decor/app/views/computers/_form.html.erb                 (v2.2)
-    decor/app/helpers/computers_helper.rb                    (v1.3)
-    decor/app/controllers/computers_controller.rb            (v1.13)
-    decor/app/views/computers/new.html.erb                   (v1.4)
-    decor/test/controllers/computers_controller_test.rb      (v1.5)
-
-### 2. Owner Show Page — Separate Appliances Table
-    decor/app/controllers/owners_controller.rb               (v1.5)
-    decor/app/views/owners/show.html.erb                     (v1.6)
-
-### 3. Read Me Page + Site Texts Infrastructure
-    decor/Gemfile                                            (redcarpet added)
-    decor/db/migrate/20260306100000_create_site_texts.rb     (v1.0)
-    decor/app/models/site_text.rb                            (v1.0)
-    decor/app/helpers/application_helper.rb                  (v1.1)
-    decor/config/routes.rb                                   (v1.5)
-    decor/app/controllers/site_texts_controller.rb           (v1.0)
-    decor/app/controllers/admin/site_texts_controller.rb     (v1.0)
-    decor/app/views/site_texts/show.html.erb                 (v1.0)
-    decor/app/views/admin/site_texts/new.html.erb            (v1.0)
-    decor/app/views/common/_navigation.html.erb              (v1.3)
-    decor/app/views/layouts/admin.html.erb                   (v1.4)
-
----
-
-## Work Completed - Session 19 (March 7, 2026)
-
-### 1. Component Table Column Reorder + Order No. Added
-    decor/app/views/components/index.html.erb                (v1.3)
-    decor/app/views/components/_component.html.erb           (v1.5)
-    decor/app/views/owners/show.html.erb                     (v1.7)
-    decor/app/views/computers/_form.html.erb                 (v2.3)
-
-### 2. "By Order No." Sort on /components
-    decor/app/helpers/components_helper.rb                   (v1.2)
-    decor/app/controllers/components_controller.rb           (v1.6)
-
----
-
-## Work Completed - Session 20 (March 8, 2026)
-
-### 1. In-page anchor links for markdown pages
-    decor/app/helpers/application_helper.rb                         (v1.1 → v1.2)
-
-### 2. Remove device_type selector from edit form
-    decor/app/views/computers/_form.html.erb                        (v2.3 → v2.4)
-    decor/app/controllers/computers_controller.rb                   (v1.13 → v1.14)
-    decor/app/helpers/computers_helper.rb                           (v1.3 → v1.4)
-
-### 3. Last Login column on admin Manage Owners page
-    decor/db/migrate/20260308100000_add_last_login_at_to_owners.rb  (v1.0 — new)
-    decor/app/controllers/sessions_controller.rb                    (v1.0 → v1.1)
-    decor/app/views/admin/owners/index.html.erb                     (v1.0 → v1.1)
-    decor/test/controllers/sessions_controller_test.rb              (v1.0 — new)
-
-### 4. Info dropdown in public navigation
-    decor/config/routes.rb                                          (v1.5 → v1.6)
-    decor/app/views/common/_navigation.html.erb                     (v1.3 → v1.4)
-
-### 5. Generalised text upload/delete pages
-    decor/app/models/site_text.rb                                   (v1.0 → v1.1)
-    decor/app/controllers/admin/site_texts_controller.rb            (v1.0 → v1.1)
-    decor/app/views/admin/site_texts/new.html.erb                   (v1.0 → v1.1)
-    decor/app/views/admin/site_texts/delete_confirm.html.erb        (v1.0 — new)
-    decor/config/routes.rb                                          (v1.6 → v1.7)
-    decor/app/views/layouts/admin.html.erb                          (v1.4 → v1.5)
-    decor/test/models/site_text_test.rb                             (v1.0 — new)
-    decor/test/controllers/admin/site_texts_controller_test.rb      (v1.0 — new)
-
-### 6. Rule document updates
-    decor/docs/claude/COMMON_BEHAVIOR.md                            (v2.3 → v2.4)
-    decor/docs/claude/PROGRAMMING_GENERAL.md                        (v1.8 → v1.9)
-
----
-
-## Work Completed - Sessions 21–22 (March 9, 2026)
-
-### Feature: barter_status on computers and components (full)
-
-#### Back-end layer (Session 21)
-    decor/db/migrate/20260309100000_add_barter_status_to_computers.rb   (v1.0 — new)
-    decor/db/migrate/20260309100001_add_barter_status_to_components.rb  (v1.0 — new)
-    decor/app/models/computer.rb                                         (v1.5 → v1.6)
-    decor/app/models/component.rb                                        (v1.3 → v1.4)
-    decor/app/controllers/computers_controller.rb                        (v1.14 → v1.15)
-    decor/app/controllers/components_controller.rb                       (v1.6 → v1.7)
-    decor/app/helpers/computers_helper.rb                                (v1.4 → v1.5)
-    decor/app/helpers/components_helper.rb                               (v1.2 → v1.3)
-    decor/test/fixtures/computers.yml                                    (v1.6 → v1.7)
-    decor/test/fixtures/components.yml                                   (v1.3 → v1.4)
-    decor/app/views/computers/_form.html.erb                             (v2.4 → v2.5)
-    decor/app/views/components/_form.html.erb                            (v1.5 → v1.6)
-    decor/app/views/components/_component.html.erb                       (v1.5 → v1.6)
-
-Notable fix in components_controller.rb v1.7: `:component_category` was missing
-from `component_params` in v1.6 and was silently dropped on form submit.
-
-#### View layer (Session 22)
-    decor/app/views/computers/_filters.html.erb                          (v1.3 → v1.4)
-    decor/app/views/components/_filters.html.erb                         (v1.0 → v1.1)
-    decor/app/views/computers/show.html.erb                              (v1.6 → v1.7)
-    decor/app/views/components/show.html.erb                             (v1.6 → v1.7)
-    decor/app/views/owners/show.html.erb                                 (v1.7 → v1.8)
-    decor/app/views/computers/index.html.erb                             (v1.7 → v1.9)
-    decor/app/views/computers/_computer.html.erb                         (v1.8 → v1.10)
-
-Notable changes in index/partial:
-  - Type column removed from /computers index (redundant — route already scopes type)
-  - Column header label: "Barter" (index tables); "Trade" (filter sidebar, show pages)
-
-#### Tests (Session 22)
-    decor/test/models/computer_test.rb                                   (v1.4 → v1.5)
-    decor/test/models/component_test.rb                                  (v1.3 → v1.4)
-    decor/test/controllers/computers_controller_test.rb                  (v1.5 → v1.6)
-    decor/test/controllers/components_controller_test.rb                 (v1.1 → v1.3)
-
-Note on components_controller_test: v1.2 used component.serial_number (nil in all
-fixtures) causing TypeError. Fixed in v1.3 by switching to unique description
-substrings ("256KB", "RL02", "VT100").
+#### Still pending from Session 25
+- `decor/app/views/owners/components.html.erb` — Peripherals tab not yet added
+  (file was never uploaded). Needs v1.1 with four-tab strip.
+- `decor/test/fixtures/computer_models.yml` — no peripheral model fixture yet.
+  Needed before peripheral model export/import tests can be written.
+- See SESSION_HANDOVER.md v27.0 for full test coverage notes.
 
 ---
 
 ## Pending — Next Session
 
-- Commit feature/session-21 branch (covers all Sessions 21+22 work)
+- Commit Session 25 work
 - Dependabot PRs — dedicated session
 - Legal/Compliance: Impressum, Privacy Policy, GDPR, Cookie Consent, TOS
 - System tests: decor/test/system/ still empty
@@ -827,8 +631,8 @@ substrings ("256KB", "RL02", "VT100").
 
 ## Current Deployment Status
 
-**Production Version:** Fully up to date through Session 20.
-**Sessions 21–22:** Ready to commit (feature/session-21 branch, not yet created).
+**Production Version:** Fully up to date through Session 24.
+**Session 25:** Ready to commit.
 
 ---
 
@@ -878,7 +682,7 @@ Line 2:     grid grid-cols-3 gap-4  (computer_condition, run_status, barter_stat
 Line 3:     full width textarea      (history, 3 rows)
 ```
 
-### Layout Pattern (Index pages — Computers/Appliances/Components/Owners)
+### Layout Pattern (Index pages — Computers/Appliances/Peripherals/Components/Owners)
 ```erb
 <div class="px-4">
   <h1 class="text-2xl font-semibold mb-4 sticky top-0 bg-white z-10 py-2">Title</h1>
@@ -906,24 +710,34 @@ Line 3:     full width textarea      (history, 3 rows)
 ```
 [Barter] column present only when `logged_in?`.
 
-### device_context Pattern (Computers / Appliances shared views)
+### device_context Pattern (Computers / Appliances / Peripherals shared views)
 ```
-Route:       resources :appliances, controller: "computers", only: [:index],
+Routes:      resources :appliances,  controller: "computers", only: [:index],
                defaults: { device_context: "appliance" }
+             resources :peripherals, controller: "computers", only: [:index],
+               defaults: { device_context: "peripheral" }
              resources :computers, defaults: { device_context: "computer" }
 
-Controller:  before_action :set_device_context sets:
-               @device_context  — "computer" or "appliance"
-               @page_title      — "Computers" or "Appliances"
-               @index_path      — computers_path or appliances_path
-               @turbo_tbody_id  — "computers" or "appliances"
-               @load_more_id    — :load_more_computers or :load_more_appliances
+Controller:  before_action :set_device_context — case/when on params[:device_context]:
+             "appliance"  → @device_context="appliance",  @page_title="Appliances",
+                            @index_path=appliances_path,  @turbo_tbody_id="appliances",
+                            @load_more_id=:load_more_appliances
+             "peripheral" → @device_context="peripheral", @page_title="Peripherals",
+                            @index_path=peripherals_path, @turbo_tbody_id="peripherals",
+                            @load_more_id=:load_more_peripherals
+             else          → @device_context="computer",  @page_title="Computers",
+                            @index_path=computers_path,   @turbo_tbody_id="computers",
+                            @load_more_id=:load_more_computers
 
-Index filter: appliances route locks device_type to "appliance"
-              computers route defaults to "computer" when no param present
+Index filter: appliance/peripheral routes lock device_type to their value.
+              computers route defaults to "computer" when no param present.
 
-Views:       all context-specific values come from instance variables
-             Type column removed — route already scopes the type
+Views:       all context-specific values come from instance variables.
+             Type filter in _filters.html.erb only shown when
+             @device_context == "computer" (the only page where it is meaningful).
+
+Admin:       Admin::ComputerModelsController uses same case/when pattern in
+             set_device_context for computer/appliance/peripheral model pages.
 ```
 
 ### Site Text Pattern (Read Me and future text pages)
@@ -934,7 +748,6 @@ Route:       get "readme", to: "site_texts#show", defaults: { key: "readme" }
 Public ctrl: SiteTextsController#show — no login required
 Admin ctrl:  Admin::SiteTextsController — new/create (upsert), destroy
 Rendering:   render_markdown(content) helper — redcarpet gem
-             Markdown links work: [text](/path) internal, [text](https://...) external
 Empty state: displays "== Empty ==" when no record uploaded yet
 ```
 
@@ -976,7 +789,6 @@ Enabled as of Session 6 (February 24, 2026).
 
 ### SQLite VARCHAR Enforcement
 VARCHAR(n) is cosmetic in SQLite — CHECK constraints required for actual enforcement.
-See RAILS_SPECIFICS.md and PROGRAMMING_GENERAL.md for rules.
 
 ### form_with Class Name / Route Name Mismatch
 When a model class name does not match the Rails route resource name, use both
@@ -989,10 +801,8 @@ when dependent records exist. Always check the return value and redirect with
 
 ### ERB + whitespace-pre-wrap Renders Leading Whitespace Literally
 Put the ERB tag on the same line as the opening tag.
-See RAILS_SPECIFICS.md.
 
 ### f.submit Label Does Not Respect Model Enum Values
-Rails generates "Create/Update [ModelClass]" regardless of enum values.
 Pass an explicit string label when device_type must be reflected:
 `f.submit "#{computer.persisted? ? "Update" : "Create"} #{computer.device_type.capitalize}"`
 
@@ -1002,23 +812,30 @@ Use `gh pr merge --merge` (not `--squash`).
 ### Multi-table ORDER BY Requires Arel.sql()
 Rails raises `ActiveRecord::UnknownAttributeReference` for `.order()` strings
 containing dots or SQL keywords. Wrap in `Arel.sql()`.
-See RAILS_SPECIFICS.md.
 
 ### build(device_type: nil) Overrides Enum Default
 `Computer.build(device_type: nil)` explicitly sets device_type to nil, bypassing
-the enum default (computer: 0). Calling `.capitalize` on nil then raises NoMethodError.
-Fix: build without the key, then assign conditionally:
-  @computer = Current.owner.computers.build
-  @computer.device_type = params[:device_type] if params[:device_type].present?
+the enum default. Fix: build without the key, then assign conditionally.
+
+### ComputerModel.where(device_type:) requires matching enum values
+If Computer and ComputerModel enums diverge, the model select on new/edit forms
+returns empty results for the unrecognised device_type string. Both enums must
+always be kept in sync. Introduced as a bug in Session 25 when peripheral: 2
+was added to Computer but not ComputerModel; fixed in computer_model.rb v1.2.
+
+### _filters.html.erb Type filter — show only on Computers page
+The Type filter is only meaningful on /computers (where the user can switch
+between Computer and Appliance types). On /appliances and /peripherals the
+device_type is locked by the controller — the selector would have no effect.
+Use `if @device_context == "computer"`, NOT `unless @device_context == "appliance"`.
+The negative form breaks silently whenever a new locked-type context is added.
 
 ### New Gem Requires Server Restart
 Adding a gem to Gemfile and running `bundle install` is not enough for a running
 Rails server. The server process must be restarted to load the new gem.
 
 ### Fixture serial_number May Be Nil
-Component fixtures do not all have serial_number set. Using `component.serial_number`
-in `assert_includes response.body, ...` raises TypeError when the value is nil.
-Use a unique substring of `description` instead (e.g. "256KB", "RL02", "VT100").
+Use a unique substring of `description` instead of `serial_number` in assertions.
 
 ---
 
@@ -1032,8 +849,7 @@ Use a unique substring of `description` instead (e.g. "256KB", "RL02", "VT100").
 - System tests: `decor/test/system/` still empty
 - Account deletion (GDPR), data export (GDPR)
 - Spam / Postmark DNS fix (awaiting Rob's dashboard findings)
-- Image upload (if added: AWS Rekognition for moderation)
-- Migrate SQLite → PostgreSQL (better constraint support)
+- CHECK(device_type IN (0,1,2)) constraint on computer_models table (pending migration)
 
 ---
 
