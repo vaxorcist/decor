@@ -1,4 +1,7 @@
-# decor/test/controllers/owners_controller_test.rb - version 1.3
+# decor/test/controllers/owners_controller_test.rb - version 1.4
+# v1.4 (Session 25): Added peripherals sub-page smoke test.
+#   Uses owner three (charlie) who has the charlie_dec_vt278 peripheral fixture,
+#   so both the non-empty table path and the controller query are exercised.
 # v1.3 (Session 23): Added three smoke tests for the new owner sub-page actions
 #   (computers / appliances / components) introduced in owners_controller.rb v1.6.
 # v1.2: Refactored to use centralized AuthenticationHelper constants.
@@ -156,12 +159,10 @@ class OwnersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Invalid or expired invitation.", flash[:alert]
   end
 
-  # ── Owner sub-page smoke tests (Session 23) ──────────────────────────────
-  # These three actions were added in owners_controller.rb v1.6. Each sub-page
-  # requires a logged-in user and renders a single collection table. The tests
-  # verify that the routes resolve, the actions complete without error, and the
-  # response is 200 OK. Content correctness is covered by the fixture data that
-  # populates @computers / @appliances / @components in the controller.
+  # ── Owner sub-page smoke tests ────────────────────────────────────────────
+  # Each sub-page requires a logged-in user and renders a single collection
+  # table. Tests verify that the routes resolve, the actions complete without
+  # error, and the response is 200 OK.
 
   test "computers sub-page returns 200 when logged in" do
     # Log in as alice (owners(:one)) and view her computers sub-page.
@@ -182,6 +183,18 @@ class OwnersControllerTest < ActionDispatch::IntegrationTest
     login_as owner
 
     get appliances_owner_url(owner)
+
+    assert_response :success
+  end
+
+  test "peripherals sub-page returns 200 when logged in" do
+    # Log in as charlie (owners(:three)) and view the peripherals sub-page.
+    # charlie has the charlie_dec_vt278 fixture (device_type: 2), so this
+    # test exercises the non-empty table path as well as the controller query.
+    owner = owners(:three)
+    login_as owner
+
+    get peripherals_owner_url(owner)
 
     assert_response :success
   end

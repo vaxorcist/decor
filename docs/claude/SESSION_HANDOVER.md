@@ -1,9 +1,9 @@
 # decor/docs/claude/SESSION_HANDOVER.md
-# version 25.0
+# version 26.0
 
 **Date:** March 10, 2026
-**Branch:** main (all Sessions 1–23 committed and deployed)
-**Status:** Session 23 complete. Tree verified clean (271 files). Ready for next session.
+**Branch:** main (all Sessions 1–24 committed and deployed)
+**Status:** Session 24 complete. Ready for next session.
 
 ---
 
@@ -44,145 +44,142 @@ Every response must follow this format:
 
 ---
 
-## Session 23 Summary
+## Session 24 Summary
 
-1. **gh pr merge transient error** — resolved by retrying (GitHub-side API fault).
+1. **Admin Import/Export feature** — new admin-namespaced import/export page
+   replacing the single "Bulk Import Data" nav item.
 
-2. **Nav font size fix** — removed `text-sm` from the "Info" dropdown button
-   (was visually smaller than other nav items rendered by `navigation_link_to`).
+2. **Nav restructured** — admin.html.erb "Import/Export" dropdown renamed
+   "Imports/Exports"; two items: "Exports" and "Imports" (both link to the
+   new Admin::DataTransfersController show page with anchors).
 
-3. **Owner page split into sub-pages** — monolithic `/owners/:id` replaced with:
-   - `/owners/:id` — compact summary card view (counts + View/Add links)
-   - `/owners/:id/computers`, `/owners/:id/appliances`, `/owners/:id/components`
-   Each sub-page: shared `_profile` partial + three-tab strip + single table.
-   Logged-in username in nav bar became a dropdown (My Computers / My Appliances /
-   My Components / Profile).
+3. **Admin::DataTransfersController** — new controller (inherits
+   Admin::BaseController, requires admin login). Actions: show, export, import.
+   Supports four data types: computer_models, appliance_models, component_types,
+   owner_collection (per-owner or all-owners for export).
 
-4. **Component description column** — truncated to 20 chars on owner components page.
+4. **New services** — ComputerModelExportService, ComputerModelImportService,
+   ComponentTypeExportService, ComponentTypeImportService, AllOwnersExportService.
 
-5. **Brakeman XSS warning** — `_profile.html.erb` website `link_to`. `sanitize()`
-   tried but does not satisfy Brakeman's taint tracking. Suppressed via
-   `brakeman.ignore` (fingerprint `95b1e056...`).
+5. **Routes** — three flat admin data_transfer routes added inside namespace :admin.
 
-6. **Admin nav "Invite Owner" link restored** — lost when dropdown layout was
-   introduced in v1.3; re-added to Owners dropdown.
-
-7. **Owner sub-page smoke tests** — three tests added to `owners_controller_test.rb`
-   (computers / appliances / components -> 200 when logged in).
+6. **Bug fixes during session:**
+   - Route helpers: `export_admin_data_transfer_path` → `admin_export_data_transfer_path`
+     (namespace prefix always comes first in Rails helper names).
+   - `include_blank: false` removed from selects (conflicts with blank option + required).
+   - `required: true` removed from `f.select` (causes ArgumentError when blank
+     option is present; controller validates server-side anyway).
+   - Export form: `data: { turbo: false }` added — Turbo silently drops
+     `send_data` file responses; must opt out so browser handles download natively.
+   - Import test syntax: two stray `end` tokens left by Python edit script removed.
+   - Import service tests: blank-name/rollback tests removed — in a single-column
+     CSV a blank name IS a blank row (silently skipped by design).
 
 ---
 
-## Work Completed Session 23 — Complete File List
+## Work Completed Session 24 — Complete File List
 
-    decor/config/routes.rb                               v1.7 -> v1.8
-    decor/app/controllers/owners_controller.rb           v1.5 -> v1.6
-    decor/app/views/owners/show.html.erb                 v1.8 -> v1.9
-    decor/app/views/owners/_profile.html.erb             v1.0 -> v1.1   <- new in session
-    decor/app/views/owners/computers.html.erb            v1.0           <- new
-    decor/app/views/owners/appliances.html.erb           v1.0           <- new
-    decor/app/views/owners/components.html.erb           v1.0           <- new
-    decor/app/views/common/_navigation.html.erb          v1.4 -> v1.5
-    decor/app/views/layouts/admin.html.erb               v1.5 -> v1.6
-    decor/config/brakeman.ignore                         (entries: 9023fba7, 95b1e056)
-    decor/test/controllers/owners_controller_test.rb     v1.2 -> v1.3
+    decor/config/routes.rb                                              v1.8 -> v1.9
+    decor/app/views/layouts/admin.html.erb                              v1.6 -> v1.7
+    decor/app/controllers/admin/data_transfers_controller.rb            v1.0  <- new
+    decor/app/views/admin/data_transfers/show.html.erb                  v1.0  <- new (new dir)
+    decor/app/services/computer_model_export_service.rb                 v1.0  <- new
+    decor/app/services/computer_model_import_service.rb                 v1.0  <- new
+    decor/app/services/component_type_export_service.rb                 v1.0  <- new
+    decor/app/services/component_type_import_service.rb                 v1.0  <- new
+    decor/app/services/all_owners_export_service.rb                     v1.0  <- new
+    decor/test/controllers/admin/data_transfers_controller_test.rb      v1.0  <- new
+    decor/test/services/computer_model_export_service_test.rb           v1.0  <- new
+    decor/test/services/computer_model_import_service_test.rb           v1.1  <- new
+    decor/test/services/component_type_export_service_test.rb           v1.0  <- new
+    decor/test/services/component_type_import_service_test.rb           v1.0  <- new
 
 ---
 
 ## Git State
 
-All work through Session 23 committed and deployed.
-Tree verified: 271 files, consistent with all session deliveries.
+All work through Session 24 committed and deployed.
 
 ---
 
-## Priority 1 — Next Session: Admin Import/Export Feature
+## Admin Import/Export — Design Reference (Session 24)
 
-### Overview
-
-Replace the existing admin nav "Import/Export" dropdown entry with a restructured
-"Imports/Exports" dropdown containing two sub-items: "Imports" and "Exports".
-Each links to a page where the admin selects what to import or export.
-
-### Target data types (both Import and Export)
-
-  1. Computer models       — fields: name, device_type
-  2. Appliance models      — fields: name, device_type (always "appliance")
-  3. Component types       — fields: name
-  4. Owner collection data — all owners, OR admin picks one owner from a dropdown
-
-### File format: CSV throughout
-
-### Design decisions settled
-
-- Computer models and Appliance models share the same ComputerModel AR model
-  (device_type column distinguishes them). Their import/export can share one
-  service class with a device_type parameter, or have separate service classes.
-  Decide after reading the existing export/import service pattern.
-- "Owner collection data" for a selected owner re-uses the existing
-  OwnerExportService / OwnerImportService (already used by DataTransfersController).
-  Admin version adds the ability to pick any owner, not just Current.owner.
-- "All owners" export: strategy (concatenate per-owner exports or new service)
-  to be decided after reading OwnerExportService at session start.
-
-### Files that will need to be created or modified
-
-New controller (admin namespace, inherits Admin::BaseController):
-  decor/app/controllers/admin/data_transfers_controller.rb    <- new
-    actions: show (landing/selector page), export, import
-
-New services:
-  decor/app/services/computer_model_export_service.rb         <- new
-  decor/app/services/computer_model_import_service.rb         <- new
-  decor/app/services/component_type_export_service.rb         <- new
-  decor/app/services/component_type_import_service.rb         <- new
-  (Owner collection re-uses existing OwnerExportService / OwnerImportService)
-
-New views:
-  decor/app/views/admin/data_transfers/show.html.erb          <- new
-    Import: data type selector + owner dropdown (for owner data) + file upload
-    Export: data type selector + owner dropdown (for owner data) + download button
-
-Updated files:
-  decor/config/routes.rb                                      v1.8 -> v1.9
-  decor/app/views/layouts/admin.html.erb                      v1.6 -> v1.7
-
-New tests:
-  decor/test/controllers/admin/data_transfers_controller_test.rb   <- new
-  decor/test/services/computer_model_export_service_test.rb        <- new
-  decor/test/services/computer_model_import_service_test.rb        <- new
-  decor/test/services/component_type_export_service_test.rb        <- new
-  decor/test/services/component_type_import_service_test.rb        <- new
-
-### Files to read at session start (before writing any code)
-
-```bash
-cat decor/app/controllers/data_transfers_controller.rb
-cat decor/app/services/owner_export_service.rb
-cat decor/app/services/owner_import_service.rb
-cat decor/app/views/data_transfers/show.html.erb
-cat decor/app/controllers/admin/base_controller.rb
-cat decor/config/routes.rb
-cat decor/app/views/layouts/admin.html.erb
-cat decor/test/controllers/data_transfers_controller_test.rb
-cat decor/test/services/owner_export_service_test.rb
-cat decor/test/fixtures/owners.yml
-cat decor/test/fixtures/computer_models.yml
-cat decor/test/fixtures/component_types.yml
+### Routes (routes.rb v1.9)
+Inside `namespace :admin`:
+```ruby
+get  "data_transfer",        to: "data_transfers#show",   as: :data_transfer
+get  "data_transfer/export", to: "data_transfers#export",  as: :export_data_transfer
+post "data_transfer/import", to: "data_transfers#import",  as: :import_data_transfer
 ```
+Route helpers: `admin_data_transfer_path`, `admin_export_data_transfer_path`,
+               `admin_import_data_transfer_path`
 
-### CSV format conventions
+**Key insight:** Inside `namespace :admin`, Rails prepends `admin_` to the `as:`
+value. So `as: :export_data_transfer` → `admin_export_data_transfer_path` (NOT
+`export_admin_data_transfer_path`).
 
-The existing OwnerExportService / OwnerImportService establish the CSV pattern.
-Read them before implementing the new services to follow the same header and
-quoting conventions.
+### Controller (admin/data_transfers_controller.rb v1.0)
+- Inherits `Admin::BaseController` (layout "admin", before_action :require_admin)
+- `show`   — loads @owners for dropdowns, renders selector UI
+- `export` — GET; params: data_type, owner_id; calls appropriate service; send_data CSV
+- `import` — POST; params: data_type, owner_id, file; delegates to service; flash + redirect
+
+### Supported data types
+  computer_models  → ComputerModelExportService / ComputerModelImportService (device_type: :computer)
+  appliance_models → ComputerModelExportService / ComputerModelImportService (device_type: :appliance)
+  component_types  → ComponentTypeExportService / ComponentTypeImportService
+  owner_collection → OwnerExportService / OwnerImportService (per-owner)
+                     AllOwnersExportService (all owners, export only)
+
+### Services
+All follow the same interface pattern as OwnerExportService / OwnerImportService:
+
+  ComputerModelExportService.export(device_type: :computer/:appliance)  → CSV string
+    CSV_HEADERS = %w[name]
+    Exports all ComputerModel records for given device_type, sorted alphabetically.
+
+  ComputerModelImportService.process(file, device_type: :computer/:appliance)
+    → { success:, count: } or { success: false, error: }
+    Skips existing names silently. Atomic (rolls back on any error).
+
+  ComponentTypeExportService.export  → CSV string
+    CSV_HEADERS = %w[name]
+    Exports all ComponentType records, sorted alphabetically.
+
+  ComponentTypeImportService.process(file)
+    → { success:, count: } or { success: false, error: }
+    Same pattern as ComputerModelImportService.
+
+  AllOwnersExportService.export  → CSV string
+    CSV_HEADERS = ["owner_user_name"] + OwnerExportService::CSV_HEADERS
+    Admin-read-only export. No corresponding import.
+
+### View (admin/data_transfers/show.html.erb v1.0)
+- Two sections with id="export" and id="import" (nav anchors from admin dropdown)
+- Export form: GET, `data: { turbo: false }` required for file download to work
+- Import form: POST, multipart: true
+- Both sections have data_type selector + owner dropdown
+
+### Turbo + send_data
+`data: { turbo: false }` is required on any form that submits to a `send_data`
+action. Turbo intercepts GET form submissions and silently drops file attachment
+responses. The non-admin export (data_transfers/show.html.erb v1.5) uses
+`link_to` for export — no Turbo issue there.
+
+### f.select + blank option + required
+`f.select :field, options_for_select([["— Select —", ""], ...]), { required: true }`
+raises `ArgumentError: include_blank cannot be false for a required field`.
+Rails infers `include_blank: false` from `required: true` but then contradicts
+itself finding a blank `""` option already in the list.
+Fix: omit `required:` from the select entirely — validate presence server-side.
 
 ---
 
-## Priority 2 — Dependabot PRs (dedicated session)
+## Priority 1 — Next Session: Dependabot PRs (dedicated session)
 
 ---
 
-## Priority 3 — Other candidates (unchanged)
+## Priority 2 — Other candidates (unchanged)
 
 1. Legal/Compliance: Impressum, Privacy Policy, GDPR, Cookie Consent, TOS
 2. System tests: decor/test/system/ still empty
@@ -218,18 +215,10 @@ end
 
 ### Views
 - owners/_profile.html.erb v1.1 — shared partial: header + info panel
-  - website uses sanitize() as href + rel: "noopener noreferrer"
-  - XSS warning suppressed in brakeman.ignore (model validates http/https-only)
 - owners/show.html.erb v1.9 — three summary cards (count + View -> + Add links)
 - owners/computers.html.erb v1.0 — tab strip (Computers active) + computers table
 - owners/appliances.html.erb v1.0 — tab strip (Appliances active) + appliances table
 - owners/components.html.erb v1.0 — tab strip (Components active) + components table
-  - Description truncated to 20 characters
-
-### Navigation (_navigation.html.erb v1.5)
-- Info button: text-sm removed (matches other nav items)
-- Username: dropdown with My Computers / My Appliances / My Components / Profile
-  - right-aligned (right-0) to stay within viewport
 
 ---
 
@@ -238,7 +227,6 @@ end
 ### Enum definition (same on both models)
 ```ruby
 enum :barter_status, { no_barter: 0, offered: 1, wanted: 2 }, prefix: true
-# Predicates: barter_status_no_barter?, barter_status_offered?, barter_status_wanted?
 ```
 
 ### Filter logic (both controllers, index action)
@@ -254,32 +242,18 @@ if logged_in?
 end
 ```
 
-### Auth rule
-- Barter data visible to logged-in members ONLY
-- if logged_in? guards on every th/td in index tables, owners/show, show pages
-
 ### Colour coding
 - offered   -> <span class="text-green-700">Offered</span>
 - wanted    -> <span class="text-amber-600">Wanted</span>
 - no_barter -> <span class="text-stone-400">--</span>
 
-### Fixture values
-  Computers:
-    computers(:alice_vax)          barter_status: 2 (wanted)
-    computers(:dec_unibus_router)  barter_status: 1 (offered)
-    all others                     barter_status: 0 (no_barter)
-  Components:
-    components(:spare_disk)             barter_status: 2 (wanted)
-    components(:charlie_vt100_terminal) barter_status: 1 (offered)
-    all others                          barter_status: 0 (no_barter)
-
 ---
 
 ## Documents Updated This Session
 
-    decor/docs/claude/SESSION_HANDOVER.md     v25.0  <- this file
+    decor/docs/claude/SESSION_HANDOVER.md     v26.0  <- this file
 
-No rule document updates required this session — no new failure patterns encountered.
+No rule document updates required this session.
 
 ---
 

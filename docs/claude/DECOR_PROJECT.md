@@ -1,5 +1,5 @@
 # decor/docs/claude/DECOR_PROJECT.md
-# version 2.18
+# version 2.19
 # Session 13: device_type on computers, component_category on components; enum tests.
 # Session 14: DRY Computer/Appliance Models admin pages; dropdown nav (admin.html.erb v1.3);
 #   device_type on computer_models; routes :appliance_models; dropdown_controller.js.
@@ -13,12 +13,14 @@
 # Session 20: Remove device_type selector from edit form (hidden field); with_toc_data
 #   for in-page anchor links; last_login_at on owners; Info dropdown nav; generalised
 #   text upload/delete pages; news/barter_trade/privacy routes.
-# Session 21+22: barter_status enum on computers and components (full feature).
+# Session 24: Admin Import/Export feature — Admin::DataTransfersController; five new
+#   services (ComputerModel/ComponentType export+import, AllOwnersExport); routes v1.9;
+#   admin nav "Imports/Exports" dropdown replaces old "Import/Export".
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** March 9, 2026 (Session 22)
-**Current Status:** Sessions 1–20 committed and deployed. Sessions 21–22 ready to commit (feature/session-21 branch).
+**Last Updated:** March 10, 2026 (Session 24)
+**Current Status:** Sessions 1–24 committed and deployed.
 
 ---
 
@@ -29,7 +31,7 @@
 tree decor/ -I "node_modules|.git|tmp|storage|log|.DS_Store|*.lock|assets|cache|pids|sockets" --dirsfirst -F --prune -L 6 > decor_tree.txt
 ```
 
-**Current tree** (as of Session 22, March 9, 2026):
+**Current tree** (as of Session 24, March 10, 2026):
 ```
 decor//
 ├── app/
@@ -41,6 +43,7 @@ decor//
 │   │   │   ├── component_types_controller.rb
 │   │   │   ├── computer_models_controller.rb
 │   │   │   ├── conditions_controller.rb
+│   │   │   ├── data_transfers_controller.rb
 │   │   │   ├── invites_controller.rb
 │   │   │   ├── owners_controller.rb
 │   │   │   ├── run_statuses_controller.rb
@@ -98,7 +101,12 @@ decor//
 │   │   ├── run_status.rb
 │   │   └── site_text.rb
 │   ├── services/
+│   │   ├── all_owners_export_service.rb
 │   │   ├── bulk_upload_service.rb
+│   │   ├── component_type_export_service.rb
+│   │   ├── component_type_import_service.rb
+│   │   ├── computer_model_export_service.rb
+│   │   ├── computer_model_import_service.rb
 │   │   ├── owner_export_service.rb
 │   │   └── owner_import_service.rb
 │   └── views/
@@ -125,6 +133,8 @@ decor//
 │       │   │   ├── _form.html.erb
 │       │   │   ├── index.html.erb
 │       │   │   └── new.html.erb
+│       │   ├── data_transfers/
+│       │   │   └── show.html.erb
 │       │   ├── invites/
 │       │   │   ├── index.html.erb
 │       │   │   └── new.html.erb
@@ -182,6 +192,9 @@ decor//
 │       │       ├── invite_email.html.erb
 │       │       └── reset_email.html.erb
 │       ├── owners/
+│       │   ├── appliances.html.erb
+│       │   ├── components.html.erb
+│       │   ├── computers.html.erb
 │       │   ├── edit.html.erb
 │       │   ├── _filters.html.erb
 │       │   ├── _form.html.erb
@@ -189,6 +202,7 @@ decor//
 │       │   ├── index.turbo_stream.erb
 │       │   ├── new.html.erb
 │       │   ├── _owner.html.erb
+│       │   ├── _profile.html.erb
 │       │   └── show.html.erb
 │       ├── password_resets/
 │       │   ├── edit.html.erb
@@ -306,6 +320,7 @@ decor//
 │   │   │   ├── component_types_controller_test.rb
 │   │   │   ├── computer_models_controller_test.rb
 │   │   │   ├── conditions_controller_test.rb
+│   │   │   ├── data_transfers_controller_test.rb
 │   │   │   ├── invites_controller_test.rb
 │   │   │   ├── run_statuses_controller_test.rb
 │   │   │   └── site_texts_controller_test.rb
@@ -345,6 +360,10 @@ decor//
 │   │   ├── run_status_test.rb
 │   │   └── site_text_test.rb
 │   ├── services/
+│   │   ├── component_type_export_service_test.rb
+│   │   ├── component_type_import_service_test.rb
+│   │   ├── computer_model_export_service_test.rb
+│   │   ├── computer_model_import_service_test.rb
 │   │   ├── owner_export_service_test.rb
 │   │   └── owner_import_service_test.rb
 │   ├── support/
@@ -359,7 +378,7 @@ decor//
 ├── README.md
 └── rich.html
 
-60 directories, 267 files
+61 directories, 283 files
 ```
 
 **Key file versions** (updated each session):
@@ -389,7 +408,21 @@ decor//
     decor/test/models/component_test.rb                                 v1.4  ← Session 22 (barter_status enum tests)
     decor/test/controllers/computers_controller_test.rb                 v1.6  ← Session 22 (barter filter tests)
     decor/test/controllers/components_controller_test.rb                v1.3  ← Session 22 (barter filter tests; nil serial fix)
-    decor/docs/claude/SESSION_HANDOVER.md                               v23.0 ← Session 22
+    decor/docs/claude/SESSION_HANDOVER.md                               v26.0 ← Session 24
+    decor/config/routes.rb                                              v1.9  ← Session 24 (admin data_transfer routes)
+    decor/app/views/layouts/admin.html.erb                              v1.7  ← Session 24 (Imports/Exports dropdown)
+    decor/app/controllers/admin/data_transfers_controller.rb            v1.0  ← Session 24 (new)
+    decor/app/views/admin/data_transfers/show.html.erb                  v1.0  ← Session 24 (new)
+    decor/app/services/computer_model_export_service.rb                 v1.0  ← Session 24 (new)
+    decor/app/services/computer_model_import_service.rb                 v1.0  ← Session 24 (new)
+    decor/app/services/component_type_export_service.rb                 v1.0  ← Session 24 (new)
+    decor/app/services/component_type_import_service.rb                 v1.0  ← Session 24 (new)
+    decor/app/services/all_owners_export_service.rb                     v1.0  ← Session 24 (new)
+    decor/test/controllers/admin/data_transfers_controller_test.rb      v1.0  ← Session 24 (new)
+    decor/test/services/computer_model_export_service_test.rb           v1.0  ← Session 24 (new)
+    decor/test/services/computer_model_import_service_test.rb           v1.1  ← Session 24 (new)
+    decor/test/services/component_type_export_service_test.rb           v1.0  ← Session 24 (new)
+    decor/test/services/component_type_import_service_test.rb           v1.0  ← Session 24 (new)
     decor/app/helpers/application_helper.rb                             v1.2  ← Session 20 (with_toc_data)
     decor/db/migrate/20260308100000_add_last_login_at_to_owners.rb      v1.0  ← Session 20 (new)
     decor/app/controllers/sessions_controller.rb                        v1.1  ← Session 20 (stamp last_login_at)

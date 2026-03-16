@@ -1,16 +1,10 @@
 # decor/config/routes.rb
-# version 1.9
+# version 2.0
+# v2.0 (Session 25): Added :peripherals member route under :owners.
+#   GET /owners/:id/peripherals → owners#peripherals (peripherals_owner_path)
+#   Mirrors the existing computers and appliances sub-page routes added in v1.8.
 # v1.9 (Session 24): Added admin data_transfer routes inside namespace :admin.
-#   GET  /admin/data_transfer        → admin/data_transfers#show   (admin_data_transfer_path)
-#   GET  /admin/data_transfer/export → admin/data_transfers#export (export_admin_data_transfer_path)
-#   POST /admin/data_transfer/import → admin/data_transfers#import (import_admin_data_transfer_path)
-#   Mirrors the non-admin data_transfer route pattern (root-level, flat, singular resource).
-# v1.8 (Session 23): Added member routes under :owners for the three sub-pages:
-#   GET /owners/:id/computers  → owners#computers  (computers_owner_path)
-#   GET /owners/:id/appliances → owners#appliances (appliances_owner_path)
-#   GET /owners/:id/components → owners#components (components_owner_path)
-#   The owners#show action now renders a compact summary card view; the three
-#   sub-pages each show a single section (computers / appliances / components).
+# v1.8 (Session 23): Added member routes under :owners (computers/appliances/components).
 # v1.7 (Session 20): Added delete_confirm collection route under admin/site_texts.
 # v1.6 (Session 20): Added news, barter_trade, privacy public routes.
 # v1.5 (Session 18): Added public readme route and admin site_texts resource.
@@ -33,9 +27,10 @@ Rails.application.routes.draw do
   # show remains the summary/profile card view.
   resources :owners do
     member do
-      get :computers   # /owners/:id/computers  — computers table
-      get :appliances  # /owners/:id/appliances — appliances table
-      get :components  # /owners/:id/components — components table
+      get :computers    # /owners/:id/computers   — computers table
+      get :appliances   # /owners/:id/appliances  — appliances table
+      get :peripherals  # /owners/:id/peripherals — peripherals table (device_type: 2)
+      get :components   # /owners/:id/components  — components table
     end
   end
 
