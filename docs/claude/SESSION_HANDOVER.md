@@ -1,10 +1,9 @@
 # decor/docs/claude/SESSION_HANDOVER.md
-# version 28.0
+# version 30.0
 
-**Date:** March 16, 2026
-**Branch:** main (Sessions 1–24 committed and deployed)
-**Status:** Sessions 25–26 complete locally. Ready to commit after one remaining file.
-           See "Pending Before Committing" below.
+**Date:** March 17, 2026
+**Branch:** main (Sessions 1–27 committed; Session 28 work ready to commit)
+**Status:** 492 tests, 0 failures, 0 errors, 0 skips. Surface 1 complete. Ready to commit.
 
 ---
 
@@ -47,128 +46,182 @@ Every response must follow this format:
 
 ## !! TOKEN BUDGET WARNING !!
 
-Session 26 hit 90% context usage after delivering only 5 files. The fixed
-overhead (5 rule documents + system prompt + tool schemas + bash cat outputs)
-consumes ~70–80% of the window before any work output is written.
+Session 28 hit ~89% context usage. The fixed overhead (5 rule documents +
+system prompt + tool schemas + bash cat outputs) consumes ~70–80% of the window
+before any work output is written.
 
-**Practical consequence:** each session has room for roughly one focused task
-(one feature, one set of tests, one commit). Do not plan multi-task sessions.
-
----
-
-## Session 26 Summary
-
-**Focus: Peripherals tab on components page + peripheral test coverage**
-
-1. **`owners/components.html.erb` v1.1** — four-tab strip added.
-   Was three tabs (Computers | Appliances | Components).
-   Now four tabs (Computers | Appliances | Peripherals | Components).
-   All other content unchanged from v1.0.
-   This was the final blocker for committing Session 25 work.
-
-2. **`computer_models.yml` v1.2** — `dec_vt278` peripheral fixture added.
-   DEC VT278 (ReGIS graphics terminal), device_type: 2.
-   Required by peripheral model tests and admin controller tests.
-
-3. **`computer_test.rb` v1.6** — peripheral enum tests added:
-   - `device_type can be set to peripheral`
-   - `device_type_peripheral? is true for peripheral fixture` (charlie_dec_vt278)
-   - `device_type_peripheral scope excludes computers and appliances`
-
-4. **`computer_model_test.rb` v1.3** — peripheral enum tests added:
-   - `device_type can be set to peripheral`
-   - `device_type_peripheral? returns true for peripheral fixture` (dec_vt278)
-   - `device_type_peripheral scope contains only peripheral fixtures`
-   - `all three device_type scopes are mutually disjoint`
-
-5. **`computers_controller_test.rb` v1.7** — peripherals route tests added:
-   - `GET /peripherals loads successfully` (smoke test)
-   - `GET /peripherals shows only peripherals, not computers or appliances`
+**Practical consequence:** each session has room for roughly one focused task.
+Do not plan multi-task sessions.
 
 ---
 
-## Work Completed Sessions 25–26 — Complete File List
+## !! FIXTURE DELIVERY RULE !!
 
-    decor/db/migrate/20260316100000_add_device_type_check_to_computers.rb  v1.0  <- Session 25 new
-    decor/app/models/computer.rb                                            v1.7  <- Session 25
-    decor/app/models/computer_model.rb                                      v1.2  <- Session 25
-    decor/config/routes.rb                                                  v2.2  <- Session 25
-    decor/app/controllers/owners_controller.rb                              v1.7  <- Session 25
-    decor/app/controllers/computers_controller.rb                           v1.16 <- Session 25
-    decor/app/controllers/admin/computer_models_controller.rb               v1.3  <- Session 25
-    decor/app/views/owners/peripherals.html.erb                             v1.0  <- Session 25 new
-    decor/app/views/owners/computers.html.erb                               v1.1  <- Session 25
-    decor/app/views/owners/appliances.html.erb                              v1.1  <- Session 25
-    decor/app/views/owners/show.html.erb                                    v2.0  <- Session 25
-    decor/app/views/common/_navigation.html.erb                             v1.7  <- Session 25
-    decor/app/views/layouts/admin.html.erb                                  v1.8  <- Session 25
-    decor/app/views/computers/_filters.html.erb                             v1.5  <- Session 25
-    decor/test/fixtures/computers.yml                                       v1.8  <- Session 25
-    decor/test/controllers/owners_controller_test.rb                        v1.4  <- Session 25
-    decor/app/views/owners/components.html.erb                              v1.1  <- Session 26
-    decor/test/fixtures/computer_models.yml                                 v1.2  <- Session 26
-    decor/test/models/computer_test.rb                                      v1.6  <- Session 26
-    decor/test/models/computer_model_test.rb                                v1.3  <- Session 26
-    decor/test/controllers/computers_controller_test.rb                     v1.7  <- Session 26
-    decor/docs/claude/SESSION_HANDOVER.md                                   v28.0 <- Session 26
+Whenever a fixture file is modified in a session, upload it to verify the change
+is actually present before closing the session. A summary entry is NOT confirmation
+of delivery. (Established Session 27.)
 
 ---
 
-## Pending Before Committing
+## Session 28 Summary
 
-1. **`admin/computer_models_controller_test.rb` — peripheral_models CRUD tests missing.**
-   The file was never uploaded in Session 26 — session hit 90% before it could be done.
-   Upload the current file at the start of next session and deliver the updated version
-   before committing.
+**Focus: Surface 1 — Add Peripherals to Owner Export/Import + unique constraints**
 
-   Tests needed (index, create, destroy for the peripheral context):
-   - `GET /admin/peripheral_models returns 200`
-   - `POST /admin/peripheral_models creates a peripheral model`
-   - `DELETE /admin/peripheral_models/:id destroys a peripheral model`
-   These mirror the existing appliance_models tests in the same file.
-   The `dec_vt278` fixture in `computer_models.yml` v1.2 provides the peripheral
-   model record needed for the destroy test.
+### Part 1 — Owner Export/Import peripheral support
+
+1. **`owner_export_service.rb` v1.2** — replaced two-branch ternary with three-branch
+   if/elsif/else. Old ternary silently exported peripherals as "computer".
+
+2. **`owner_import_service.rb` v1.3** — two fixes:
+   - Added `when "peripheral"` branch (was hitting unknown-record_type error path).
+   - Fixed duplicate check: now scopes by `(owner, model, serial)` instead of
+     `(owner, serial)`. Old check blocked VT320 "unknown" because VT220 "unknown"
+     already existed for the same owner. Model is now resolved FIRST so the
+     duplicate check has it available.
+   - Split `@computer_count` into `@computer_count`, `@appliance_count`,
+     `@peripheral_count` — returned separately in result hash.
+
+3. **`data_transfers_controller.rb` v1.3** — flash message now reports each device
+   type separately, omits zero counts, and shows "Nothing to import — all records
+   already exist." when total is zero.
+
+4. **`data_transfers/show.html.erb` v1.7** — removed inline flash block (was
+   duplicating the layout's `_flashes.html.erb` partial, causing double display).
+   Added "peripheral" to all descriptive text and the CSV format reference table.
+
+### Part 2 — Unique constraints (database + Rails)
+
+5. **Migration `20260316110000`** — unique index on `(owner_id, component_type_id,
+   serial_number)` on components table. Scope: per owner per type (not global).
+   NULL serial numbers remain unconstrained (SQLite treats each NULL as distinct).
+
+6. **Migration `20260316120000`** — unique index on `(owner_id, computer_model_id,
+   serial_number)` on computers table. Scope: per owner per model.
+
+7. **`component.rb` v1.5** — `validates :serial_number, uniqueness: { scope:
+   [:owner_id, :component_type_id] }, allow_blank: true`.
+
+8. **`computer.rb` v1.8** — `validates :serial_number, uniqueness: { scope:
+   [:owner_id, :computer_model_id] }`.
+
+### Part 3 — Test fixes
+
+9. **`owners_controller_destroy_test.rb` v1.3** — serial numbers "TEST-001"/"TEST-002"
+   changed to "DESTROY-SN-001"/"DESTROY-SN-002". alice has a pdp11_70 fixture with
+   serial "TEST-001" (unassigned_condition_test); new uniqueness constraint correctly
+   rejected the duplicate.
+
+10. **`owner_import_service_test.rb` v1.3** — fixed two tests that asserted
+    `result[:computer_count]` for appliance/peripheral rows; corrected to
+    `result[:appliance_count]` / `result[:peripheral_count]`. Added one new test:
+    "same serial number on a different model is NOT a duplicate and is imported."
+
+11. **`computer_test.rb` v1.6** — 5 new uniqueness tests covering all four combinations
+    of same/different owner × same/different model.
+
+12. **`component_test.rb` v1.5** — 5 new uniqueness tests covering same/different
+    owner × same/different type × blank serial.
+
+13. **`owner_export_service_test.rb` v1.2** — 4 new peripheral export tests using
+    dynamically-created owner+peripheral records (no fixture dependency).
+
+**Final test count: 492 tests, 0 failures, 0 errors, 0 skips.**
 
 ---
 
-## Serial Number Assertion Note
+## Work Completed Session 28 — Complete File List
 
-`computers_controller_test.rb` v1.7 asserts `computers(:charlie_dec_vt278).serial_number`
-is present in the GET /peripherals response. If this serial_number is nil in the
-fixture (see Known Issues in DECOR_PROJECT.md), the assertion must be changed to
-use a description substring instead. Verify when tests are run.
-
----
-
-## Git State
-
-Sessions 1–24 committed and deployed.
-Sessions 25–26 work complete locally — not yet committed (pending admin controller test above).
-
----
-
-## Priority 1 — Next Session
-
-1. Upload `decor/test/controllers/admin/computer_models_controller_test.rb`.
-2. Deliver updated version with peripheral_models CRUD tests.
-3. Commit Sessions 25–26 work (bin/rails test → rubocop → brakeman → commit).
-4. Dependabot PRs — dedicated session (do not mix with above).
+    decor/db/migrate/20260316110000_add_unique_index_to_components_serial_number.rb  v1.0  new
+    decor/db/migrate/20260316120000_add_unique_index_to_computers_serial_number.rb   v1.0  new
+    decor/app/models/computer.rb                                                     v1.8
+    decor/app/models/component.rb                                                    v1.5
+    decor/app/services/owner_export_service.rb                                       v1.2
+    decor/app/services/owner_import_service.rb                                       v1.3
+    decor/app/controllers/data_transfers_controller.rb                               v1.3
+    decor/app/views/data_transfers/show.html.erb                                     v1.7
+    decor/test/models/computer_test.rb                                               v1.6
+    decor/test/models/component_test.rb                                              v1.5
+    decor/test/services/owner_export_service_test.rb                                 v1.2
+    decor/test/services/owner_import_service_test.rb                                 v1.3
+    decor/test/controllers/owners_controller_destroy_test.rb                         v1.3
 
 ---
 
-## Priority 2 — Other candidates (unchanged)
+## Priority 1 — Next Session: Surface 2 — Admin Import/Export
 
-1. Legal/Compliance: Impressum, Privacy Policy, GDPR, Cookie Consent, TOS
-2. System tests: decor/test/system/ still empty
-3. Account deletion + data export (GDPR)
-4. Spam / Postmark DNS fix (awaiting Rob's dashboard findings)
-5. CHECK(device_type IN (0,1,2)) constraint on computer_models table (pending migration)
-6. BulkUploadService stale model references (low priority):
-     decor/app/services/bulk_upload_service.rb
-     - Condition -> ComputerCondition
-     - computer.condition -> computer.computer_condition
-     - component.history field does not exist on Component model
-     - component.condition -> component.component_condition
+Surface 1 (owner-facing /data_transfer) is complete.
+Surface 2 (admin /admin/data_transfer) was NOT started.
+
+Files to upload at session start:
+    decor/app/controllers/admin/data_transfers_controller.rb
+    decor/app/views/admin/data_transfers/show.html.erb
+    decor/app/services/computer_model_export_service.rb
+    decor/app/services/computer_model_import_service.rb
+    decor/test/controllers/admin/data_transfers_controller_test.rb
+    decor/test/services/computer_model_export_service_test.rb
+    decor/test/services/computer_model_import_service_test.rb
+
+Work needed (verify after reading the files):
+- Check whether ComputerModelExportService already exports all device_type values
+  or only device_type: 0/1. If it filters, extend to include device_type: 2.
+- Check whether ComputerModelImportService accepts "peripheral" as a valid
+  device_type string on import.
+- Check the admin show.html.erb: if it has separate Computer Models / Appliance Models
+  sections, add a Peripheral Models section.
+- Tests: add peripheral model round-trip test.
+
+**Also: commit Session 28 work before starting Surface 2.**
+
+```bash
+bin/rails test        # verify still green
+git add -A
+git commit -m "Session 28: peripherals in owner export/import; unique constraints on serial numbers"
+git push origin main
+kamal deploy
+```
+
+---
+
+## Priority 2 — Other Candidates (unchanged)
+
+1. Dependabot PRs — dedicated session (do not mix with above)
+2. Legal/Compliance: Impressum, Privacy Policy, GDPR, Cookie Consent, TOS
+3. System tests: decor/test/system/ still empty
+4. Account deletion + data export (GDPR)
+5. Spam / Postmark DNS fix (awaiting Rob's dashboard findings)
+6. CHECK(device_type IN (0,1,2)) constraint on computer_models table (pending migration)
+7. BulkUploadService stale model references (low priority)
+
+---
+
+## Unique Constraint Design Reference (Session 28)
+
+### computers table
+Index: `index_computers_on_owner_model_and_serial_number`
+Columns: `(owner_id, computer_model_id, serial_number)`
+Scope rationale: a VT220 "unknown" and a VT320 "unknown" for the same owner are
+physically different devices — only owner + model + serial must be unique.
+Migration: `20260316120000_add_unique_index_to_computers_serial_number.rb`
+Model validation: `validates :serial_number, uniqueness: { scope: [:owner_id, :computer_model_id] }`
+
+### components table
+Index: `index_components_on_owner_type_and_serial_number`
+Columns: `(owner_id, component_type_id, serial_number)`
+Scope rationale: owners invent their own replacement numbering; cross-owner
+collisions are expected and valid. allow_blank: true — multiple unserialised
+spares of the same type are always permitted (SQLite NULL != NULL in unique index).
+Migration: `20260316110000_add_unique_index_to_components_serial_number.rb`
+Model validation: `validates :serial_number, uniqueness: { scope: [:owner_id, :component_type_id] }, allow_blank: true`
+
+### Import service duplicate-check pattern (v1.3)
+```ruby
+# computers — model resolved FIRST so check can scope by model:
+model = ComputerModel.find_by(name: model_name)
+return if @owner.computers.exists?(computer_model: model, serial_number: serial_number)
+
+# components — scoped by type:
+return if @owner.components.exists?(component_type: component_type, serial_number: serial_number)
+```
 
 ---
 
@@ -178,92 +231,36 @@ Sessions 25–26 work complete locally — not yet committed (pending admin cont
 ```ruby
 enum :device_type, { computer: 0, appliance: 1, peripheral: 2 }, prefix: true
 ```
-CHECK(device_type IN (0,1,2)) constraint on computers table (migration 20260316100000).
-No CHECK constraint yet on computer_models table — pending future migration.
 
-### Routes added (routes.rb v2.2)
+### Routes (routes.rb v2.2)
 ```ruby
-# Public index
 resources :peripherals, controller: "computers", only: [:index],
                         defaults: { device_context: "peripheral" }
-
-# Owner sub-page
 resources :owners do
   member do
-    get :peripherals  # /owners/:id/peripherals → owners#peripherals
+    get :peripherals
   end
 end
-
-# Admin models page
 namespace :admin do
   resources :peripheral_models, only: %i[index new create edit update destroy],
                                 controller: "computer_models",
                                 defaults: { device_context: "peripheral" }
 end
 ```
-Route helpers: `peripherals_path`, `peripherals_owner_path`, `admin_peripheral_models_path`
-
-### set_device_context — case/when pattern (computers_controller.rb v1.16)
-```ruby
-case params[:device_context]
-when "appliance"
-  @device_context = "appliance"; @page_title = "Appliances"
-  @index_path = appliances_path; @turbo_tbody_id = "appliances"
-  @load_more_id = :load_more_appliances
-when "peripheral"
-  @device_context = "peripheral"; @page_title = "Peripherals"
-  @index_path = peripherals_path; @turbo_tbody_id = "peripherals"
-  @load_more_id = :load_more_peripherals
-else
-  @device_context = "computer"; @page_title = "Computers"
-  @index_path = computers_path; @turbo_tbody_id = "computers"
-  @load_more_id = :load_more_computers
-end
-```
-Same case/when pattern used in Admin::ComputerModelsController v1.3.
-
-### Tab strip order (all four owner sub-page views)
-Computers | Appliances | Peripherals | Components
-
-### Summary card grid
-`owners/show.html.erb` v2.0: `grid-cols-4` — Computers | Appliances | Peripherals | Components.
 
 ---
 
 ## Barter Feature — Design Reference (Sessions 21–22, unchanged)
 
-### Enum definition (same on both models)
+### Enum definition
 ```ruby
 enum :barter_status, { no_barter: 0, offered: 1, wanted: 2 }, prefix: true
-```
-
-### Filter logic (both controllers, index action)
-```ruby
-if logged_in?
-  barter_filter = params[:barter_status].presence || "0+1"
-  records = case barter_filter
-            when "0"   then records.where(barter_status: 0)
-            when "1"   then records.where(barter_status: 1)
-            when "2"   then records.where(barter_status: 2)
-            else            records.where(barter_status: [0, 1])
-            end
-end
 ```
 
 ### Colour coding
 - offered   -> <span class="text-green-700">Offered</span>
 - wanted    -> <span class="text-amber-600">Wanted</span>
 - no_barter -> <span class="text-stone-400">--</span>
-
----
-
-## Documents Updated This Session
-
-    decor/docs/claude/SESSION_HANDOVER.md     v28.0  <- this file
-
-No DECOR_PROJECT.md update required this session — the Key file versions table
-and pending sections will be updated in the commit session alongside the full
-test run.
 
 ---
 

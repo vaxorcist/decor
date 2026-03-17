@@ -1,11 +1,12 @@
 # decor/app/models/computer.rb
-# version 1.7
+# version 1.8
+# v1.8 (Session 28): Added serial_number uniqueness validation scoped to
+#   (owner_id, computer_model_id). This mirrors the DB unique index added in
+#   migration 20260316120000. Scope rationale: the same serial "unknown" on a
+#   VT220 and a VT320 belonging to the same owner is valid because they are
+#   physically different devices (different model). Only owner + model + serial
+#   together must be unique.
 # v1.7 (Session 25): Added peripheral: 2 to device_type enum.
-#   Peripherals are devices that attach to a host computer (terminals, word-
-#   processors, storage controllers, etc.) — distinct from autonomous appliances
-#   and from the host computers themselves.
-#   The CHECK(device_type IN (0,1,2)) constraint is added to the computers table
-#   by migration 20260316100000_add_device_type_check_to_computers.rb.
 # v1.6 (Session 21): Added barter_status enum.
 # v1.5 (Session 13): Added device_type enum (computer: 0, appliance: 1).
 
@@ -36,6 +37,16 @@ class Computer < ApplicationRecord
 
   # Validations
   validates :serial_number, presence: true
+
+  # serial_number uniqueness: one owner cannot have two devices of the same model
+  # with the same serial number. Different models owned by the same owner may share
+  # a serial (e.g. a VT220 "unknown" and a VT320 "unknown" are distinct physical
+  # devices). This mirrors the DB unique index on (owner_id, computer_model_id,
+  # serial_number).
+  validates :serial_number,
+            uniqueness: { scope: [:owner_id, :computer_model_id],
+                          message: "has already been taken for this model" }
+
   validates :order_number, length: { maximum: 20 }, allow_blank: true
 
   # Search scope that searches across model name, owner name, serial number,
