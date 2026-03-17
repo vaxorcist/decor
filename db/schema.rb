@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_09_100001) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_16_120000) do
   create_table "component_conditions", force: :cascade do |t|
     t.string "condition", limit: 40, null: false
     t.datetime "created_at", precision: nil, null: false
@@ -43,6 +43,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_09_100001) do
     t.index ["component_condition_id"], name: "index_components_on_component_condition_id"
     t.index ["component_type_id"], name: "index_components_on_component_type_id"
     t.index ["computer_id"], name: "index_components_on_computer_id"
+    t.index ["owner_id", "component_type_id", "serial_number"], name: "index_components_on_owner_type_and_serial_number", unique: true
     t.index ["owner_id"], name: "index_components_on_owner_id"
   end
 
@@ -78,6 +79,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_09_100001) do
     t.index ["computer_condition_id"], name: "index_computers_on_computer_condition_id"
     t.index ["computer_model_id"], name: "index_computers_on_computer_model_id"
     t.index ["device_type"], name: "index_computers_on_device_type"
+    t.index ["owner_id", "computer_model_id", "serial_number"], name: "index_computers_on_owner_model_and_serial_number", unique: true
     t.index ["owner_id"], name: "index_computers_on_owner_id"
     t.index ["run_status_id"], name: "index_computers_on_run_status_id"
   end

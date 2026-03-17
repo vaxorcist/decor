@@ -1,16 +1,14 @@
 # decor/config/routes.rb
-# version 1.9
+# version 2.2
+# v2.2 (Session 25): Added resources :peripherals index route.
+#   Mirrors resources :appliances: shares ComputersController,
+#   device_context: "peripheral" tells set_device_context to lock
+#   device_type to "peripheral" and set all context instance variables.
+#   Route helper: peripherals_path.
+# v2.1 (Session 25): Added admin :peripheral_models resource.
+# v2.0 (Session 25): Added :peripherals member route under :owners.
 # v1.9 (Session 24): Added admin data_transfer routes inside namespace :admin.
-#   GET  /admin/data_transfer        → admin/data_transfers#show   (admin_data_transfer_path)
-#   GET  /admin/data_transfer/export → admin/data_transfers#export (export_admin_data_transfer_path)
-#   POST /admin/data_transfer/import → admin/data_transfers#import (import_admin_data_transfer_path)
-#   Mirrors the non-admin data_transfer route pattern (root-level, flat, singular resource).
-# v1.8 (Session 23): Added member routes under :owners for the three sub-pages:
-#   GET /owners/:id/computers  → owners#computers  (computers_owner_path)
-#   GET /owners/:id/appliances → owners#appliances (appliances_owner_path)
-#   GET /owners/:id/components → owners#components (components_owner_path)
-#   The owners#show action now renders a compact summary card view; the three
-#   sub-pages each show a single section (computers / appliances / components).
+# v1.8 (Session 23): Added member routes under :owners (computers/appliances/components).
 # v1.7 (Session 20): Added delete_confirm collection route under admin/site_texts.
 # v1.6 (Session 20): Added news, barter_trade, privacy public routes.
 # v1.5 (Session 18): Added public readme route and admin site_texts resource.
@@ -33,18 +31,24 @@ Rails.application.routes.draw do
   # show remains the summary/profile card view.
   resources :owners do
     member do
-      get :computers   # /owners/:id/computers  — computers table
-      get :appliances  # /owners/:id/appliances — appliances table
-      get :components  # /owners/:id/components — components table
+      get :computers    # /owners/:id/computers   — computers table
+      get :appliances   # /owners/:id/appliances  — appliances table
+      get :peripherals  # /owners/:id/peripherals — peripherals table (device_type: 2)
+      get :components   # /owners/:id/components  — components table
     end
   end
 
-  resources :computers,  defaults: { device_context: "computer" }
+  resources :computers,    defaults: { device_context: "computer" }
 
   # Appliances index — shares the computers controller; device_context param
   # tells the controller to lock the device_type filter to "appliance".
-  resources :appliances, controller: "computers", only: [:index],
-                         defaults: { device_context: "appliance" }
+  resources :appliances,   controller: "computers", only: [:index],
+                           defaults: { device_context: "appliance" }
+
+  # Peripherals index — shares the computers controller; device_context param
+  # tells the controller to lock the device_type filter to "peripheral".
+  resources :peripherals,  controller: "computers", only: [:index],
+                           defaults: { device_context: "peripheral" }
 
   resources :components
 
@@ -63,11 +67,14 @@ Rails.application.routes.draw do
     resources :invites, only: %i[index new create destroy]
     resources :component_types, only: %i[index new create edit update destroy]
 
-    resources :computer_models,  only: %i[index new create edit update destroy],
-                                 defaults: { device_context: "computer" }
-    resources :appliance_models, only: %i[index new create edit update destroy],
-                                 controller: "computer_models",
-                                 defaults: { device_context: "appliance" }
+    resources :computer_models,   only: %i[index new create edit update destroy],
+                                  defaults: { device_context: "computer" }
+    resources :appliance_models,  only: %i[index new create edit update destroy],
+                                  controller: "computer_models",
+                                  defaults: { device_context: "appliance" }
+    resources :peripheral_models, only: %i[index new create edit update destroy],
+                                  controller: "computer_models",
+                                  defaults: { device_context: "peripheral" }
 
     resources :conditions,            only: %i[index new create edit update destroy]
     resources :component_conditions,  only: %i[index new create edit update destroy]
@@ -75,8 +82,6 @@ Rails.application.routes.draw do
     resources :bulk_uploads,          only: %i[new create]
 
     # Site text management — generic upload and delete pages for all named texts.
-    # delete_confirm: GET /admin/site_texts/delete_confirm — key selector page;
-    #   actual destroy uses DELETE /admin/site_texts/:key (param: :key).
     resources :site_texts, only: %i[new create destroy], param: :key do
       collection do
         get :delete_confirm
@@ -84,8 +89,6 @@ Rails.application.routes.draw do
     end
 
     # Admin data transfer — import/export of reference data and owner collections.
-    # Mirrors the non-admin data_transfer route pattern: flat singular-resource style.
-    # Scoped to the admin namespace so requires admin login via Admin::BaseController.
     # Route helpers:
     #   admin_data_transfer_path         — show page (selector UI)
     #   export_admin_data_transfer_path  — export action (GET, returns CSV)

@@ -1,7 +1,14 @@
-# decor/test/services/owner_export_service_test.rb - version 1.1
+# decor/test/services/owner_export_service_test.rb - version 1.2
 # Session 16: Added tests for device_type / record_type:
 #   - Appliance (device_type: 1) exports with record_type "appliance"
 #   - Computer (device_type: 0) still exports with record_type "computer"
+# Session 28: Added tests for peripheral (device_type: 2):
+#   - Peripheral exports with record_type "peripheral"
+#   - Peripheral row carries correct model name
+#   - Peripheral row has blank component columns
+#   - Peripheral (device_type: 2) does NOT export as "computer" (regression guard)
+#   Peripheral tests create records dynamically (no computers.yml fixture dependency)
+#   using dec_vt278 (computer_models fixture, device_type: 2).
 #
 # Tests for OwnerExportService — verifies CSV output structure and content.
 #
@@ -64,9 +71,11 @@ class OwnerExportServiceTest < ActiveSupport::TestCase
   end
 
   test "computer (device_type: 0) exports with record_type 'computer'" do
-    # All of alice's computers are device_type: 0 — none should export as "appliance"
-    appliance_rows = @csv.select { |row| row["record_type"] == "appliance" }
-    assert_equal 0, appliance_rows.size, "No appliance rows expected in alice's export"
+    # All of alice's computers are device_type: 0 — none should export as "appliance" or "peripheral"
+    appliance_rows  = @csv.select { |row| row["record_type"] == "appliance" }
+    peripheral_rows = @csv.select { |row| row["record_type"] == "peripheral" }
+    assert_equal 0, appliance_rows.size,  "No appliance rows expected in alice's export"
+    assert_equal 0, peripheral_rows.size, "No peripheral rows expected in alice's export"
   end
 
   test "appliance row carries correct model name" do
@@ -84,6 +93,94 @@ class OwnerExportServiceTest < ActiveSupport::TestCase
     appliance_row = csv.find { |row| row["record_type"] == "appliance" }
     assert_nil appliance_row["component_type"].presence
     assert_nil appliance_row["component_description"].presence
+  end
+
+  # ── Peripheral device_type / record_type mapping (Session 28) ───────────────
+  # These tests build a peripheral record dynamically inside each test so they
+  # do not depend on knowing which peripheral fixture exists in computers.yml or
+  # which owner it belongs to. The dec_vt278 model (computer_models fixture,
+  # device_type: 2) is used as the model for the test peripheral.
+
+  test "peripheral (device_type: 2) exports with record_type 'peripheral'" do
+    # Create a temporary owner with one peripheral record.
+    owner = Owner.create!(
+      user_name: "periphexp01",
+      email:     "periphexp01@example.com",
+      password:  "ValidTest2026!"
+    )
+    owner.computers.create!(
+      serial_number:  "VT278-EXP-001",
+      computer_model: computer_models(:dec_vt278),
+      device_type:    :peripheral
+    )
+
+    csv = CSV.parse(OwnerExportService.export(owner), headers: true)
+    peripheral_rows = csv.select { |row| row["record_type"] == "peripheral" }
+
+    assert_equal 1, peripheral_rows.size,
+                 "Expected exactly one peripheral row in export"
+    assert_equal "VT278-EXP-001", peripheral_rows.first["computer_serial_number"]
+  end
+
+  test "peripheral row carries correct model name" do
+    owner = Owner.create!(
+      user_name: "periphexp02",
+      email:     "periphexp02@example.com",
+      password:  "ValidTest2026!"
+    )
+    owner.computers.create!(
+      serial_number:  "VT278-EXP-002",
+      computer_model: computer_models(:dec_vt278),
+      device_type:    :peripheral
+    )
+
+    csv = CSV.parse(OwnerExportService.export(owner), headers: true)
+    peripheral_row = csv.find { |row| row["record_type"] == "peripheral" }
+
+    assert_equal "DEC VT278", peripheral_row["computer_model"]
+  end
+
+  test "peripheral row has blank component columns" do
+    owner = Owner.create!(
+      user_name: "periphexp03",
+      email:     "periphexp03@example.com",
+      password:  "ValidTest2026!"
+    )
+    owner.computers.create!(
+      serial_number:  "VT278-EXP-003",
+      computer_model: computer_models(:dec_vt278),
+      device_type:    :peripheral
+    )
+
+    csv = CSV.parse(OwnerExportService.export(owner), headers: true)
+    peripheral_row = csv.find { |row| row["record_type"] == "peripheral" }
+
+    assert_nil peripheral_row["component_type"].presence
+    assert_nil peripheral_row["component_description"].presence
+    assert_nil peripheral_row["component_serial_number"].presence
+    assert_nil peripheral_row["component_order_number"].presence
+    assert_nil peripheral_row["component_condition"].presence
+  end
+
+  test "peripheral (device_type: 2) does NOT export with record_type 'computer'" do
+    # Regression guard: before v1.2 the ternary (appliance? ? "appliance" : "computer")
+    # would export peripherals as "computer" silently. This test prevents that regression.
+    owner = Owner.create!(
+      user_name: "periphexp04",
+      email:     "periphexp04@example.com",
+      password:  "ValidTest2026!"
+    )
+    owner.computers.create!(
+      serial_number:  "VT278-EXP-004",
+      computer_model: computer_models(:dec_vt278),
+      device_type:    :peripheral
+    )
+
+    csv = CSV.parse(OwnerExportService.export(owner), headers: true)
+    computer_rows = csv.select { |row| row["record_type"] == "computer" }
+
+    assert_empty computer_rows,
+                 "A peripheral must not export with record_type 'computer'"
   end
 
   # ── Computer row content ─────────────────────────────────────────────────────

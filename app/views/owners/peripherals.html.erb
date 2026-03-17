@@ -1,10 +1,12 @@
-<%# decor/app/views/owners/computers.html.erb - version 1.1 %>
-<%# v1.1 (Session 25): Added Peripherals tab to the tab strip (inactive). %>
-<%#   Tab order: Computers (active) | Appliances | Peripherals | Components. %>
-<%# v1.0 (Session 23): New sub-page for the owner's computers. %>
-<%#   Renders the shared _profile partial, a tab strip to navigate between %>
-<%#   the sub-pages, and the computers table (device_type: computer only). %>
-<%#   Table content and column layout extracted from owners/show.html.erb v1.8. %>
+<%# decor/app/views/owners/peripherals.html.erb - version 1.0 %>
+<%# v1.0 (Session 25): New sub-page for the owner's peripherals. %>
+<%#   Peripherals are devices that attach to a host computer (terminals, %>
+<%#   word-processors, storage controllers, etc.) — stored in the computers %>
+<%#   table with device_type = 2 (:peripheral). %>
+<%#   Renders the shared _profile partial, a four-tab strip to navigate between %>
+<%#   the sub-pages, and the peripherals table (device_type: peripheral only). %>
+<%#   Table column layout mirrors owners/appliances.html.erb. %>
+<%#   Tab strip highlights "Peripherals" as the active tab. %>
 
 <div class="max-w-7xl mx-auto">
   <%# Profile header + info panel %>
@@ -15,14 +17,14 @@
       Inactive tabs: border-transparent + text-stone-600. %>
   <div class="flex gap-6 border-b border-stone-200 mb-6">
     <%= link_to "Computers",  computers_owner_path(@owner),
-          class: "pb-2 -mb-px border-b-2 font-medium " \
-                 "border-indigo-600 text-indigo-700" %>
+          class: "pb-2 -mb-px border-b-2 " \
+                 "border-transparent text-stone-600 hover:text-stone-900" %>
     <%= link_to "Appliances", appliances_owner_path(@owner),
           class: "pb-2 -mb-px border-b-2 " \
                  "border-transparent text-stone-600 hover:text-stone-900" %>
     <%= link_to "Peripherals", peripherals_owner_path(@owner),
-          class: "pb-2 -mb-px border-b-2 " \
-                 "border-transparent text-stone-600 hover:text-stone-900" %>
+          class: "pb-2 -mb-px border-b-2 font-medium " \
+                 "border-indigo-600 text-indigo-700" %>
     <%= link_to "Components", components_owner_path(@owner),
           class: "pb-2 -mb-px border-b-2 " \
                  "border-transparent text-stone-600 hover:text-stone-900" %>
@@ -30,13 +32,14 @@
 
   <%# Section header %>
   <div class="flex justify-between items-center mb-3">
-    <h2 class="text-lg font-semibold">Computers (<%= @computers.count %>)</h2>
+    <h2 class="text-lg font-semibold">Peripherals (<%= @peripherals.count %>)</h2>
     <% if Current.owner == @owner %>
-      <%= link_to "Add Computer", new_computer_path, class: button_classes(style: :secondary) %>
+      <%= link_to "Add Peripheral", new_computer_path(device_type: "peripheral"),
+            class: button_classes(style: :secondary) %>
     <% end %>
   </div>
 
-  <% if @computers.any? %>
+  <% if @peripherals.any? %>
     <div class="bg-white border border-stone-200 rounded overflow-auto"
          style="max-height: calc(100vh - 18rem);">
       <table class="min-w-full divide-y divide-stone-200">
@@ -55,23 +58,23 @@
           </tr>
         </thead>
         <tbody class="bg-white divide-y divide-stone-200 text-sm">
-          <% @computers.each do |computer| %>
+          <% @peripherals.each do |peripheral| %>
             <tr class="hover:bg-stone-50">
-              <%# Model — clickable, navigates to computer show page %>
+              <%# Model — clickable; peripherals use the computers_* routes %>
               <td class="px-4 py-3 whitespace-nowrap font-medium">
-                <%= link_to computer.computer_model.name, computer_path(computer),
+                <%= link_to peripheral.computer_model.name, computer_path(peripheral),
                       class: "text-indigo-600 hover:text-indigo-900" %>
               </td>
-              <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= computer.order_number || "—" %></td>
-              <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= computer.serial_number %></td>
-              <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= computer.computer_condition&.name || "—" %></td>
-              <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= computer.run_status&.name || "—" %></td>
+              <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= peripheral.order_number || "—" %></td>
+              <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= peripheral.serial_number %></td>
+              <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= peripheral.computer_condition&.name || "—" %></td>
+              <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= peripheral.run_status&.name || "—" %></td>
               <%# Trade cell — visible to logged-in members only %>
               <% if logged_in? %>
                 <td class="px-4 py-3 whitespace-nowrap">
-                  <% if computer.barter_status_offered? %>
+                  <% if peripheral.barter_status_offered? %>
                     <span class="text-green-700">Offered</span>
-                  <% elsif computer.barter_status_wanted? %>
+                  <% elsif peripheral.barter_status_wanted? %>
                     <span class="text-amber-600">Wanted</span>
                   <% else %>
                     <span class="text-stone-400">—</span>
@@ -82,10 +85,10 @@
               <td class="px-4 py-3 whitespace-nowrap text-right">
                 <% if Current.owner == @owner %>
                   <div class="flex items-center justify-end gap-3">
-                    <%= link_to "Edit", edit_computer_path(computer),
+                    <%= link_to "Edit", edit_computer_path(peripheral),
                           class: "text-indigo-600 hover:text-indigo-900" %>
-                    <%= button_to "Delete", computer_path(computer), method: :delete,
-                          data: { turbo_confirm: "Delete #{computer.computer_model.name} (#{computer.serial_number})? This cannot be undone." },
+                    <%= button_to "Delete", computer_path(peripheral), method: :delete,
+                          data: { turbo_confirm: "Delete #{peripheral.computer_model.name} (#{peripheral.serial_number})? This cannot be undone." },
                           params: { source: "owner" },
                           class: "text-red-600 hover:text-red-900 bg-transparent border-0 p-0 cursor-pointer",
                           form: { style: "display:inline" } %>
@@ -98,6 +101,6 @@
       </table>
     </div>
   <% else %>
-    <p class="text-sm text-stone-500">No computers registered.</p>
+    <p class="text-sm text-stone-500">No peripherals registered.</p>
   <% end %>
 </div>

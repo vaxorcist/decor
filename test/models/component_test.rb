@@ -1,12 +1,15 @@
 # decor/test/models/component_test.rb
-# version 1.4
-# v1.4 (Session 22): Added barter_status enum tests — default, predicates,
-#   fixture values (spare_disk: wanted, charlie_vt100_terminal: offered, others: no_barter).
-#   Pattern mirrors component_category tests above.
+# version 1.5
+# v1.5 (Session 28): Added serial_number uniqueness validation tests.
+#   Constraint scope: (owner_id, component_type_id, serial_number).
+#   - same owner + same type + duplicate serial       → invalid
+#   - same owner + different type + same serial       → valid
+#   - different owner + same type + same serial       → valid  ← key difference
+#     from a global constraint; owners use their own replacement numbering.
+#   - blank serial number → no uniqueness check (multiple allowed per owner+type)
+#   - duplicate serial number produces a descriptive error message
+# v1.4 (Session 22): Added barter_status enum tests.
 # v1.3: Fixed: bob_vt100_terminal → charlie_vt100_terminal to match fixture rename.
-# The peripheral fixture was moved to owner three (charlie) to avoid breaking
-# both OwnerExportServiceTest (alice count) and OwnersControllerDestroyTest
-# (bob count).
 
 require "test_helper"
 
@@ -72,6 +75,108 @@ class ComponentTest < ActiveSupport::TestCase
   test "belongs to component_type" do
     component = components(:pdp11_memory)
     assert_equal component_types(:memory_board), component.component_type
+  end
+
+  # --- serial_number uniqueness validation tests (Session 28) ---
+  # Constraint scope: (owner_id, component_type_id, serial_number).
+
+  test "valid when serial_number is unique within owner and component type" do
+    component = Component.new(
+      owner: owners(:one),
+      component_type: component_types(:memory_board),
+      serial_number: "MB-UNIQUE-001"
+    )
+    assert component.valid?, "A unique serial number must be valid: #{component.errors.full_messages}"
+  end
+
+  test "invalid when same owner has duplicate serial number on same component type" do
+    # Create a component for alice, then attempt a second with the same
+    # owner + type + serial — must be rejected.
+    Component.create!(
+      owner: owners(:one),
+      component_type: component_types(:memory_board),
+      serial_number: "MB-DUPE-001"
+    )
+
+    duplicate = Component.new(
+      owner: owners(:one),         # same owner
+      component_type: component_types(:memory_board),
+      serial_number: "MB-DUPE-001"
+    )
+    assert_not duplicate.valid?,
+                "Same owner + same type + same serial must be invalid"
+    assert duplicate.errors[:serial_number].any?,
+           "Validation error must be on serial_number"
+  end
+
+  test "different owner may use the same serial number on the same component type" do
+    # Owners invent their own replacement numbering schemes; cross-owner collisions
+    # are expected and valid. Alice and Bob may each have a Memory Board "MB-001".
+    Component.create!(
+      owner: owners(:one),         # alice
+      component_type: component_types(:memory_board),
+      serial_number: "MB-SHARED-001"
+    )
+
+    bob_component = Component.new(
+      owner: owners(:two),         # bob — different owner, same type+serial
+      component_type: component_types(:memory_board),
+      serial_number: "MB-SHARED-001"
+    )
+    assert bob_component.valid?,
+           "Different owner + same type + same serial must be valid"
+  end
+
+  test "same serial number on different component type for the same owner is valid" do
+    # "MB-CROSS-001" on memory_board and "MB-CROSS-001" on cpu_board — both valid.
+    Component.create!(
+      owner: owners(:one),
+      component_type: component_types(:memory_board),
+      serial_number: "MB-CROSS-001"
+    )
+
+    different_type = Component.new(
+      owner: owners(:one),
+      component_type: component_types(:cpu_board),
+      serial_number: "MB-CROSS-001"
+    )
+    assert different_type.valid?,
+           "Same owner + different type + same serial must be valid"
+  end
+
+  test "blank serial number is always valid regardless of other blank-serial components" do
+    # Multiple components of the same owner and type with no serial number must
+    # all be valid. allow_blank: true means the uniqueness check is skipped
+    # entirely when serial_number is nil.
+    Component.create!(
+      owner: owners(:one),
+      component_type: component_types(:memory_board)
+      # serial_number omitted → nil
+    )
+
+    second_no_serial = Component.new(
+      owner: owners(:one),
+      component_type: component_types(:memory_board)
+    )
+    assert second_no_serial.valid?,
+           "Multiple components of the same owner+type with no serial number must all be valid"
+  end
+
+  test "duplicate serial number error message is descriptive" do
+    Component.create!(
+      owner: owners(:one),
+      component_type: component_types(:cpu_board),
+      serial_number: "CPU-ERR-001"
+    )
+
+    duplicate = Component.new(
+      owner: owners(:one),
+      component_type: component_types(:cpu_board),
+      serial_number: "CPU-ERR-001"
+    )
+    duplicate.valid?
+    assert_match "component type", duplicate.errors[:serial_number].first,
+                 "Error message must mention 'component type' to help the user understand the constraint"
   end
 
   # --- component_category enum tests ---

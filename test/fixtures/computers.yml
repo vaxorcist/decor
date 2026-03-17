@@ -1,12 +1,16 @@
 # decor/test/fixtures/computers.yml
-# version 1.7
+# version 1.8
+# v1.8 (Session 25): Added charlie_dec_vt278 fixture for device_type: 2 (peripheral)
+#   enum tests and owners#peripherals smoke test.
+#   Assigned to owner three (charlie) — neutral owner with no hardcoded count
+#   assertions in any test file.
 # v1.7 (Session 21): Added barter_status values to two fixtures for filter tests.
 #   dec_unibus_router: barter_status: 1 (offered) — charlie's appliance.
 #   alice_vax:         barter_status: 2 (wanted)  — alice's computer.
 #   All other fixtures: barter_status omitted → DB default 0 (no_barter).
 #   barter_status values: 0 = no_barter, 1 = offered, 2 = wanted.
 # v1.6: dec_unibus_router owner changed to three (charlie) — neutral owner.
-# device_type values: 0 = computer (default), 1 = appliance.
+# device_type values: 0 = computer (default), 1 = appliance, 2 = peripheral.
 
 alice_pdp11:
   owner: one
@@ -70,3 +74,17 @@ dec_unibus_router:
   device_type: 1
   barter_status: 1
   history: Standalone UNIBUS-attached routing device.
+
+# Peripheral fixture for device_type enum tests and owners#peripherals smoke test.
+# Represents a device that attaches to a host computer rather than operating
+# autonomously. Assigned to owner three (charlie) — neutral owner.
+# device_type: 2 = peripheral.
+charlie_dec_vt278:
+  owner: three
+  computer_model: vt100
+  serial_number: VT278-001
+  order_number: ORD-VT278-001
+  computer_condition: original
+  run_status: working
+  device_type: 2
+  history: DEC VT278 DECmate personal computer / word processor.

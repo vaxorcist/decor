@@ -1,4 +1,8 @@
-<%# decor/app/views/owners/components.html.erb - version 1.0 %>
+<%# decor/app/views/owners/components.html.erb - version 1.1 %>
+<%# v1.1 (Session 26): Added Peripherals tab to the tab strip. %>
+<%#   Tab strip now has four tabs matching owners/show.html.erb summary card grid: %>
+<%#   Computers | Appliances | Peripherals | Components (this page, active). %>
+<%#   All other content unchanged from v1.0. %>
 <%# v1.0 (Session 23): New sub-page for the owner's components. %>
 <%#   Renders the shared _profile partial, a three-tab strip to navigate between %>
 <%#   the sub-pages, and the components table. %>
@@ -11,15 +15,20 @@
   <%# Profile header + info panel %>
   <%= render "profile" %>
 
-  <%# Tab strip — switches between the three owner sub-pages %>
+  <%# Tab strip — switches between the four owner sub-pages %>
+  <%# Order mirrors the summary card grid in owners/show.html.erb v2.0: %>
+  <%#   Computers | Appliances | Peripherals | Components %>
   <div class="flex gap-6 border-b border-stone-200 mb-6">
-    <%= link_to "Computers",  computers_owner_path(@owner),
+    <%= link_to "Computers",   computers_owner_path(@owner),
           class: "pb-2 -mb-px border-b-2 " \
                  "border-transparent text-stone-600 hover:text-stone-900" %>
-    <%= link_to "Appliances", appliances_owner_path(@owner),
+    <%= link_to "Appliances",  appliances_owner_path(@owner),
           class: "pb-2 -mb-px border-b-2 " \
                  "border-transparent text-stone-600 hover:text-stone-900" %>
-    <%= link_to "Components", components_owner_path(@owner),
+    <%= link_to "Peripherals", peripherals_owner_path(@owner),
+          class: "pb-2 -mb-px border-b-2 " \
+                 "border-transparent text-stone-600 hover:text-stone-900" %>
+    <%= link_to "Components",  components_owner_path(@owner),
           class: "pb-2 -mb-px border-b-2 font-medium " \
                  "border-indigo-600 text-indigo-700" %>
   </div>

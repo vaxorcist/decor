@@ -1,18 +1,21 @@
-# decor/test/services/owner_import_service_test.rb - version 1.1
-# Session 16: Added tests for "appliance" record_type:
-#   - Importing an "appliance" row creates a computer with device_type: 1
-#   - "appliance" is accepted as a valid record_type (not treated as unknown)
+# decor/test/services/owner_import_service_test.rb - version 1.3
+# v1.3 (Session 28): Fixed two test assertions that referenced result[:computer_count]
+#   for appliance and peripheral rows. OwnerImportService v1.3 returns separate
+#   counters: computer_count, appliance_count, peripheral_count, component_count.
+#   "importing an 'appliance' row..." → assert result[:appliance_count]
+#   "importing a 'peripheral' row..." → assert result[:peripheral_count]
+#   Also updated component duplicate-skip check comment to reflect v1.3 scoping
+#   by (owner, component_type, serial) instead of (owner, serial).
+# v1.2 (Session 28): Added peripheral record_type tests.
+# v1.1 (Session 16): Added appliance record_type tests.
 #
 # Tests for OwnerImportService — verifies CSV import behaviour including the
 # two-pass strategy, duplicate skipping, atomicity, and error handling.
 #
-# File mock: csv_upload(content) creates an ActionDispatch::Http::UploadedFile
-# wrapping a Tempfile, giving the service the .path / .size / .content_type /
-# .original_filename interface it expects.
-#
 # Fixture baseline used in tests:
 #   computer_models: pdp11_70 ("PDP-11/70"), pdp8 ("PDP-8"), vt100 ("VT100"),
-#                    hsc50 ("HSC50", device_type: 1)
+#                    hsc50 ("HSC50", device_type: 1),
+#                    dec_vt278 ("DEC VT278", device_type: 2)
 #   component_types: memory_board ("Memory Board"), cpu_board ("CPU Board")
 #   computer_conditions: original ("Completely original")
 #   component_conditions: working (condition: "Working")
@@ -110,7 +113,9 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
     assert_difference "@alice.computers.count", 1 do
       result = OwnerImportService.process(@alice, csv_upload(csv))
       assert result[:success], "Expected success, got: #{result[:error]}"
-      assert_equal 1, result[:computer_count]
+      # Appliance rows increment appliance_count, not computer_count.
+      assert_equal 1, result[:appliance_count]
+      assert_equal 0, result[:computer_count]
     end
 
     appliance = @alice.computers.find_by!(serial_number: "APP-SN-001")
@@ -121,8 +126,6 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
   end
 
   test "'appliance' record_type is not treated as unknown" do
-    # This test verifies that "appliance" does not trigger the unknown-record_type
-    # error path — it must be accepted and processed without error.
     csv = build_csv([
       ["appliance", "HSC50", nil, "APP-SN-VALID", nil, nil, nil,
        nil, nil, nil, nil, nil]
@@ -132,8 +135,41 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
     assert result[:success], "Expected 'appliance' to be a valid record_type, got: #{result[:error]}"
   end
 
+  # ── device_type: peripheral ───────────────────────────────────────────────
+
+  test "importing a 'peripheral' row creates a computer with device_type peripheral" do
+    csv = build_csv([
+      ["peripheral", "DEC VT278", "PER-ORD-001", "PER-SN-001",
+       nil, nil, "VT278 graphics terminal",
+       nil, nil, nil, nil, nil]
+    ])
+
+    assert_difference "@alice.computers.count", 1 do
+      result = OwnerImportService.process(@alice, csv_upload(csv))
+      assert result[:success], "Expected success, got: #{result[:error]}"
+      # Peripheral rows increment peripheral_count, not computer_count.
+      assert_equal 1, result[:peripheral_count]
+      assert_equal 0, result[:computer_count]
+    end
+
+    peripheral = @alice.computers.find_by!(serial_number: "PER-SN-001")
+    assert peripheral.device_type_peripheral?,
+           "Imported 'peripheral' record_type should produce device_type: peripheral"
+    assert_equal "DEC VT278", peripheral.computer_model.name
+    assert_equal "VT278 graphics terminal", peripheral.history
+  end
+
+  test "'peripheral' record_type is not treated as unknown" do
+    csv = build_csv([
+      ["peripheral", "DEC VT278", nil, "PER-SN-VALID", nil, nil, nil,
+       nil, nil, nil, nil, nil]
+    ])
+
+    result = OwnerImportService.process(@alice, csv_upload(csv))
+    assert result[:success], "Expected 'peripheral' to be a valid record_type, got: #{result[:error]}"
+  end
+
   test "importing a 'computer' row still creates device_type: computer" do
-    # Regression: adding appliance support must not affect the existing computer path.
     csv = build_csv([
       ["computer", "PDP-11/70", nil, "COMPUTER-TYPE-SN", nil, nil, nil,
        nil, nil, nil, nil, nil]
@@ -149,9 +185,6 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
   # ── Two-pass strategy ────────────────────────────────────────────────────
 
   test "component row can reference a computer created in the same import" do
-    # IMPORT-SN-TWO-PASS does not yet exist — computer and component arrive
-    # in the same file. The two-pass strategy must process the computer row
-    # first so the component row can find it by serial number.
     csv = build_csv([
       ["computer", "PDP-11/70", nil, "IMPORT-SN-TWO-PASS", nil, nil, nil,
        nil, nil, nil, nil, nil],
@@ -169,7 +202,6 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
   end
 
   test "component rows appear before computer rows in CSV but still attach correctly" do
-    # Component row is listed FIRST in the CSV — two-pass must handle this.
     csv = build_csv([
       ["component", nil, nil, "IMPORT-SN-REVERSED", nil, nil, nil,
        "Memory Board", nil, nil, nil, "Listed before its computer"],
@@ -189,7 +221,7 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
   # ── Duplicate skipping ───────────────────────────────────────────────────
 
   test "re-importing an existing computer serial number is silently skipped" do
-    # SN12345 already belongs to alice from fixtures
+    # SN12345 already belongs to alice's pdp11_70 fixture.
     csv = build_csv([
       ["computer", "PDP-11/70", nil, "SN12345", nil, nil, nil,
        nil, nil, nil, nil, nil]
@@ -202,8 +234,21 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
     end
   end
 
+  test "same serial number on a different model is NOT a duplicate and is imported" do
+    # alice has SN12345 on pdp11_70. SN12345 on vt100 is a different device.
+    csv = build_csv([
+      ["computer", "VT100", nil, "SN12345", nil, nil, nil,
+       nil, nil, nil, nil, nil]
+    ])
+
+    assert_difference "@alice.computers.count", 1 do
+      result = OwnerImportService.process(@alice, csv_upload(csv))
+      assert result[:success], "Same serial on different model must succeed: #{result[:error]}"
+      assert_equal 1, result[:computer_count]
+    end
+  end
+
   test "re-importing an existing component serial number is silently skipped" do
-    # Create a component with a known serial number first
     existing = @alice.components.create!(
       component_type: component_types(:memory_board),
       serial_number:  "DUPE-COMP-SN",
@@ -221,12 +266,10 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
       assert_equal 0, result[:component_count]
     end
 
-    # Original record must be unchanged
     assert_equal "Original", existing.reload.description
   end
 
   test "component without serial number is always created (no duplicate check)" do
-    # Two rows with no serial number — both should be created
     csv = build_csv([
       ["component", nil, nil, nil, nil, nil, nil,
        "CPU Board", nil, nil, nil, "No serial 1"],
@@ -262,7 +305,6 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
     csv = build_csv([
       ["computer", "PDP-11/70", nil, "ATOMIC-GOOD-1", nil, nil, nil,
        nil, nil, nil, nil, nil],
-      # Bad row: computer_model does not exist
       ["computer", "NONEXISTENT MODEL", nil, "ATOMIC-BAD-1", nil, nil, nil,
        nil, nil, nil, nil, nil],
       ["computer", "PDP-11/70", nil, "ATOMIC-GOOD-2", nil, nil, nil,
@@ -275,7 +317,6 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
       assert_match "NONEXISTENT MODEL", result[:error]
     end
 
-    # Neither good row should have been saved
     refute @alice.computers.exists?(serial_number: "ATOMIC-GOOD-1")
     refute @alice.computers.exists?(serial_number: "ATOMIC-GOOD-2")
   end
@@ -385,7 +426,6 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
   # ── Unknown record_type ───────────────────────────────────────────────────
 
   test "unknown record_type value fails with descriptive error" do
-    # "widget" is not a valid record_type — must trigger an error containing the bad value
     csv = build_csv([
       ["widget", "PDP-11/70", nil, "UNKNOWN-TYPE-SN", nil, nil, nil,
        nil, nil, nil, nil, nil]
@@ -415,8 +455,6 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
 
   # ── Helpers ────────────────────────────────────────────────────────────
 
-  # Build a CSV string from an array of value arrays.
-  # Each inner array must have exactly 12 values matching CSV_HEADERS column order.
   def build_csv(rows)
     CSV.generate(headers: true, force_quotes: true) do |csv|
       csv << OwnerExportService::CSV_HEADERS
@@ -424,8 +462,6 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
     end
   end
 
-  # Wrap a CSV string in an ActionDispatch::Http::UploadedFile so the service
-  # receives the same interface as a real browser file upload.
   def csv_upload(content, filename: "test_import.csv", content_type: "text/csv")
     tempfile = Tempfile.new(["import_test", ".csv"])
     tempfile.write(content)

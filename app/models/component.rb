@@ -1,12 +1,12 @@
 # decor/app/models/component.rb
-# version 1.4
+# version 1.5
+# v1.5 (Session 28): Added serial_number uniqueness validation scoped to
+#   component_type (mirrors the DB unique index added in migration 20260316110000).
+#   allow_blank: true — components without a serial number are not subject to
+#   this validation (multiple spare boards of the same type are permitted).
+#   The constraint is global (not per-owner): a serial number identifies a specific
+#   physical unit; no two owners can claim the same component type + serial number.
 # v1.4 (Session 21): Added barter_status enum.
-#   0 = no_barter (default) — not available for trade
-#   1 = offered             — owner is offering this item for trade
-#   2 = wanted              — owner is looking for this item (need not be in collection)
-#   Prefix: barter_status_ → predicates: barter_status_no_barter?, barter_status_offered?, barter_status_wanted?
-#   Visibility: barter_status values are only shown to logged-in members (enforced in
-#   controllers and views, not at the model layer).
 # v1.3 (Session 13): Added component_category enum (integral: 0, peripheral: 1).
 
 class Component < ApplicationRecord
@@ -36,6 +36,19 @@ class Component < ApplicationRecord
   #             physically owned component (special status per design spec)
   # All barter values are only displayed to logged-in members.
   enum :barter_status, { no_barter: 0, offered: 1, wanted: 2 }, prefix: true
+
+  # serial_number uniqueness: one owner cannot have two components of the same
+  # type with the same serial number. Different owners may share the same
+  # type+serial combination (owners often invent their own replacement numbering
+  # schemes, so cross-owner collisions are expected and valid).
+  # This validation mirrors the DB unique index on (owner_id, component_type_id,
+  # serial_number). allow_blank skips the check when serial_number is nil or
+  # empty — multiple unserialised spares belonging to the same owner and type
+  # are permitted.
+  validates :serial_number,
+            uniqueness: { scope: [:owner_id, :component_type_id],
+                          message: "has already been taken for this component type" },
+            allow_blank: true
 
   # Search scope that searches across component type, owner name, computer model,
   # and description.

@@ -1,12 +1,13 @@
 # decor/app/models/computer.rb
-# version 1.6
+# version 1.8
+# v1.8 (Session 28): Added serial_number uniqueness validation scoped to
+#   (owner_id, computer_model_id). This mirrors the DB unique index added in
+#   migration 20260316120000. Scope rationale: the same serial "unknown" on a
+#   VT220 and a VT320 belonging to the same owner is valid because they are
+#   physically different devices (different model). Only owner + model + serial
+#   together must be unique.
+# v1.7 (Session 25): Added peripheral: 2 to device_type enum.
 # v1.6 (Session 21): Added barter_status enum.
-#   0 = no_barter (default) — not available for trade
-#   1 = offered             — owner is offering this item for trade
-#   2 = wanted              — owner is looking for this item (need not be in collection)
-#   Prefix: barter_status_ → predicates: barter_status_no_barter?, barter_status_offered?, barter_status_wanted?
-#   Visibility: barter_status values are only shown to logged-in members (enforced in
-#   controllers and views, not at the model layer).
 # v1.5 (Session 13): Added device_type enum (computer: 0, appliance: 1).
 
 class Computer < ApplicationRecord
@@ -16,11 +17,15 @@ class Computer < ApplicationRecord
   belongs_to :run_status, optional: true
   has_many :components, dependent: :destroy
 
-  # Distinguishes general-purpose computers from autonomous "appliance"
-  # devices (routers, switches, terminal servers, printers, etc.) that
-  # operate independently without a host computer.
-  # "appliance" is a working placeholder; the UI label will be finalised later.
-  enum :device_type, { computer: 0, appliance: 1 }, prefix: true
+  # Classifies the item stored in the computers table.
+  # computer   — a general-purpose programmable machine
+  # appliance  — an autonomous device that operates without a host computer
+  #              (routers, switches, terminal servers, printers, etc.)
+  # peripheral — a device that attaches to and requires a host computer
+  #              (terminals, word-processors, storage controllers, etc.)
+  # A CHECK(device_type IN (0,1,2)) constraint enforces valid values at the
+  # database level (migration 20260316100000).
+  enum :device_type, { computer: 0, appliance: 1, peripheral: 2 }, prefix: true
 
   # Barter trade status for this item.
   # no_barter — not available for trade (the default for all records)
@@ -32,6 +37,16 @@ class Computer < ApplicationRecord
 
   # Validations
   validates :serial_number, presence: true
+
+  # serial_number uniqueness: one owner cannot have two devices of the same model
+  # with the same serial number. Different models owned by the same owner may share
+  # a serial (e.g. a VT220 "unknown" and a VT320 "unknown" are distinct physical
+  # devices). This mirrors the DB unique index on (owner_id, computer_model_id,
+  # serial_number).
+  validates :serial_number,
+            uniqueness: { scope: [:owner_id, :computer_model_id],
+                          message: "has already been taken for this model" }
+
   validates :order_number, length: { maximum: 20 }, allow_blank: true
 
   # Search scope that searches across model name, owner name, serial number,

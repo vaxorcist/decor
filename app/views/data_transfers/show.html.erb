@@ -1,8 +1,10 @@
-<%# decor/app/views/data_transfers/show.html.erb - version 1.5 %>
+<%# decor/app/views/data_transfers/show.html.erb - version 1.7 %>
+<%# Session 28: Removed inline flash rendering block (notice + alert divs). %>
+<%#   Flash is now rendered exclusively by the layout's _flashes.html.erb partial, %>
+<%#   which is shared across all pages. Having both caused the flash message to %>
+<%#   appear twice on this page — once from the layout and once from this view. %>
+<%# Session 28: Added "peripheral" as a fourth valid record_type value. %>
 <%# Session 16: Added "appliance" as a third valid record_type value. %>
-<%#   Updated import section text to mention appliances throughout. %>
-<%#   Updated CSV format reference table (record_type row). %>
-<%#   Updated example CSV to include an appliance row. %>
 <%# Owner data export / import page. %>
 <%# Only reachable by logged-in owners (auth enforced globally by Authentication concern). %>
 <%# %>
@@ -13,23 +15,11 @@
 <div class="max-w-3xl mx-auto">
   <h1 class="text-2xl font-semibold mb-6">Export / Import Your Data</h1>
 
-  <%# ── Flash messages ──────────────────────────────────────────────────── %>
-  <% if flash[:notice].present? %>
-    <div class="mb-6 p-4 rounded border border-green-300 bg-green-50 text-green-800 text-sm">
-      <%= flash[:notice] %>
-    </div>
-  <% end %>
-  <% if flash[:alert].present? %>
-    <div class="mb-6 p-4 rounded border border-red-300 bg-red-50 text-red-800 text-sm">
-      <%= flash[:alert] %>
-    </div>
-  <% end %>
-
   <%# ── Export section ──────────────────────────────────────────────────── %>
   <div class="bg-white border border-stone-200 rounded p-6 mb-6">
     <h2 class="text-lg font-semibold mb-3">Export</h2>
     <p class="text-sm text-stone-600 mb-4">
-      Download all of your computers, appliances and components as a CSV file.
+      Download all of your computers, appliances, peripherals and components as a CSV file.
       The file can be re-imported here or used as a backup.
     </p>
     <%# inline-flex items-center w-fit: constrains width to text (matching submit button), %>
@@ -45,13 +35,13 @@
     <h2 class="text-lg font-semibold mb-3">Import</h2>
     <p class="text-sm text-stone-600 mb-1">
       Upload a CSV file in the format described below to add computers,
-      appliances and components to your account.
+      appliances, peripherals and components to your account.
     </p>
     <ul class="text-sm text-stone-600 mb-4 list-disc list-inside space-y-1">
       <li>Records that already exist (matched by serial number) are skipped — safe to re-import.</li>
-      <li>If a referenced Computer Model, Appliance Model, Component Type, Condition, or Run Status does not exist,
+      <li>If a referenced Computer Model, Appliance Model, Peripheral Model, Component Type, Condition, or Run Status does not exist,
           the row is rejected and the entire import is rolled back.</li>
-      <li>A component whose parent computer/appliance is not found is imported as a spare (not an error).</li>
+      <li>A component whose parent computer/appliance/peripheral is not found is imported as a spare (not an error).</li>
       <li>The entire file is imported atomically — all rows succeed or none are saved.</li>
     </ul>
 
@@ -79,13 +69,13 @@
   <div class="bg-white border border-stone-200 rounded p-6 mb-6">
     <h2 class="text-lg font-semibold mb-3">CSV Format</h2>
     <p class="text-sm text-stone-600 mb-4">
-      Each row represents either one computer, one appliance, or one component,
+      Each row represents either one computer, one appliance, one peripheral, or one component,
       indicated by the <code class="font-mono bg-stone-100 px-1 rounded">record_type</code> column.
-      <br>All columns for computers apply for appliances as well.
+      <br>All columns for computers apply for appliances and peripherals as well.
       <br>Blank cells are allowed for optional fields.
     </p>
 
-    <%# Column reference table — space-aligned, no pipe chars (plain-text-friendly) %>
+    <%# Column reference table %>
     <div class="overflow-x-auto mb-4">
       <table class="min-w-full text-xs">
         <thead class="bg-stone-50">
@@ -98,12 +88,12 @@
         <tbody class="divide-y divide-stone-100 text-stone-700">
           <tr class="bg-white">
             <td class="px-3 py-2 font-mono">record_type</td>
-            <td class="px-3 py-2"><span class="font-medium">Required.</span> Value: <code class="font-mono bg-stone-100 px-1 rounded">computer</code> or <code class="font-mono bg-stone-100 px-1 rounded">appliance</code></td>
+            <td class="px-3 py-2"><span class="font-medium">Required.</span> Value: <code class="font-mono bg-stone-100 px-1 rounded">computer</code>, <code class="font-mono bg-stone-100 px-1 rounded">appliance</code>, or <code class="font-mono bg-stone-100 px-1 rounded">peripheral</code></td>
             <td class="px-3 py-2"><span class="font-medium">Required.</span> Value: <code class="font-mono bg-stone-100 px-1 rounded">component</code></td>
           </tr>
           <tr class="bg-stone-50">
             <td class="px-3 py-2 font-mono">computer_model</td>
-            <td class="px-3 py-2"><span class="font-medium">Required.</span> Must match an existing computer/appliance model.</td>
+            <td class="px-3 py-2"><span class="font-medium">Required.</span> Must match an existing computer/appliance/peripheral model.</td>
             <td class="px-3 py-2 text-stone-400">Leave blank.</td>
           </tr>
           <tr class="bg-white">
@@ -114,7 +104,7 @@
           <tr class="bg-stone-50">
             <td class="px-3 py-2 font-mono">computer_serial_number</td>
             <td class="px-3 py-2"><span class="font-medium">Required.</span> Max 20 characters.</td>
-            <td class="px-3 py-2">Optional. Serial of the <em>parent computer/appliance</em> to attach this component to. Leave blank for spare components.</td>
+            <td class="px-3 py-2">Optional. Serial of the <em>parent computer/appliance/peripheral</em> to attach this component to. Leave blank for spare components.</td>
           </tr>
           <tr class="bg-white">
             <td class="px-3 py-2 font-mono">computer_condition</td>
@@ -165,6 +155,7 @@
     <pre class="text-xs bg-stone-50 border border-stone-200 rounded p-3 overflow-x-auto text-stone-700">record_type,computer_model,computer_order_number,computer_serial_number,computer_condition,computer_run_status,computer_history,component_type,component_order_number,component_serial_number,component_condition,component_description
 computer,PDP-11/70,AA-1234567-A,12345678,Completely original,Running,"Acquired 1978",,,,, 
 appliance,HSC50,HS-5001,HSC-001,Completely original,Running,"Storage controller",,,,, 
+peripheral,DEC VT278,,,,,,,,,, 
 component,,,12345678,,,, Memory Board,MB-001,,Working,"256KB core memory"
 component,,,,,,, Memory Board,,,,Spare 256KB board</pre>
     <p class="mt-2 text-xs text-stone-500">

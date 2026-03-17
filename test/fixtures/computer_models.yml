@@ -1,9 +1,12 @@
 # decor/test/fixtures/computer_models.yml
-# version 1.1
+# version 1.2
 # Added device_type to all entries (explicit is better than relying on DB default).
 # Added hsc50 (appliance, device_type: 1) assigned to no owner — computer_models
 # are reference data with no owner column, so neutral-owner pattern does not apply.
 # Existing computer model fixtures all use device_type: 0 (computer).
+# Session 26/27: added dec_vt278 (peripheral, device_type: 2) — used by
+#   computer_model_test.rb and computer_models_controller_test.rb to test the
+#   peripheral context. DEC VT278 is a ReGIS graphics terminal.
 
 pdp11_70:
   name: PDP-11/70
@@ -30,3 +33,10 @@ vt100:
 hsc50:
   name: HSC50
   device_type: 1
+
+# Peripheral model fixture — used by computer_model_test.rb and
+# computer_models_controller_test.rb to test the peripheral context.
+# DEC VT278: ReGIS graphics terminal. device_type: 2 (peripheral).
+dec_vt278:
+  name: DEC VT278
+  device_type: 2

@@ -1,18 +1,22 @@
-<%# decor/app/views/owners/show.html.erb - version 1.9 %>
+<%# decor/app/views/owners/show.html.erb - version 2.0 %>
+<%# v2.0 (Session 25): Added Peripherals summary card. %>
+<%#   - Grid changed from grid-cols-3 to grid-cols-4 to accommodate the new card. %>
+<%#   - @peripheral_count loaded by owners_controller#show v1.7. %>
+<%#   - Card order: Computers | Appliances | Peripherals | Components. %>
+<%#   - "Add Peripheral" link pre-selects device_type: "peripheral" on the new form. %>
 <%# v1.9 (Session 23): Replaced the three inline tables with a summary card view. %>
 <%#   Profile header and info panel extracted to owners/_profile.html.erb. %>
 <%#   Three cards (Computers / Appliances / Components) show item counts and link %>
 <%#   to the corresponding sub-pages (/owners/:id/computers etc.). %>
 <%#   Owner of the account also sees an "Add" link on each card. %>
-<%#   The source=owner redirect (from computers_controller / components_controller) %>
-<%#   still lands here; the user can navigate onward via the cards. %>
 
 <div class="max-w-5xl mx-auto">
   <%# Profile header + info panel (shared with sub-pages) %>
   <%= render "profile" %>
 
-  <%# Section cards: one per collection, showing count + navigation %>
-  <div class="grid grid-cols-3 gap-4">
+  <%# Section cards: one per collection, showing count + navigation.
+      Four cards in a single row on standard viewports. %>
+  <div class="grid grid-cols-4 gap-4">
 
     <%# Computers card %>
     <div class="bg-white border border-stone-200 rounded p-5">
@@ -41,6 +45,22 @@
               class: "text-sm text-indigo-600 hover:text-indigo-900" %>
         <% if Current.owner == @owner %>
           <%= link_to "+ Add", new_computer_path(device_type: "appliance"),
+                class: "text-sm text-indigo-600 hover:text-indigo-900" %>
+        <% end %>
+      </div>
+    </div>
+
+    <%# Peripherals card %>
+    <div class="bg-white border border-stone-200 rounded p-5">
+      <div class="flex justify-between items-start mb-3">
+        <h2 class="font-semibold text-stone-700">Peripherals</h2>
+        <span class="text-2xl font-bold text-stone-300"><%= @peripheral_count %></span>
+      </div>
+      <div class="flex items-center justify-between">
+        <%= link_to "View →", peripherals_owner_path(@owner),
+              class: "text-sm text-indigo-600 hover:text-indigo-900" %>
+        <% if Current.owner == @owner %>
+          <%= link_to "+ Add", new_computer_path(device_type: "peripheral"),
                 class: "text-sm text-indigo-600 hover:text-indigo-900" %>
         <% end %>
       </div>

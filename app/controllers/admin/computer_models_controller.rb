@@ -1,9 +1,11 @@
 # decor/app/controllers/admin/computer_models_controller.rb
-# version 1.2
-# Fix: form_with derives URL from model class, always resolving to
-# /admin/computer_models regardless of context. Added @create_path and
-# @update_path_for to set_device_context so _form.html.erb can pass an
-# explicit url: to form_with, routing submissions to the correct resource.
+# version 1.3
+# v1.3 (Session 25): Extended set_device_context to handle device_context: "peripheral".
+#   peripheral branch: @device_type_value = 2, route helpers use :peripheral_models.
+#   No other changes — all actions are already driven entirely by the context
+#   variables set here, so the peripheral page works without any further edits.
+# v1.2: Added @create_path and @update_path_for to set_device_context so _form.html.erb
+#   can pass an explicit url: to form_with, routing submissions to the correct resource.
 
 module Admin
   class ComputerModelsController < BaseController
@@ -61,34 +63,58 @@ module Admin
     private
 
     # Derives all context from the device_context param injected by the router.
-    # "computer" (default) → Computer Models page.
-    # "appliance"           → Appliance Models page.
+    # "computer"   (default) → Computer Models page   (device_type: 0)
+    # "appliance"            → Appliance Models page  (device_type: 1)
+    # "peripheral"           → Peripheral Models page (device_type: 2)
     #
     # Sets:
-    #   @model_label        — "Computer"  / "Appliance"  (titles, buttons, flash)
-    #   @model_label_plural — "Computers" / "Appliances" (table column header)
-    #   @device_type_key    — "computer"  / "appliance"  (enum string for in-memory filter)
-    #   @device_type_value  — 0 / 1                      (integer for where + new-record stamp)
-    #   @index_path         — collection index path      (redirects, Cancel)
-    #   @new_path           — new-record path            (Add button)
-    #   @create_path        — collection POST path       (form_with url: for new records)
-    #   @update_path_for    — bound method               (form_with url: for existing records)
-    #   @edit_path_for      — bound method               (Edit link in index)
-    #   @delete_path_for    — bound method               (Delete button in index)
+    #   @model_label        — "Computer" / "Appliance" / "Peripheral"
+    #   @model_label_plural — "Computers" / "Appliances" / "Peripherals"
+    #   @device_type_key    — "computer" / "appliance" / "peripheral"
+    #   @device_type_value  — 0 / 1 / 2
+    #   @index_path         — collection index path
+    #   @new_path           — new-record path
+    #   @create_path        — collection POST path (form_with url: for new records)
+    #   @update_path_for    — bound method (form_with url: for existing records)
+    #   @edit_path_for      — bound method (Edit link in index)
+    #   @delete_path_for    — bound method (Delete button in index)
     def set_device_context
-      appliance           = params[:device_context] == "appliance"
-      @model_label        = appliance ? "Appliance"  : "Computer"
-      @model_label_plural = appliance ? "Appliances" : "Computers"
-      @device_type_key    = appliance ? "appliance"  : "computer"
-      @device_type_value  = appliance ? 1 : 0
-      @index_path         = appliance ? admin_appliance_models_path  : admin_computer_models_path
-      @new_path           = appliance ? new_admin_appliance_model_path : new_admin_computer_model_path
-      # @create_path: where the form POSTs for a new record
-      @create_path        = appliance ? admin_appliance_models_path  : admin_computer_models_path
-      # @update_path_for: where the form PATCHes for an existing record
-      @update_path_for    = method(appliance ? :admin_appliance_model_path   : :admin_computer_model_path)
-      @edit_path_for      = method(appliance ? :edit_admin_appliance_model_path : :edit_admin_computer_model_path)
-      @delete_path_for    = method(appliance ? :admin_appliance_model_path   : :admin_computer_model_path)
+      case params[:device_context]
+      when "appliance"
+        @model_label        = "Appliance"
+        @model_label_plural = "Appliances"
+        @device_type_key    = "appliance"
+        @device_type_value  = 1
+        @index_path         = admin_appliance_models_path
+        @new_path           = new_admin_appliance_model_path
+        @create_path        = admin_appliance_models_path
+        @update_path_for    = method(:admin_appliance_model_path)
+        @edit_path_for      = method(:edit_admin_appliance_model_path)
+        @delete_path_for    = method(:admin_appliance_model_path)
+      when "peripheral"
+        @model_label        = "Peripheral"
+        @model_label_plural = "Peripherals"
+        @device_type_key    = "peripheral"
+        @device_type_value  = 2
+        @index_path         = admin_peripheral_models_path
+        @new_path           = new_admin_peripheral_model_path
+        @create_path        = admin_peripheral_models_path
+        @update_path_for    = method(:admin_peripheral_model_path)
+        @edit_path_for      = method(:edit_admin_peripheral_model_path)
+        @delete_path_for    = method(:admin_peripheral_model_path)
+      else
+        # Default: "computer"
+        @model_label        = "Computer"
+        @model_label_plural = "Computers"
+        @device_type_key    = "computer"
+        @device_type_value  = 0
+        @index_path         = admin_computer_models_path
+        @new_path           = new_admin_computer_model_path
+        @create_path        = admin_computer_models_path
+        @update_path_for    = method(:admin_computer_model_path)
+        @edit_path_for      = method(:edit_admin_computer_model_path)
+        @delete_path_for    = method(:admin_computer_model_path)
+      end
     end
 
     def set_computer_model

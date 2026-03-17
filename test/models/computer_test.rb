@@ -1,9 +1,15 @@
 # decor/test/models/computer_test.rb
-# version 1.5
-# v1.5 (Session 22): Added barter_status enum tests — default, predicates,
-#   fixture values (alice_vax: wanted, dec_unibus_router: offered, all others: no_barter).
-#   Pattern mirrors device_type tests above: string-form and predicate-form assertions.
-# v1.4: Added device_type enum tests — default, predicates, and scope filtering.
+# version 1.6
+# v1.6 (Session 28): Added serial_number uniqueness validation tests.
+#   Constraint scope: (owner_id, computer_model_id, serial_number).
+#   - same owner + same model + duplicate serial         → invalid
+#   - same owner + different model + same serial         → valid
+#     (VT220 "unknown" and VT320 "unknown" are different physical devices)
+#   - different owner + same model + same serial         → valid
+#     (each owner may use their own numbering scheme)
+#   - duplicate serial produces a descriptive error message
+# v1.5 (Session 22): Added barter_status enum tests.
+# v1.4: Added device_type enum tests.
 
 require "test_helper"
 
@@ -100,10 +106,91 @@ class ComputerTest < ActiveSupport::TestCase
     assert_equal 0, surviving, "Expected all components to be destroyed with the computer"
   end
 
+  # --- serial_number uniqueness validation tests (Session 28) ---
+  # Constraint scope: (owner_id, computer_model_id, serial_number).
+
+  test "valid when serial_number is unique within owner and model" do
+    computer = Computer.new(
+      owner: owners(:one),
+      computer_model: computer_models(:pdp11_70),
+      serial_number: "UNIQ-SN-001"
+    )
+    assert computer.valid?, "A unique serial number must be valid: #{computer.errors.full_messages}"
+  end
+
+  test "invalid when same owner has duplicate serial number on same model" do
+    Computer.create!(
+      owner: owners(:one),
+      computer_model: computer_models(:vt100),
+      serial_number: "DUPE-SN-001"
+    )
+
+    duplicate = Computer.new(
+      owner: owners(:one),       # same owner
+      computer_model: computer_models(:vt100),
+      serial_number: "DUPE-SN-001"
+    )
+    assert_not duplicate.valid?,
+                "Same owner + same model + same serial must be invalid"
+    assert duplicate.errors[:serial_number].any?,
+           "Validation error must be on serial_number"
+  end
+
+  test "same owner may use the same serial number on different models" do
+    # A VT220 "unknown" and a VT320 "unknown" owned by the same person are
+    # physically different devices — both must be valid.
+    Computer.create!(
+      owner: owners(:one),
+      computer_model: computer_models(:vt100),
+      serial_number: "SHARED-SN-001"
+    )
+
+    different_model = Computer.new(
+      owner: owners(:one),
+      computer_model: computer_models(:pdp11_70),  # different model
+      serial_number: "SHARED-SN-001"
+    )
+    assert different_model.valid?,
+           "Same owner + different model + same serial must be valid"
+  end
+
+  test "different owner may use the same serial number on the same model" do
+    # Owners invent their own numbering schemes; cross-owner collisions are expected.
+    Computer.create!(
+      owner: owners(:one),       # alice
+      computer_model: computer_models(:vt100),
+      serial_number: "CROSS-OWNER-SN"
+    )
+
+    bob_computer = Computer.new(
+      owner: owners(:two),       # bob — different owner, same model+serial
+      computer_model: computer_models(:vt100),
+      serial_number: "CROSS-OWNER-SN"
+    )
+    assert bob_computer.valid?,
+           "Different owner + same model + same serial must be valid"
+  end
+
+  test "duplicate serial number error message is descriptive" do
+    Computer.create!(
+      owner: owners(:one),
+      computer_model: computer_models(:pdp11_70),
+      serial_number: "ERR-MSG-SN-001"
+    )
+
+    duplicate = Computer.new(
+      owner: owners(:one),
+      computer_model: computer_models(:pdp11_70),
+      serial_number: "ERR-MSG-SN-001"
+    )
+    duplicate.valid?
+    assert_match "model", duplicate.errors[:serial_number].first,
+                 "Error message must mention 'model' to help the user understand the constraint"
+  end
+
   # --- device_type enum tests ---
 
   test "device_type defaults to computer" do
-    # A new record without an explicit device_type must default to computer (0).
     computer = Computer.new(
       owner: owners(:one),
       computer_model: computer_models(:pdp11_70),
@@ -135,21 +222,18 @@ class ComputerTest < ActiveSupport::TestCase
   end
 
   test "device_type_appliance? is true for appliance fixture" do
-    # dec_unibus_router fixture has device_type: 1 (appliance).
     appliance = computers(:dec_unibus_router)
     assert appliance.device_type_appliance?
     assert_not appliance.device_type_computer?
   end
 
   test "device_type_computer scope excludes appliances" do
-    # The dec_unibus_router fixture is an appliance and must not appear in this scope.
     computers = Computer.device_type_computer
     assert_not computers.exists?(computers(:dec_unibus_router).id),
       "device_type_computer scope must not include appliances"
   end
 
   test "device_type_appliance scope excludes computers" do
-    # alice_pdp11 is a computer and must not appear in the appliance scope.
     appliances = Computer.device_type_appliance
     assert appliances.exists?(computers(:dec_unibus_router).id),
       "device_type_appliance scope must include the appliance fixture"
@@ -160,7 +244,6 @@ class ComputerTest < ActiveSupport::TestCase
   # --- barter_status enum tests ---
 
   test "barter_status defaults to no_barter" do
-    # A new record without an explicit barter_status must default to no_barter (0).
     computer = Computer.new(
       owner: owners(:one),
       computer_model: computer_models(:pdp11_70),
@@ -207,21 +290,18 @@ class ComputerTest < ActiveSupport::TestCase
   end
 
   test "alice_vax fixture has barter_status wanted" do
-    # alice_vax was set to barter_status: 2 (wanted) in computers.yml v1.7.
     vax = computers(:alice_vax)
     assert_equal "wanted", vax.barter_status
     assert vax.barter_status_wanted?
   end
 
   test "dec_unibus_router fixture has barter_status offered" do
-    # dec_unibus_router was set to barter_status: 1 (offered) in computers.yml v1.7.
     router = computers(:dec_unibus_router)
     assert_equal "offered", router.barter_status
     assert router.barter_status_offered?
   end
 
   test "alice_pdp11 fixture has barter_status no_barter" do
-    # alice_pdp11 omits barter_status in the fixture, so it receives the DB default (0).
     pdp11 = computers(:alice_pdp11)
     assert_equal "no_barter", pdp11.barter_status
     assert pdp11.barter_status_no_barter?
