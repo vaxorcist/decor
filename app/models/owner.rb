@@ -1,13 +1,28 @@
-# decor/app/models/owner.rb - version 1.3
-# Added password strength validation using zxcvbn (minimum score 3)
+# decor/app/models/owner.rb - version 1.4
+# v1.4 (Session 31): Added has_many :connection_groups, dependent: :destroy.
+#   Declared AFTER has_many :computers so Rails destroys computers first during
+#   owner deletion. Computer destruction triggers the ConnectionMember after_destroy
+#   callbacks, which auto-destroy undersized groups. The has_many :connection_groups
+#   dependent: :destroy then cleans up any groups that weren't already destroyed
+#   via the computer-deletion cascade (edge case: groups whose members were all
+#   deleted at DB level, leaving the group record but no members pointing to it).
+# v1.3: Added password strength validation using zxcvbn (minimum score 3)
 # Password validation: minimum 12 characters + strength check
 # Password validation only applies when password is being set (create or update with password change)
 
 class Owner < ApplicationRecord
   has_secure_password
 
+  # NOTE: has_many :computers must be declared BEFORE has_many :connection_groups
+  # so that Rails processes computer deletions first during owner destroy. This
+  # ensures the ConnectionMember after_destroy callbacks fire before Rails
+  # attempts to destroy connection_groups directly.
   has_many :computers, dependent: :destroy
   has_many :components, dependent: :destroy
+
+  # Connection groups owned by this owner. Destroyed after computers (see note above).
+  # All member devices in these groups must belong to this owner (model validation).
+  has_many :connection_groups, dependent: :destroy
 
   PASSWORD_RESET_EXPIRY = 2.hours
 

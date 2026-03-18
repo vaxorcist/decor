@@ -1,5 +1,10 @@
 # decor/app/models/computer.rb
-# version 1.8
+# version 1.9
+# v1.9 (Session 31): Added has_many :connection_members (dependent: :destroy)
+#   and has_many :connection_groups (through: :connection_members).
+#   dependent: :destroy (not :delete_all) is intentional: Ruby destroy fires
+#   after_destroy on each ConnectionMember, which implements the auto-cleanup
+#   logic that destroys a ConnectionGroup when it falls below 2 members.
 # v1.8 (Session 28): Added serial_number uniqueness validation scoped to
 #   (owner_id, computer_model_id). This mirrors the DB unique index added in
 #   migration 20260316120000. Scope rationale: the same serial "unknown" on a
@@ -16,6 +21,16 @@ class Computer < ApplicationRecord
   belongs_to :computer_condition, optional: true
   belongs_to :run_status, optional: true
   has_many :components, dependent: :destroy
+
+  # Connections: a computer (appliance or peripheral) may participate in one or
+  # more connection groups. Each group records which devices are physically or
+  # logically connected to each other.
+  #
+  # dependent: :destroy — must use Ruby destroy (not delete_all) so that
+  # ConnectionMember's after_destroy callback fires and can auto-destroy any
+  # ConnectionGroup that falls below the 2-member minimum.
+  has_many :connection_members, dependent: :destroy
+  has_many :connection_groups, through: :connection_members
 
   # Classifies the item stored in the computers table.
   # computer   — a general-purpose programmable machine
