@@ -1,6 +1,7 @@
 # decor/test/services/computer_model_import_service_test.rb
-# version 1.0
+# version 1.1
 # Session 24: New test file — ComputerModelImportService.
+# Session 29: Added peripheral import test — same service, device_type: :peripheral.
 #
 # Tests use Tempfile to provide a real file object with .path, .content_type,
 # and .original_filename — matching what the controller passes to the service.
@@ -38,6 +39,22 @@ class ComputerModelImportServiceTest < ActiveSupport::TestCase
     assert result[:success]
     model = ComputerModel.find_by!(name: "DECserver 100")
     assert model.device_type_appliance?
+  end
+
+  # ── Happy path — peripheral ────────────────────────────────────────────────
+
+  # Session 29: verify device_type: :peripheral is accepted and stamped correctly.
+  # The service already handles arbitrary device_type values — this test confirms
+  # it works end-to-end for the peripheral case.
+
+  test "imports a new peripheral model with correct device_type" do
+    result = process_csv("name\nLA120\n", device_type: :peripheral)
+
+    assert result[:success], "Expected success but got: #{result[:error]}"
+    assert_equal 1, result[:count]
+
+    model = ComputerModel.find_by!(name: "LA120")
+    assert model.device_type_peripheral?, "Imported model must have device_type: peripheral"
   end
 
   # ── Duplicate handling ─────────────────────────────────────────────────────

@@ -1,6 +1,11 @@
 # decor/app/controllers/admin/data_transfers_controller.rb
-# version 1.0
+# version 1.1
 # Session 24: New controller — admin import/export for reference data and owner collections.
+# Session 29: Added "peripheral_models" as a supported data_type (export, import,
+#   success message). Fixed owner_collection success message: v1.0 only reported
+#   computer_count + component_count; OwnerImportService v1.3 (Session 28) splits
+#   counts into computer/appliance/peripheral/component — all four are now shown,
+#   zero counts omitted, "Nothing to import" shown when total is zero.
 #
 # Inherits Admin::BaseController which provides:
 #   - layout "admin"
@@ -8,11 +13,12 @@
 #     the underlying require_login check)
 #
 # Supported data types (params[:data_type]):
-#   "computer_models"  — ComputerModel records with device_type: computer
-#   "appliance_models" — ComputerModel records with device_type: appliance
-#   "component_types"  — ComponentType records
-#   "owner_collection" — One owner's computers + components via OwnerExportService /
-#                        OwnerImportService; or ALL owners via AllOwnersExportService
+#   "computer_models"   — ComputerModel records with device_type: computer
+#   "appliance_models"  — ComputerModel records with device_type: appliance
+#   "peripheral_models" — ComputerModel records with device_type: peripheral  ← Session 29
+#   "component_types"   — ComponentType records
+#   "owner_collection"  — One owner's computers + components via OwnerExportService /
+#                         OwnerImportService; or ALL owners via AllOwnersExportService
 #
 # Actions:
 #   show   — renders the selector UI; loads @owners for dropdowns
@@ -20,13 +26,13 @@
 #   import — POST; reads data_type + owner_id + file params; delegates to service
 #
 # CSV format for export:
-#   computer_models / appliance_models → ComputerModelExportService (headers: name)
-#   component_types                    → ComponentTypeExportService  (headers: name)
-#   owner_collection (one owner)       → OwnerExportService          (OwnerExportService::CSV_HEADERS)
-#   owner_collection (all owners)      → AllOwnersExportService      (owner_user_name + CSV_HEADERS)
+#   computer_models / appliance_models / peripheral_models → ComputerModelExportService
+#   component_types                                        → ComponentTypeExportService
+#   owner_collection (one owner)                           → OwnerExportService
+#   owner_collection (all owners)                          → AllOwnersExportService
 #
 # Import is always per-owner for owner_collection (owner_id must be a specific owner id).
-# "All owners" export exists for admin analysis; there is no corresponding "all owners" import.
+# "All owners" export exists for admin analysis; there is no corresponding all-owners import.
 
 require "csv"
 
@@ -118,6 +124,13 @@ module Admin
         csv      = ComputerModelExportService.export(device_type: :appliance)
         filename = "appliance_models_#{Date.today}.csv"
 
+      # Session 29: peripheral models use the same service with device_type: :peripheral.
+      # ComputerModelExportService already supports arbitrary device_type values —
+      # no service change required; only the controller case was missing.
+      when "peripheral_models"
+        csv      = ComputerModelExportService.export(device_type: :peripheral)
+        filename = "peripheral_models_#{Date.today}.csv"
+
       when "component_types"
         csv      = ComponentTypeExportService.export
         filename = "component_types_#{Date.today}.csv"
@@ -158,7 +171,8 @@ module Admin
     # ── Import helpers ──────────────────────────────────────────────────────
 
     # Dispatch the file to the appropriate import service.
-    # Returns a result hash: { success:, count:, error:, computer_count:, component_count: }
+    # Returns a result hash: { success:, count:, error:, computer_count:,
+    #   appliance_count:, peripheral_count:, component_count: }
     # (exact keys depend on the service; build_success_message reads from result).
     def process_import(data_type, owner_id, file)
       case data_type
@@ -167,6 +181,10 @@ module Admin
 
       when "appliance_models"
         ComputerModelImportService.process(file, device_type: :appliance)
+
+      # Session 29: same service, different device_type — no service change needed.
+      when "peripheral_models"
+        ComputerModelImportService.process(file, device_type: :peripheral)
 
       when "component_types"
         ComponentTypeImportService.process(file)
@@ -190,17 +208,36 @@ module Admin
     end
 
     # Build a human-readable success flash message appropriate for each data type.
+    #
+    # owner_collection fix (Session 29): v1.0 only reported computer_count +
+    # component_count. OwnerImportService v1.3 (Session 28) returns four separate
+    # counts: computer_count, appliance_count, peripheral_count, component_count.
+    # Zero counts are now omitted; "Nothing to import" shown when total is zero.
     def build_success_message(data_type, result)
       case data_type
       when "computer_models"
         "Successfully imported #{result[:count]} computer model(s)."
       when "appliance_models"
         "Successfully imported #{result[:count]} appliance model(s)."
+      when "peripheral_models"
+        "Successfully imported #{result[:count]} peripheral model(s)."
       when "component_types"
         "Successfully imported #{result[:count]} component type(s)."
       when "owner_collection"
-        "Successfully imported #{result[:computer_count]} computer(s) " \
-        "and #{result[:component_count]} component(s)."
+        # Build a list of non-zero counts; omit device types with zero imported.
+        # result keys from OwnerImportService v1.3: computer_count, appliance_count,
+        # peripheral_count, component_count.
+        parts = []
+        parts << "#{result[:computer_count]} computer(s)"   if result[:computer_count].to_i   > 0
+        parts << "#{result[:appliance_count]} appliance(s)" if result[:appliance_count].to_i   > 0
+        parts << "#{result[:peripheral_count]} peripheral(s)" if result[:peripheral_count].to_i > 0
+        parts << "#{result[:component_count]} component(s)"  if result[:component_count].to_i  > 0
+
+        if parts.any?
+          "Successfully imported #{parts.join(', ')}."
+        else
+          "Nothing to import — all records already exist."
+        end
       else
         "Import complete."
       end
