@@ -1,5 +1,5 @@
 # decor/docs/claude/DECOR_PROJECT.md
-# version 2.24
+# version 2.26
 # Session 13: device_type on computers, component_category on components; enum tests.
 # Session 14: DRY Computer/Appliance Models admin pages; dropdown nav (admin.html.erb v1.3);
 #   device_type on computer_models; routes :appliance_models; dropdown_controller.js.
@@ -37,11 +37,15 @@
 #   Merged all 8 Dependabot PRs (#20,31,32,33,34,46,47,59) — all CI green.
 #   Added CHECK(device_type IN (0,1,2)) constraint to computer_models table
 #   (migration 20260318000000 — companion to Session 25 computers constraint).
+# Session 31: Connections feature Part 1a — 3 migrations, 3 new models, 2 updated
+#   models, 3 new fixture files. Tests deferred to Part 1b (next session).
+# Session 32: Connections feature Part 1b — 3 model test files for ConnectionType,
+#   ConnectionGroup, ConnectionMember.
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** March 18, 2026 (Session 30)
-**Current Status:** Sessions 1–29 committed and deployed. Session 30 migration ready to branch/PR/deploy.
+**Last Updated:** March 18, 2026 (Session 32)
+**Current Status:** Sessions 1–30 committed and deployed. Session 31 Part 1 (foundation) + Session 32 Part 1b (model tests) ready to branch/PR/deploy together.
 
 ---
 
@@ -52,7 +56,7 @@
 tree decor/ -I "node_modules|.git|tmp|storage|log|.DS_Store|*.lock|assets|cache|pids|sockets" --dirsfirst -F --prune -L 6 > decor_tree.txt
 ```
 
-**Current tree** (as of Session 30, March 18, 2026):
+**Current tree** (as of Session 32, March 18, 2026 — new test files added, rest unchanged):
 ```
 decor//
 ├── app/
@@ -82,33 +86,10 @@ decor//
 │   │   ├── sessions_controller.rb
 │   │   └── site_texts_controller.rb
 │   ├── helpers/
-│   │   ├── application_helper.rb
-│   │   ├── components_helper.rb
-│   │   ├── computers_helper.rb
-│   │   ├── navigation_helper.rb
-│   │   ├── owners_helper.rb
-│   │   └── style_helper.rb
+│   │   └── (unchanged)
 │   ├── javascript/
-│   │   ├── controllers/
-│   │   │   ├── application.js
-│   │   │   ├── back_controller.js
-│   │   │   ├── computer_select_controller.js
-│   │   │   ├── dropdown_controller.js
-│   │   │   ├── hello_controller.js
-│   │   │   ├── index.js
-│   │   │   ├── load_more_controller.js
-│   │   │   └── password_generator_controller.js
-│   │   └── application.js
-│   ├── jobs/
-│   │   ├── application_job.rb
-│   │   └── invite_reminder_job.rb
-│   ├── mailers/
-│   │   ├── application_mailer.rb
-│   │   ├── invite_mailer.rb
-│   │   └── password_reset_mailer.rb
+│   │   └── (unchanged)
 │   ├── models/
-│   │   ├── decor/
-│   │   │   └── routes.rb
 │   │   ├── application_record.rb
 │   │   ├── component_condition.rb
 │   │   ├── component.rb
@@ -116,140 +97,29 @@ decor//
 │   │   ├── computer_condition.rb
 │   │   ├── computer_model.rb
 │   │   ├── computer.rb
+│   │   ├── connection_group.rb          ← Session 31 new
+│   │   ├── connection_member.rb         ← Session 31 new
+│   │   ├── connection_type.rb           ← Session 31 new
 │   │   ├── current.rb
 │   │   ├── invite.rb
 │   │   ├── owner.rb
 │   │   ├── run_status.rb
 │   │   └── site_text.rb
 │   ├── services/
-│   │   ├── all_owners_export_service.rb
-│   │   ├── bulk_upload_service.rb
-│   │   ├── component_type_export_service.rb
-│   │   ├── component_type_import_service.rb
-│   │   ├── computer_model_export_service.rb
-│   │   ├── computer_model_import_service.rb
-│   │   ├── owner_export_service.rb
-│   │   └── owner_import_service.rb
+│   │   └── (unchanged)
 │   └── views/
-│       ├── admin/
-│       │   ├── bulk_uploads/
-│       │   │   └── new.html.erb
-│       │   ├── component_conditions/
-│       │   │   ├── edit.html.erb
-│       │   │   ├── _form.html.erb
-│       │   │   ├── index.html.erb
-│       │   │   └── new.html.erb
-│       │   ├── component_types/
-│       │   │   ├── edit.html.erb
-│       │   │   ├── _form.html.erb
-│       │   │   ├── index.html.erb
-│       │   │   └── new.html.erb
-│       │   ├── computer_models/
-│       │   │   ├── edit.html.erb
-│       │   │   ├── _form.html.erb
-│       │   │   ├── index.html.erb
-│       │   │   └── new.html.erb
-│       │   ├── conditions/
-│       │   │   ├── edit.html.erb
-│       │   │   ├── _form.html.erb
-│       │   │   ├── index.html.erb
-│       │   │   └── new.html.erb
-│       │   ├── data_transfers/
-│       │   │   └── show.html.erb
-│       │   ├── invites/
-│       │   │   ├── index.html.erb
-│       │   │   └── new.html.erb
-│       │   ├── owners/
-│       │   │   ├── edit.html.erb
-│       │   │   └── index.html.erb
-│       │   ├── run_statuses/
-│       │   │   ├── edit.html.erb
-│       │   │   ├── _form.html.erb
-│       │   │   ├── index.html.erb
-│       │   │   └── new.html.erb
-│       │   └── site_texts/
-│       │       ├── delete_confirm.html.erb
-│       │       └── new.html.erb
-│       ├── common/
-│       │   ├── _flashes.html.erb
-│       │   ├── _footer.html.erb
-│       │   ├── _navigation.html.erb
-│       │   └── _record_errors.html.erb
-│       ├── components/
-│       │   ├── _component.html.erb
-│       │   ├── edit.html.erb
-│       │   ├── _filters.html.erb
-│       │   ├── _form.html.erb
-│       │   ├── index.html.erb
-│       │   ├── index.turbo_stream.erb
-│       │   ├── new.html.erb
-│       │   └── show.html.erb
-│       ├── computers/
-│       │   ├── _computer_component_form.html.erb
-│       │   ├── _computer.html.erb
-│       │   ├── edit.html.erb
-│       │   ├── _filters.html.erb
-│       │   ├── _form.html.erb
-│       │   ├── index.html.erb
-│       │   ├── index.turbo_stream.erb
-│       │   ├── new.html.erb
-│       │   └── show.html.erb
-│       ├── data_transfers/
-│       │   └── show.html.erb
-│       ├── home/
-│       │   └── index.html.erb
-│       ├── layouts/
-│       │   ├── admin.html.erb
-│       │   ├── application.html.erb
-│       │   ├── mailer.html.erb
-│       │   └── mailer.text.erb
-│       ├── mailers/
-│       │   ├── invite_mailer/
-│       │   │   ├── invite_email.html.erb
-│       │   │   ├── invite_email.text.erb
-│       │   │   ├── reminder_email.html.erb
-│       │   │   └── reminder_email.text.erb
-│       │   └── password_reset_mailer/
-│       │       ├── invite_email.html.erb
-│       │       └── reset_email.html.erb
-│       ├── owners/
-│       │   ├── appliances.html.erb
-│       │   ├── components.html.erb
-│       │   ├── computers.html.erb
-│       │   ├── edit.html.erb
-│       │   ├── _filters.html.erb
-│       │   ├── _form.html.erb
-│       │   ├── index.html.erb
-│       │   ├── index.turbo_stream.erb
-│       │   ├── new.html.erb
-│       │   ├── _owner.html.erb
-│       │   ├── peripherals.html.erb
-│       │   ├── _profile.html.erb
-│       │   └── show.html.erb
-│       ├── password_resets/
-│       │   ├── edit.html.erb
-│       │   └── new.html.erb
-│       ├── pwa/
-│       │   ├── manifest.json.erb
-│       │   └── service-worker.js
-│       ├── sessions/
-│       │   └── new.html.erb
-│       ├── shared/
-│       │   └── _load_more.html.erb
-│       └── site_texts/
-│           └── show.html.erb
-├── bin/
-│   └── (unchanged)
-├── config/
-│   └── (unchanged)
+│       └── (unchanged)
 ├── db/
 │   ├── migrate/
 │   │   ├── (prior migrations unchanged)
 │   │   ├── 20260316100000_add_device_type_check_to_computers.rb
 │   │   ├── 20260316110000_add_unique_index_to_components_serial_number.rb
 │   │   ├── 20260316120000_add_unique_index_to_computers_serial_number.rb
-│   │   └── 20260318000000_add_device_type_check_to_computer_models.rb
-│   └── (schema, seeds unchanged)
+│   │   ├── 20260318000000_add_device_type_check_to_computer_models.rb
+│   │   ├── 20260319000000_create_connection_types.rb    ← Session 31 new
+│   │   ├── 20260319010000_create_connection_groups.rb   ← Session 31 new
+│   │   └── 20260319020000_create_connection_members.rb  ← Session 31 new
+│   └── (schema, seeds unchanged until migration run)
 ├── docs/
 │   └── claude/
 │       ├── COMMON_BEHAVIOR.md
@@ -258,13 +128,38 @@ decor//
 │       ├── RAILS_SPECIFICS.md
 │       └── SESSION_HANDOVER.md
 └── test/
-    └── (see key versions table)
+    ├── fixtures/
+    │   ├── connection_groups.yml    ← Session 31 new
+    │   ├── connection_members.yml   ← Session 31 new
+    │   ├── connection_types.yml     ← Session 31 new
+    │   └── (all others unchanged)
+    └── models/
+        ├── connection_group_test.rb   ← Session 32 new
+        ├── connection_member_test.rb  ← Session 32 new
+        ├── connection_type_test.rb    ← Session 32 new
+        └── (all others unchanged)
 ```
 
 ---
 
 **Key file versions** (updated each session):
 
+    decor/test/models/connection_type_test.rb                                        v1.0  ← Session 32 new
+    decor/test/models/connection_group_test.rb                                       v1.0  ← Session 32 new
+    decor/test/models/connection_member_test.rb                                      v1.0  ← Session 32 new
+    decor/app/models/connection_type.rb                                              v1.0  ← Session 31 new
+    decor/app/models/connection_group.rb                                             v1.0  ← Session 31 new
+    decor/app/models/connection_member.rb                                            v1.0  ← Session 31 new
+    decor/app/models/computer.rb                                                     v1.9  ← Session 31
+    decor/app/models/owner.rb                                                        v1.4  ← Session 31
+    decor/db/migrate/20260319000000_create_connection_types.rb                       v1.0  ← Session 31 new
+    decor/db/migrate/20260319010000_create_connection_groups.rb                      v1.0  ← Session 31 new
+    decor/db/migrate/20260319020000_create_connection_members.rb                     v1.0  ← Session 31 new
+    decor/test/fixtures/connection_types.yml                                         v1.0  ← Session 31 new
+    decor/test/fixtures/connection_groups.yml                                        v1.0  ← Session 31 new
+    decor/test/fixtures/connection_members.yml                                       v1.0  ← Session 31 new
+    decor/docs/claude/SESSION_HANDOVER.md                                            v34.0 ← Session 32
+    decor/docs/claude/DECOR_PROJECT.md                                               v2.26 ← Session 32
     decor/db/migrate/20260318000000_add_device_type_check_to_computer_models.rb      v1.0  ← Session 30 new
     decor/app/controllers/admin/data_transfers_controller.rb                         v1.1  ← Session 29
     decor/app/views/admin/data_transfers/show.html.erb                               v1.1  ← Session 29
@@ -273,7 +168,6 @@ decor//
     decor/test/services/computer_model_import_service_test.rb                        v1.1  ← Session 29
     decor/db/migrate/20260316120000_add_unique_index_to_computers_serial_number.rb   v1.0  ← Session 28 new
     decor/db/migrate/20260316110000_add_unique_index_to_components_serial_number.rb  v1.0  ← Session 28 new
-    decor/app/models/computer.rb                                                     v1.8  ← Session 28
     decor/app/models/component.rb                                                    v1.5  ← Session 28
     decor/app/services/owner_export_service.rb                                       v1.2  ← Session 28
     decor/app/services/owner_import_service.rb                                       v1.3  ← Session 28
@@ -286,88 +180,88 @@ decor//
     decor/test/controllers/owners_controller_destroy_test.rb                         v1.3  ← Session 28
     decor/test/controllers/admin/computer_models_controller_test.rb                  v1.2  ← Session 27
     decor/test/fixtures/computer_models.yml                                          v1.2  ← Session 27
-    decor/docs/claude/SESSION_HANDOVER.md                                            v32.0 ← Session 30
-    decor/docs/claude/DECOR_PROJECT.md                                               v2.24 ← Session 30
-    decor/db/migrate/20260316100000_add_device_type_check_to_computers.rb            v1.0  ← Session 25 new
-    decor/app/models/computer_model.rb                                               v1.2  ← Session 25
     decor/config/routes.rb                                                           v2.2  ← Session 25
     decor/app/controllers/owners_controller.rb                                       v1.7  ← Session 25
     decor/app/controllers/computers_controller.rb                                    v1.16 ← Session 25
     decor/app/controllers/admin/computer_models_controller.rb                        v1.3  ← Session 25
-    decor/app/views/owners/peripherals.html.erb                                      v1.0  ← Session 25 new
-    decor/app/views/owners/computers.html.erb                                        v1.1  ← Session 25
-    decor/app/views/owners/appliances.html.erb                                       v1.1  ← Session 25
-    decor/app/views/owners/show.html.erb                                             v2.0  ← Session 25
-    decor/app/views/common/_navigation.html.erb                                      v1.7  ← Session 25
-    decor/app/views/layouts/admin.html.erb                                           v1.8  ← Session 25
-    decor/app/views/computers/_filters.html.erb                                      v1.5  ← Session 25
-    decor/test/fixtures/computers.yml                                                v1.8  ← Session 25
-    decor/test/controllers/owners_controller_test.rb                                 v1.4  ← Session 25
-    decor/app/views/owners/components.html.erb                                       v1.1  ← Session 26
-    decor/test/controllers/computers_controller_test.rb                              v1.7  ← Session 26
-    decor/app/services/computer_model_export_service.rb                              v1.0  ← Session 24 new
-    decor/app/services/computer_model_import_service.rb                              v1.0  ← Session 24 new
-    decor/app/services/component_type_export_service.rb                              v1.0  ← Session 24 new
-    decor/app/services/component_type_import_service.rb                              v1.0  ← Session 24 new
-    decor/app/services/all_owners_export_service.rb                                  v1.0  ← Session 24 new
-    decor/test/services/component_type_export_service_test.rb                        v1.0  ← Session 24 new
-    decor/test/services/component_type_import_service_test.rb                        v1.0  ← Session 24 new
     decor/test/fixtures/owners.yml                                                   v2.1  ← Session 13
+    decor/test/fixtures/computers.yml                                                v1.8  ← Session 25
 
 ---
 
 ## Data Model Overview
 
 ### Owner
-- has_many computers
-- has_many components
+- has_many :computers, dependent: :destroy            (declared first — ordering matters)
+- has_many :components, dependent: :destroy
+- has_many :connection_groups, dependent: :destroy    (declared after computers)
 - Visibility settings: real_name, email, country (public/members_only/private)
 - Authentication via has_secure_password
 
 ### Computer
-- belongs_to owner
-- belongs_to computer_model
-- belongs_to computer_condition (optional)
-- belongs_to run_status (optional)
-- has_many components, dependent: :destroy
+- belongs_to :owner
+- belongs_to :computer_model
+- belongs_to :computer_condition (optional)
+- belongs_to :run_status (optional)
+- has_many :components, dependent: :destroy
+- has_many :connection_members, dependent: :destroy   (Ruby destroy — callbacks must fire)
+- has_many :connection_groups, through: :connection_members
 - device_type enum: 0 = computer (default), 1 = appliance, 2 = peripheral
   prefix: true → device_type_computer?, device_type_appliance?, device_type_peripheral?
-  CHECK(device_type IN (0,1,2)) constraint on computers table (migration 20260316100000).
+  CHECK(device_type IN (0,1,2)) on computers table (migration 20260316100000).
 - barter_status enum: 0 = no_barter (default), 1 = offered, 2 = wanted, prefix: true
-- Validations:
-  - serial_number: presence: true
-  - serial_number: uniqueness scoped to (owner_id, computer_model_id)
-    DB index: index_computers_on_owner_model_and_serial_number (migration 20260316120000)
-  - order_number: max 20 characters, optional
+- Validations: serial_number presence + uniqueness scoped to (owner_id, computer_model_id)
 
 ### ComputerModel
 - device_type enum: 0 = computer (default), 1 = appliance, 2 = peripheral
-  CHECK(device_type IN (0,1,2)) constraint added in Session 30 (migration 20260318000000).
-- has_many computers, dependent: :restrict_with_error
+  CHECK(device_type IN (0,1,2)) constraint (migration 20260318000000).
+- has_many :computers, dependent: :restrict_with_error
 - Validations: name presence + uniqueness
 
 ### Component
-- belongs_to owner
-- belongs_to computer (optional)
-- belongs_to component_type
-- belongs_to component_condition (optional)
+- belongs_to :owner
+- belongs_to :computer (optional)
+- belongs_to :component_type
+- belongs_to :component_condition (optional)
 - component_category enum: 0 = integral (default), 1 = peripheral
 - barter_status enum: 0 = no_barter (default), 1 = offered, 2 = wanted, prefix: true
-- Validations:
-  - serial_number: uniqueness scoped to (owner_id, component_type_id), allow_blank: true
-    DB index: index_components_on_owner_type_and_serial_number (migration 20260316110000)
+- serial_number: uniqueness scoped to (owner_id, component_type_id), allow_blank: true
+
+### ConnectionType
+- has_many :connection_groups, dependent: :restrict_with_error
+- Admin-managed (same pattern as ComponentType, RunStatus)
+- Validations: name presence + uniqueness; label max 100 chars
+
+### ConnectionGroup
+- belongs_to :owner
+- belongs_to :connection_type (optional)
+- has_many :connection_members, dependent: :delete_all
+- has_many :computers, through: :connection_members
+- accepts_nested_attributes_for :connection_members, allow_destroy: true
+- Validations: minimum 2 active members; all members must belong to group's owner
+
+### ConnectionMember
+- belongs_to :connection_group
+- belongs_to :computer
+- Validation: computer_id uniqueness scoped to connection_group_id
+- after_destroy: destroys parent group if member count falls below 2
+
+---
+
+## Connections Feature — Planned Parts
+
+    Part 1a: Migrations + models + fixtures             DONE (Session 31)
+    Part 1b: Model tests                                DONE (Session 32)
+    Part 2:  Admin ConnectionTypes CRUD                 NEXT
+    Part 3:  Owner device show pages — read-only connections display
+    Part 4:  Owner ConnectionGroup CRUD
 
 ---
 
 ## Export / Import Status (Session 29, unchanged)
 
 ### Surface 1 — Owner Export / Import  (/data_transfer) — COMPLETE
-All three device types (computer, appliance, peripheral) export and import correctly.
-Duplicate checks scope by (owner, model, serial) for devices and (owner, type, serial) for components.
-
 ### Surface 2 — Admin Imports / Exports  (/admin/data_transfer) — COMPLETE (Session 29)
-All three ComputerModel device types (computer, appliance, peripheral) now supported in
-both export and import. Owner collection success message shows all four device-type counts.
 
 ---
 
@@ -415,10 +309,15 @@ Always upload fixture files at end of session they are modified. (Session 27.)
 `@owner.computers.exists?(serial_number:)` alone blocks different-model devices
 with the same serial. Always scope by `computer_model:` as well. (Session 28.)
 
-### Admin controller owner_collection success message missing appliance/peripheral counts
-Fixed Session 29. v1.0 only read `computer_count` + `component_count` from result;
-OwnerImportService v1.3 (Session 28) returns four separate keys. Admin controller
-`build_success_message` now reads all four, omitting zero counts.
+### ConnectionGroup dependent: :delete_all vs ConnectionMember dependent: :destroy
+ConnectionGroup uses delete_all on its members (no callbacks needed when the group
+is the source of deletion). Computer uses destroy on its members (callbacks MUST fire
+to trigger the group auto-cleanup). Mixing these up breaks the cascade logic.
+
+### Opening separator missing (Session 31)
+Every response requires BOTH the opening and closing `================================================================================`
+separator lines. The closing separator with token estimate was present; the opening
+was omitted. Both are mandatory on every response without exception.
 
 ---
 

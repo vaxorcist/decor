@@ -1,10 +1,9 @@
 # decor/docs/claude/SESSION_HANDOVER.md
-# version 32.0
+# version 34.0
 
 **Date:** March 18, 2026
-**Branch:** main (Sessions 1–29 committed and deployed; Session 30 migration ready to branch/PR/deploy)
-**Status:** Tests not re-run this session (migration-only change; no model/controller/test code
-changed). Run `bin/rails test` locally before pushing the migration PR.
+**Branch:** main (Sessions 1–30 committed and deployed; Sessions 31 Part 1 + 32 Part 1b ready to branch/PR/deploy)
+**Status:** Tests written and delivered. Run `bin/rails db:migrate` then `bin/rails test` before committing.
 
 ---
 
@@ -43,13 +42,17 @@ Every response must follow this format:
 **Token Usage...**
 ```
 
+The OPENING separator is also mandatory — not just the closing one.
+Real violation: Session 31 — the file-placement response had the closing separator
+but was missing the opening one. Both are required on every response.
+
 ---
 
 ## !! TOKEN BUDGET WARNING !!
 
-Sessions 28–30 hit ~50–65% context usage after rule document reads. The fixed
-overhead (5 rule documents + system prompt + tool schemas + bash cat outputs)
-consumes ~50–65% of the window before any work output is written.
+Sessions 28–32 hit ~88–90% context usage. The fixed overhead (5 rule documents +
+system prompt + tool schemas + bash cat outputs + uploaded source files) consumes
+~60–90% of the window before any work output is written.
 
 **Practical consequence:** each session has room for roughly one focused task.
 Do not plan multi-task sessions.
@@ -64,57 +67,81 @@ of delivery. (Established Session 27.)
 
 ---
 
-## Session 30 Summary
+## Session 32 Summary
 
-**Focus: Housekeeping — CVE fix, Dependabot PRs, computer_models CHECK constraint**
+**Focus: Connections feature — Part 1b: Model tests**
 
-No model or controller code changes. No test changes. Migration + Gemfile.lock only.
+All three model test files written and delivered. Fixtures from Session 31 provided
+sufficient data for all tests with no fixture additions required.
 
 ### Changes
 
-1. **action_text-trix CVE fix (GHSA-qmpg-8xg6-ph5q)**
-   `bundler-audit` caught `action_text-trix` v2.1.16 (stored XSS) blocking the
-   `feature/add-peripherals-admin-export-import` PR CI check. Fixed with:
-   `bundle update action_text-trix` → Gemfile.lock updated. PR merged, deployed.
+**3 new test files:**
 
-2. **Dependabot PRs — all 8 merged**
-   All had passing CI; merged in order oldest-first via:
-   `gh pr merge --merge --delete-branch` for each.
+    decor/test/models/connection_type_test.rb    v1.0
+    decor/test/models/connection_group_test.rb   v1.0
+    decor/test/models/connection_member_test.rb  v1.0
 
-   #20  Bump bootsnap 1.22.0 → 1.23.0
-   #31  Bump selenium-webdriver 4.40.0 → 4.41.0
-   #32  Bump web-console 4.2.1 → 4.3.0
-   #33  Bump minitest 5.27.0 → 6.0.2  (major version — CI confirmed compatible with Rails 8.1.2)
-   #34  Bump solid_queue 1.3.1 → 1.3.2
-   #46  Bump actions/upload-artifact 6 → 7
-   #47  Bump sqlite3 2.9.0 → 2.9.1
-   #59  Bump thruster 0.1.18 → 0.1.19
+**2 updated docs:**
 
-3. **`20260318000000_add_device_type_check_to_computer_models.rb` v1.0** — new migration
-   Adds CHECK(device_type IN (0,1,2)) to computer_models table using SQLite table
-   recreation pattern (disable_ddl_transaction!, explicit column names, FK pragma).
-   Companion to migration 20260316100000 which did the same for computers (Session 25).
-   **Still needs: branch → test → PR → CI → merge → deploy** (see commit block below).
+    decor/docs/claude/DECOR_PROJECT.md           v2.26
+    decor/docs/claude/SESSION_HANDOVER.md        v34.0
+
+### Test coverage
+
+connection_type_test.rb (8 tests):
+  - valid with name + label; valid with name only; invalid without name
+  - invalid with duplicate name; valid with unique name
+  - has_many :connection_groups responds
+  - restrict_with_error: destroy blocked when groups exist (rs232)
+  - destroy succeeds when no groups (ethernet)
+
+connection_group_test.rb (11 tests):
+  - minimum_two_members: valid at 2, invalid at 0 and 1 (boundary tests)
+  - all_members_belong_to_owner: invalid when member from different owner
+  - connection_type optional: valid without, valid with
+  - belongs_to owner; belongs_to connection_type (with instance check)
+  - has_many connection_members; has_many computers through members
+  - cascade: destroy group → members deleted (delete_all)
+  - cascade: computers NOT destroyed when group is destroyed
+
+connection_member_test.rb (7 tests):
+  - belongs_to connection_group; belongs_to computer
+  - invalid: same computer in same group twice (uniqueness error on :computer_id)
+  - valid: same computer in different group (scoped uniqueness)
+  - after_destroy (2→1): group auto-destroys when count drops below 2
+  - after_destroy (2→1 alt): same via alice's group
+  - after_destroy (3→2): group survives when count stays at 2
+
+### Key notes for test run
+
+- `bin/rails db:migrate` must run first (Session 31 migrations not yet applied to test DB)
+- ConnectionGroup.create! in connection_member_test uses
+  `connection_members: [ConnectionMember.new(...)]` — accepted by accepts_nested_attributes_for
+- All error key assertions use `:base` for group-level custom validations
+  (minimum_two_members, all_members_belong_to_owner) — if models use a different
+  key, tests will tell you immediately
 
 ---
 
-## Commit Session 30 migration
+## Commit Session 31 Part 1 + Session 32 Part 1b (together)
 
 ```bash
 git switch main
 git pull origin main
-git switch -c feature/device-type-check-computer-models
-# Place migration file at:
-# decor/db/migrate/20260318000000_add_device_type_check_to_computer_models.rb
+git switch -c feature/connections-part1
+# Place all 16 files (see complete file list below)
 bin/rails db:migrate
 bin/rails test
+bundle exec rubocop -A && bundle exec rubocop
+bin/brakeman --no-pager
 git add -A
-git commit -m "Session 30: Add CHECK(device_type IN (0,1,2)) to computer_models table"
-git push origin feature/device-type-check-computer-models
+git commit -m "Sessions 31-32: Add connections foundation + model tests (Part 1a + 1b)"
+git push origin feature/connections-part1
 gh pr create --fill
-gh pr checks feature/device-type-check-computer-models --watch
+gh pr checks feature/connections-part1 --watch
 # Once green:
-gh pr merge --merge --delete-branch feature/device-type-check-computer-models
+gh pr merge --merge --delete-branch feature/connections-part1
 git switch main
 git pull origin main
 kamal deploy
@@ -122,22 +149,122 @@ kamal deploy
 
 ---
 
-## Work Completed Session 30 — Complete File List
+## Complete File List (Sessions 31 + 32)
 
-    decor/db/migrate/20260318000000_add_device_type_check_to_computer_models.rb      v1.0
-    decor/docs/claude/DECOR_PROJECT.md                                               v2.24
-    decor/docs/claude/SESSION_HANDOVER.md                                            v32.0
+    decor/db/migrate/20260319000000_create_connection_types.rb              v1.0
+    decor/db/migrate/20260319010000_create_connection_groups.rb             v1.0
+    decor/db/migrate/20260319020000_create_connection_members.rb            v1.0
+    decor/app/models/connection_type.rb                                     v1.0
+    decor/app/models/connection_group.rb                                    v1.0
+    decor/app/models/connection_member.rb                                   v1.0
+    decor/app/models/computer.rb                                            v1.9
+    decor/app/models/owner.rb                                               v1.4
+    decor/test/fixtures/connection_types.yml                                v1.0
+    decor/test/fixtures/connection_groups.yml                               v1.0
+    decor/test/fixtures/connection_members.yml                              v1.0
+    decor/test/models/connection_type_test.rb                               v1.0
+    decor/test/models/connection_group_test.rb                              v1.0
+    decor/test/models/connection_member_test.rb                             v1.0
+    decor/docs/claude/SESSION_HANDOVER.md                                   v34.0
+    decor/docs/claude/DECOR_PROJECT.md                                      v2.26
 
 ---
 
-## Priority 1 — Next Session Candidates
+## Priority 1 — Next Session: Part 2 — Admin ConnectionTypes CRUD
 
-All housekeeping items from the previous backlog are now cleared:
-- ✅ Dependabot PRs — done Session 30
-- ✅ CHECK(device_type IN (0,1,2)) on computer_models — done Session 30
-- ✅ Surface 1 + Surface 2 export/import — done Sessions 28–29
+    decor/app/controllers/admin/connection_types_controller.rb  — new
+    decor/app/views/admin/connection_types/                     — new (index, new, edit, _form)
+    decor/config/routes.rb                                      — add resource
+    decor/app/views/layouts/admin.html.erb                      — add to dropdown nav
 
-Remaining candidates:
+Upload at session start (in addition to 5 rule docs):
+    decor/config/routes.rb
+    decor/app/views/layouts/admin.html.erb
+    decor/app/controllers/admin/base_controller.rb
+    decor/app/controllers/admin/component_types_controller.rb  (pattern reference)
+    decor/app/views/admin/component_types/index.html.erb       (pattern reference)
+
+---
+
+## Connections Feature — Design Reference (Session 31, unchanged)
+
+### Tables
+
+```
+connection_types
+  id                  integer  PK
+  name                VARCHAR(40) NOT NULL, UNIQUE
+  label               VARCHAR(100) nullable
+  created_at / updated_at
+
+connection_groups
+  id                  integer  PK
+  owner_id            integer  FK → owners.id, NOT NULL
+  connection_type_id  integer  FK → connection_types.id, nullable
+  label               VARCHAR(100) nullable
+  created_at / updated_at
+
+connection_members
+  id                   integer  PK
+  connection_group_id  integer  FK → connection_groups.id, NOT NULL
+                                on_delete: :cascade (DB level)
+  computer_id          integer  FK → computers.id, NOT NULL
+                                no on_delete (Ruby callbacks must fire)
+  created_at / updated_at
+  UNIQUE INDEX (connection_group_id, computer_id)
+```
+
+### Cascade chain on Computer deletion
+```
+owner.destroy
+  → computers.destroy_each          (has_many :computers, dependent: :destroy)
+      → computer.destroy
+          → connection_members.destroy_each  (has_many :connection_members, dependent: :destroy)
+              → member.after_destroy: group.destroy if group.connection_members.count < 2
+                  → connection_members.delete_all  (has_many :connection_members, dependent: :delete_all)
+  → connection_groups.destroy_each  (cleans up any groups not already destroyed above)
+```
+
+### Model associations
+```ruby
+# ConnectionType
+has_many :connection_groups, dependent: :restrict_with_error
+
+# ConnectionGroup
+belongs_to :owner
+belongs_to :connection_type, optional: true
+has_many :connection_members, dependent: :delete_all
+has_many :computers, through: :connection_members
+accepts_nested_attributes_for :connection_members, allow_destroy: true
+validate :minimum_two_members
+validate :all_members_belong_to_owner
+
+# ConnectionMember
+belongs_to :connection_group
+belongs_to :computer
+validates :computer_id, uniqueness: { scope: :connection_group_id }
+after_destroy :cleanup_undersized_group
+
+# Computer (v1.9)
+has_many :connection_members, dependent: :destroy
+has_many :connection_groups, through: :connection_members
+
+# Owner (v1.4) — order of has_many declarations matters
+has_many :computers, dependent: :destroy      # FIRST
+has_many :components, dependent: :destroy
+has_many :connection_groups, dependent: :destroy  # AFTER computers
+```
+
+### Planned parts
+- Part 1a: Migrations + models + fixtures         ← DONE (Session 31)
+- Part 1b: Model tests                            ← DONE (Session 32)
+- Part 2:  Admin ConnectionTypes CRUD             ← NEXT SESSION
+- Part 3:  Owner device show pages — read-only connections display
+- Part 4:  Owner ConnectionGroup CRUD
+
+---
+
+## Priority 2 — After Connections Feature Complete
 
 1. **Legal/Compliance** — Impressum, Privacy Policy, GDPR, Cookie Consent, TOS.
 2. **System tests** — decor/test/system/ still empty.
@@ -147,40 +274,19 @@ Remaining candidates:
 
 ---
 
-## Priority 2 — Other Candidates (unchanged)
-
-(Same as Priority 1 list above — all are un-started candidates.)
-
----
-
 ## Unique Constraint Design Reference (Session 28, unchanged)
 
 ### computers table
 Index: `index_computers_on_owner_model_and_serial_number`
 Columns: `(owner_id, computer_model_id, serial_number)`
-Scope rationale: a VT220 "unknown" and a VT320 "unknown" for the same owner are
-physically different devices — only owner + model + serial must be unique.
 Migration: `20260316120000_add_unique_index_to_computers_serial_number.rb`
 Model validation: `validates :serial_number, uniqueness: { scope: [:owner_id, :computer_model_id] }`
 
 ### components table
 Index: `index_components_on_owner_type_and_serial_number`
 Columns: `(owner_id, component_type_id, serial_number)`
-Scope rationale: owners invent their own replacement numbering; cross-owner
-collisions are expected and valid. allow_blank: true — multiple unserialised
-spares of the same type are always permitted (SQLite NULL != NULL in unique index).
 Migration: `20260316110000_add_unique_index_to_components_serial_number.rb`
 Model validation: `validates :serial_number, uniqueness: { scope: [:owner_id, :component_type_id] }, allow_blank: true`
-
-### Import service duplicate-check pattern (v1.3)
-```ruby
-# computers — model resolved FIRST so check can scope by model:
-model = ComputerModel.find_by(name: model_name)
-return if @owner.computers.exists?(computer_model: model, serial_number: serial_number)
-
-# components — scoped by type:
-return if @owner.components.exists?(component_type: component_type, serial_number: serial_number)
-```
 
 ---
 
