@@ -1,5 +1,5 @@
 # decor/docs/claude/DECOR_PROJECT.md
-# version 2.22
+# version 2.23
 # Session 13: device_type on computers, component_category on components; enum tests.
 # Session 14: DRY Computer/Appliance Models admin pages; dropdown nav (admin.html.erb v1.3);
 #   device_type on computer_models; routes :appliance_models; dropdown_controller.js.
@@ -27,11 +27,17 @@
 #   Flash message split into per-device-type counts. Inline flash removed from
 #   data_transfers/show.html.erb (was duplicating layout _flashes partial).
 #   492 tests, 0 failures. Surface 2 (Admin) pending.
+# Session 29: Surface 2 — Admin Import/Export extended to cover peripheral_models.
+#   Added "peripheral_models" data type to admin controller (build_export,
+#   process_import, build_success_message). Fixed owner_collection success message
+#   (v1.0 silently dropped appliance_count + peripheral_count; now shows all four
+#   counts, omitting zeros). Updated admin show.html.erb selectors and CSV format
+#   reference. Test files updated accordingly.
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** March 17, 2026 (Session 28)
-**Current Status:** Sessions 1–27 committed and deployed. Session 28 ready to commit.
+**Last Updated:** March 17, 2026 (Session 29)
+**Current Status:** Sessions 1–28 committed and deployed. Session 29 ready to commit.
 
 ---
 
@@ -254,6 +260,11 @@ decor//
 
 **Key file versions** (updated each session):
 
+    decor/app/controllers/admin/data_transfers_controller.rb                         v1.1  ← Session 29
+    decor/app/views/admin/data_transfers/show.html.erb                               v1.1  ← Session 29
+    decor/test/controllers/admin/data_transfers_controller_test.rb                   v1.1  ← Session 29
+    decor/test/services/computer_model_export_service_test.rb                        v1.1  ← Session 29
+    decor/test/services/computer_model_import_service_test.rb                        v1.1  ← Session 29
     decor/db/migrate/20260316120000_add_unique_index_to_computers_serial_number.rb   v1.0  ← Session 28 new
     decor/db/migrate/20260316110000_add_unique_index_to_components_serial_number.rb  v1.0  ← Session 28 new
     decor/app/models/computer.rb                                                     v1.8  ← Session 28
@@ -269,8 +280,8 @@ decor//
     decor/test/controllers/owners_controller_destroy_test.rb                         v1.3  ← Session 28
     decor/test/controllers/admin/computer_models_controller_test.rb                  v1.2  ← Session 27
     decor/test/fixtures/computer_models.yml                                          v1.2  ← Session 27
-    decor/docs/claude/SESSION_HANDOVER.md                                            v30.0 ← Session 28
-    decor/docs/claude/DECOR_PROJECT.md                                               v2.22 ← Session 28
+    decor/docs/claude/SESSION_HANDOVER.md                                            v31.0 ← Session 29
+    decor/docs/claude/DECOR_PROJECT.md                                               v2.23 ← Session 29
     decor/db/migrate/20260316100000_add_device_type_check_to_computers.rb            v1.0  ← Session 25 new
     decor/app/models/computer_model.rb                                               v1.2  ← Session 25
     decor/config/routes.rb                                                           v2.2  ← Session 25
@@ -288,19 +299,13 @@ decor//
     decor/test/controllers/owners_controller_test.rb                                 v1.4  ← Session 25
     decor/app/views/owners/components.html.erb                                       v1.1  ← Session 26
     decor/test/controllers/computers_controller_test.rb                              v1.7  ← Session 26
-    decor/app/controllers/admin/data_transfers_controller.rb                         v1.0  ← Session 24 new
-    decor/app/views/admin/data_transfers/show.html.erb                               v1.0  ← Session 24 new
     decor/app/services/computer_model_export_service.rb                              v1.0  ← Session 24 new
     decor/app/services/computer_model_import_service.rb                              v1.0  ← Session 24 new
     decor/app/services/component_type_export_service.rb                              v1.0  ← Session 24 new
     decor/app/services/component_type_import_service.rb                              v1.0  ← Session 24 new
     decor/app/services/all_owners_export_service.rb                                  v1.0  ← Session 24 new
-    decor/test/controllers/admin/data_transfers_controller_test.rb                   v1.0  ← Session 24 new
-    decor/test/services/computer_model_export_service_test.rb                        v1.0  ← Session 24 new
-    decor/test/services/computer_model_import_service_test.rb                        v1.1  ← Session 24
     decor/test/services/component_type_export_service_test.rb                        v1.0  ← Session 24 new
     decor/test/services/component_type_import_service_test.rb                        v1.0  ← Session 24 new
-    decor/app/services/owner_export_service.rb                                       v1.1  ← Session 16
     decor/test/fixtures/owners.yml                                                   v2.1  ← Session 13
 
 ---
@@ -348,20 +353,15 @@ decor//
 
 ---
 
-## Export / Import Status (Session 28)
+## Export / Import Status (Session 29)
 
 ### Surface 1 — Owner Export / Import  (/data_transfer) — COMPLETE
-All three device types (computer, appliance, peripheral) now export and import correctly.
+All three device types (computer, appliance, peripheral) export and import correctly.
 Duplicate checks scope by (owner, model, serial) for devices and (owner, type, serial) for components.
 
-### Surface 2 — Admin Imports / Exports  (/admin/data_transfer) — PENDING
-Upload the 7 admin-side files at next session start and read before planning.
-
----
-
-## Export / Import — Known Issue (duplicate flash on data_transfers/show)
-**RESOLVED Session 28.** The inline flash block in show.html.erb was duplicating
-the layout _flashes partial. Removed in v1.7.
+### Surface 2 — Admin Imports / Exports  (/admin/data_transfer) — COMPLETE (Session 29)
+All three ComputerModel device types (computer, appliance, peripheral) now supported in
+both export and import. Owner collection success message shows all four device-type counts.
 
 ---
 
@@ -408,6 +408,11 @@ Always upload fixture files at end of session they are modified. (Session 27.)
 ### Import duplicate check must scope by model, not just serial
 `@owner.computers.exists?(serial_number:)` alone blocks different-model devices
 with the same serial. Always scope by `computer_model:` as well. (Session 28.)
+
+### Admin controller owner_collection success message missing appliance/peripheral counts
+Fixed Session 29. v1.0 only read `computer_count` + `component_count` from result;
+OwnerImportService v1.3 (Session 28) returns four separate keys. Admin controller
+`build_success_message` now reads all four, omitting zero counts.
 
 ---
 

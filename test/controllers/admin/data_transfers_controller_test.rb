@@ -1,12 +1,18 @@
 # decor/test/controllers/admin/data_transfers_controller_test.rb
-# version 1.0
+# version 1.1
 # Session 24: New test file — Admin::DataTransfersController (show, export, import).
+# Session 29: Added peripheral_models export and import tests.
+#   Peripheral model records are created dynamically within tests (fixture-independent)
+#   because the peripheral model fixture name added in Session 27 is not in context.
+#   Dynamic creation is also consistent with the approach used in
+#   owner_export_service_test.rb v1.2 for peripheral records.
 #
 # Fixture baseline used:
 #   owners(:one)  = alice (admin)
 #   owners(:two)  = bob   (non-admin)
 #   owners(:three)= charlie (non-admin, neutral owner)
-#   computer_models: pdp11_70 (device_type: 0), hsc50 (device_type: 1)
+#   computer_models: pdp11_70 (device_type: 0), hsc50 (device_type: 1),
+#                    one peripheral model (device_type: 2) — added Session 27
 #   component_types: memory_board, cpu_board, disk_drive, tape_drive, power_supply, terminal
 #
 # Route helpers (admin namespace):
@@ -125,6 +131,50 @@ class Admin::DataTransfersControllerTest < ActionDispatch::IntegrationTest
 
     assert_includes names, "HSC50"
     refute_includes names, "PDP-11/70"
+  end
+
+  # ── export — peripheral_models ────────────────────────────────────────────
+
+  # Session 29: peripheral model tests use a dynamically-created record ("LA120")
+  # to avoid dependency on the Session 27 fixture whose label is not in context.
+  # LA120 is a DEC dot-matrix printer — an appropriate peripheral for this project.
+
+  test "export peripheral_models returns CSV attachment with correct header" do
+    ComputerModel.create!(name: "LA120", device_type: :peripheral)
+
+    login_as(@alice)
+    get admin_export_data_transfer_path, params: { data_type: "peripheral_models" }
+
+    assert_response :ok
+    assert_equal "text/csv; charset=utf-8", response.content_type
+    csv = CSV.parse(response.body, headers: true)
+    assert_equal ComputerModelExportService::CSV_HEADERS, csv.headers
+  end
+
+  test "export peripheral_models filename contains date and type" do
+    login_as(@alice)
+    get admin_export_data_transfer_path, params: { data_type: "peripheral_models" }
+
+    disposition = response.headers["Content-Disposition"]
+    assert_match "peripheral_models", disposition
+    assert_match Date.today.to_s,     disposition
+    assert_match ".csv",              disposition
+  end
+
+  test "export peripheral_models contains only device_type 2 records" do
+    # Create a peripheral model to assert against.
+    # Verify it appears in peripheral export and that computer/appliance models do not.
+    ComputerModel.create!(name: "LA120", device_type: :peripheral)
+
+    login_as(@alice)
+    get admin_export_data_transfer_path, params: { data_type: "peripheral_models" }
+
+    csv   = CSV.parse(response.body, headers: true)
+    names = csv.map { |row| row["name"] }
+
+    assert_includes names, "LA120",     "LA120 (peripheral) must appear in peripheral export"
+    refute_includes names, "PDP-11/70", "Computer model must not appear in peripheral export"
+    refute_includes names, "HSC50",     "Appliance model must not appear in peripheral export"
   end
 
   # ── export — component_types ──────────────────────────────────────────────
@@ -278,6 +328,41 @@ class Admin::DataTransfersControllerTest < ActionDispatch::IntegrationTest
 
     model = ComputerModel.find_by!(name: "DECserver 200")
     assert model.device_type_appliance?
+  end
+
+  # ── import — peripheral_models ────────────────────────────────────────────
+
+  # Session 29: verify the peripheral_models import path creates a record with
+  # device_type: peripheral. Uses a unique name to avoid fixture conflicts.
+
+  test "import peripheral_models creates record with device_type peripheral" do
+    login_as(@alice)
+    csv_content = "name\nLA120\n"
+
+    assert_difference "ComputerModel.count", 1 do
+      post admin_import_data_transfer_path,
+           params: { data_type: "peripheral_models", file: csv_upload(csv_content) }
+    end
+
+    assert_redirected_to admin_data_transfer_path
+    assert_match "peripheral model", flash[:notice]
+    assert_match "1",                flash[:notice]
+
+    model = ComputerModel.find_by!(name: "LA120")
+    assert model.device_type_peripheral?
+  end
+
+  test "import peripheral_models skips existing records silently" do
+    # Create a peripheral model, then re-import the same name — must be skipped.
+    existing = ComputerModel.create!(name: "LA120", device_type: :peripheral)
+    login_as(@alice)
+
+    assert_no_difference "ComputerModel.count" do
+      post admin_import_data_transfer_path,
+           params: { data_type: "peripheral_models", file: csv_upload("name\nLA120\n") }
+    end
+
+    assert_nil flash[:alert]
   end
 
   # ── import — component_types ──────────────────────────────────────────────

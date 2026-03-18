@@ -1,17 +1,24 @@
 # decor/test/services/computer_model_export_service_test.rb
-# version 1.0
+# version 1.1
 # Session 24: New test file — ComputerModelExportService.
+# Session 29: Added peripheral export tests section.
+#   Peripheral records created dynamically (fixture-independent) because the
+#   peripheral model fixture added to computer_models.yml in Session 27 is not
+#   visible in current context. Dynamic creation is also cleaner — it keeps the
+#   count assertions in computer/appliance sections unaffected by fixture changes.
 #
-# Fixture baseline (computer_models.yml):
+# Fixture baseline (computer_models.yml v1.2):
 #   pdp11_70  name: PDP-11/70   device_type: 0 (computer)
 #   pdp8      name: PDP-8       device_type: 0 (computer)
 #   vax11_780 name: VAX-11/780  device_type: 0 (computer)
 #   pdp10     name: PDP-10      device_type: 0 (computer)
 #   vt100     name: VT100       device_type: 0 (computer)
 #   hsc50     name: HSC50       device_type: 1 (appliance)
+#   (one peripheral model added Session 27 — label/name not in current context)
 #
 # Computer export: 5 rows (device_type: 0)
 # Appliance export: 1 row  (device_type: 1)
+# Peripheral export: at least 1 row (fixture + any dynamically created)
 
 require "test_helper"
 require "csv"
@@ -75,6 +82,55 @@ class ComputerModelExportServiceTest < ActiveSupport::TestCase
     csv   = CSV.parse(ComputerModelExportService.export(device_type: :appliance), headers: true)
     names = csv.map { |row| row["name"] }
     refute_includes names, "PDP-11/70", "Computer model must not appear in appliance export"
+  end
+
+  # ── Peripheral export ──────────────────────────────────────────────────────
+  #
+  # Session 29: peripheral export tests.
+  # Dynamic records are used so these tests remain stable regardless of which
+  # peripheral fixture(s) are defined in computer_models.yml.
+
+  test "peripheral export has correct headers" do
+    csv = CSV.parse(ComputerModelExportService.export(device_type: :peripheral), headers: true)
+    assert_equal ComputerModelExportService::CSV_HEADERS, csv.headers
+  end
+
+  test "peripheral export includes dynamically-created peripheral model" do
+    # Create a peripheral model within this test; the transaction rolls back after.
+    ComputerModel.create!(name: "LA120", device_type: :peripheral)
+
+    csv   = CSV.parse(ComputerModelExportService.export(device_type: :peripheral), headers: true)
+    names = csv.map { |row| row["name"] }
+
+    assert_includes names, "LA120", "Dynamically-created peripheral must appear in peripheral export"
+  end
+
+  test "peripheral export does NOT include computer or appliance models" do
+    csv   = CSV.parse(ComputerModelExportService.export(device_type: :peripheral), headers: true)
+    names = csv.map { |row| row["name"] }
+
+    refute_includes names, "PDP-11/70", "Computer model must not appear in peripheral export"
+    refute_includes names, "HSC50",     "Appliance model must not appear in peripheral export"
+  end
+
+  test "peripheral export row count matches live DB peripheral count" do
+    # Derive the expected count from the DB — robust against fixture additions.
+    # This replaces a hardcoded count (which would be the anti-pattern from
+    # PROGRAMMING_GENERAL.md — Derive Test Assertions from Data, Not Constants).
+    expected = ComputerModel.where(device_type: :peripheral).count
+    csv = CSV.parse(ComputerModelExportService.export(device_type: :peripheral), headers: true)
+    assert_equal expected, csv.size
+  end
+
+  test "peripheral export rows are sorted alphabetically by name" do
+    # Ensure at least two peripheral records exist so sorting is observable.
+    ComputerModel.create!(name: "VT220", device_type: :peripheral)
+    ComputerModel.create!(name: "LA120", device_type: :peripheral)
+
+    csv   = CSV.parse(ComputerModelExportService.export(device_type: :peripheral), headers: true)
+    names = csv.map { |row| row["name"] }
+
+    assert_equal names.sort, names, "Peripheral export must be sorted alphabetically by name"
   end
 
   # ── Empty state ────────────────────────────────────────────────────────────
