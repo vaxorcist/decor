@@ -1,5 +1,5 @@
 # decor/docs/claude/DECOR_PROJECT.md
-# version 2.23
+# version 2.24
 # Session 13: device_type on computers, component_category on components; enum tests.
 # Session 14: DRY Computer/Appliance Models admin pages; dropdown nav (admin.html.erb v1.3);
 #   device_type on computer_models; routes :appliance_models; dropdown_controller.js.
@@ -33,11 +33,15 @@
 #   (v1.0 silently dropped appliance_count + peripheral_count; now shows all four
 #   counts, omitting zeros). Updated admin show.html.erb selectors and CSV format
 #   reference. Test files updated accordingly.
+# Session 30: Fixed action_text-trix CVE (GHSA-qmpg-8xg6-ph5q) on feature PR.
+#   Merged all 8 Dependabot PRs (#20,31,32,33,34,46,47,59) — all CI green.
+#   Added CHECK(device_type IN (0,1,2)) constraint to computer_models table
+#   (migration 20260318000000 — companion to Session 25 computers constraint).
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** March 17, 2026 (Session 29)
-**Current Status:** Sessions 1–28 committed and deployed. Session 29 ready to commit.
+**Last Updated:** March 18, 2026 (Session 30)
+**Current Status:** Sessions 1–29 committed and deployed. Session 30 migration ready to branch/PR/deploy.
 
 ---
 
@@ -48,7 +52,7 @@
 tree decor/ -I "node_modules|.git|tmp|storage|log|.DS_Store|*.lock|assets|cache|pids|sockets" --dirsfirst -F --prune -L 6 > decor_tree.txt
 ```
 
-**Current tree** (as of Session 27, March 16, 2026 — unchanged from Session 25):
+**Current tree** (as of Session 30, March 18, 2026):
 ```
 decor//
 ├── app/
@@ -243,7 +247,8 @@ decor//
 │   │   ├── (prior migrations unchanged)
 │   │   ├── 20260316100000_add_device_type_check_to_computers.rb
 │   │   ├── 20260316110000_add_unique_index_to_components_serial_number.rb
-│   │   └── 20260316120000_add_unique_index_to_computers_serial_number.rb
+│   │   ├── 20260316120000_add_unique_index_to_computers_serial_number.rb
+│   │   └── 20260318000000_add_device_type_check_to_computer_models.rb
 │   └── (schema, seeds unchanged)
 ├── docs/
 │   └── claude/
@@ -260,6 +265,7 @@ decor//
 
 **Key file versions** (updated each session):
 
+    decor/db/migrate/20260318000000_add_device_type_check_to_computer_models.rb      v1.0  ← Session 30 new
     decor/app/controllers/admin/data_transfers_controller.rb                         v1.1  ← Session 29
     decor/app/views/admin/data_transfers/show.html.erb                               v1.1  ← Session 29
     decor/test/controllers/admin/data_transfers_controller_test.rb                   v1.1  ← Session 29
@@ -280,8 +286,8 @@ decor//
     decor/test/controllers/owners_controller_destroy_test.rb                         v1.3  ← Session 28
     decor/test/controllers/admin/computer_models_controller_test.rb                  v1.2  ← Session 27
     decor/test/fixtures/computer_models.yml                                          v1.2  ← Session 27
-    decor/docs/claude/SESSION_HANDOVER.md                                            v31.0 ← Session 29
-    decor/docs/claude/DECOR_PROJECT.md                                               v2.23 ← Session 29
+    decor/docs/claude/SESSION_HANDOVER.md                                            v32.0 ← Session 30
+    decor/docs/claude/DECOR_PROJECT.md                                               v2.24 ← Session 30
     decor/db/migrate/20260316100000_add_device_type_check_to_computers.rb            v1.0  ← Session 25 new
     decor/app/models/computer_model.rb                                               v1.2  ← Session 25
     decor/config/routes.rb                                                           v2.2  ← Session 25
@@ -336,7 +342,7 @@ decor//
 
 ### ComputerModel
 - device_type enum: 0 = computer (default), 1 = appliance, 2 = peripheral
-  No CHECK constraint yet on computer_models.device_type — pending future migration.
+  CHECK(device_type IN (0,1,2)) constraint added in Session 30 (migration 20260318000000).
 - has_many computers, dependent: :restrict_with_error
 - Validations: name presence + uniqueness
 
@@ -353,7 +359,7 @@ decor//
 
 ---
 
-## Export / Import Status (Session 29)
+## Export / Import Status (Session 29, unchanged)
 
 ### Surface 1 — Owner Export / Import  (/data_transfer) — COMPLETE
 All three device types (computer, appliance, peripheral) export and import correctly.

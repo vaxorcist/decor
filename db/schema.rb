@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_18_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_19_020000) do
   create_table "component_conditions", force: :cascade do |t|
     t.string "condition", limit: 40, null: false
     t.datetime "created_at", precision: nil, null: false
@@ -84,6 +84,33 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_18_000000) do
     t.index ["run_status_id"], name: "index_computers_on_run_status_id"
   end
 
+  create_table "connection_groups", force: :cascade do |t|
+    t.integer "connection_type_id"
+    t.datetime "created_at", precision: nil, null: false
+    t.string "label", limit: 100
+    t.integer "owner_id", null: false
+    t.datetime "updated_at", precision: nil, null: false
+    t.index ["connection_type_id"], name: "index_connection_groups_on_connection_type_id"
+    t.index ["owner_id"], name: "index_connection_groups_on_owner_id"
+  end
+
+  create_table "connection_members", force: :cascade do |t|
+    t.integer "computer_id", null: false
+    t.integer "connection_group_id", null: false
+    t.datetime "created_at", precision: nil, null: false
+    t.datetime "updated_at", precision: nil, null: false
+    t.index ["computer_id"], name: "index_connection_members_on_computer_id"
+    t.index ["connection_group_id", "computer_id"], name: "index_connection_members_on_group_and_computer", unique: true
+  end
+
+  create_table "connection_types", force: :cascade do |t|
+    t.datetime "created_at", precision: nil, null: false
+    t.string "label", limit: 100
+    t.string "name", limit: 40, null: false
+    t.datetime "updated_at", precision: nil, null: false
+    t.index ["name"], name: "index_connection_types_on_name", unique: true
+  end
+
   create_table "invites", force: :cascade do |t|
     t.datetime "accepted_at"
     t.datetime "created_at", null: false
@@ -144,4 +171,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_18_000000) do
   add_foreign_key "computers", "computer_models"
   add_foreign_key "computers", "owners"
   add_foreign_key "computers", "run_statuses"
+  add_foreign_key "connection_groups", "connection_types"
+  add_foreign_key "connection_groups", "owners"
+  add_foreign_key "connection_members", "computers"
+  add_foreign_key "connection_members", "connection_groups", on_delete: :cascade
 end

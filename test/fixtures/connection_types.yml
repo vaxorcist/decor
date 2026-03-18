@@ -1,0 +1,14 @@
+# decor/test/fixtures/connection_types.yml
+# version 1.0
+# Session 31: Part 1 — Connections feature foundation.
+# Two connection type fixtures:
+#   rs232   — used by bob's group (bob_pdp8_vt100 in connection_groups.yml)
+#   ethernet — a second type for testing dropdown display, no groups attached
+
+rs232:
+  name: RS-232 Serial
+  label: RS-232 serial port connection
+
+ethernet:
+  name: Ethernet
+  label: Ethernet network connection

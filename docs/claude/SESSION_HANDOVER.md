@@ -1,11 +1,10 @@
 # decor/docs/claude/SESSION_HANDOVER.md
-# version 31.0
+# version 32.0
 
-**Date:** March 17, 2026
-**Branch:** main (Sessions 1–28 committed; Session 29 work ready to commit)
-**Status:** Tests not re-run this session (no production code path changed in
-existing tests; 5 new peripheral tests added). Target: 492 + ~10 new = ~502 tests.
-Run `bin/rails test` to confirm before committing.
+**Date:** March 18, 2026
+**Branch:** main (Sessions 1–29 committed and deployed; Session 30 migration ready to branch/PR/deploy)
+**Status:** Tests not re-run this session (migration-only change; no model/controller/test code
+changed). Run `bin/rails test` locally before pushing the migration PR.
 
 ---
 
@@ -48,9 +47,9 @@ Every response must follow this format:
 
 ## !! TOKEN BUDGET WARNING !!
 
-Sessions 28–29 hit ~65–89% context usage. The fixed overhead (5 rule documents +
-system prompt + tool schemas + bash cat outputs) consumes ~65–80% of the window
-before any work output is written.
+Sessions 28–30 hit ~50–65% context usage after rule document reads. The fixed
+overhead (5 rule documents + system prompt + tool schemas + bash cat outputs)
+consumes ~50–65% of the window before any work output is written.
 
 **Practical consequence:** each session has room for roughly one focused task.
 Do not plan multi-task sessions.
@@ -65,95 +64,86 @@ of delivery. (Established Session 27.)
 
 ---
 
-## Session 29 Summary
+## Session 30 Summary
 
-**Focus: Surface 2 — Admin Import/Export peripheral_models support + bug fix**
+**Focus: Housekeeping — CVE fix, Dependabot PRs, computer_models CHECK constraint**
 
-No migrations. No service changes. Controller + view + tests only.
+No model or controller code changes. No test changes. Migration + Gemfile.lock only.
 
 ### Changes
 
-1. **`admin/data_transfers_controller.rb` v1.1** — three case statements extended:
-   - `build_export`: added `when "peripheral_models"` →
-     `ComputerModelExportService.export(device_type: :peripheral)`.
-   - `process_import`: added `when "peripheral_models"` →
-     `ComputerModelImportService.process(file, device_type: :peripheral)`.
-   - `build_success_message`: added `when "peripheral_models"`.
-   - **Bug fix:** `owner_collection` branch in `build_success_message` was silently
-     dropping `appliance_count` and `peripheral_count` (added to OwnerImportService
-     in Session 28). Fixed to show all four counts, omitting zeros, with
-     "Nothing to import — all records already exist." when total is zero.
+1. **action_text-trix CVE fix (GHSA-qmpg-8xg6-ph5q)**
+   `bundler-audit` caught `action_text-trix` v2.1.16 (stored XSS) blocking the
+   `feature/add-peripherals-admin-export-import` PR CI check. Fixed with:
+   `bundle update action_text-trix` → Gemfile.lock updated. PR merged, deployed.
 
-2. **`admin/data_transfers/show.html.erb` v1.1** — two changes:
-   - Added `["Peripheral Models", "peripheral_models"]` to both export and import
-     data type selectors (between Appliance Models and Component Types).
-   - Updated CSV format reference section: "Computer / Appliance Models" heading
-     renamed to "Computer / Appliance / Peripheral Models"; import bullet updated
-     to mention peripherals.
+2. **Dependabot PRs — all 8 merged**
+   All had passing CI; merged in order oldest-first via:
+   `gh pr merge --merge --delete-branch` for each.
 
-3. **`data_transfers_controller_test.rb` v1.1** — 5 new tests:
-   - `export peripheral_models returns CSV attachment with correct header`
-   - `export peripheral_models filename contains date and type`
-   - `export peripheral_models contains only device_type 2 records`
-   - `import peripheral_models creates record with device_type peripheral`
-   - `import peripheral_models skips existing records silently`
-   All peripheral tests use dynamically-created records ("LA120") rather than
-   fixture dependency (Session 27 peripheral fixture label not in context).
+   #20  Bump bootsnap 1.22.0 → 1.23.0
+   #31  Bump selenium-webdriver 4.40.0 → 4.41.0
+   #32  Bump web-console 4.2.1 → 4.3.0
+   #33  Bump minitest 5.27.0 → 6.0.2  (major version — CI confirmed compatible with Rails 8.1.2)
+   #34  Bump solid_queue 1.3.1 → 1.3.2
+   #46  Bump actions/upload-artifact 6 → 7
+   #47  Bump sqlite3 2.9.0 → 2.9.1
+   #59  Bump thruster 0.1.18 → 0.1.19
 
-4. **`computer_model_export_service_test.rb` v1.1** — 5 new tests in new
-   "Peripheral export" section:
-   - `peripheral export has correct headers`
-   - `peripheral export includes dynamically-created peripheral model`
-   - `peripheral export does NOT include computer or appliance models`
-   - `peripheral export row count matches live DB peripheral count`
-     (uses derived count — avoids hardcoded count anti-pattern)
-   - `peripheral export rows are sorted alphabetically by name`
-
-5. **`computer_model_import_service_test.rb` v1.1** — 1 new test:
-   - `imports a new peripheral model with correct device_type`
-
-### Services unchanged
-`ComputerModelExportService` v1.0 and `ComputerModelImportService` v1.0 already
-accept any `device_type:` symbol. No service modifications needed.
+3. **`20260318000000_add_device_type_check_to_computer_models.rb` v1.0** — new migration
+   Adds CHECK(device_type IN (0,1,2)) to computer_models table using SQLite table
+   recreation pattern (disable_ddl_transaction!, explicit column names, FK pragma).
+   Companion to migration 20260316100000 which did the same for computers (Session 25).
+   **Still needs: branch → test → PR → CI → merge → deploy** (see commit block below).
 
 ---
 
-## Work Completed Session 29 — Complete File List
-
-    decor/app/controllers/admin/data_transfers_controller.rb                         v1.1
-    decor/app/views/admin/data_transfers/show.html.erb                               v1.1
-    decor/test/controllers/admin/data_transfers_controller_test.rb                   v1.1
-    decor/test/services/computer_model_export_service_test.rb                        v1.1
-    decor/test/services/computer_model_import_service_test.rb                        v1.1
-    decor/docs/claude/DECOR_PROJECT.md                                               v2.23
-    decor/docs/claude/SESSION_HANDOVER.md                                            v31.0
-
----
-
-## Commit Session 29 work
+## Commit Session 30 migration
 
 ```bash
-bin/rails test        # verify green before committing
+git switch main
+git pull origin main
+git switch -c feature/device-type-check-computer-models
+# Place migration file at:
+# decor/db/migrate/20260318000000_add_device_type_check_to_computer_models.rb
+bin/rails db:migrate
+bin/rails test
 git add -A
-git commit -m "Session 29: peripheral_models in admin export/import; fix owner_collection flash counts"
-git push origin main
+git commit -m "Session 30: Add CHECK(device_type IN (0,1,2)) to computer_models table"
+git push origin feature/device-type-check-computer-models
+gh pr create --fill
+gh pr checks feature/device-type-check-computer-models --watch
+# Once green:
+gh pr merge --merge --delete-branch feature/device-type-check-computer-models
+git switch main
+git pull origin main
 kamal deploy
 ```
 
 ---
 
+## Work Completed Session 30 — Complete File List
+
+    decor/db/migrate/20260318000000_add_device_type_check_to_computer_models.rb      v1.0
+    decor/docs/claude/DECOR_PROJECT.md                                               v2.24
+    decor/docs/claude/SESSION_HANDOVER.md                                            v32.0
+
+---
+
 ## Priority 1 — Next Session Candidates
 
-Both surfaces are now complete. The remaining priorities from the backlog:
+All housekeeping items from the previous backlog are now cleared:
+- ✅ Dependabot PRs — done Session 30
+- ✅ CHECK(device_type IN (0,1,2)) on computer_models — done Session 30
+- ✅ Surface 1 + Surface 2 export/import — done Sessions 28–29
 
-1. **Dependabot PRs** — dedicated session (do not mix with feature work).
-2. **CHECK(device_type IN (0,1,2)) on computer_models table** — pending migration
-   (listed since Session 25; low effort, one migration + no code changes).
-3. **Legal/Compliance** — Impressum, Privacy Policy, GDPR, Cookie Consent, TOS.
-4. **System tests** — decor/test/system/ still empty.
-5. **Account deletion + data export** (GDPR).
-6. **Spam / Postmark DNS fix** — awaiting Rob's dashboard findings.
-7. **BulkUploadService stale model references** — low priority.
+Remaining candidates:
+
+1. **Legal/Compliance** — Impressum, Privacy Policy, GDPR, Cookie Consent, TOS.
+2. **System tests** — decor/test/system/ still empty.
+3. **Account deletion + data export** (GDPR).
+4. **Spam / Postmark DNS fix** — awaiting Rob's dashboard findings.
+5. **BulkUploadService stale model references** — low priority.
 
 ---
 
