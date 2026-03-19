@@ -1,5 +1,10 @@
 # decor/app/controllers/computers_controller.rb
-# version 1.16
+# version 1.17
+# v1.17 (Session 34): show action now loads @connection_groups — the set of
+#   ConnectionGroups this computer belongs to, eager-loading :connection_type
+#   and computers: :computer_model to avoid N+1 queries on the show page.
+#   The view iterates @connection_groups and filters peers in memory via reject
+#   rather than where.not so the preloaded computers cache is used.
 # v1.16 (Session 25): Extended set_device_context and index device_type filter
 #   to handle device_context: "peripheral" (device_type value 2).
 #   - set_device_context: added peripheral branch in case/when (replaces the
@@ -80,6 +85,19 @@ class ComputersController < ApplicationController
 
   def show
     @components = @computer.components.includes(:component_type)
+
+    # Load connection groups this computer belongs to, with all data needed
+    # for the read-only connections section on the show page.
+    #
+    # Eager-load strategy (prevents N+1):
+    #   :connection_type          — to display the type label or name
+    #   computers: :computer_model — to display peer computer model names as links
+    #
+    # The view filters peer computers in memory (group.computers.reject { ... })
+    # so the preloaded computers cache is used rather than firing per-row queries.
+    @connection_groups = @computer.connection_groups
+      .includes(:connection_type, computers: :computer_model)
+      .order(:id)
   end
 
   def new

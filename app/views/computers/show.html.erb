@@ -1,4 +1,12 @@
-<%# decor/app/views/computers/show.html.erb - version 1.7 %>
+<%# decor/app/views/computers/show.html.erb - version 1.9 %>
+<%# v1.9 (Session 35): Brakeman fix — peer links in Connections section now built %>
+<%#   with safe_join(..., ", ") instead of .map{}.join().html_safe. safe_join returns %>
+<%#   an html_safe string from an already-safe array without marking raw user data safe. %>
+<%# v1.8 (Session 34): Added read-only "Connections" section between Components %>
+<%#   and the Back button. Displays the connection groups this device belongs to, %>
+<%#   each showing its type, optional label, and peer computers as links. %>
+<%#   Controller loads @connection_groups with eager-loading (see computers_controller.rb %>
+<%#   v1.17 show action). Peer computers filtered via reject in-memory to avoid N+1. %>
 <%# v1.7 (Session 22): Added "Trade Status" field in Line 2, as the third column. %>
 <%#   Mirrors _form.html.erb v2.5 (Condition | Run Status | Trade Status). %>
 <%#   The field is wrapped in - if logged_in? - and Line 2 expands from %>
@@ -133,6 +141,77 @@
     <% else %>
       <%# device_type ("computer"/"appliance") used directly — no capitalisation needed here %>
       <p class="text-sm text-stone-500">No components attached to this <%= @computer.device_type %>.</p>
+    <% end %>
+  </div>
+
+  <%# ── Connections section (read-only) ── %>
+  <%# Shows all connection groups this device belongs to. %>
+  <%# Each row: connection type | group label | peer computers in the same group. %>
+  <%# Visible to all visitors — connection data is not sensitive. %>
+  <%# @connection_groups is eager-loaded in the show action (see computers_controller.rb). %>
+  <%# Peers are filtered with reject (in-memory) to avoid N+1 against the preloaded cache. %>
+  <div class="mt-6">
+    <h2 class="text-lg font-semibold mb-3">Connections (<%= @connection_groups.count %>)</h2>
+
+    <% if @connection_groups.any? %>
+      <div class="bg-white border border-stone-200 rounded">
+        <table class="min-w-full divide-y divide-stone-200">
+          <thead class="bg-stone-50">
+            <tr>
+              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Type</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Label</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Connected to</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-stone-200 text-sm">
+            <% @connection_groups.each do |group| %>
+              <tr class="hover:bg-stone-50">
+
+                <%# Type: prefer connection_type.label over .name; "—" if no type set %>
+                <td class="px-4 py-3 whitespace-nowrap text-stone-600">
+                  <% if group.connection_type %>
+                    <%= group.connection_type.label.presence || group.connection_type.name %>
+                  <% else %>
+                    <span class="text-stone-400">—</span>
+                  <% end %>
+                </td>
+
+                <%# Label: the optional free-text label on the group itself %>
+                <td class="px-4 py-3 whitespace-nowrap text-stone-600">
+                  <% if group.label.present? %>
+                    <%= group.label %>
+                  <% else %>
+                    <span class="text-stone-400">—</span>
+                  <% end %>
+                </td>
+
+                <%# Connected to: peer computers in this group (all except this device). %>
+                <%# reject uses the preloaded computers cache — no extra DB query per row. %>
+                <%# Each peer links to its own show page with its model name as the label. %>
+                <td class="px-4 py-3 text-stone-600">
+                  <% peers = group.computers.reject { |c| c.id == @computer.id } %>
+                  <% if peers.any? %>
+                    <%# safe_join joins an array of html_safe link strings and returns %>
+                    <%# an html_safe result — no need to call .html_safe on raw data. %>
+                    <%= safe_join(
+                          peers.map { |peer|
+                            link_to peer.computer_model.name,
+                                    computer_path(peer),
+                                    class: "text-indigo-600 hover:text-indigo-900"
+                          }, ", "
+                        ) %>
+                  <% else %>
+                    <span class="text-stone-400">—</span>
+                  <% end %>
+                </td>
+
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <p class="text-sm text-stone-500">No connections recorded for this <%= @computer.device_type %>.</p>
     <% end %>
   </div>
 

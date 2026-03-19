@@ -1,5 +1,5 @@
 # decor/docs/claude/DECOR_PROJECT.md
-# version 2.27
+# version 2.29
 # Session 13: device_type on computers, component_category on components; enum tests.
 # Session 14: DRY Computer/Appliance Models admin pages; dropdown nav (admin.html.erb v1.3);
 #   device_type on computer_models; routes :appliance_models; dropdown_controller.js.
@@ -19,7 +19,7 @@
 # Session 25: Peripherals — device_type: 2 on Computer and ComputerModel models;
 #   CHECK(device_type IN (0,1,2)) migration; /peripherals index route; owner
 #   sub-page /owners/:id/peripherals; admin Peripheral Models page; nav updated.
-# Session 27: Sessions 25-26-27 committed. Peripheral fixture added to computer_models.yml.
+# Session 27: Sessions 25-26-27 committed and deployed. Peripheral fixture added to computer_models.yml.
 # Session 28: Surface 1 of export/import peripherals gap closed. Unique constraints
 #   on (owner_id, computer_model_id, serial_number) for computers and
 #   (owner_id, component_type_id, serial_number) for components — both DB index
@@ -43,11 +43,20 @@
 #   ConnectionGroup, ConnectionMember. connection_group_test.rb patched to v1.1
 #   (error key fix: :connection_members not :base for minimum_two_members).
 #   532 tests, 0 failures. Committed and deployed.
+# Session 33: Connections feature Part 2 — Admin ConnectionTypes CRUD.
+#   Controller, 4 views, routes v2.3, admin nav v1.9 (Connections dropdown).
+#   destroy checks return value; flash[:alert] on restrict_with_error failure.
+#   Also fixed local Docker daemon DNS (daemon.json dns: 8.8.8.8) to unblock kamal deploy.
+#   Tests pass. Committed and deployed.
+# Session 34: Connections feature Part 3 — read-only connections display on device
+#   show page. computers_controller.rb show action loads @connection_groups with
+#   eager-loading. show.html.erb adds Connections section (Type | Label | Connected to).
+#   Tests deferred to next session.
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** March 18, 2026 (Session 32)
-**Current Status:** Sessions 1–32 committed and deployed. Next: Part 2 — Admin ConnectionTypes CRUD.
+**Last Updated:** March 19, 2026 (Session 34)
+**Current Status:** Sessions 1–33 committed and deployed. Session 34 (Part 3) ready to commit. Next: Part 3 tests + commit/deploy, then Part 4 — Owner ConnectionGroup CRUD.
 
 ---
 
@@ -58,7 +67,7 @@
 tree decor/ -I "node_modules|.git|tmp|storage|log|.DS_Store|*.lock|assets|cache|pids|sockets" --dirsfirst -F --prune -L 6 > decor_tree.txt
 ```
 
-**Current tree** (as of Session 32, March 18, 2026 — new test files added, rest unchanged):
+**Current tree** (as of Session 34 — no new files added; two files updated):
 ```
 decor//
 ├── app/
@@ -70,6 +79,7 @@ decor//
 │   │   │   ├── component_types_controller.rb
 │   │   │   ├── computer_models_controller.rb
 │   │   │   ├── conditions_controller.rb
+│   │   │   ├── connection_types_controller.rb        ← Session 33 new
 │   │   │   ├── data_transfers_controller.rb
 │   │   │   ├── invites_controller.rb
 │   │   │   ├── owners_controller.rb
@@ -80,7 +90,7 @@ decor//
 │   │   │   └── pagination.rb
 │   │   ├── application_controller.rb
 │   │   ├── components_controller.rb
-│   │   ├── computers_controller.rb
+│   │   ├── computers_controller.rb                   ← Session 34 updated (v1.17)
 │   │   ├── data_transfers_controller.rb
 │   │   ├── home_controller.rb
 │   │   ├── owners_controller.rb
@@ -99,9 +109,9 @@ decor//
 │   │   ├── computer_condition.rb
 │   │   ├── computer_model.rb
 │   │   ├── computer.rb
-│   │   ├── connection_group.rb          ← Session 31 new
-│   │   ├── connection_member.rb         ← Session 31 new
-│   │   ├── connection_type.rb           ← Session 31 new
+│   │   ├── connection_group.rb
+│   │   ├── connection_member.rb
+│   │   ├── connection_type.rb
 │   │   ├── current.rb
 │   │   ├── invite.rb
 │   │   ├── owner.rb
@@ -110,7 +120,16 @@ decor//
 │   ├── services/
 │   │   └── (unchanged)
 │   └── views/
-│       └── (unchanged)
+│       ├── admin/
+│       │   ├── connection_types/                     ← Session 33 new directory
+│       │   │   ├── _form.html.erb                    ← Session 33 new
+│       │   │   ├── edit.html.erb                     ← Session 33 new
+│       │   │   ├── index.html.erb                    ← Session 33 new
+│       │   │   └── new.html.erb                      ← Session 33 new
+│       │   └── (all other admin views unchanged)
+│       ├── computers/
+│       │   └── show.html.erb                         ← Session 34 updated (v1.8)
+│       └── (all other views unchanged)
 ├── db/
 │   ├── migrate/
 │   │   ├── (prior migrations unchanged)
@@ -118,10 +137,10 @@ decor//
 │   │   ├── 20260316110000_add_unique_index_to_components_serial_number.rb
 │   │   ├── 20260316120000_add_unique_index_to_computers_serial_number.rb
 │   │   ├── 20260318000000_add_device_type_check_to_computer_models.rb
-│   │   ├── 20260319000000_create_connection_types.rb    ← Session 31 new
-│   │   ├── 20260319010000_create_connection_groups.rb   ← Session 31 new
-│   │   └── 20260319020000_create_connection_members.rb  ← Session 31 new
-│   └── (schema, seeds unchanged until migration run)
+│   │   ├── 20260319000000_create_connection_types.rb
+│   │   ├── 20260319010000_create_connection_groups.rb
+│   │   └── 20260319020000_create_connection_members.rb
+│   └── (schema, seeds unchanged)
 ├── docs/
 │   └── claude/
 │       ├── COMMON_BEHAVIOR.md
@@ -129,16 +148,22 @@ decor//
 │       ├── PROGRAMMING_GENERAL.md
 │       ├── RAILS_SPECIFICS.md
 │       └── SESSION_HANDOVER.md
+├── config/
+│   └── routes.rb                                     ← Session 33 updated (v2.3)
 └── test/
     ├── fixtures/
-    │   ├── connection_groups.yml    ← Session 31 new
-    │   ├── connection_members.yml   ← Session 31 new
-    │   ├── connection_types.yml     ← Session 31 new
+    │   ├── connection_groups.yml
+    │   ├── connection_members.yml
+    │   ├── connection_types.yml
     │   └── (all others unchanged)
+    ├── controllers/
+    │   └── admin/
+    │       ├── connection_types_controller_test.rb    ← Session 33 new
+    │       └── (all others unchanged)
     └── models/
-        ├── connection_group_test.rb   ← Session 32 new
-        ├── connection_member_test.rb  ← Session 32 new
-        ├── connection_type_test.rb    ← Session 32 new
+        ├── connection_group_test.rb
+        ├── connection_member_test.rb
+        ├── connection_type_test.rb
         └── (all others unchanged)
 ```
 
@@ -146,48 +171,55 @@ decor//
 
 **Key file versions** (updated each session):
 
-    decor/test/models/connection_type_test.rb                                        v1.0  ← Session 32 new
-    decor/test/models/connection_group_test.rb                                       v1.1  ← Session 32 (patched: error key fix)
-    decor/test/models/connection_member_test.rb                                      v1.0  ← Session 32 new
-    decor/app/models/connection_type.rb                                              v1.0  ← Session 31 new
-    decor/app/models/connection_group.rb                                             v1.0  ← Session 31 new
-    decor/app/models/connection_member.rb                                            v1.0  ← Session 31 new
-    decor/app/models/computer.rb                                                     v1.9  ← Session 31
-    decor/app/models/owner.rb                                                        v1.4  ← Session 31
-    decor/db/migrate/20260319000000_create_connection_types.rb                       v1.0  ← Session 31 new
-    decor/db/migrate/20260319010000_create_connection_groups.rb                      v1.0  ← Session 31 new
-    decor/db/migrate/20260319020000_create_connection_members.rb                     v1.0  ← Session 31 new
-    decor/test/fixtures/connection_types.yml                                         v1.0  ← Session 31 new
-    decor/test/fixtures/connection_groups.yml                                        v1.0  ← Session 31 new
-    decor/test/fixtures/connection_members.yml                                       v1.0  ← Session 31 new
-    decor/docs/claude/SESSION_HANDOVER.md                                            v34.0 ← Session 32
-    decor/docs/claude/DECOR_PROJECT.md                                               v2.26 ← Session 32
-    decor/db/migrate/20260318000000_add_device_type_check_to_computer_models.rb      v1.0  ← Session 30 new
-    decor/app/controllers/admin/data_transfers_controller.rb                         v1.1  ← Session 29
-    decor/app/views/admin/data_transfers/show.html.erb                               v1.1  ← Session 29
-    decor/test/controllers/admin/data_transfers_controller_test.rb                   v1.1  ← Session 29
-    decor/test/services/computer_model_export_service_test.rb                        v1.1  ← Session 29
-    decor/test/services/computer_model_import_service_test.rb                        v1.1  ← Session 29
-    decor/db/migrate/20260316120000_add_unique_index_to_computers_serial_number.rb   v1.0  ← Session 28 new
-    decor/db/migrate/20260316110000_add_unique_index_to_components_serial_number.rb  v1.0  ← Session 28 new
-    decor/app/models/component.rb                                                    v1.5  ← Session 28
-    decor/app/services/owner_export_service.rb                                       v1.2  ← Session 28
-    decor/app/services/owner_import_service.rb                                       v1.3  ← Session 28
-    decor/app/controllers/data_transfers_controller.rb                               v1.3  ← Session 28
-    decor/app/views/data_transfers/show.html.erb                                     v1.7  ← Session 28
-    decor/test/models/computer_test.rb                                               v1.6  ← Session 28
-    decor/test/models/component_test.rb                                              v1.5  ← Session 28
-    decor/test/services/owner_export_service_test.rb                                 v1.2  ← Session 28
-    decor/test/services/owner_import_service_test.rb                                 v1.3  ← Session 28
-    decor/test/controllers/owners_controller_destroy_test.rb                         v1.3  ← Session 28
-    decor/test/controllers/admin/computer_models_controller_test.rb                  v1.2  ← Session 27
-    decor/test/fixtures/computer_models.yml                                          v1.2  ← Session 27
-    decor/config/routes.rb                                                           v2.2  ← Session 25
-    decor/app/controllers/owners_controller.rb                                       v1.7  ← Session 25
-    decor/app/controllers/computers_controller.rb                                    v1.16 ← Session 25
-    decor/app/controllers/admin/computer_models_controller.rb                        v1.3  ← Session 25
-    decor/test/fixtures/owners.yml                                                   v2.1  ← Session 13
-    decor/test/fixtures/computers.yml                                                v1.8  ← Session 25
+    decor/app/controllers/computers_controller.rb                            v1.17 ← Session 34
+    decor/app/views/computers/show.html.erb                                  v1.8  ← Session 34
+    decor/app/controllers/admin/connection_types_controller.rb               v1.0  ← Session 33 new
+    decor/app/views/admin/connection_types/index.html.erb                    v1.0  ← Session 33 new
+    decor/app/views/admin/connection_types/_form.html.erb                    v1.0  ← Session 33 new
+    decor/app/views/admin/connection_types/new.html.erb                      v1.0  ← Session 33 new
+    decor/app/views/admin/connection_types/edit.html.erb                     v1.0  ← Session 33 new
+    decor/config/routes.rb                                                   v2.3  ← Session 33
+    decor/app/views/layouts/admin.html.erb                                   v1.9  ← Session 33
+    decor/test/controllers/admin/connection_types_controller_test.rb         v1.0  ← Session 33 new
+    decor/test/models/connection_type_test.rb                                v1.0  ← Session 32 new
+    decor/test/models/connection_group_test.rb                               v1.1  ← Session 32 (patched: error key fix)
+    decor/test/models/connection_member_test.rb                              v1.0  ← Session 32 new
+    decor/app/models/connection_type.rb                                      v1.0  ← Session 31 new
+    decor/app/models/connection_group.rb                                     v1.0  ← Session 31 new
+    decor/app/models/connection_member.rb                                    v1.0  ← Session 31 new
+    decor/app/models/computer.rb                                             v1.9  ← Session 31
+    decor/app/models/owner.rb                                                v1.4  ← Session 31
+    decor/db/migrate/20260319000000_create_connection_types.rb               v1.0  ← Session 31 new
+    decor/db/migrate/20260319010000_create_connection_groups.rb              v1.0  ← Session 31 new
+    decor/db/migrate/20260319020000_create_connection_members.rb             v1.0  ← Session 31 new
+    decor/test/fixtures/connection_types.yml                                 v1.0  ← Session 31 new
+    decor/test/fixtures/connection_groups.yml                                v1.0  ← Session 31 new
+    decor/test/fixtures/connection_members.yml                               v1.0  ← Session 31 new
+    decor/docs/claude/SESSION_HANDOVER.md                                    v37.0 ← Session 34
+    decor/docs/claude/DECOR_PROJECT.md                                       v2.29 ← Session 34
+    decor/db/migrate/20260318000000_add_device_type_check_to_computer_models.rb  v1.0  ← Session 30 new
+    decor/app/controllers/admin/data_transfers_controller.rb                 v1.1  ← Session 29
+    decor/app/views/admin/data_transfers/show.html.erb                       v1.1  ← Session 29
+    decor/test/controllers/admin/data_transfers_controller_test.rb           v1.1  ← Session 29
+    decor/test/services/computer_model_export_service_test.rb                v1.1  ← Session 29
+    decor/test/services/computer_model_import_service_test.rb                v1.1  ← Session 29
+    decor/db/migrate/20260316120000_add_unique_index_to_computers_serial_number.rb  v1.0  ← Session 28 new
+    decor/db/migrate/20260316110000_add_unique_index_to_components_serial_number.rb v1.0  ← Session 28 new
+    decor/app/models/component.rb                                            v1.5  ← Session 28
+    decor/app/services/owner_export_service.rb                               v1.2  ← Session 28
+    decor/app/services/owner_import_service.rb                               v1.3  ← Session 28
+    decor/app/controllers/data_transfers_controller.rb                       v1.3  ← Session 28
+    decor/app/views/data_transfers/show.html.erb                             v1.7  ← Session 28
+    decor/test/models/computer_test.rb                                       v1.6  ← Session 28
+    decor/test/models/component_test.rb                                      v1.5  ← Session 28
+    decor/test/services/owner_export_service_test.rb                         v1.2  ← Session 28
+    decor/test/services/owner_import_service_test.rb                         v1.3  ← Session 28
+    decor/test/controllers/owners_controller_destroy_test.rb                 v1.3  ← Session 28
+    decor/test/controllers/admin/computer_models_controller_test.rb          v1.2  ← Session 27
+    decor/test/fixtures/computer_models.yml                                  v1.2  ← Session 27
+    decor/app/controllers/owners_controller.rb                               v1.7  ← Session 25
+    decor/test/fixtures/owners.yml                                           v2.1  ← Session 13
+    decor/test/fixtures/computers.yml                                        v1.8  ← Session 25
 
 ---
 
@@ -254,9 +286,9 @@ decor//
 
     Part 1a: Migrations + models + fixtures             DONE (Session 31)
     Part 1b: Model tests                                DONE (Session 32)
-    Part 2:  Admin ConnectionTypes CRUD                 NEXT
-    Part 3:  Owner device show pages — read-only connections display
-    Part 4:  Owner ConnectionGroup CRUD
+    Part 2:  Admin ConnectionTypes CRUD                 DONE (Session 33)
+    Part 3:  Owner device show pages — read-only        DONE (Session 34) — tests deferred
+    Part 4:  Owner ConnectionGroup CRUD                 NEXT
 
 ---
 
@@ -320,6 +352,18 @@ to trigger the group auto-cleanup). Mixing these up breaks the cascade logic.
 Every response requires BOTH the opening and closing `================================================================================`
 separator lines. The closing separator with token estimate was present; the opening
 was omitted. Both are mandatory on every response without exception.
+
+### Local Docker daemon DNS — kamal deploy DNS failure
+Docker buildx containers use the daemon's DNS config, not the host's systemd-resolved.
+If kamal deploy fails with "lookup registry-1.docker.io on [::1]:53: connection refused",
+add `"dns": ["8.8.8.8", "8.8.4.4"]` to `/etc/docker/daemon.json` on the build machine
+and restart Docker. (Session 33.)
+
+### Connections show page — peer filtering uses reject not where.not
+`group.computers.reject { |c| c.id == @computer.id }` uses the preloaded cache.
+`group.computers.where.not(id: @computer.id)` would fire a new DB query per row,
+defeating the eager-load. Always use in-memory reject when iterating preloaded
+has_many :through associations on a show page. (Session 34.)
 
 ---
 

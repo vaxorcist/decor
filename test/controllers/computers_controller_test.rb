@@ -1,4 +1,12 @@
-# decor/test/controllers/computers_controller_test.rb - version 1.6
+# decor/test/controllers/computers_controller_test.rb - version 1.7
+# v1.7 (Session 35): Added two show-action tests for Part 3 connections display.
+#   show with connections: alice_pdp11 is in group alice_pdp11_vax (label "Lab setup",
+#     no connection_type, peer = alice_vax). Asserts group label and peer model name
+#     appear. NOTE: Connected-to column renders computer_model.name as link text,
+#     NOT the serial number — assertion uses computer_models(:vax11_780).name.
+#   show without connections: unassigned_condition_test (alice's, no group members).
+#     Asserts empty-state "No connections recorded" message appears.
+#
 # v1.6 (Session 22): Added barter_status filter tests.
 #   Logged-in default ("0+1"): alice_pdp11 (no_barter) visible; alice_vax (wanted) hidden.
 #   Logged-in barter_status=2: alice_vax (wanted) visible; alice_pdp11 hidden.
@@ -246,5 +254,44 @@ class ComputersControllerTest < ActionDispatch::IntegrationTest
       "alice_pdp11 should be visible to logged-out visitors (no filter)"
     assert_includes response.body, computers(:alice_vax).serial_number,
       "alice_vax (wanted) should be visible to logged-out visitors (no filter)"
+  end
+
+  # ---------------------------------------------------------------------------
+  # Show — connections display (Part 3)
+  # ---------------------------------------------------------------------------
+  #
+  # Fixture connection data:
+  #   alice_pdp11  → group alice_pdp11_vax (label: "Lab setup", no connection_type)
+  #                   peer: alice_vax (serial: VAX-780-001)
+  #   bob_pdp8     → group bob_pdp8_vt100 (label: "PDP-8 terminal connection",
+  #                   connection_type: rs232 / label: "RS-232 serial port connection")
+  #                   peer: bob_vt100
+  #   unassigned_condition_test — alice's device, not in any group → empty state
+
+  test "show with connections renders connection group label and peer computer" do
+    # alice_pdp11 belongs to group alice_pdp11_vax.
+    # Group label "Lab setup" must appear in the Connections section.
+    # Peer alice_vax must appear in the Connected-to column rendered as a link
+    # with the computer model name ("VAX-11/780") as link text — NOT the serial
+    # number. The view uses computer_model.name for peer display.
+    # No connection_type is set on this group, so the Type column renders "—".
+    login_as owners(:one)
+    get computer_path(computers(:alice_pdp11))
+    assert_response :success
+    assert_includes response.body, "Lab setup",
+      "Group label should appear in the Connections section"
+    assert_includes response.body, computer_models(:vax11_780).name,
+      "Peer computer model name should appear as link text in the Connected-to column"
+  end
+
+  test "show without connections renders empty-state message" do
+    # unassigned_condition_test is owned by alice and has no connection_members.
+    # The Connections section must show the empty-state paragraph rather than
+    # a table.
+    login_as owners(:one)
+    get computer_path(computers(:unassigned_condition_test))
+    assert_response :success
+    assert_includes response.body, "No connections recorded",
+      "Empty-state message should appear for a device with no connections"
   end
 end
