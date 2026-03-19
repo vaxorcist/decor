@@ -1,5 +1,5 @@
 # decor/docs/claude/DECOR_PROJECT.md
-# version 2.26
+# version 2.27
 # Session 13: device_type on computers, component_category on components; enum tests.
 # Session 14: DRY Computer/Appliance Models admin pages; dropdown nav (admin.html.erb v1.3);
 #   device_type on computer_models; routes :appliance_models; dropdown_controller.js.
@@ -40,12 +40,14 @@
 # Session 31: Connections feature Part 1a — 3 migrations, 3 new models, 2 updated
 #   models, 3 new fixture files. Tests deferred to Part 1b (next session).
 # Session 32: Connections feature Part 1b — 3 model test files for ConnectionType,
-#   ConnectionGroup, ConnectionMember.
+#   ConnectionGroup, ConnectionMember. connection_group_test.rb patched to v1.1
+#   (error key fix: :connection_members not :base for minimum_two_members).
+#   532 tests, 0 failures. Committed and deployed.
 
 **DEC Owner's Registry Project - Specific Information**
 
 **Last Updated:** March 18, 2026 (Session 32)
-**Current Status:** Sessions 1–30 committed and deployed. Session 31 Part 1 (foundation) + Session 32 Part 1b (model tests) ready to branch/PR/deploy together.
+**Current Status:** Sessions 1–32 committed and deployed. Next: Part 2 — Admin ConnectionTypes CRUD.
 
 ---
 
@@ -145,7 +147,7 @@ decor//
 **Key file versions** (updated each session):
 
     decor/test/models/connection_type_test.rb                                        v1.0  ← Session 32 new
-    decor/test/models/connection_group_test.rb                                       v1.0  ← Session 32 new
+    decor/test/models/connection_group_test.rb                                       v1.1  ← Session 32 (patched: error key fix)
     decor/test/models/connection_member_test.rb                                      v1.0  ← Session 32 new
     decor/app/models/connection_type.rb                                              v1.0  ← Session 31 new
     decor/app/models/connection_group.rb                                             v1.0  ← Session 31 new

@@ -1,5 +1,6 @@
 # decor/config/routes.rb
-# version 2.2
+# version 2.3
+# v2.3 (Session 33): Added admin :connection_types resource.
 # v2.2 (Session 25): Added resources :peripherals index route.
 #   Mirrors resources :appliances: shares ComputersController,
 #   device_context: "peripheral" tells set_device_context to lock
@@ -65,7 +66,8 @@ Rails.application.routes.draw do
       post :send_password_reset, on: :member
     end
     resources :invites, only: %i[index new create destroy]
-    resources :component_types, only: %i[index new create edit update destroy]
+    resources :component_types,    only: %i[index new create edit update destroy]
+    resources :connection_types,   only: %i[index new create edit update destroy]
 
     resources :computer_models,   only: %i[index new create edit update destroy],
                                   defaults: { device_context: "computer" }
