@@ -1,9 +1,10 @@
 # decor/docs/claude/SESSION_HANDOVER.md
-# version 35.0
+# version 37.0
 
-**Date:** March 18, 2026
-**Branch:** main (Sessions 1–32 committed and deployed)
-**Status:** Part 1 (foundation) + Part 1b (model tests) complete. Next: Part 2 — Admin ConnectionTypes CRUD.
+**Date:** March 19, 2026
+**Branch:** main (Sessions 1–33 committed and deployed)
+**Status:** Part 3 (Owner device show pages — read-only connections display) complete.
+Next: commit/deploy Part 3, then Part 4 — Owner ConnectionGroup CRUD.
 
 ---
 
@@ -50,7 +51,7 @@ but was missing the opening one. Both are required on every response.
 
 ## !! TOKEN BUDGET WARNING !!
 
-Sessions 28–32 hit ~88–90% context usage. The fixed overhead (5 rule documents +
+Sessions 28–34 hit ~53–120% context usage. The fixed overhead (5 rule documents +
 system prompt + tool schemas + bash cat outputs + uploaded source files) consumes
 ~60–90% of the window before any work output is written.
 
@@ -67,35 +68,48 @@ of delivery. (Established Session 27.)
 
 ---
 
-## Session 32 Summary
+## Session 34 Summary
 
-**Focus: Connections feature — Part 1b: Model tests**
+**Focus: Connections feature — Part 3: Owner device show pages (read-only connections display)**
 
-All three model test files written, patched, and committed. 532 tests, 0 failures.
+Two files changed. No migrations, no new routes. Tests deferred to next session.
 
 ### Changes
 
-**3 new / 1 patched test files:**
+**2 updated files:**
 
-    decor/test/models/connection_type_test.rb    v1.0  — new
-    decor/test/models/connection_group_test.rb   v1.1  — new, then patched same session
-    decor/test/models/connection_member_test.rb  v1.0  — new
+    decor/app/controllers/computers_controller.rb    v1.16 → v1.17
+    decor/app/views/computers/show.html.erb          v1.7  → v1.8
 
-**2 updated docs:**
+### What was done
 
-    decor/docs/claude/DECOR_PROJECT.md           v2.27
-    decor/docs/claude/SESSION_HANDOVER.md        v35.0
+**computers_controller.rb v1.17:**
+- `show` action now loads `@connection_groups` in addition to `@components`.
+- Eager-loads `:connection_type` and `computers: :computer_model` to avoid N+1.
+- Ordered by `:id` for stable display.
 
-### Patch note — connection_group_test.rb v1.0 → v1.1
+**show.html.erb v1.8:**
+- Added "Connections (N)" section between Components and the Back button.
+- Table with three columns: Type | Label | Connected to.
+- Type: `connection_type.label` → `.name` → "—" if no type set.
+- Label: `group.label` → "—".
+- Connected to: peer computers (all except current device) as links to their
+  show pages, using the preloaded computers cache via `reject` (no N+1).
+- Empty state: "No connections recorded for this computer/appliance/peripheral."
+- Read-only only — no Edit/Delete buttons (those belong to Part 4, by design).
 
-The `minimum_two_members` validation adds its error on `:connection_members`
-(not `:base` as initially assumed). Two assertion lines updated:
-  errors[:base].any? → errors[:connection_members].any?
-`all_members_belong_to_owner` correctly uses `:base` — that assertion unchanged.
+### Tests deferred
+
+`ComputersController#show` connections rendering is not yet tested. Needs:
+    decor/test/controllers/computers_controller_test.rb   (upload at session start)
+
+Tests to write at that session:
+  - Computer with connections → groups and peer names appear in response body
+  - Computer without connections → "No connections recorded" empty state
 
 ---
 
-## Complete File List (Sessions 31 + 32)
+## Complete File List (Sessions 31–34)
 
     decor/db/migrate/20260319000000_create_connection_types.rb              v1.0  ✓ merged
     decor/db/migrate/20260319010000_create_connection_groups.rb             v1.0  ✓ merged
@@ -111,24 +125,44 @@ The `minimum_two_members` validation adds its error on `:connection_members`
     decor/test/models/connection_type_test.rb                               v1.0  ✓ merged
     decor/test/models/connection_group_test.rb                              v1.1  ✓ merged
     decor/test/models/connection_member_test.rb                             v1.0  ✓ merged
+    decor/app/controllers/admin/connection_types_controller.rb              v1.0  ✓ merged
+    decor/app/views/admin/connection_types/index.html.erb                   v1.0  ✓ merged
+    decor/app/views/admin/connection_types/_form.html.erb                   v1.0  ✓ merged
+    decor/app/views/admin/connection_types/new.html.erb                     v1.0  ✓ merged
+    decor/app/views/admin/connection_types/edit.html.erb                    v1.0  ✓ merged
+    decor/config/routes.rb                                                  v2.3  ✓ merged
+    decor/app/views/layouts/admin.html.erb                                  v1.9  ✓ merged
+    decor/test/controllers/admin/connection_types_controller_test.rb        v1.0  ✓ merged
+    decor/app/controllers/computers_controller.rb                           v1.17 ← Session 34 (not yet committed)
+    decor/app/views/computers/show.html.erb                                 v1.8  ← Session 34 (not yet committed)
 
 ---
 
-## Priority 1 — Next Session: Part 2 — Admin ConnectionTypes CRUD
+## Priority 1 — Next Session: Commit Part 3 + Part 3 tests + start Part 4
 
-    decor/app/controllers/admin/connection_types_controller.rb  — new
-    decor/app/views/admin/connection_types/                     — new (index, new, edit, _form)
-    decor/config/routes.rb                                      — add :connection_types resource
-    decor/app/views/layouts/admin.html.erb                      — add to admin dropdown nav
-    decor/test/controllers/admin/connection_types_controller_test.rb — new
+### Step A — tests first (before committing Part 3)
+Upload at session start:
+    decor/test/controllers/computers_controller_test.rb
 
-Upload at session start (in addition to 5 rule docs):
+Write tests:
+  - show: computer with connections → groups in response body
+  - show: computer without connections → "No connections recorded" empty state
+
+### Step B — commit Part 3
+Once tests pass: branch, commit, deploy as usual.
+
+### Step C — Part 4: Owner ConnectionGroup CRUD
+Full CRUD for owners to create/edit/delete their own connection groups.
+Design questions to settle at session start:
+  - Route: nested under owners? or top-level /connection_groups?
+  - Form: nested attributes for members (add/remove computers in one form)?
+  - Member selection: how does the owner pick which computers to connect?
+
+Upload at session start (for Part 4):
     decor/config/routes.rb
-    decor/app/views/layouts/admin.html.erb
-    decor/app/controllers/admin/base_controller.rb
-    decor/app/controllers/admin/component_types_controller.rb  (pattern reference)
-    decor/app/views/admin/component_types/index.html.erb       (pattern reference)
-    decor/test/controllers/admin/component_types_controller_test.rb  (test pattern reference)
+    decor/app/views/layouts/application.html.erb  (or nav partial — for any nav changes)
+    decor/test/fixtures/owners.yml
+    decor/test/fixtures/computers.yml             (already known; re-upload for freshness)
 
 ---
 
@@ -204,9 +238,9 @@ has_many :connection_groups, dependent: :destroy  # AFTER computers
 ### Planned parts
 - Part 1a: Migrations + models + fixtures         ← DONE (Session 31)
 - Part 1b: Model tests                            ← DONE (Session 32)
-- Part 2:  Admin ConnectionTypes CRUD             ← NEXT SESSION
-- Part 3:  Owner device show pages — read-only connections display
-- Part 4:  Owner ConnectionGroup CRUD
+- Part 2:  Admin ConnectionTypes CRUD             ← DONE (Session 33)
+- Part 3:  Owner device show pages — read-only connections display  ← DONE (Session 34)
+- Part 4:  Owner ConnectionGroup CRUD             ← NEXT
 
 ---
 
@@ -243,7 +277,7 @@ Model validation: `validates :serial_number, uniqueness: { scope: [:owner_id, :c
 enum :device_type, { computer: 0, appliance: 1, peripheral: 2 }, prefix: true
 ```
 
-### Routes (routes.rb v2.2)
+### Routes (routes.rb v2.3)
 ```ruby
 resources :peripherals, controller: "computers", only: [:index],
                         defaults: { device_context: "peripheral" }
