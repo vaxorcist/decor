@@ -1,0 +1,9 @@
+<%# decor/app/views/admin/connection_types/new.html.erb %>
+<%# version 1.0 — Session 33 %>
+<div class="max-w-7xl mx-auto">
+  <h1 class="text-2xl font-semibold mb-4">New Connection Type</h1>
+  <%= render "form", connection_type: @connection_type %>
+  <div class="mt-4">
+    <%= link_to "Done", admin_connection_types_path, class: "text-stone-600 hover:text-stone-900 text-sm" %>
+  </div>
+</div>

@@ -1,0 +1,30 @@
+<%# decor/app/views/admin/connection_types/_form.html.erb %>
+<%# version 1.0 — Session 33 %>
+<%# Shared form for new and edit. Renders name (required) and label (optional). %>
+<%= form_with model: [:admin, connection_type], class: "space-y-4 max-w-md" do |f| %>
+  <% if connection_type.errors.any? %>
+    <div class="bg-red-50 border border-red-200 rounded p-3 text-sm text-red-700">
+      <% connection_type.errors.full_messages.each do |msg| %>
+        <p><%= msg %></p>
+      <% end %>
+    </div>
+  <% end %>
+
+  <div>
+    <%= f.label :name, class: "block text-sm font-medium text-stone-700 mb-1" %>
+    <%= f.text_field :name,
+          class: "block w-full border border-stone-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-stone-500",
+          maxlength: 40 %>
+  </div>
+
+  <div>
+    <%= f.label :label, class: "block text-sm font-medium text-stone-700 mb-1" %>
+    <%= f.text_field :label,
+          class: "block w-full border border-stone-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-stone-500",
+          maxlength: 100 %>
+  </div>
+
+  <div>
+    <%= f.submit class: button_classes(style: :primary) %>
+  </div>
+<% end %>
