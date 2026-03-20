@@ -30,7 +30,6 @@
 require "test_helper"
 
 class ConnectionGroupsControllerTest < ActionDispatch::IntegrationTest
-
   # ---------------------------------------------------------------------------
   # Authentication — unauthenticated access
   # ---------------------------------------------------------------------------
@@ -207,5 +206,4 @@ class ConnectionGroupsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to owner_connection_groups_path(owners(:one))
     assert_equal "Connection group was successfully deleted.", flash[:notice]
   end
-
 end
