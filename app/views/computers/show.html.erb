@@ -1,4 +1,7 @@
-<%# decor/app/views/computers/show.html.erb - version 1.9 %>
+<%# decor/app/views/computers/show.html.erb - version 2.0 %>
+<%# v2.0 (Session 36): Connections Type column now always shows connection_type.name. %>
+<%#   Previously used label.presence || name, which incorrectly showed the longer %>
+<%#   label text when present. The short name is the correct value for this column.
 <%# v1.9 (Session 35): Brakeman fix — peer links in Connections section now built %>
 <%#   with safe_join(..., ", ") instead of .map{}.join().html_safe. safe_join returns %>
 <%#   an html_safe string from an already-safe array without marking raw user data safe. %>
@@ -167,10 +170,12 @@
             <% @connection_groups.each do |group| %>
               <tr class="hover:bg-stone-50">
 
-                <%# Type: prefer connection_type.label over .name; "—" if no type set %>
+                <%# Type: connection_type.name always; "—" if no type set. %>
+                <%# The label is a longer description stored on ConnectionType but %>
+                <%# is NOT shown here — only the short name belongs in this column. %>
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600">
                   <% if group.connection_type %>
-                    <%= group.connection_type.label.presence || group.connection_type.name %>
+                    <%= group.connection_type.name %>
                   <% else %>
                     <span class="text-stone-400">—</span>
                   <% end %>

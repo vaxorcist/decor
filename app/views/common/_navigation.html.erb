@@ -1,4 +1,7 @@
-<%# decor/app/views/common/_navigation.html.erb - version 1.7 %>
+<%# decor/app/views/common/_navigation.html.erb - version 1.8 %>
+<%# v1.8 (Session 36): Added "My Connections" to the owner dropdown, between %>
+<%#   "My Components" and the Profile divider. Links to the owner's connection %>
+<%#   groups index: owner_connection_groups_path(Current.owner). %>
 <%# v1.7 (Session 25): Added "Peripherals" top-level navigation link between %>
 <%#   "Computers" and "Appliances", mirroring the Appliances link added in v1.2. %>
 <%# v1.6 (Session 25): Added "My Peripherals" to the owner dropdown menu. %>
@@ -53,7 +56,7 @@
 
       <%# Owner dropdown — sub-page links plus Profile. %>
       <%# Order mirrors the tab strip on the owner sub-pages: %>
-      <%#   Computers | Appliances | Peripherals | Components | (divider) | Profile %>
+      <%#   Computers | Appliances | Peripherals | Components | Connections | (divider) | Profile %>
       <%# Menu right-aligned (right-0) to stay within viewport. %>
       <div class="relative" data-controller="dropdown">
         <button data-action="click->dropdown#toggle click@window->dropdown#hide"
@@ -73,6 +76,9 @@
           <%= link_to "My Peripherals", peripherals_owner_path(Current.owner),
                 class: "block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50" %>
           <%= link_to "My Components",  components_owner_path(Current.owner),
+                class: "block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50" %>
+          <%# My Connections — links to the connection groups index for this owner. %>
+          <%= link_to "My Connections", owner_connection_groups_path(Current.owner),
                 class: "block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50" %>
           <div class="border-t border-stone-200 my-1"></div>
           <%= link_to "Profile", owner_path(Current.owner),

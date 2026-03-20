@@ -1,0 +1,80 @@
+<%# decor/app/views/connection_groups/index.html.erb - version 1.1 %>
+<%# v1.1 (Session 36): Member device names are now links to computer_path. %>
+<%#   safe_join used (same pattern as computers/show.html.erb v1.9) to avoid %>
+<%#   Brakeman XSS warning from .map.join.html_safe. %>
+<%# v1.0 (Session 36): Part 4 — Owner ConnectionGroup CRUD. %>
+<%# Lists all connection groups belonging to the current owner. %>
+<%# Each row shows: Type (or em-dash if none), Label (or em-dash), Members, Edit/Delete. %>
+<%# Empty state shown when the owner has no groups yet. %>
+
+<% content_for :title, "My Connections" %>
+
+<div class="max-w-4xl mx-auto px-4 py-6">
+
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-xl font-medium text-stone-900">My Connections</h1>
+    <%= link_to "New connection group",
+                new_owner_connection_group_path(@owner),
+                class: "text-sm text-indigo-600 hover:text-indigo-900" %>
+  </div>
+
+  <% if @connection_groups.any? %>
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-stone-200">
+          <th class="text-left py-2 pr-4 text-stone-500 uppercase text-xs font-medium">Type</th>
+          <th class="text-left py-2 pr-4 text-stone-500 uppercase text-xs font-medium">Label</th>
+          <th class="text-left py-2 pr-4 text-stone-500 uppercase text-xs font-medium">Members</th>
+          <th class="py-2"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @connection_groups.each do |group| %>
+          <tr class="border-b border-stone-100">
+
+            <%# Connection type name, or em-dash if no type assigned. %>
+            <td class="py-3 pr-4 text-stone-600">
+              <%= group.connection_type&.name || "—" %>
+            </td>
+
+            <%# Label, or em-dash if blank. %>
+            <td class="py-3 pr-4 text-stone-600">
+              <%= group.label.presence || "—" %>
+            </td>
+
+            <%# Comma-separated list of member device links (model · serial). %>
+            <%# Each device name links to its show page (computer_path). %>
+            <%# safe_join joins already-html_safe link_to results — same pattern %>
+            <%# as computers/show.html.erb v1.9 (avoids Brakeman XSS warning). %>
+            <td class="py-3 pr-4 text-stone-600">
+              <%= safe_join(
+                    group.computers.map { |c|
+                      link_to "#{c.computer_model.name} – #{c.serial_number}",
+                              computer_path(c),
+                              class: "text-indigo-600 hover:text-indigo-900"
+                    },
+                    ", "
+                  ) %>
+            </td>
+
+            <%# Edit and Delete actions. %>
+            <td class="py-3 text-right whitespace-nowrap">
+              <%= link_to "Edit",
+                          edit_owner_connection_group_path(@owner, group),
+                          class: "text-indigo-600 hover:text-indigo-900 mr-4" %>
+              <%= button_to "Delete",
+                            owner_connection_group_path(@owner, group),
+                            method: :delete,
+                            form: { data: { turbo_confirm: "Delete this connection group?" } },
+                            class: "text-red-600 hover:text-red-900 bg-transparent border-0 p-0 cursor-pointer text-sm" %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% else %>
+    <%# Empty state — no groups yet. %>
+    <p class="text-stone-500 text-sm">No connection groups yet.</p>
+  <% end %>
+
+</div>

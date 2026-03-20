@@ -1,10 +1,10 @@
 # decor/docs/claude/SESSION_HANDOVER.md
-# version 37.0
+# version 39.0
 
 **Date:** March 19, 2026
-**Branch:** main (Sessions 1–33 committed and deployed)
-**Status:** Part 3 (Owner device show pages — read-only connections display) complete.
-Next: commit/deploy Part 3, then Part 4 — Owner ConnectionGroup CRUD.
+**Branch:** main (Sessions 1–35 committed and deployed)
+**Status:** Part 4 files produced in Session 36. Pending: bin/rails test, rubocop, brakeman, commit, deploy.
+Next: run tests, fix any failures, then commit Part 4.
 
 ---
 
@@ -68,54 +68,111 @@ of delivery. (Established Session 27.)
 
 ---
 
-## Session 34 Summary
+## !! SKILL READ VIOLATION — Session 36 !!
 
-**Focus: Connections feature — Part 3: Owner device show pages (read-only connections display)**
+At session start, the `decor-session-rules` skill was read using the `view` tool
+instead of `bash cat`. The `view` tool is explicitly prohibited for rule documents
+(silent truncation risk). The correct tool is always `bash cat` — for all files,
+including skill files read at session start.
 
-Two files changed. No migrations, no new routes. Tests deferred to next session.
+---
+
+## Session 36 Summary
+
+**Focus: Connections feature — Part 4 — Owner ConnectionGroup CRUD**
+
+12 files produced. No migrations. No fixture changes.
 
 ### Changes
 
 **2 updated files:**
 
-    decor/app/controllers/computers_controller.rb    v1.16 → v1.17
-    decor/app/views/computers/show.html.erb          v1.7  → v1.8
+    decor/config/routes.rb                                        v2.3 → v2.4
+    decor/app/models/connection_group.rb                          v1.0 → v1.1
+    decor/app/views/common/_navigation.html.erb                   v1.7 → v1.8
+
+**9 new files:**
+
+    decor/app/controllers/connection_groups_controller.rb         v1.0
+    decor/app/views/connection_groups/index.html.erb              v1.0
+    decor/app/views/connection_groups/new.html.erb                v1.0
+    decor/app/views/connection_groups/edit.html.erb               v1.0
+    decor/app/views/connection_groups/_form.html.erb              v1.0
+    decor/app/javascript/controllers/connection_members_controller.js  v1.0
+    decor/test/controllers/connection_groups_controller_test.rb   v1.0
+    decor/docs/claude/DECOR_PROJECT.md                            v2.31
+    decor/docs/claude/SESSION_HANDOVER.md                         v39.0
 
 ### What was done
 
-**computers_controller.rb v1.17:**
-- `show` action now loads `@connection_groups` in addition to `@components`.
-- Eager-loads `:connection_type` and `computers: :computer_model` to avoid N+1.
-- Ordered by `:id` for stable display.
+**routes.rb v2.4:**
+- Added `resources :connection_groups, only: %i[index new create edit update destroy]`
+  nested inside `resources :owners`. No :show action (index suffices).
+- Route helpers: `owner_connection_groups_path(@owner)`,
+  `new_owner_connection_group_path(@owner)`,
+  `edit_owner_connection_group_path(@owner, @cg)`,
+  `owner_connection_group_path(@owner, @cg)`.
 
-**show.html.erb v1.8:**
-- Added "Connections (N)" section between Components and the Back button.
-- Table with three columns: Type | Label | Connected to.
-- Type: `connection_type.label` → `.name` → "—" if no type set.
-- Label: `group.label` → "—".
-- Connected to: peer computers (all except current device) as links to their
-  show pages, using the preloaded computers cache via `reject` (no N+1).
-- Empty state: "No connections recorded for this computer/appliance/peripheral."
-- Read-only only — no Edit/Delete buttons (those belong to Part 4, by design).
+**connection_group.rb v1.1:**
+- Added `reject_if: :all_blank` to `accepts_nested_attributes_for :connection_members`.
+- Without this, blank dropdown rows (user adds a row but leaves it empty) attempt to
+  build a ConnectionMember with no computer_id, failing belongs_to presence before
+  the group-level minimum_two_members validator runs. reject_if: :all_blank silently
+  discards empty rows — standard Rails idiom.
 
-### Tests deferred
+**connection_groups_controller.rb v1.0:**
+- Full CRUD (index, new, create, edit, update, destroy).
+- `before_action :require_login` — redirects to new_session_path if not authenticated.
+- `before_action :set_owner` — finds Owner by params[:owner_id]; redirects to root_path
+  with alert if owner != Current.owner. Prevents cross-owner access regardless of URL.
+- `set_connection_group` scopes to `@owner.connection_groups` — prevents fetching
+  another owner's group by id.
+- `load_form_data`: `@connection_types` ordered by name; `@computers` scoped to owner,
+  joined and eager-loaded, ordered by Arel.sql("computer_models.name ASC, serial_number ASC").
+- `new` pre-builds 2 blank member rows; `edit` pre-builds 1 blank row.
+- All redirects go to `owner_connection_groups_path(@owner)`.
 
-`ComputersController#show` connections rendering is not yet tested. Needs:
-    decor/test/controllers/computers_controller_test.rb   (upload at session start)
+**Views (index, new, edit, _form):**
+- index: table of groups with Type, Label, Members columns; Edit/Delete actions;
+  empty state. "New connection group" link at top right.
+- new/edit: breadcrumb + heading, render shared _form partial.
+- _form: connection_type select, label text field, nested member rows with
+  Stimulus `connection-members` controller for add/remove.
+  Dropdown label format: "Model name · SN serial (device_type)".
+  <template> tag rendered server-side with all computer options populated.
+  reject_if: :all_blank on model (v1.1) handles blank rows at save time.
+  Submit label: "Create connection group" (new) or "Save connection group" (edit).
+  Cancel: "Done" link — consistent with project button convention.
 
-Tests to write at that session:
-  - Computer with connections → groups and peer names appear in response body
-  - Computer without connections → "No connections recorded" empty state
+**connection_members_controller.js v1.0:**
+- Stimulus controller with targets: membersList, template.
+- `add(event)`: clones template innerHTML, replaces NEW_INDEX with Date.now(),
+  appends to membersList.
+- `remove(event)`: finds [data-member-row] ancestor.
+  If [data-destroy-field] present (persisted row): sets value="1", hides row.
+  If no destroy field (unsaved row): removes element from DOM.
+
+**_navigation.html.erb v1.8:**
+- Added "My Connections" link in owner dropdown, between "My Components" and
+  the Profile divider. Links to owner_connection_groups_path(Current.owner).
+
+**connection_groups_controller_test.rb v1.0:**
+- 14 tests covering: authentication (3), authorisation (3), index (3),
+  new (1), create valid + 2 invalid (3), edit (1), update valid + invalid (2),
+  destroy (1), auth-destroy (already in authorisation block).
+
+### Part 4 status
+Files produced. Tests not yet run. Next session: bin/rails test → fix → rubocop → brakeman → commit → deploy.
 
 ---
 
-## Complete File List (Sessions 31–34)
+## Complete File List (Sessions 31–36)
 
     decor/db/migrate/20260319000000_create_connection_types.rb              v1.0  ✓ merged
     decor/db/migrate/20260319010000_create_connection_groups.rb             v1.0  ✓ merged
     decor/db/migrate/20260319020000_create_connection_members.rb            v1.0  ✓ merged
     decor/app/models/connection_type.rb                                     v1.0  ✓ merged
-    decor/app/models/connection_group.rb                                    v1.0  ✓ merged
+    decor/app/models/connection_group.rb                                    v1.1  ← Session 36
     decor/app/models/connection_member.rb                                   v1.0  ✓ merged
     decor/app/models/computer.rb                                            v1.9  ✓ merged
     decor/app/models/owner.rb                                               v1.4  ✓ merged
@@ -130,39 +187,39 @@ Tests to write at that session:
     decor/app/views/admin/connection_types/_form.html.erb                   v1.0  ✓ merged
     decor/app/views/admin/connection_types/new.html.erb                     v1.0  ✓ merged
     decor/app/views/admin/connection_types/edit.html.erb                    v1.0  ✓ merged
-    decor/config/routes.rb                                                  v2.3  ✓ merged
+    decor/config/routes.rb                                                  v2.4  ← Session 36
     decor/app/views/layouts/admin.html.erb                                  v1.9  ✓ merged
     decor/test/controllers/admin/connection_types_controller_test.rb        v1.0  ✓ merged
-    decor/app/controllers/computers_controller.rb                           v1.17 ← Session 34 (not yet committed)
-    decor/app/views/computers/show.html.erb                                 v1.8  ← Session 34 (not yet committed)
+    decor/test/controllers/computers_controller_test.rb                     v1.7  ✓ merged (Session 35)
+    decor/app/views/computers/show.html.erb                                 v1.9  ✓ merged (Session 35)
+    decor/app/controllers/computers_controller.rb                           v1.17 ✓ merged (Session 34)
+    decor/app/controllers/connection_groups_controller.rb                   v1.0  ← Session 36 new
+    decor/app/views/connection_groups/index.html.erb                        v1.0  ← Session 36 new
+    decor/app/views/connection_groups/new.html.erb                          v1.0  ← Session 36 new
+    decor/app/views/connection_groups/edit.html.erb                         v1.0  ← Session 36 new
+    decor/app/views/connection_groups/_form.html.erb                        v1.0  ← Session 36 new
+    decor/app/javascript/controllers/connection_members_controller.js       v1.0  ← Session 36 new
+    decor/app/views/common/_navigation.html.erb                             v1.8  ← Session 36
+    decor/test/controllers/connection_groups_controller_test.rb             v1.0  ← Session 36 new
 
 ---
 
-## Priority 1 — Next Session: Commit Part 3 + Part 3 tests + start Part 4
+## Priority 1 — Next Session: Run Tests + Commit Part 4
 
-### Step A — tests first (before committing Part 3)
-Upload at session start:
-    decor/test/controllers/computers_controller_test.rb
+Steps:
+  1. Place all 12 Session 36 files (see file list above)
+  2. bin/rails test — fix any failures
+  3. bundle exec rubocop -A; bundle exec rubocop
+  4. bin/brakeman --no-pager
+  5. git add -A; git commit; git push; gh pr create; gh pr merge --merge; kamal deploy
 
-Write tests:
-  - show: computer with connections → groups in response body
-  - show: computer without connections → "No connections recorded" empty state
+Upload at next session start:
+  - The standard 5 rule documents
+  - Any test failure output (paste to context) if tests fail before session start
 
-### Step B — commit Part 3
-Once tests pass: branch, commit, deploy as usual.
-
-### Step C — Part 4: Owner ConnectionGroup CRUD
-Full CRUD for owners to create/edit/delete their own connection groups.
-Design questions to settle at session start:
-  - Route: nested under owners? or top-level /connection_groups?
-  - Form: nested attributes for members (add/remove computers in one form)?
-  - Member selection: how does the owner pick which computers to connect?
-
-Upload at session start (for Part 4):
-    decor/config/routes.rb
-    decor/app/views/layouts/application.html.erb  (or nav partial — for any nav changes)
-    decor/test/fixtures/owners.yml
-    decor/test/fixtures/computers.yml             (already known; re-upload for freshness)
+Known risk: the `view` tool was used to read the skill file at session start in Session 36
+(instead of bash cat). This is noted above. No content was truncated (skill file is short),
+but the violation is recorded.
 
 ---
 
@@ -215,7 +272,7 @@ belongs_to :owner
 belongs_to :connection_type, optional: true
 has_many :connection_members, dependent: :delete_all
 has_many :computers, through: :connection_members
-accepts_nested_attributes_for :connection_members, allow_destroy: true
+accepts_nested_attributes_for :connection_members, allow_destroy: true, reject_if: :all_blank
 validate :minimum_two_members
 validate :all_members_belong_to_owner
 
@@ -234,13 +291,6 @@ has_many :computers, dependent: :destroy      # FIRST
 has_many :components, dependent: :destroy
 has_many :connection_groups, dependent: :destroy  # AFTER computers
 ```
-
-### Planned parts
-- Part 1a: Migrations + models + fixtures         ← DONE (Session 31)
-- Part 1b: Model tests                            ← DONE (Session 32)
-- Part 2:  Admin ConnectionTypes CRUD             ← DONE (Session 33)
-- Part 3:  Owner device show pages — read-only connections display  ← DONE (Session 34)
-- Part 4:  Owner ConnectionGroup CRUD             ← NEXT
 
 ---
 
@@ -267,45 +317,6 @@ Index: `index_components_on_owner_type_and_serial_number`
 Columns: `(owner_id, component_type_id, serial_number)`
 Migration: `20260316110000_add_unique_index_to_components_serial_number.rb`
 Model validation: `validates :serial_number, uniqueness: { scope: [:owner_id, :component_type_id] }, allow_blank: true`
-
----
-
-## Peripherals Feature — Design Reference (Session 25, unchanged)
-
-### device_type enum (both Computer and ComputerModel)
-```ruby
-enum :device_type, { computer: 0, appliance: 1, peripheral: 2 }, prefix: true
-```
-
-### Routes (routes.rb v2.3)
-```ruby
-resources :peripherals, controller: "computers", only: [:index],
-                        defaults: { device_context: "peripheral" }
-resources :owners do
-  member do
-    get :peripherals
-  end
-end
-namespace :admin do
-  resources :peripheral_models, only: %i[index new create edit update destroy],
-                                controller: "computer_models",
-                                defaults: { device_context: "peripheral" }
-end
-```
-
----
-
-## Barter Feature — Design Reference (Sessions 21–22, unchanged)
-
-### Enum definition
-```ruby
-enum :barter_status, { no_barter: 0, offered: 1, wanted: 2 }, prefix: true
-```
-
-### Colour coding
-- offered   -> <span class="text-green-700">Offered</span>
-- wanted    -> <span class="text-amber-600">Wanted</span>
-- no_barter -> <span class="text-stone-400">--</span>
 
 ---
 

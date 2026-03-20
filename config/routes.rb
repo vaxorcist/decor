@@ -1,11 +1,15 @@
 # decor/config/routes.rb
-# version 2.3
+# version 2.4
+# v2.4 (Session 36): Added resources :connection_groups nested under :owners.
+#   Provides full CRUD for owner-managed connection groups at:
+#     /owners/:owner_id/connection_groups
+#     /owners/:owner_id/connection_groups/new
+#     /owners/:owner_id/connection_groups/:id/edit
+#   No :show action — the index lists all groups; show is not needed.
+#   The owner_id in the URL is always verified against Current.owner in
+#   ConnectionGroupsController#set_owner (no cross-owner access).
 # v2.3 (Session 33): Added admin :connection_types resource.
 # v2.2 (Session 25): Added resources :peripherals index route.
-#   Mirrors resources :appliances: shares ComputersController,
-#   device_context: "peripheral" tells set_device_context to lock
-#   device_type to "peripheral" and set all context instance variables.
-#   Route helper: peripherals_path.
 # v2.1 (Session 25): Added admin :peripheral_models resource.
 # v2.0 (Session 25): Added :peripherals member route under :owners.
 # v1.9 (Session 24): Added admin data_transfer routes inside namespace :admin.
@@ -30,6 +34,8 @@ Rails.application.routes.draw do
 
   # Owner sub-pages: each shows one section of the owner's profile.
   # show remains the summary/profile card view.
+  # connection_groups: full CRUD nested under the owner — owner_id in the URL
+  # is always validated against Current.owner in the controller.
   resources :owners do
     member do
       get :computers    # /owners/:id/computers   — computers table
@@ -37,6 +43,8 @@ Rails.application.routes.draw do
       get :peripherals  # /owners/:id/peripherals — peripherals table (device_type: 2)
       get :components   # /owners/:id/components  — components table
     end
+    # Full CRUD for connection groups; no :show (index suffices).
+    resources :connection_groups, only: %i[index new create edit update destroy]
   end
 
   resources :computers,    defaults: { device_context: "computer" }
@@ -91,10 +99,6 @@ Rails.application.routes.draw do
     end
 
     # Admin data transfer — import/export of reference data and owner collections.
-    # Route helpers:
-    #   admin_data_transfer_path         — show page (selector UI)
-    #   export_admin_data_transfer_path  — export action (GET, returns CSV)
-    #   import_admin_data_transfer_path  — import action (POST, accepts CSV upload)
     get  "data_transfer",        to: "data_transfers#show",   as: :data_transfer
     get  "data_transfer/export", to: "data_transfers#export",  as: :export_data_transfer
     post "data_transfer/import", to: "data_transfers#import",  as: :import_data_transfer
