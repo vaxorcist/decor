@@ -1,0 +1,19 @@
+<%# decor/app/views/connection_groups/new.html.erb - version 1.0 %>
+<%# Session 36: Part 4 — Owner ConnectionGroup CRUD. %>
+<%# Renders the new connection group form. %>
+
+<% content_for :title, "New Connection Group" %>
+
+<div class="max-w-2xl mx-auto px-4 py-6">
+
+  <p class="text-sm text-stone-500 mb-1">
+    <%= link_to "My Connections", owner_connection_groups_path(@owner),
+                class: "text-indigo-600 hover:text-indigo-900" %>
+    &rsaquo; New connection group
+  </p>
+
+  <h1 class="text-xl font-medium text-stone-900 mb-6">New connection group</h1>
+
+  <%= render "form", owner: @owner, connection_group: @connection_group %>
+
+</div>

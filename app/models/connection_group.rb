@@ -1,28 +1,12 @@
 # decor/app/models/connection_group.rb
-# version 1.0
-# Session 31: Part 1 — Connections feature foundation.
-# A ConnectionGroup represents one named connection between two or more devices
-# (computers, appliances, or peripherals — all stored in the computers table).
-# All participating devices must belong to the same owner as the group.
-#
-# Key invariants enforced by model validations:
-#   1. A group must always have at least 2 member devices.
-#   2. Every member device must belong to the same owner as the group.
-#
-# Cascade behaviour:
-#   - When a group is deleted, all its connection_members rows are removed
-#     immediately via dependent: :delete_all (no Ruby callbacks fired, direct
-#     DB delete). This is intentional — there is no further cleanup to trigger
-#     when the group itself is the source of deletion.
-#   - When a Computer is deleted, its ConnectionMember rows are destroyed via
-#     Computer's dependent: :destroy, which fires after_destroy on each
-#     ConnectionMember. That callback checks whether the group has fallen below
-#     2 members and, if so, destroys the group (which in turn uses delete_all
-#     to clean up any remaining members of that group).
-#
-# accepts_nested_attributes_for is required for the minimum_two_members
-# validation to work correctly: it allows in-memory member records to be
-# counted by the validator before any DB writes occur.
+# version 1.1
+# v1.1 (Session 36): Added reject_if: :all_blank to accepts_nested_attributes_for.
+#   Without this, an "Add member" row left blank by the user (computer_id absent)
+#   would attempt to build a ConnectionMember with no computer_id, failing
+#   belongs_to :computer presence validation. reject_if: :all_blank silently
+#   discards any nested-attributes hash where all values are blank — standard
+#   Rails idiom for optional nested rows. Zero behaviour change for valid rows.
+# v1.0 (Session 31): Part 1 — Connections feature foundation.
 
 class ConnectionGroup < ApplicationRecord
   belongs_to :owner
@@ -36,18 +20,18 @@ class ConnectionGroup < ApplicationRecord
   # Convenience association: access participating Computer objects directly.
   has_many :computers, through: :connection_members
 
-  # Enables nested creation/update of members in a single operation, which is
-  # required for the minimum_two_members validation to see in-memory records.
-  # allow_destroy: true permits removing a member by passing _destroy: true.
-  accepts_nested_attributes_for :connection_members, allow_destroy: true
+  # reject_if: :all_blank — discard nested-attributes hashes where every value
+  # is blank (e.g. a blank dropdown row the user added but did not fill in).
+  # allow_destroy: true — permits removing an existing member by passing
+  # _destroy: "1" in the nested attributes hash.
+  accepts_nested_attributes_for :connection_members,
+                                 allow_destroy: true,
+                                 reject_if:     :all_blank
 
   # Validation 1: a connection must always involve at least 2 devices.
-  # Uses reject(&:marked_for_destruction?) so that members being removed in the
-  # same operation are not counted toward the minimum.
   validate :minimum_two_members
 
   # Validation 2: every member device must belong to the same owner as the group.
-  # This cross-table constraint cannot be expressed in SQLite and is enforced here.
   validate :all_members_belong_to_owner
 
   validates :label, length: { maximum: 100 }, allow_blank: true

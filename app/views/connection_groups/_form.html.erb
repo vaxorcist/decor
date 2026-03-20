@@ -1,0 +1,143 @@
+<%# decor/app/views/connection_groups/_form.html.erb - version 1.0 %>
+<%# Session 36: Part 4 — Owner ConnectionGroup CRUD. %>
+<%# Shared form partial for new and edit actions. %>
+<%# %>
+<%# Nested member rows use a Stimulus controller (connection-members) for %>
+<%# dynamic add/remove without a page reload: %>
+<%#   - "Add member" clones the <template> block, replacing NEW_INDEX with %>
+<%#     Date.now() to produce a unique nested-attributes key. %>
+<%#   - "×" on an existing member sets a hidden _destroy field and hides the row. %>
+<%#   - "×" on an unsaved row removes it from the DOM immediately. %>
+<%# %>
+<%# The <template> tag is rendered server-side with the full computer options %>
+<%# already populated, so no extra AJAX is needed for the dropdown content. %>
+<%# %>
+<%# reject_if: :all_blank on the model (v1.1) silently discards any member row %>
+<%# where computer_id was left blank before submission. %>
+
+<%= form_with model: [owner, connection_group],
+              data:  { controller: "connection-members" } do |f| %>
+
+  <%# Validation error summary. %>
+  <% if connection_group.errors.any? %>
+    <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+      <p class="font-medium mb-1">
+        <%= pluralize(connection_group.errors.count, "error") %> prevented this group from being saved:
+      </p>
+      <ul class="list-disc list-inside">
+        <% connection_group.errors.full_messages.each do |msg| %>
+          <li><%= msg %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <%# ── Connection type ──────────────────────────────────────────────────── %>
+  <div class="mb-4">
+    <%= f.label :connection_type_id, class: "block text-xs text-stone-500 uppercase mb-1" do %>
+      Connection type <span class="normal-case text-stone-400">(optional)</span>
+    <% end %>
+    <%= f.select :connection_type_id,
+                 @connection_types.map { |ct| [ct.name, ct.id] },
+                 { include_blank: "— none —" },
+                 class: "w-full border border-stone-300 rounded px-2 py-1 text-sm text-stone-900 bg-white" %>
+  </div>
+
+  <%# ── Label ────────────────────────────────────────────────────────────── %>
+  <div class="mb-6">
+    <%= f.label :label, class: "block text-xs text-stone-500 uppercase mb-1" do %>
+      Label <span class="normal-case text-stone-400">(optional)</span>
+    <% end %>
+    <%= f.text_field :label,
+                     placeholder: "e.g. Lab setup",
+                     class: "w-full border border-stone-300 rounded px-2 py-1 text-sm text-stone-900" %>
+    <p class="text-xs text-stone-400 mt-1">A short description of this connection group.</p>
+  </div>
+
+  <%# ── Members ──────────────────────────────────────────────────────────── %>
+  <div class="mb-6">
+    <p class="text-xs text-stone-500 uppercase mb-2">
+      Members
+      <span class="normal-case text-stone-400">(minimum 2)</span>
+    </p>
+
+    <%# Existing + pre-built member rows. %>
+    <div data-connection-members-target="membersList">
+      <%= f.fields_for :connection_members do |mf| %>
+        <%# Each row: computer dropdown + remove button. %>
+        <%# data-member-row marks the row so the Stimulus controller can find it. %>
+        <%# data-persisted distinguishes saved rows (need _destroy) from new ones (just remove). %>
+        <div class="flex items-center gap-2 mb-2"
+             data-member-row
+             <%= "data-persisted" if mf.object.persisted? %>>
+
+          <%= mf.hidden_field :id if mf.object.persisted? %>
+
+          <%# _destroy hidden field — Stimulus sets this to "1" when the user clicks ×. %>
+          <%= mf.hidden_field :_destroy,
+                              value: "0",
+                              data: { destroy_field: true } %>
+
+          <%# Computer dropdown — label: "Model · SN serial (device_type)". %>
+          <%= mf.select :computer_id,
+                        @computers.map { |c|
+                          ["#{c.computer_model.name} – SN #{c.serial_number} (#{c.device_type})", c.id]
+                        },
+                        { include_blank: "— select a computer/peripheral/appliance —" },
+                        class: "flex-1 border border-stone-300 rounded px-2 py-1 text-sm text-stone-900 bg-white" %>
+
+          <%# Remove button — handled by connection-members Stimulus controller. %>
+          <button type="button"
+                  data-action="click->connection-members#remove"
+                  class="flex-shrink-0 w-8 h-8 border border-stone-300 rounded text-stone-400 hover:text-red-600 hover:border-red-300 text-base leading-none">
+            &times;
+          </button>
+        </div>
+      <% end %>
+    </div>
+
+    <%# Add member button — Stimulus clones the <template> below. %>
+    <button type="button"
+            data-action="click->connection-members#add"
+            class="text-sm text-indigo-600 hover:text-indigo-900 border border-dashed border-indigo-300 rounded px-3 py-1 mt-1">
+      + Add member
+    </button>
+
+    <%# Template for new member rows added via JS. %>
+    <%# NEW_INDEX is replaced with Date.now() by the Stimulus controller, producing %>
+    <%# a unique nested-attributes key (e.g. connection_members_attributes[1748239812345]). %>
+    <%# The template is rendered server-side so dropdown options are already filled in. %>
+    <template data-connection-members-target="template">
+      <div class="flex items-center gap-2 mb-2" data-member-row>
+        <input type="hidden"
+               name="connection_group[connection_members_attributes][NEW_INDEX][_destroy]"
+               value="0"
+               data-destroy-field="true">
+        <select name="connection_group[connection_members_attributes][NEW_INDEX][computer_id]"
+                class="flex-1 border border-stone-300 rounded px-2 py-1 text-sm text-stone-900 bg-white">
+          <option value="">— select a computer/peripheral/appliance —</option>
+          <% @computers.each do |c| %>
+            <option value="<%= c.id %>">
+              <%= c.computer_model.name %> – SN <%= c.serial_number %> (<%= c.device_type %>)
+            </option>
+          <% end %>
+        </select>
+        <button type="button"
+                data-action="click->connection-members#remove"
+                class="flex-shrink-0 w-8 h-8 border border-stone-300 rounded text-stone-400 hover:text-red-600 hover:border-red-300 text-base leading-none">
+          &times;
+        </button>
+      </div>
+    </template>
+  </div>
+
+  <%# ── Form actions ─────────────────────────────────────────────────────── %>
+  <div class="flex items-center gap-4 pt-4 border-t border-stone-200">
+    <%= f.submit connection_group.persisted? ? "Save connection group" : "Create connection group",
+                 class: "border border-stone-300 rounded px-4 py-1.5 text-sm font-medium text-stone-900 hover:bg-stone-50 cursor-pointer" %>
+    <%= link_to "Done",
+                owner_connection_groups_path(owner),
+                class: "text-sm text-stone-500 hover:text-stone-700" %>
+  </div>
+
+<% end %>
