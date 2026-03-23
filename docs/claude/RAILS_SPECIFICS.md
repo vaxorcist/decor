@@ -1,5 +1,9 @@
 # RAILS_SPECIFICS.md
-# version 2.2
+# version 2.3
+# Session 36: Added "Nested Attributes — reject_if: :all_blank" section.
+#   Without this option, blank form rows (user adds a member row but leaves it
+#   empty) attempt to build child records with missing required attributes,
+#   producing confusing validation errors before the parent-level validator runs.
 # decor/docs/claude/RAILS_SPECIFICS.md
 # Added (Session 13): Fixture Ownership section — derive counts from data;
 #   use a neutral owner for test-support fixtures to avoid breaking hardcoded
@@ -718,6 +722,51 @@ explicit column names on both sides.
 
 ---
 
+
+---
+
+## Nested Attributes — Always Use reject_if: :all_blank
+
+**When using `accepts_nested_attributes_for` with a form that lets the user add
+rows dynamically, always include `reject_if: :all_blank`.**
+
+Without it, a blank row submitted by the user (e.g. an "Add member" dropdown
+left unselected) attempts to build a child record with all attributes missing.
+This fails the child model's `belongs_to` presence validation before the
+parent-level validator (e.g. `minimum_two_members`) even runs — producing a
+confusing error message that points at the wrong thing.
+
+**Wrong — blank rows cause misleading belongs_to presence errors:**
+```ruby
+accepts_nested_attributes_for :connection_members, allow_destroy: true
+```
+
+**Correct — blank rows are silently discarded before validation:**
+```ruby
+accepts_nested_attributes_for :connection_members,
+                               allow_destroy: true,
+                               reject_if:     :all_blank
+```
+
+**What `:all_blank` does:** Rails calls the check on each nested-attributes hash
+before building the child object. If every value in the hash is blank (empty
+string, nil, or "0" for `_destroy`), the hash is discarded entirely — no child
+record is built, no validation runs.
+
+**When `:all_blank` is NOT appropriate:**
+- When every attribute on the child is optional and a fully-blank record is
+  intentionally valid. This is rare — if a child record can be blank, question
+  whether it should exist at all.
+- When you need finer-grained rejection logic — use a proc instead:
+  `reject_if: ->(attrs) { attrs[:computer_id].blank? }`
+
+**Real example (Session 36, March 19, 2026):**
+`ConnectionGroup` accepted nested `connection_members`. Without `reject_if: :all_blank`,
+a blank dropdown row submitted the hash `{ computer_id: "" }`, which tried to build
+a `ConnectionMember` with no `computer_id`, failing `belongs_to :computer` presence
+validation. The error shown was "Computer must exist" — not "minimum 2 members" —
+which was confusing because the blank row was not intentional. Adding
+`reject_if: :all_blank` silently discarded the empty row before any validation ran.
 
 ---
 
