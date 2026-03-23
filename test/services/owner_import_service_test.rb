@@ -1,25 +1,31 @@
-# decor/test/services/owner_import_service_test.rb - version 1.3
-# v1.3 (Session 28): Fixed two test assertions that referenced result[:computer_count]
-#   for appliance and peripheral rows. OwnerImportService v1.3 returns separate
-#   counters: computer_count, appliance_count, peripheral_count, component_count.
-#   "importing an 'appliance' row..." → assert result[:appliance_count]
-#   "importing a 'peripheral' row..." → assert result[:peripheral_count]
-#   Also updated component duplicate-skip check comment to reflect v1.3 scoping
-#   by (owner, component_type, serial) instead of (owner, serial).
-# v1.2 (Session 28): Added peripheral record_type tests.
-# v1.1 (Session 16): Added appliance record_type tests.
+# decor/test/services/owner_import_service_test.rb
+# version 1.4
+# Session 37: Tests for OwnerImportService v1.4 additions:
+#   Comment rows (starting with '#') — skipped silently, never an error.
+#   Sentinel detection ('! --- connections ---') — switches parser to connections mode.
+#   Pass 3 connections — connection_group + connection_member rows:
+#     - Happy path: group created with correct type, label, and members.
+#     - connection_group_count in result hash.
+#     - Connection members can reference computers created in the same import (pass 1).
+#     - Unknown connection_type → error.
+#     - Unknown computer in member row → error.
+#     - Fewer than 2 members → fails model validation (minimum_two_members).
+#     - connection_group/member row before sentinel → treated as unknown record_type.
+#   Added build_csv_with_connections helper.
+# v1.3 (Session 28): Separate per-device-type counters in result hash.
+# v1.2 (Session 28): Peripheral record_type tests.
+# v1.1 (Session 16): Appliance record_type tests.
 #
-# Tests for OwnerImportService — verifies CSV import behaviour including the
-# two-pass strategy, duplicate skipping, atomicity, and error handling.
-#
-# Fixture baseline used in tests:
-#   computer_models: pdp11_70 ("PDP-11/70"), pdp8 ("PDP-8"), vt100 ("VT100"),
+# Fixture baseline:
+#   computer_models: pdp11_70 ("PDP-11/70"), vax11_780 ("VAX-11/780"),
+#                    pdp8 ("PDP-8"), vt100 ("VT100"),
 #                    hsc50 ("HSC50", device_type: 1),
 #                    dec_vt278 ("DEC VT278", device_type: 2)
 #   component_types: memory_board ("Memory Board"), cpu_board ("CPU Board")
 #   computer_conditions: original ("Completely original")
 #   component_conditions: working (condition: "Working")
 #   run_statuses: working ("Working")
+#   connection_types: rs232 ("RS-232 Serial"), ethernet ("Ethernet")
 #   alice (owners(:one)) — already has SN12345, VAX-780-001, TEST-001
 #   bob   (owners(:two)) — already has PDP8-7891, VT100-5432
 
@@ -59,11 +65,11 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
     OwnerImportService.process(@alice, csv_upload(csv))
 
     computer = @alice.computers.find_by!(serial_number: "IMPORT-SN-002")
-    assert_equal "PDP-11/70", computer.computer_model.name
-    assert_equal "NEW-ORD-001", computer.order_number
+    assert_equal "PDP-11/70",           computer.computer_model.name
+    assert_equal "NEW-ORD-001",         computer.order_number
     assert_equal "Completely original", computer.computer_condition.name
-    assert_equal "Working", computer.run_status.name
-    assert_equal "Some history", computer.history
+    assert_equal "Working",             computer.run_status.name
+    assert_equal "Some history",        computer.history
   end
 
   test "imports a single spare component (no computer)" do
@@ -80,10 +86,10 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
     end
 
     component = @alice.components.find_by!(serial_number: "MB-SN-01")
-    assert_nil component.computer,                        "Spare component should have no computer"
-    assert_equal "Memory Board",  component.component_type.name
-    assert_equal "Working",       component.component_condition.condition
-    assert_equal "MB-ORD-01",     component.order_number
+    assert_nil component.computer
+    assert_equal "Memory Board", component.component_type.name
+    assert_equal "Working",      component.component_condition.condition
+    assert_equal "MB-ORD-01",    component.order_number
     assert_equal "Spare memory board", component.description
   end
 
@@ -113,15 +119,13 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
     assert_difference "@alice.computers.count", 1 do
       result = OwnerImportService.process(@alice, csv_upload(csv))
       assert result[:success], "Expected success, got: #{result[:error]}"
-      # Appliance rows increment appliance_count, not computer_count.
       assert_equal 1, result[:appliance_count]
       assert_equal 0, result[:computer_count]
     end
 
     appliance = @alice.computers.find_by!(serial_number: "APP-SN-001")
-    assert appliance.device_type_appliance?,
-           "Imported 'appliance' record_type should produce device_type: appliance"
-    assert_equal "HSC50", appliance.computer_model.name
+    assert appliance.device_type_appliance?
+    assert_equal "HSC50",              appliance.computer_model.name
     assert_equal "Storage controller", appliance.history
   end
 
@@ -132,7 +136,7 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
     ])
 
     result = OwnerImportService.process(@alice, csv_upload(csv))
-    assert result[:success], "Expected 'appliance' to be a valid record_type, got: #{result[:error]}"
+    assert result[:success], "Expected 'appliance' to be valid, got: #{result[:error]}"
   end
 
   # ── device_type: peripheral ───────────────────────────────────────────────
@@ -147,15 +151,13 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
     assert_difference "@alice.computers.count", 1 do
       result = OwnerImportService.process(@alice, csv_upload(csv))
       assert result[:success], "Expected success, got: #{result[:error]}"
-      # Peripheral rows increment peripheral_count, not computer_count.
       assert_equal 1, result[:peripheral_count]
       assert_equal 0, result[:computer_count]
     end
 
     peripheral = @alice.computers.find_by!(serial_number: "PER-SN-001")
-    assert peripheral.device_type_peripheral?,
-           "Imported 'peripheral' record_type should produce device_type: peripheral"
-    assert_equal "DEC VT278", peripheral.computer_model.name
+    assert peripheral.device_type_peripheral?
+    assert_equal "DEC VT278",             peripheral.computer_model.name
     assert_equal "VT278 graphics terminal", peripheral.history
   end
 
@@ -166,7 +168,7 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
     ])
 
     result = OwnerImportService.process(@alice, csv_upload(csv))
-    assert result[:success], "Expected 'peripheral' to be a valid record_type, got: #{result[:error]}"
+    assert result[:success], "Expected 'peripheral' to be valid, got: #{result[:error]}"
   end
 
   test "importing a 'computer' row still creates device_type: computer" do
@@ -174,12 +176,10 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
       ["computer", "PDP-11/70", nil, "COMPUTER-TYPE-SN", nil, nil, nil,
        nil, nil, nil, nil, nil]
     ])
-
     OwnerImportService.process(@alice, csv_upload(csv))
 
     computer = @alice.computers.find_by!(serial_number: "COMPUTER-TYPE-SN")
-    assert computer.device_type_computer?,
-           "Imported 'computer' record_type should produce device_type: computer"
+    assert computer.device_type_computer?
   end
 
   # ── Two-pass strategy ────────────────────────────────────────────────────
@@ -197,11 +197,10 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
 
     computer  = @alice.computers.find_by!(serial_number: "IMPORT-SN-TWO-PASS")
     component = @alice.components.find_by!(description: "Attached to new computer")
-
-    assert_equal computer, component.computer, "Component should be attached to the newly imported computer"
+    assert_equal computer, component.computer
   end
 
-  test "component rows appear before computer rows in CSV but still attach correctly" do
+  test "component rows before computer rows in CSV still attach correctly" do
     csv = build_csv([
       ["component", nil, nil, "IMPORT-SN-REVERSED", nil, nil, nil,
        "Memory Board", nil, nil, nil, "Listed before its computer"],
@@ -214,14 +213,12 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
 
     computer  = @alice.computers.find_by!(serial_number: "IMPORT-SN-REVERSED")
     component = @alice.components.find_by!(description: "Listed before its computer")
-
     assert_equal computer, component.computer
   end
 
   # ── Duplicate skipping ───────────────────────────────────────────────────
 
   test "re-importing an existing computer serial number is silently skipped" do
-    # SN12345 already belongs to alice's pdp11_70 fixture.
     csv = build_csv([
       ["computer", "PDP-11/70", nil, "SN12345", nil, nil, nil,
        nil, nil, nil, nil, nil]
@@ -229,13 +226,12 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
 
     assert_no_difference "@alice.computers.count" do
       result = OwnerImportService.process(@alice, csv_upload(csv))
-      assert result[:success], "Duplicate skip must not cause a failure"
-      assert_equal 0, result[:computer_count], "Skipped computer must not be counted"
+      assert result[:success]
+      assert_equal 0, result[:computer_count]
     end
   end
 
   test "same serial number on a different model is NOT a duplicate and is imported" do
-    # alice has SN12345 on pdp11_70. SN12345 on vt100 is a different device.
     csv = build_csv([
       ["computer", "VT100", nil, "SN12345", nil, nil, nil,
        nil, nil, nil, nil, nil]
@@ -271,10 +267,8 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
 
   test "component without serial number is always created (no duplicate check)" do
     csv = build_csv([
-      ["component", nil, nil, nil, nil, nil, nil,
-       "CPU Board", nil, nil, nil, "No serial 1"],
-      ["component", nil, nil, nil, nil, nil, nil,
-       "CPU Board", nil, nil, nil, "No serial 2"]
+      ["component", nil, nil, nil, nil, nil, nil, "CPU Board", nil, nil, nil, "No serial 1"],
+      ["component", nil, nil, nil, nil, nil, nil, "CPU Board", nil, nil, nil, "No serial 2"]
     ])
 
     assert_difference "@alice.components.count", 2 do
@@ -284,7 +278,7 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
     end
   end
 
-  # ── Unknown computer serial in component → spare (not error) ─────────────
+  # ── Unknown computer serial in component → spare ─────────────────────────
 
   test "component with unknown computer_serial_number is imported as spare" do
     csv = build_csv([
@@ -293,27 +287,302 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
     ])
 
     result = OwnerImportService.process(@alice, csv_upload(csv))
-    assert result[:success], "Unknown computer serial must not cause a failure"
+    assert result[:success]
 
     component = @alice.components.find_by!(serial_number: "SPARE-DOWNGRADE-SN")
-    assert_nil component.computer, "Component should be spare when computer serial not found"
+    assert_nil component.computer
+  end
+
+  # ── Comment row handling (Session 37) ────────────────────────────────────
+
+  test "comment rows (record_type starting with '#') are silently skipped" do
+    csv = build_csv([
+      ["# This is a comment — ignore me"],
+      ["computer", "PDP-11/70", nil, "COMMENT-SKIP-SN", nil, nil, nil,
+       nil, nil, nil, nil, nil]
+    ])
+
+    result = OwnerImportService.process(@alice, csv_upload(csv))
+    assert result[:success], "Comment row must not cause failure: #{result[:error]}"
+    assert @alice.computers.exists?(serial_number: "COMMENT-SKIP-SN"),
+           "Computer after comment row must be imported"
+  end
+
+  test "comment rows do not count as unknown record_type" do
+    csv = build_csv([
+      ["# Owner: alice — exported 2026-03-20"],
+      ["# Another annotation line"]
+    ])
+
+    result = OwnerImportService.process(@alice, csv_upload(csv))
+    assert result[:success], "Comment-only CSV must succeed: #{result[:error]}"
+  end
+
+  test "comment row does not count toward any import counter" do
+    csv = build_csv([
+      ["# Annotation only"]
+    ])
+
+    result = OwnerImportService.process(@alice, csv_upload(csv))
+    assert result[:success]
+    assert_equal 0, result[:computer_count]
+    assert_equal 0, result[:component_count]
+    assert_equal 0, result[:connection_group_count].to_i
+  end
+
+  # ── Connections import (Session 37) ──────────────────────────────────────
+
+  test "CSV without a connections section imports normally with zero connection_group_count" do
+    csv = build_csv([
+      ["computer", "PDP-11/70", nil, "CONN-NOCONN-SN", nil, nil, nil,
+       nil, nil, nil, nil, nil]
+    ])
+    result = OwnerImportService.process(@alice, csv_upload(csv))
+    assert result[:success]
+    assert_equal 0, result[:connection_group_count].to_i
+  end
+
+  test "importing a connections section creates connection groups" do
+    # alice_pdp11 (SN12345, PDP-11/70) and alice_vax (VAX-780-001, VAX-11/780)
+    # already exist as alice's fixture computers.
+    csv = build_csv_with_connections([], [
+      { type: "RS-232 Serial", label: "My RS-232 link",
+        members: [
+          { model: "PDP-11/70",  serial: "SN12345"     },
+          { model: "VAX-11/780", serial: "VAX-780-001" }
+        ] }
+    ])
+
+    assert_difference "ConnectionGroup.count", 1 do
+      result = OwnerImportService.process(@alice, csv_upload(csv))
+      assert result[:success], "Expected success, got: #{result[:error]}"
+      assert_equal 1, result[:connection_group_count]
+    end
+  end
+
+  test "imported connection group has the correct connection_type" do
+    csv = build_csv_with_connections([], [
+      { type: "RS-232 Serial", label: "Type test group",
+        members: [
+          { model: "PDP-11/70",  serial: "SN12345"     },
+          { model: "VAX-11/780", serial: "VAX-780-001" }
+        ] }
+    ])
+
+    OwnerImportService.process(@alice, csv_upload(csv))
+
+    group = @alice.connection_groups.find_by(label: "Type test group")
+    assert_not_nil group
+    assert_equal "RS-232 Serial", group.connection_type.name
+  end
+
+  test "imported connection group with no type imports successfully with nil type" do
+    csv = build_csv_with_connections([], [
+      { type: nil, label: "No type group",
+        members: [
+          { model: "PDP-11/70",  serial: "SN12345"     },
+          { model: "VAX-11/780", serial: "VAX-780-001" }
+        ] }
+    ])
+
+    result = OwnerImportService.process(@alice, csv_upload(csv))
+    assert result[:success], "Group with no type must import successfully: #{result[:error]}"
+
+    group = @alice.connection_groups.find_by(label: "No type group")
+    assert_nil group.connection_type
+  end
+
+  test "imported connection group has the correct label" do
+    csv = build_csv_with_connections([], [
+      { type: nil, label: "My special label",
+        members: [
+          { model: "PDP-11/70",  serial: "SN12345"     },
+          { model: "VAX-11/780", serial: "VAX-780-001" }
+        ] }
+    ])
+
+    OwnerImportService.process(@alice, csv_upload(csv))
+    assert @alice.connection_groups.exists?(label: "My special label")
+  end
+
+  test "imported connection group has the correct members" do
+    csv = build_csv_with_connections([], [
+      { type: nil, label: "Member check group",
+        members: [
+          { model: "PDP-11/70",  serial: "SN12345"     },
+          { model: "VAX-11/780", serial: "VAX-780-001" }
+        ] }
+    ])
+
+    OwnerImportService.process(@alice, csv_upload(csv))
+
+    group = @alice.connection_groups.find_by(label: "Member check group")
+    assert_equal 2, group.connection_members.count
+    member_serials = group.computers.pluck(:serial_number)
+    assert_includes member_serials, "SN12345"
+    assert_includes member_serials, "VAX-780-001"
+  end
+
+  test "connection group members can reference computers created in the same import" do
+    # Import two new computers and a connection group between them in one file.
+    csv = build_csv_with_connections(
+      [
+        ["computer", "PDP-11/70",  nil, "CONN-NEW-1", nil, nil, nil, nil, nil, nil, nil, nil],
+        ["computer", "VAX-11/780", nil, "CONN-NEW-2", nil, nil, nil, nil, nil, nil, nil, nil]
+      ],
+      [
+        { type: nil, label: "New computers group",
+          members: [
+            { model: "PDP-11/70",  serial: "CONN-NEW-1" },
+            { model: "VAX-11/780", serial: "CONN-NEW-2" }
+          ] }
+      ]
+    )
+
+    result = OwnerImportService.process(@alice, csv_upload(csv))
+    assert result[:success], "Expected success, got: #{result[:error]}"
+    assert_equal 1, result[:connection_group_count]
+
+    group = @alice.connection_groups.find_by(label: "New computers group")
+    assert_not_nil group
+    assert_equal 2, group.connection_members.count
+  end
+
+  test "multiple connection groups in one file are all imported" do
+    csv = build_csv_with_connections([], [
+      { type: nil, label: "First group",
+        members: [
+          { model: "PDP-11/70",  serial: "SN12345"     },
+          { model: "VAX-11/780", serial: "VAX-780-001" }
+        ] },
+      { type: nil, label: "Second group",
+        members: [
+          { model: "PDP-11/70",  serial: "SN12345"     },
+          { model: "VAX-11/780", serial: "VAX-780-001" }
+        ] }
+    ])
+
+    assert_difference "ConnectionGroup.count", 2 do
+      result = OwnerImportService.process(@alice, csv_upload(csv))
+      assert result[:success], "Expected success, got: #{result[:error]}"
+      assert_equal 2, result[:connection_group_count]
+    end
+  end
+
+  test "unknown connection_type name fails with descriptive error" do
+    csv = build_csv_with_connections([], [
+      { type: "Nonexistent Bus Type", label: "Bad type group",
+        members: [
+          { model: "PDP-11/70",  serial: "SN12345"     },
+          { model: "VAX-11/780", serial: "VAX-780-001" }
+        ] }
+    ])
+
+    result = OwnerImportService.process(@alice, csv_upload(csv))
+    refute result[:success]
+    assert_match "Nonexistent Bus Type", result[:error]
+  end
+
+  test "connection_member referencing a non-existent computer fails" do
+    csv = build_csv_with_connections([], [
+      { type: nil, label: "Bad member group",
+        members: [
+          { model: "PDP-11/70", serial: "DOES-NOT-EXIST-999" },
+          { model: "PDP-11/70", serial: "SN12345" }
+        ] }
+    ])
+
+    result = OwnerImportService.process(@alice, csv_upload(csv))
+    refute result[:success]
+    assert_match "DOES-NOT-EXIST-999", result[:error]
+  end
+
+  test "connection group with fewer than 2 members fails model validation" do
+    csv = build_csv_with_connections([], [
+      { type: nil, label: "Too small group",
+        members: [
+          { model: "PDP-11/70", serial: "SN12345" }  # only 1 member
+        ] }
+    ])
+
+    assert_no_difference "ConnectionGroup.count" do
+      result = OwnerImportService.process(@alice, csv_upload(csv))
+      refute result[:success],
+             "Group with only 1 member must fail minimum_two_members validation"
+    end
+  end
+
+  test "connection group with 0 members fails model validation" do
+    csv = build_csv_with_connections([], [
+      { type: nil, label: "Empty group", members: [] }
+    ])
+
+    assert_no_difference "ConnectionGroup.count" do
+      result = OwnerImportService.process(@alice, csv_upload(csv))
+      refute result[:success]
+    end
+  end
+
+  test "connection_member before any connection_group row fails with descriptive error" do
+    # Manually build a CSV with a member row but no group row before it.
+    csv = CSV.generate(headers: true, force_quotes: true) do |c|
+      c << OwnerExportService::CSV_HEADERS
+      c << ["! --- connections ---"]
+      c << ["connection_member", "PDP-11/70", nil, "SN12345",
+            nil, nil, nil, nil, nil, nil, nil, nil]
+    end
+
+    result = OwnerImportService.process(@alice, csv_upload(csv))
+    refute result[:success]
+    assert_match "connection_member", result[:error]
+  end
+
+  test "connection_group row before the sentinel is treated as unknown record_type" do
+    # connection_group outside of connections mode is an unknown type.
+    csv = build_csv([
+      ["connection_group", "RS-232 Serial", "My link",
+       nil, nil, nil, nil, nil, nil, nil, nil, nil]
+    ])
+
+    result = OwnerImportService.process(@alice, csv_upload(csv))
+    refute result[:success]
+    assert_match "connection_group", result[:error]
+  end
+
+  test "bad connection group does not prevent earlier successful connection groups" do
+    # First group is valid; second group has only 1 member (fails validation).
+    # The transaction rolls back both — atomicity is at the file level.
+    csv = build_csv_with_connections([], [
+      { type: nil, label: "Valid group",
+        members: [
+          { model: "PDP-11/70",  serial: "SN12345"     },
+          { model: "VAX-11/780", serial: "VAX-780-001" }
+        ] },
+      { type: nil, label: "Invalid group (1 member)",
+        members: [
+          { model: "PDP-11/70", serial: "SN12345" }
+        ] }
+    ])
+
+    # Entire import (both groups) must be rolled back — atomicity.
+    assert_no_difference "ConnectionGroup.count" do
+      result = OwnerImportService.process(@alice, csv_upload(csv))
+      refute result[:success]
+    end
   end
 
   # ── Atomicity ────────────────────────────────────────────────────────────
 
   test "single bad row rolls back the entire import" do
     csv = build_csv([
-      ["computer", "PDP-11/70", nil, "ATOMIC-GOOD-1", nil, nil, nil,
-       nil, nil, nil, nil, nil],
-      ["computer", "NONEXISTENT MODEL", nil, "ATOMIC-BAD-1", nil, nil, nil,
-       nil, nil, nil, nil, nil],
-      ["computer", "PDP-11/70", nil, "ATOMIC-GOOD-2", nil, nil, nil,
-       nil, nil, nil, nil, nil]
+      ["computer", "PDP-11/70",       nil, "ATOMIC-GOOD-1", nil, nil, nil, nil, nil, nil, nil, nil],
+      ["computer", "NONEXISTENT MODEL", nil, "ATOMIC-BAD-1",  nil, nil, nil, nil, nil, nil, nil, nil],
+      ["computer", "PDP-11/70",       nil, "ATOMIC-GOOD-2", nil, nil, nil, nil, nil, nil, nil, nil]
     ])
 
     assert_no_difference "@alice.computers.count" do
       result = OwnerImportService.process(@alice, csv_upload(csv))
-      refute result[:success], "Expected failure"
+      refute result[:success]
       assert_match "NONEXISTENT MODEL", result[:error]
     end
 
@@ -325,10 +594,8 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
 
   test "computer row without serial_number fails with descriptive error" do
     csv = build_csv([
-      ["computer", "PDP-11/70", nil, nil, nil, nil, nil,
-       nil, nil, nil, nil, nil]
+      ["computer", "PDP-11/70", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil]
     ])
-
     result = OwnerImportService.process(@alice, csv_upload(csv))
     refute result[:success]
     assert_match "computer_serial_number", result[:error]
@@ -336,10 +603,8 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
 
   test "computer row without computer_model fails with descriptive error" do
     csv = build_csv([
-      ["computer", nil, nil, "NO-MODEL-SN", nil, nil, nil,
-       nil, nil, nil, nil, nil]
+      ["computer", nil, nil, "NO-MODEL-SN", nil, nil, nil, nil, nil, nil, nil, nil]
     ])
-
     result = OwnerImportService.process(@alice, csv_upload(csv))
     refute result[:success]
     assert_match "computer_model", result[:error]
@@ -347,10 +612,8 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
 
   test "component row without component_type fails with descriptive error" do
     csv = build_csv([
-      ["component", nil, nil, nil, nil, nil, nil,
-       nil, nil, nil, nil, "No type given"]
+      ["component", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "No type given"]
     ])
-
     result = OwnerImportService.process(@alice, csv_upload(csv))
     refute result[:success]
     assert_match "component_type", result[:error]
@@ -363,7 +626,6 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
       ["computer", "Does Not Exist 9000", nil, "LOOKUP-SN-01", nil, nil, nil,
        nil, nil, nil, nil, nil]
     ])
-
     result = OwnerImportService.process(@alice, csv_upload(csv))
     refute result[:success]
     assert_match "Does Not Exist 9000", result[:error]
@@ -374,7 +636,6 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
       ["component", nil, nil, nil, nil, nil, nil,
        "Phantom Type", nil, nil, nil, "Some component"]
     ])
-
     result = OwnerImportService.process(@alice, csv_upload(csv))
     refute result[:success]
     assert_match "Phantom Type", result[:error]
@@ -385,7 +646,6 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
       ["computer", "PDP-11/70", nil, "COND-ERR-SN", "Nonexistent Condition",
        nil, nil, nil, nil, nil, nil, nil]
     ])
-
     result = OwnerImportService.process(@alice, csv_upload(csv))
     refute result[:success]
     assert_match "Nonexistent Condition", result[:error]
@@ -396,7 +656,6 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
       ["component", nil, nil, nil, nil, nil, nil,
        "Memory Board", nil, nil, "Phantom Condition", "Some component"]
     ])
-
     result = OwnerImportService.process(@alice, csv_upload(csv))
     refute result[:success]
     assert_match "Phantom Condition", result[:error]
@@ -407,7 +666,6 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
       ["computer", "PDP-11/70", nil, "RS-ERR-SN", nil, "Phantom Status",
        nil, nil, nil, nil, nil, nil]
     ])
-
     result = OwnerImportService.process(@alice, csv_upload(csv))
     refute result[:success]
     assert_match "Phantom Status", result[:error]
@@ -416,9 +674,8 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
   # ── Header validation ─────────────────────────────────────────────────────
 
   test "CSV with missing required headers fails" do
-    bad_csv = "record_type,computer_model\\ncomputer,PDP-11/70\\n"
-
-    result = OwnerImportService.process(@alice, csv_upload(bad_csv))
+    bad_csv = "record_type,computer_model\ncomputer,PDP-11/70\n"
+    result  = OwnerImportService.process(@alice, csv_upload(bad_csv))
     refute result[:success]
     assert_match "Missing required CSV columns", result[:error]
   end
@@ -430,7 +687,6 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
       ["widget", "PDP-11/70", nil, "UNKNOWN-TYPE-SN", nil, nil, nil,
        nil, nil, nil, nil, nil]
     ])
-
     result = OwnerImportService.process(@alice, csv_upload(csv))
     refute result[:success]
     assert_match "widget", result[:error]
@@ -453,12 +709,36 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
 
   private
 
-  # ── Helpers ────────────────────────────────────────────────────────────
+  # ── Helpers ──────────────────────────────────────────────────────────────
 
+  # Build a CSV string with the standard headers followed by the given rows.
   def build_csv(rows)
     CSV.generate(headers: true, force_quotes: true) do |csv|
       csv << OwnerExportService::CSV_HEADERS
       rows.each { |row| csv << row }
+    end
+  end
+
+  # Build a CSV string with optional device/component rows in the device section,
+  # followed by the sentinel and one or more connection group definitions.
+  #
+  # connection_groups_data: array of hashes with keys:
+  #   type:    connection_type name string (or nil for no type)
+  #   label:   group label string (or nil)
+  #   members: array of { model: model_name, serial: serial_number }
+  def build_csv_with_connections(device_rows, connection_groups_data)
+    CSV.generate(headers: true, force_quotes: true) do |csv|
+      csv << OwnerExportService::CSV_HEADERS
+      device_rows.each { |row| csv << row }
+      csv << ["! --- connections ---"]
+      connection_groups_data.each do |g|
+        csv << ["connection_group", g[:type], g[:label],
+                nil, nil, nil, nil, nil, nil, nil, nil, nil]
+        g[:members].each do |m|
+          csv << ["connection_member", m[:model], nil, m[:serial],
+                  nil, nil, nil, nil, nil, nil, nil, nil]
+        end
+      end
     end
   end
 
@@ -468,10 +748,10 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
     tempfile.rewind
 
     ActionDispatch::Http::UploadedFile.new(
-      tempfile:     tempfile,
-      filename:     filename,
-      type:         content_type,
-      head:         "Content-Disposition: form-data; name=\"file\"; filename=\"#{filename}\""
+      tempfile: tempfile,
+      filename: filename,
+      type:     content_type,
+      head:     "Content-Disposition: form-data; name=\"file\"; filename=\"#{filename}\""
     )
   end
 end

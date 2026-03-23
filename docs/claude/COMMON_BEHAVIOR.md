@@ -1,5 +1,7 @@
 # COMMON_BEHAVIOR.md
-# version 2.4
+# version 2.5
+# Session 36: Reading Rule Documents — clarified that bash cat applies to skill files too.
+#   Real example: decor-session-rules skill read with view tool at Session 36 start.
 # decor/docs/claude/COMMON_BEHAVIOR.md
 # Session 14: Major reliability update.
 #   - Added "Reading Rule Documents" section — MANDATORY use of bash cat, never view tool.
@@ -99,6 +101,14 @@ After reading each document, Claude MUST log the line count as confirmation:
 
 **RULE: Read any other uploaded code or config file using `bash cat` as well.**
 
+**RULE: This applies to skill files too.** Skill files read from `/mnt/skills/`
+at session start must also be read via `bash cat` — never the `view` tool.
+The truncation risk is identical regardless of where the file lives.
+
+```bash
+cat /mnt/skills/user/decor-session-rules/SKILL.md
+```
+
 `view` MAY be used for directory listings only — never for reading file content
 that feeds into rule compliance or implementation decisions.
 
@@ -106,6 +116,12 @@ that feeds into rule compliance or implementation decisions.
 DECOR_PROJECT.md (636 lines) was read with the `view` tool. Lines 215–422 were
 silently truncated. Claude completed a partial read and proceeded without noticing.
 This is unacceptable — the rules set exists precisely to be read completely.
+
+**Real example (Session 36, March 19, 2026):**
+The `decor-session-rules` skill at `/mnt/skills/user/decor-session-rules/SKILL.md`
+was read with the `view` tool at session start. The file happened to be short enough
+that no truncation occurred — but the rule was still violated. The tool choice is
+wrong regardless of file length. `bash cat` is always the correct tool.
 
 ---
 
