@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_19_020000) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_23_010000) do
   create_table "component_conditions", force: :cascade do |t|
     t.string "condition", limit: 40, null: false
     t.datetime "created_at", precision: nil, null: false
@@ -86,21 +86,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_19_020000) do
 
   create_table "connection_groups", force: :cascade do |t|
     t.integer "connection_type_id"
-    t.datetime "created_at", precision: nil, null: false
+    t.datetime "created_at", precision: nil
     t.string "label", limit: 100
+    t.integer "owner_group_id", default: 0, null: false
     t.integer "owner_id", null: false
-    t.datetime "updated_at", precision: nil, null: false
+    t.datetime "updated_at", precision: nil
     t.index ["connection_type_id"], name: "index_connection_groups_on_connection_type_id"
+    t.index ["owner_id", "owner_group_id"], name: "index_connection_groups_on_owner_and_ownergroup", unique: true
     t.index ["owner_id"], name: "index_connection_groups_on_owner_id"
   end
 
   create_table "connection_members", force: :cascade do |t|
     t.integer "computer_id", null: false
     t.integer "connection_group_id", null: false
-    t.datetime "created_at", precision: nil, null: false
-    t.datetime "updated_at", precision: nil, null: false
+    t.datetime "created_at", precision: nil
+    t.string "label", limit: 100
+    t.integer "owner_member_id", default: 0, null: false
+    t.datetime "updated_at", precision: nil
     t.index ["computer_id"], name: "index_connection_members_on_computer_id"
     t.index ["connection_group_id", "computer_id"], name: "index_connection_members_on_group_and_computer", unique: true
+    t.index ["connection_group_id", "owner_member_id"], name: "index_connection_members_on_group_and_ownermember", unique: true
   end
 
   create_table "connection_types", force: :cascade do |t|

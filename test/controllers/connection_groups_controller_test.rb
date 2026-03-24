@@ -1,31 +1,37 @@
-# decor/test/controllers/connection_groups_controller_test.rb - version 1.0
-# Session 36: Part 4 — Owner ConnectionGroup CRUD.
+# decor/test/controllers/connection_groups_controller_test.rb
+# version 1.1
+# v1.1 (Session 38): Updated for UI overhaul.
+#   - Index tests: use connections_owner_path (the new sub-page) instead of
+#     owner_connection_groups_path (which now 301-redirects to the sub-page).
+#   - Redirect assertions after create/update/destroy: changed to
+#     connections_owner_path to match the controller's new redirect target.
+#   - Flash messages: "Connection group was successfully…" →
+#     "Connection was successfully…" (UI rename: Connection Group → Connection).
+#   - Added label length validation test: ConnectionGroup now validates
+#     label length: { maximum: 100 }.
+#   - create test: removed explicit owner_group_id / owner_member_id — auto-assign
+#     callbacks handle them when left blank.
+# v1.0 (Session 36): Initial controller test file.
 #
 # Covers:
 #   Authentication:  unauthenticated requests redirect to new_session_path.
-#   Authorisation:   an owner cannot access or modify another owner's groups
-#                    (set_owner redirects to root_path).
-#   index:           renders successfully, shows own groups, does not show
-#                    another owner's groups.
+#   Authorisation:   an owner cannot access or modify another owner's groups.
+#   index:           renders the connections sub-page (connections_owner_path).
 #   new:             renders the form.
-#   create (valid):  creates the group, redirects to index with notice.
-#   create (invalid): only 1 member fails minimum_two_members validation;
-#                     re-renders new with status 422.
+#   create (valid):  creates the group, redirects to connections sub-page.
+#   create (invalid): only 1 member fails minimum_two_members; re-renders 422.
 #   edit:            renders the form with existing data.
-#   update (valid):  updates the group, redirects to index with notice.
+#   update (valid):  updates the group, redirects to connections sub-page.
 #   update (invalid): label over 100 chars fails validation; re-renders edit 422.
-#   destroy:         destroys the group, redirects to index with notice.
-#   auth-destroy:    bob cannot destroy alice's group.
+#   destroy:         destroys the group, redirects to connections sub-page.
 #
 # Fixture notes:
-#   owners(:one)                    = alice (admin, password via detect_password)
-#   owners(:two)                    = bob   (non-admin, password via detect_password)
+#   owners(:one)                         = alice
+#   owners(:two)                         = bob
 #   connection_groups(:alice_pdp11_vax)  — alice's group, label: "Lab setup"
 #   connection_groups(:bob_pdp8_vt100)   — bob's group
 #   computers(:alice_pdp11)              — alice's PDP-11/70
 #   computers(:alice_vax)                — alice's VAX-11/780
-#
-# All tests run in a rolled-back transaction (standard minitest fixtures).
 
 require "test_helper"
 
@@ -35,6 +41,8 @@ class ConnectionGroupsControllerTest < ActionDispatch::IntegrationTest
   # ---------------------------------------------------------------------------
 
   test "index redirects to login when not authenticated" do
+    # owner_connection_groups_path now 301-redirects internally, but auth guard
+    # fires before the redirect — still redirects to login.
     get owner_connection_groups_path(owners(:one))
     assert_redirected_to new_session_path
   end
@@ -56,7 +64,6 @@ class ConnectionGroupsControllerTest < ActionDispatch::IntegrationTest
   # ---------------------------------------------------------------------------
 
   test "index redirects to root when accessing another owner's groups" do
-    # Bob tries to view alice's connection groups — set_owner fires and redirects.
     login_as owners(:two)
     get owner_connection_groups_path(owners(:one))
     assert_redirected_to root_path
@@ -77,25 +84,28 @@ class ConnectionGroupsControllerTest < ActionDispatch::IntegrationTest
   end
 
   # ---------------------------------------------------------------------------
-  # Index
+  # Index — now served at connections_owner_path
   # ---------------------------------------------------------------------------
 
   test "index renders successfully for the authenticated owner" do
+    # The connections sub-page (connections_owner_path) replaced the old
+    # standalone index. owner_connection_groups_path 301-redirects there, but
+    # we test the canonical URL directly.
     login_as owners(:one)
-    get owner_connection_groups_path(owners(:one))
+    get connections_owner_path(owners(:one))
     assert_response :success
   end
 
   test "index shows own connection group label" do
     login_as owners(:one)
-    get owner_connection_groups_path(owners(:one))
+    get connections_owner_path(owners(:one))
     assert_includes response.body, connection_groups(:alice_pdp11_vax).label,
       "Alice's group label should appear on her own connections index"
   end
 
   test "index does not show another owner's group label" do
     login_as owners(:one)
-    get owner_connection_groups_path(owners(:one))
+    get connections_owner_path(owners(:one))
     assert_not_includes response.body, connection_groups(:bob_pdp8_vt100).label,
       "Bob's group label should not appear on alice's connections index"
   end
@@ -115,6 +125,8 @@ class ConnectionGroupsControllerTest < ActionDispatch::IntegrationTest
   # ---------------------------------------------------------------------------
 
   test "create with valid params (2 members) creates group and redirects" do
+    # owner_group_id and owner_member_ids are intentionally omitted —
+    # auto_assign callbacks supply them on create.
     login_as owners(:one)
     assert_difference "ConnectionGroup.count", 1 do
       post owner_connection_groups_path(owners(:one)), params: {
@@ -127,12 +139,11 @@ class ConnectionGroupsControllerTest < ActionDispatch::IntegrationTest
         }
       }
     end
-    assert_redirected_to owner_connection_groups_path(owners(:one))
-    assert_equal "Connection group was successfully created.", flash[:notice]
+    assert_redirected_to connections_owner_path(owners(:one))
+    assert_equal "Connection was successfully created.", flash[:notice]
   end
 
   test "create with only 1 member re-renders new with validation error" do
-    # minimum_two_members validation requires at least 2 active members.
     login_as owners(:one)
     assert_no_difference "ConnectionGroup.count" do
       post owner_connection_groups_path(owners(:one)), params: {
@@ -148,8 +159,6 @@ class ConnectionGroupsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "create with no members re-renders new with validation error" do
-    # An empty submission (all blank rows discarded by reject_if: :all_blank)
-    # produces zero members — also fails minimum_two_members.
     login_as owners(:one)
     assert_no_difference "ConnectionGroup.count" do
       post owner_connection_groups_path(owners(:one)), params: {
@@ -180,13 +189,13 @@ class ConnectionGroupsControllerTest < ActionDispatch::IntegrationTest
     patch owner_connection_group_path(owners(:one), connection_groups(:alice_pdp11_vax)), params: {
       connection_group: { label: "Updated label" }
     }
-    assert_redirected_to owner_connection_groups_path(owners(:one))
-    assert_equal "Connection group was successfully updated.", flash[:notice]
+    assert_redirected_to connections_owner_path(owners(:one))
+    assert_equal "Connection was successfully updated.", flash[:notice]
     assert_equal "Updated label", connection_groups(:alice_pdp11_vax).reload.label
   end
 
   test "update with a label over 100 characters re-renders edit with validation error" do
-    # Label validates length: maximum 100 (from ConnectionGroup model).
+    # ConnectionGroup validates label length: { maximum: 100 }.
     login_as owners(:one)
     patch owner_connection_group_path(owners(:one), connection_groups(:alice_pdp11_vax)), params: {
       connection_group: { label: "x" * 101 }
@@ -203,7 +212,7 @@ class ConnectionGroupsControllerTest < ActionDispatch::IntegrationTest
     assert_difference "ConnectionGroup.count", -1 do
       delete owner_connection_group_path(owners(:one), connection_groups(:alice_pdp11_vax))
     end
-    assert_redirected_to owner_connection_groups_path(owners(:one))
-    assert_equal "Connection group was successfully deleted.", flash[:notice]
+    assert_redirected_to connections_owner_path(owners(:one))
+    assert_equal "Connection was successfully deleted.", flash[:notice]
   end
 end

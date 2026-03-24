@@ -1,6 +1,8 @@
 # RAILS_SPECIFICS.md
-# version 2.3
-# Session 36: Added "Nested Attributes — reject_if: :all_blank" section.
+# version 2.4
+# Session 37: Added "CSV::Table — Never Use #to_a When You Need Row Indexing" section.
+#   CSV::Table#to_a returns plain arrays; iterating with map/each yields CSV::Row objects
+#   that support string-key indexing. Real example: OwnerExportServiceTest Session 37.
 #   Without this option, blank form rows (user adds a member row but leaves it
 #   empty) attempt to build child records with missing required attributes,
 #   producing confusing validation errors before the parent-level validator runs.
@@ -874,5 +876,47 @@ If it is an admin page:
   [ ] app/controllers/admin/base_controller.rb   (check inherited auth guard)
   [ ] app/views/layouts/admin.html.erb           (dropdown menu)
 ```
+
+---
+
+## CSV::Table — Never Use #to_a When You Need Row Indexing
+
+**`CSV::Table#to_a` returns plain arrays, not `CSV::Row` objects.**
+
+When you call `csv_table.to_a`, Ruby returns an array of plain arrays —
+the first element is the headers array, the rest are value arrays. Plain
+arrays cannot be indexed by a string column name; attempting it raises:
+
+```
+TypeError: no implicit conversion of String into Integer
+```
+
+**Wrong — #to_a produces plain arrays:**
+```ruby
+rows = @csv.to_a
+sentinel_idx = rows.index { |r| r["record_type"]&.start_with?("!") }
+# → TypeError: no implicit conversion of String into Integer
+```
+
+**Correct — iterate with map/select/each to get CSV::Row objects:**
+```ruby
+rows = @csv.map { |r| r }   # or @csv.each.to_a — both yield CSV::Row objects
+sentinel_idx = rows.index { |r| r["record_type"]&.start_with?("!") }
+# → works correctly
+```
+
+**When this matters:**
+- Any time you need to collect `CSV::Row` objects into a plain array for
+  subsequent indexed access (e.g. `rows[i..]` slicing, position-based lookup).
+- Parsing CSV in tests that iterate and then slice by position.
+- The normal `@csv.select { }`, `@csv.find { }`, `@csv.each { }` patterns
+  already yield `CSV::Row` objects and are not affected.
+
+**Real example (Session 37, March 23, 2026):**
+`OwnerExportServiceTest` — two tests called `@csv.to_a` to collect rows for
+position-based sentinel detection. Both failed with `TypeError` on the first
+`r["record_type"]` access. Fixed by replacing `.to_a` with `.map { |r| r }`.
+
+---
 
 **End of RAILS_SPECIFICS.md**

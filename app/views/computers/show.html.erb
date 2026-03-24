@@ -1,28 +1,14 @@
-<%# decor/app/views/computers/show.html.erb - version 2.0 %>
+<%# decor/app/views/computers/show.html.erb - version 2.1 %>
+<%# v2.1 (Session 38): Connections section redesigned — multi-row table. %>
+<%#   Columns: CONNECTION ID | TYPE | CONNECTION LABEL | PORT ID | CONNECTS | PORT LABEL. %>
+<%#   First row of each group shows all group columns; subsequent rows show only %>
+<%#   the port columns (PORT ID, CONNECTS, PORT LABEL). %>
+<%#   Groups ordered by owner_group_id; ports by owner_member_id. %>
+<%#   Controller (v1.18) updated eager-load to include connection_members with computer+model. %>
 <%# v2.0 (Session 36): Connections Type column now always shows connection_type.name. %>
-<%#   Previously used label.presence || name, which incorrectly showed the longer %>
-<%#   label text when present. The short name is the correct value for this column.
-<%# v1.9 (Session 35): Brakeman fix — peer links in Connections section now built %>
-<%#   with safe_join(..., ", ") instead of .map{}.join().html_safe. safe_join returns %>
-<%#   an html_safe string from an already-safe array without marking raw user data safe. %>
-<%# v1.8 (Session 34): Added read-only "Connections" section between Components %>
-<%#   and the Back button. Displays the connection groups this device belongs to, %>
-<%#   each showing its type, optional label, and peer computers as links. %>
-<%#   Controller loads @connection_groups with eager-loading (see computers_controller.rb %>
-<%#   v1.17 show action). Peer computers filtered via reject in-memory to avoid N+1. %>
-<%# v1.7 (Session 22): Added "Trade Status" field in Line 2, as the third column. %>
-<%#   Mirrors _form.html.erb v2.5 (Condition | Run Status | Trade Status). %>
-<%#   The field is wrapped in - if logged_in? - and Line 2 expands from %>
-<%#   grid-cols-2 to grid-cols-3 accordingly. Non-logged-in visitors see the %>
-<%#   original 2-col row. Colour coding matches index row partials: %>
-<%#     offered   → text-green-700 %>
-<%#     wanted    → text-amber-600 %>
-<%#     no_barter → text-stone-400 %>
-<%# v1.6 (Session 17): "No components attached to this computer." now uses %>
-<%#   @computer.device_type so it reads "...this computer." or "...this appliance." %>
-<%# v1.5 (Session 12): Delete source "computer" → "computer_show". %>
-<%# v1.4 (Session 12): max-w-5xl → max-w-7xl; Order No. + Serial No. columns added; %>
-<%#   Delete button added; column order aligned with owners/show. %>
+<%# v1.9 (Session 35): Brakeman fix — peer links built with safe_join. %>
+<%# v1.8 (Session 34): Added read-only Connections section. %>
+<%# v1.7 (Session 22): Added Trade Status field. %>
 
 <div class="max-w-7xl mx-auto">
 
@@ -40,7 +26,7 @@
     <% end %>
   </div>
 
-  <%# ── Computer fields: styled display boxes, always rendered, empty → "—" ── %>
+  <%# ── Computer fields ── %>
   <dl class="space-y-4 text-sm mb-6">
 
     <%# Line 1 (3-col): Model | Order Number | Serial Number %>
@@ -60,7 +46,6 @@
     </div>
 
     <%# Line 2: Condition | Run Status | Trade Status (3-col when logged in, 2-col otherwise) %>
-    <%# Trade Status is only shown to logged-in members — barter data is member-only. %>
     <div class="grid <%= logged_in? ? "grid-cols-3" : "grid-cols-2" %> gap-4">
       <div>
         <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider mb-1">Condition</dt>
@@ -86,7 +71,7 @@
       <% end %>
     </div>
 
-    <%# Line 3 (full): History — whitespace-pre-wrap, ERB tag on same line (no leading whitespace rendered) %>
+    <%# Line 3 (full): History %>
     <div>
       <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider mb-1">History</dt>
       <dd class="block w-full p-3 rounded border border-stone-300 bg-white text-sm whitespace-pre-wrap" style="min-height: 4.5rem;"><%= @computer.history.presence || "—" %></dd>
@@ -142,17 +127,16 @@
         </table>
       </div>
     <% else %>
-      <%# device_type ("computer"/"appliance") used directly — no capitalisation needed here %>
       <p class="text-sm text-stone-500">No components attached to this <%= @computer.device_type %>.</p>
     <% end %>
   </div>
 
   <%# ── Connections section (read-only) ── %>
-  <%# Shows all connection groups this device belongs to. %>
-  <%# Each row: connection type | group label | peer computers in the same group. %>
-  <%# Visible to all visitors — connection data is not sensitive. %>
-  <%# @connection_groups is eager-loaded in the show action (see computers_controller.rb). %>
-  <%# Peers are filtered with reject (in-memory) to avoid N+1 against the preloaded cache. %>
+  <%# Shows all connections this device belongs to. %>
+  <%# Columns: CONNECTION ID | TYPE | CONNECTION LABEL | PORT ID | CONNECTS | PORT LABEL %>
+  <%# One row per port; first row of each group shows the group-level columns. %>
+  <%# @connection_groups eager-loads connection_members with computer+model (controller v1.18). %>
+  <%# Members sorted in memory by owner_member_id — no extra DB queries per group. %>
   <div class="mt-6">
     <h2 class="text-lg font-semibold mb-3">Connections (<%= @connection_groups.count %>)</h2>
 
@@ -161,57 +145,54 @@
         <table class="min-w-full divide-y divide-stone-200">
           <thead class="bg-stone-50">
             <tr>
+              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Connection ID</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Type</th>
-              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Label</th>
-              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Connected to</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Connection Label</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Port ID</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Connects</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Port Label</th>
             </tr>
           </thead>
-          <tbody class="bg-white divide-y divide-stone-200 text-sm">
-            <% @connection_groups.each do |group| %>
-              <tr class="hover:bg-stone-50">
+          <tbody class="bg-white text-sm">
 
-                <%# Type: connection_type.name always; "—" if no type set. %>
-                <%# The label is a longer description stored on ConnectionType but %>
-                <%# is NOT shown here — only the short name belongs in this column. %>
-                <td class="px-4 py-3 whitespace-nowrap text-stone-600">
-                  <% if group.connection_type %>
-                    <%= group.connection_type.name %>
+            <% @connection_groups.each_with_index do |group, group_idx| %>
+              <% members = group.connection_members.sort_by(&:owner_member_id) %>
+
+              <% members.each_with_index do |member, member_idx| %>
+                <tr class="hover:bg-stone-50 <%= 'border-t-2 border-stone-300' if group_idx > 0 && member_idx == 0 %> <%= 'border-t border-stone-100' if member_idx > 0 %>">
+
+                  <%# Group columns — first row of each group only. %>
+                  <% if member_idx == 0 %>
+                    <td class="px-4 py-3 whitespace-nowrap text-stone-600 align-top font-medium">
+                      <%= group.owner_group_id %>
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap text-stone-600 align-top">
+                      <%= group.connection_type&.name || "—" %>
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap text-stone-600 align-top">
+                      <%= group.label.presence || "—" %>
+                    </td>
                   <% else %>
-                    <span class="text-stone-400">—</span>
+                    <td></td><td></td><td></td>
                   <% end %>
-                </td>
 
-                <%# Label: the optional free-text label on the group itself %>
-                <td class="px-4 py-3 whitespace-nowrap text-stone-600">
-                  <% if group.label.present? %>
-                    <%= group.label %>
-                  <% else %>
-                    <span class="text-stone-400">—</span>
-                  <% end %>
-                </td>
+                  <%# Port columns — every row. %>
+                  <td class="px-4 py-3 whitespace-nowrap text-stone-600">
+                    <%= member.owner_member_id %>
+                  </td>
+                  <td class="px-4 py-3 text-stone-600">
+                    <%= link_to "#{member.computer.computer_model.name} – #{member.computer.serial_number}",
+                                computer_path(member.computer),
+                                class: "text-indigo-600 hover:text-indigo-900" %>
+                  </td>
+                  <td class="px-4 py-3 text-stone-600">
+                    <%= member.label.presence || "" %>
+                  </td>
 
-                <%# Connected to: peer computers in this group (all except this device). %>
-                <%# reject uses the preloaded computers cache — no extra DB query per row. %>
-                <%# Each peer links to its own show page with its model name as the label. %>
-                <td class="px-4 py-3 text-stone-600">
-                  <% peers = group.computers.reject { |c| c.id == @computer.id } %>
-                  <% if peers.any? %>
-                    <%# safe_join joins an array of html_safe link strings and returns %>
-                    <%# an html_safe result — no need to call .html_safe on raw data. %>
-                    <%= safe_join(
-                          peers.map { |peer|
-                            link_to peer.computer_model.name,
-                                    computer_path(peer),
-                                    class: "text-indigo-600 hover:text-indigo-900"
-                          }, ", "
-                        ) %>
-                  <% else %>
-                    <span class="text-stone-400">—</span>
-                  <% end %>
-                </td>
-
-              </tr>
+                </tr>
+              <% end %>
             <% end %>
+
           </tbody>
         </table>
       </div>
@@ -220,7 +201,7 @@
     <% end %>
   </div>
 
-  <%# ── Back button — Stimulus back_controller: history.back() with owner fallback ── %>
+  <%# ── Back button ── %>
   <div class="mt-6">
     <a href="#"
        data-controller="back"

@@ -1,20 +1,29 @@
 # decor/test/models/connection_member_test.rb
-# version 1.0
-# Session 32 (Part 1b): Model tests for ConnectionMember.
+# version 1.1
+# v1.1 (Session 39): Added three tests for Session 38 additions:
+#   - owner_member_id auto-assigns on create for a single new member added to
+#     a persisted group (straightforward DB max+1 case)
+#   - owner_member_id auto-assigns with in-memory siblings (new group created with
+#     2+ members at once — no persisted siblings to query, so callback must scan
+#     the parent's in-memory connection_members collection)
+#   - label over 100 characters is invalid
+# v1.0 (Session 32): Initial model tests for ConnectionMember.
 #
 # Coverage:
 #   - computer_id uniqueness scoped to connection_group_id
 #     (same computer in same group → invalid; same computer in different group → valid)
 #   - belongs_to :connection_group, :computer associations
+#   - owner_member_id auto-assign — persisted group (DB max) and new group (in-memory scan)
+#   - label max 100 characters
 #   - after_destroy :cleanup_undersized_group:
 #     (a) 2-member group loses 1 member → count drops to 1 → group auto-destroys
 #     (b) 3-member group loses 1 member → count stays at 2 → group survives
 #
 # Fixtures:
-#   connection_members(:bob_pdp8_member)  — computer: bob_pdp8, group: bob_pdp8_vt100
-#   connection_members(:bob_vt100_member) — computer: bob_vt100, group: bob_pdp8_vt100
-#   connection_members(:alice_pdp11_member) — computer: alice_pdp11, group: alice_pdp11_vax
-#   connection_members(:alice_vax_member)   — computer: alice_vax, group: alice_pdp11_vax
+#   connection_members(:bob_pdp8_member)    — computer: bob_pdp8,   group: bob_pdp8_vt100, owner_member_id: 1
+#   connection_members(:bob_vt100_member)   — computer: bob_vt100,  group: bob_pdp8_vt100, owner_member_id: 2
+#   connection_members(:alice_pdp11_member) — computer: alice_pdp11, group: alice_pdp11_vax, owner_member_id: 1
+#   connection_members(:alice_vax_member)   — computer: alice_vax,   group: alice_pdp11_vax, owner_member_id: 2
 #
 # Both fixture groups have exactly 2 members, making them ideal for testing
 # the auto-destroy boundary. The 3-member test creates its own group inline
@@ -66,6 +75,81 @@ class ConnectionMemberTest < ActiveSupport::TestCase
     )
     assert member.valid?,
            "Same computer in a different group must be valid at the member level: #{member.errors.full_messages}"
+  end
+
+  # -------------------------------------------------------------------------
+  # owner_member_id — auto-assign (Session 38)
+  # -------------------------------------------------------------------------
+
+  test "owner_member_id auto-assigns on create for a single new member added to a persisted group" do
+    # Create a 2-member group for alice first. Both members persist with
+    # owner_member_ids 1 and 2 (assigned in creation order). Then add a third
+    # member — the callback reads the DB max (2) and assigns 3.
+    # alice's computers (alice_pdp11, alice_vax) may be in multiple groups;
+    # the UNIQUE index is (connection_group_id, computer_id), not global.
+    group = ConnectionGroup.create!(
+      owner: owners(:one),
+      connection_members: [
+        ConnectionMember.new(computer: computers(:alice_pdp11)),
+        ConnectionMember.new(computer: computers(:alice_vax))
+      ]
+    )
+    # unassigned_condition_test belongs to alice (owners(:one)) and is not
+    # in any fixture group, making it a safe choice for the new member.
+    new_member = group.connection_members.create!(
+      computer: computers(:unassigned_condition_test)
+    )
+    assert_equal 3, new_member.owner_member_id,
+                 "Third member added to a persisted group must receive owner_member_id 3 (max 2 + 1)"
+  end
+
+  test "owner_member_id auto-assigns correctly when a new group is created with multiple members at once" do
+    # When a new group is created via nested attributes (or ConnectionGroup.create!
+    # with a connection_members: array), all members are in-memory simultaneously —
+    # there are no persisted siblings yet. The callback must scan the parent's
+    # in-memory connection_members collection (using the data-owner-member-id
+    # attribute pattern from the Stimulus controller on the form side).
+    # On the model side, the before_create callback iterates sibling records
+    # to find the current max and assigns max+1.
+    group = ConnectionGroup.create!(
+      owner: owners(:one),
+      connection_members: [
+        ConnectionMember.new(computer: computers(:alice_pdp11)),
+        ConnectionMember.new(computer: computers(:alice_vax))
+      ]
+    )
+    member_ids = group.connection_members.order(:owner_member_id).pluck(:owner_member_id)
+    assert_equal [1, 2], member_ids,
+                 "Members created together in one group must receive sequential owner_member_ids [1, 2]"
+  end
+
+  # -------------------------------------------------------------------------
+  # label validation — max 100 characters (Session 38)
+  # -------------------------------------------------------------------------
+
+  test "invalid when label exceeds 100 characters" do
+    member = connection_members(:bob_pdp8_member)
+    member.label = "x" * 101
+    assert_not member.valid?,
+               "A label longer than 100 characters must make the member invalid"
+    assert member.errors[:label].any?,
+           "Validation error must be reported on :label for an over-length value"
+  end
+
+  test "valid when label is exactly 100 characters" do
+    # Boundary: 100 is the allowed maximum — must pass
+    member = connection_members(:bob_pdp8_member)
+    member.label = "x" * 100
+    assert member.valid?,
+           "A label of exactly 100 characters must be valid: #{member.errors.full_messages}"
+  end
+
+  test "valid when label is nil" do
+    # label is optional — nil must be accepted
+    member = connection_members(:bob_pdp8_member)
+    member.label = nil
+    assert member.valid?,
+           "A nil label must be valid (label is optional): #{member.errors.full_messages}"
   end
 
   # -------------------------------------------------------------------------

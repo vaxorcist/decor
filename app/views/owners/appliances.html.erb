@@ -1,4 +1,5 @@
-<%# decor/app/views/owners/appliances.html.erb - version 1.1 %>
+<%# decor/app/views/owners/appliances.html.erb - version 1.2 %>
+<%# v1.2 (Session 38): Added Connections tab (inactive) to the tab strip. %>
 <%# v1.1 (Session 25): Added Peripherals tab to the tab strip (inactive). %>
 <%#   Tab order: Computers | Appliances (active) | Peripherals | Components. %>
 <%# v1.0 (Session 23): New sub-page for the owner's appliances. %>
@@ -26,6 +27,8 @@
     <%= link_to "Components", components_owner_path(@owner),
           class: "pb-2 -mb-px border-b-2 " \
                  "border-transparent text-stone-600 hover:text-stone-900" %>
+    <%= link_to "Connections", connections_owner_path(@owner),
+          class: "pb-2 -mb-px border-b-2 border-transparent text-stone-600 hover:text-stone-900" %>
   </div>
 
   <%# Section header %>

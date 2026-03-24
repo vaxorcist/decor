@@ -1,4 +1,5 @@
-<%# decor/app/views/owners/peripherals.html.erb - version 1.0 %>
+<%# decor/app/views/owners/peripherals.html.erb - version 1.1 %>
+<%# v1.1 (Session 38): Added Connections tab (inactive) to the tab strip. %>
 <%# v1.0 (Session 25): New sub-page for the owner's peripherals. %>
 <%#   Peripherals are devices that attach to a host computer (terminals, %>
 <%#   word-processors, storage controllers, etc.) — stored in the computers %>
@@ -28,6 +29,8 @@
     <%= link_to "Components", components_owner_path(@owner),
           class: "pb-2 -mb-px border-b-2 " \
                  "border-transparent text-stone-600 hover:text-stone-900" %>
+    <%= link_to "Connections", connections_owner_path(@owner),
+          class: "pb-2 -mb-px border-b-2 border-transparent text-stone-600 hover:text-stone-900" %>
   </div>
 
   <%# Section header %>

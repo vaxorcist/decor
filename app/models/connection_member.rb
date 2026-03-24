@@ -1,49 +1,87 @@
 # decor/app/models/connection_member.rb
-# version 1.0
-# Session 31: Part 1 — Connections feature foundation.
-# Each row records one device's participation in one connection group.
-# The after_destroy callback implements the "auto-destroy undersized group"
-# requirement: when a Computer is deleted, its ConnectionMember rows are
-# destroyed via Computer's dependent: :destroy; if that leaves the group
-# with fewer than 2 members, the group is destroyed automatically.
-#
-# Important: ConnectionGroup uses dependent: :delete_all (not :destroy) when
-# deleting its members, so this callback is NOT triggered during group deletion.
-# This deliberately breaks the potential recursive loop:
-#   group.destroy → delete_all (no callback) → done
-#   computer.destroy → member.destroy → callback → group.destroy → delete_all → done
+# version 1.1
+# v1.1 (Session 38): Added owner_member_id and label.
+#   - before_validation :auto_assign_owner_member_id (on: :create) — assigns the
+#     next available port ID within the group if left blank. Handles both the case
+#     of new groups (multiple members built simultaneously in memory) and adding a
+#     port to an existing group (queries DB for current max).
+#   - validates :owner_member_id — presence, integer > 0, unique within group.
+#   - validates :label — max 100 characters, optional.
+# v1.0 (Session 31): Initial model.
 
 class ConnectionMember < ApplicationRecord
+  # ── Associations ────────────────────────────────────────────────────────────
+
   belongs_to :connection_group
   belongs_to :computer
 
-  validates :computer_id,
-            uniqueness: {
-              scope: :connection_group_id,
-              message: "is already a member of this connection group"
-            }
+  # ── Validations ─────────────────────────────────────────────────────────────
 
-  # After a member is destroyed (only via Computer's dependent: :destroy —
-  # group deletion uses delete_all and does not reach this callback),
-  # check whether the group still has at least 2 members. Destroy the group
-  # if it has fallen below the minimum.
-  #
-  # Uses find_by(id:) rather than self.connection_group to re-query the DB
-  # for the actual post-deletion state, guarding against the case where
-  # the group was already destroyed by a concurrent member's after_destroy
-  # (e.g. owner deletion destroying multiple computers in sequence).
+  # One computer per group — the primary structural constraint.
+  validates :computer_id, uniqueness: { scope:   :connection_group_id,
+                                        message: "is already a port in this connection" }
+
+  validates :owner_member_id,
+            presence:     true,
+            numericality: { only_integer: true, greater_than: 0 },
+            uniqueness:   { scope:   :connection_group_id,
+                            message: "is already used in this connection" }
+
+  validates :label, length: { maximum: 100 }, allow_blank: true
+
+  # ── Callbacks ───────────────────────────────────────────────────────────────
+
+  before_validation :auto_assign_owner_member_id, on: :create
+
+  # If destroying this member leaves fewer than 2 in the group, destroy the
+  # group too. This fires only when a computer is deleted (has_many
+  # :connection_members, dependent: :destroy on Computer), not when the group
+  # itself is deleted (dependent: :delete_all skips callbacks).
   after_destroy :cleanup_undersized_group
+
+  # ── Private methods ──────────────────────────────────────────────────────────
 
   private
 
-  def cleanup_undersized_group
-    # Re-fetch the group from DB — it may already be gone if a sibling
-    # member's after_destroy destroyed it first (e.g. during owner deletion).
-    group = ConnectionGroup.find_by(id: connection_group_id)
-    return unless group
+  # Auto-assigns owner_member_id on create when left blank.
+  # Assigns one higher than the maximum already in use within this group.
+  #
+  # Two sources are checked:
+  #   1. In-memory siblings — handles the case where a new group is being built
+  #      with multiple members simultaneously (none persisted yet). Each member's
+  #      callback runs sequentially; earlier members have already had their IDs
+  #      assigned, so the max of in-memory siblings grows correctly.
+  #   2. DB persisted rows — handles adding a new port to an existing group.
+  #
+  # Taking the max of both ensures correctness in all cases.
+  def auto_assign_owner_member_id
+    # Guard: skip only when an explicit positive value has already been set.
+    # owner_member_id.present? is NOT sufficient — 0.present? is true in Ruby,
+    # so a freshly-built record (DB default = 0) would never get auto-assigned.
+    return if owner_member_id.to_i > 0
+    return unless connection_group
 
-    # If fewer than 2 members remain, the group is no longer a valid connection.
-    # Destroy the group; this triggers delete_all on any remaining member rows.
+    # In-memory sibling IDs (excludes self to avoid counting our own blank value).
+    mem_max = connection_group.connection_members
+                               .reject { |m| m.equal?(self) }
+                               .filter_map(&:owner_member_id)
+                               .max || 0
+
+    # Persisted DB IDs (0 if group is not yet saved).
+    db_max = if connection_group.new_record?
+               0
+    else
+               ConnectionMember
+                 .where(connection_group_id: connection_group.id)
+                 .maximum(:owner_member_id) || 0
+    end
+
+    self.owner_member_id = [mem_max, db_max].max + 1
+  end
+
+  def cleanup_undersized_group
+    group = connection_group
+    return unless group
     group.destroy if group.connection_members.count < 2
   end
 end

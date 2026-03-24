@@ -1,5 +1,6 @@
 # decor/config/routes.rb
-# version 2.4
+# version 2.5
+# v2.5: "/owners/:id/connections — connections table" added manually
 # v2.4 (Session 36): Added resources :connection_groups nested under :owners.
 #   Provides full CRUD for owner-managed connection groups at:
 #     /owners/:owner_id/connection_groups
@@ -42,6 +43,7 @@ Rails.application.routes.draw do
       get :appliances   # /owners/:id/appliances  — appliances table
       get :peripherals  # /owners/:id/peripherals — peripherals table (device_type: 2)
       get :components   # /owners/:id/components  — components table
+      get :connections  # /owners/:id/connections — connections table
     end
     # Full CRUD for connection groups; no :show (index suffices).
     resources :connection_groups, only: %i[index new create edit update destroy]

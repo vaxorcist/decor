@@ -1,21 +1,20 @@
 # decor/test/fixtures/connection_groups.yml
-# version 1.0
-# Session 31: Part 1 — Connections feature foundation.
-# Two groups covering two different owners:
-#   bob_pdp8_vt100   — bob's VT100 terminal connected to his PDP-8 via RS-232.
-#                      Has a connection_type set (rs232).
-#   alice_pdp11_vax  — alice's PDP-11/70 connected to her VAX-11/780.
-#                      No connection_type (nullable — left unspecified).
-#
-# Both groups have exactly 2 members (see connection_members.yml), making them
-# useful for testing the minimum_two_members validation boundary and the
-# auto-destroy-on-last-member cascade logic.
+# version 1.1
+# v1.1 (Session 38): Added owner_group_id to both fixtures.
+#   bob_pdp8_vt100  → owner_group_id: 1  (first group for bob)
+#   alice_pdp11_vax → owner_group_id: 1  (first group for alice)
+#   Each owner has only one group in the fixtures, so 1 is correct for both.
+#   The unique index (owner_id, owner_group_id) is satisfied — different owners
+#   may share the same owner_group_id value (it is only unique per owner).
+# v1.0 (Session 31): Initial fixture data.
 
 bob_pdp8_vt100:
   owner: two
   connection_type: rs232
   label: PDP-8 terminal connection
+  owner_group_id: 1
 
 alice_pdp11_vax:
   owner: one
   label: Lab setup
+  owner_group_id: 1

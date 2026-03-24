@@ -1,4 +1,5 @@
-<%# decor/app/views/common/_navigation.html.erb - version 1.8 %>
+<%# decor/app/views/common/_navigation.html.erb - version 1.9 %>
+<%# v1.9: Changed "owner_connection_groups_path(Current.owner)" to "connections_owner_path(Current.owner)" %>
 <%# v1.8 (Session 36): Added "My Connections" to the owner dropdown, between %>
 <%#   "My Components" and the Profile divider. Links to the owner's connection %>
 <%#   groups index: owner_connection_groups_path(Current.owner). %>
@@ -78,7 +79,7 @@
           <%= link_to "My Components",  components_owner_path(Current.owner),
                 class: "block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50" %>
           <%# My Connections — links to the connection groups index for this owner. %>
-          <%= link_to "My Connections", owner_connection_groups_path(Current.owner),
+          <%= link_to "My Connections", connections_owner_path(Current.owner),
                 class: "block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50" %>
           <div class="border-t border-stone-200 my-1"></div>
           <%= link_to "Profile", owner_path(Current.owner),

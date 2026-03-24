@@ -1,4 +1,8 @@
-<%# decor/app/views/owners/show.html.erb - version 2.0 %>
+<%# decor/app/views/owners/show.html.erb - version 2.1 %>
+<%# v2.1 (Session 38): Added Connections summary card (5th). %>
+<%#   - Grid changed from grid-cols-4 to grid-cols-5. %>
+<%#   - @connection_group_count loaded by owners_controller#show v1.8. %>
+<%#   - Card links to connections_owner_path; owner sees "+ Add" link for new group. %>
 <%# v2.0 (Session 25): Added Peripherals summary card. %>
 <%#   - Grid changed from grid-cols-3 to grid-cols-4 to accommodate the new card. %>
 <%#   - @peripheral_count loaded by owners_controller#show v1.7. %>
@@ -15,8 +19,8 @@
   <%= render "profile" %>
 
   <%# Section cards: one per collection, showing count + navigation.
-      Four cards in a single row on standard viewports. %>
-  <div class="grid grid-cols-4 gap-4">
+      Five cards in a single row on standard viewports. %>
+  <div class="grid grid-cols-5 gap-4">
 
     <%# Computers card %>
     <div class="bg-white border border-stone-200 rounded p-5">
@@ -77,6 +81,22 @@
               class: "text-sm text-indigo-600 hover:text-indigo-900" %>
         <% if Current.owner == @owner %>
           <%= link_to "+ Add", new_component_path,
+                class: "text-sm text-indigo-600 hover:text-indigo-900" %>
+        <% end %>
+      </div>
+    </div>
+
+    <%# Connections card — links to the new connections sub-page %>
+    <div class="bg-white border border-stone-200 rounded p-5">
+      <div class="flex justify-between items-start mb-3">
+        <h2 class="font-semibold text-stone-700">Connections</h2>
+        <span class="text-2xl font-bold text-stone-300"><%= @connection_group_count %></span>
+      </div>
+      <div class="flex items-center justify-between">
+        <%= link_to "View →", connections_owner_path(@owner),
+              class: "text-sm text-indigo-600 hover:text-indigo-900" %>
+        <% if Current.owner == @owner %>
+          <%= link_to "+ Add", new_owner_connection_group_path(@owner),
                 class: "text-sm text-indigo-600 hover:text-indigo-900" %>
         <% end %>
       </div>

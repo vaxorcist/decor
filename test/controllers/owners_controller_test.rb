@@ -1,9 +1,17 @@
-# decor/test/controllers/owners_controller_test.rb - version 1.4
+# decor/test/controllers/owners_controller_test.rb - version 1.7
+# v1.7 (Session 39): Corrected the unauthenticated connections test.
+#   OwnersController has no require_login before_action at all — the
+#   connections action (and all other read-only sub-pages) are publicly
+#   accessible without login. Unauthenticated request returns 200, not a
+#   redirect. The test description and assertion updated accordingly.
+# v1.6 (Session 39): Corrected two connections sub-page tests after reading
+#   authentication.rb and owners_controller.rb:
+#   - new_session_path (not login_path) for unauthenticated redirect.
+#   - No ownership guard on connections — cross-owner returns 200.
+# v1.5 (Session 39): Added three smoke tests for the connections sub-page
+#   introduced in owners_controller.rb v1.8 (Session 38).
 # v1.4 (Session 25): Added peripherals sub-page smoke test.
-#   Uses owner three (charlie) who has the charlie_dec_vt278 peripheral fixture,
-#   so both the non-empty table path and the controller query are exercised.
-# v1.3 (Session 23): Added three smoke tests for the new owner sub-page actions
-#   (computers / appliances / components) introduced in owners_controller.rb v1.6.
+# v1.3 (Session 23): Added computers / appliances / components sub-page smoke tests.
 # v1.2: Refactored to use centralized AuthenticationHelper constants.
 # All password references use TEST_PASSWORD_VALID constant.
 
@@ -160,13 +168,11 @@ class OwnersControllerTest < ActionDispatch::IntegrationTest
   end
 
   # ── Owner sub-page smoke tests ────────────────────────────────────────────
-  # Each sub-page requires a logged-in user and renders a single collection
-  # table. Tests verify that the routes resolve, the actions complete without
-  # error, and the response is 200 OK.
+  # OwnersController has no require_login before_action. All read-only
+  # sub-pages (computers, appliances, peripherals, components, connections)
+  # are publicly accessible. Tests verify routes resolve and actions succeed.
 
   test "computers sub-page returns 200 when logged in" do
-    # Log in as alice (owners(:one)) and view her computers sub-page.
-    # alice has at least one computer in the fixtures (alice_vax).
     owner = owners(:one)
     login_as owner
 
@@ -176,9 +182,6 @@ class OwnersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "appliances sub-page returns 200 when logged in" do
-    # Log in as alice and view her appliances sub-page.
-    # The page renders correctly even when the owner has no appliances
-    # (the empty-state branch is exercised in that case).
     owner = owners(:one)
     login_as owner
 
@@ -188,9 +191,8 @@ class OwnersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "peripherals sub-page returns 200 when logged in" do
-    # Log in as charlie (owners(:three)) and view the peripherals sub-page.
-    # charlie has the charlie_dec_vt278 fixture (device_type: 2), so this
-    # test exercises the non-empty table path as well as the controller query.
+    # charlie has the charlie_dec_vt278 fixture (device_type: peripheral),
+    # exercising the non-empty table path.
     owner = owners(:three)
     login_as owner
 
@@ -200,11 +202,46 @@ class OwnersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "components sub-page returns 200 when logged in" do
-    # Log in as alice and view her components sub-page.
     owner = owners(:one)
     login_as owner
 
     get components_owner_url(owner)
+
+    assert_response :success
+  end
+
+  # ── Connections sub-page tests ────────────────────────────────────────────
+  # connections has no ownership guard and no login requirement —
+  # consistent with all other read-only sub-pages in this controller.
+
+  test "connections sub-page returns 200 when logged in as own page" do
+    # bob has the bob_pdp8_vt100 fixture (2 members), exercising the
+    # non-empty table path and the eager-load query.
+    owner = owners(:two)
+    login_as owner
+
+    get connections_owner_url(owner)
+
+    assert_response :success
+  end
+
+  test "connections sub-page returns 200 when a different logged-in owner views it" do
+    # No ownership guard on read-only sub-pages — any logged-in user may view.
+    alice = owners(:one)
+    bob   = owners(:two)
+    login_as alice
+
+    get connections_owner_url(bob)
+
+    assert_response :success
+  end
+
+  test "connections sub-page returns 200 when not authenticated" do
+    # OwnersController has no require_login before_action.
+    # Unauthenticated requests to read-only sub-pages are permitted.
+    owner = owners(:two)
+
+    get connections_owner_url(owner)
 
     assert_response :success
   end
