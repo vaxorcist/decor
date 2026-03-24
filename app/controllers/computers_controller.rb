@@ -1,16 +1,16 @@
 # decor/app/controllers/computers_controller.rb
-# version 1.17
-# v1.17 (Session 34): show action now loads @connection_groups — the set of
-#   ConnectionGroups this computer belongs to, eager-loading :connection_type
-#   and computers: :computer_model to avoid N+1 queries on the show page.
-#   The view iterates @connection_groups and filters peers in memory via reject
-#   rather than where.not so the preloaded computers cache is used.
+# version 1.18
+# v1.18 (Session 38): show action — updated @connection_groups eager-loading.
+#   - includes() changed from (computers: :computer_model) to
+#     (connection_members: { computer: :computer_model }) so the view can access
+#     individual member attributes (owner_member_id, label) needed for the new
+#     multi-row connections table.
+#   - .order(:id) changed to .order(:owner_group_id) to respect the owner's
+#     own numbering scheme.
+#   The view now sorts members in memory via .sort_by(&:owner_member_id).
+# v1.17 (Session 34): show action now loads @connection_groups with eager-loading.
 # v1.16 (Session 25): Extended set_device_context and index device_type filter
 #   to handle device_context: "peripheral" (device_type value 2).
-#   - set_device_context: added peripheral branch in case/when (replaces the
-#     previous binary appliance/computer boolean).
-#   - index: device_type filter now locks to "peripheral" on the peripherals
-#     route, exactly mirroring the existing appliance lock.
 # v1.15 (Session 21): Added barter_status filter to index.
 # v1.14 (Session 20): Removed device_type selector from the form.
 # v1.13 (Session 18): build() without device_type key fix.
@@ -57,17 +57,13 @@ class ComputersController < ApplicationController
     end
 
     # Barter status filter — members only.
-    # Non-logged-in visitors see all items with no barter information displayed.
-    # For logged-in users the default is "0+1" (no_barter and offered), which hides
-    # "wanted" items (barter_status: 2) from the default listing because those records
-    # may represent items not physically in the owner's collection.
     if logged_in?
       barter_filter = params[:barter_status].presence || "0+1"
       computers = case barter_filter
       when "0"   then computers.where(barter_status: 0)
       when "1"   then computers.where(barter_status: 1)
       when "2"   then computers.where(barter_status: 2)
-      else            computers.where(barter_status: [0, 1])  # "0+1" and any unknown value
+      else            computers.where(barter_status: [0, 1])
       end
     end
 
@@ -86,27 +82,21 @@ class ComputersController < ApplicationController
   def show
     @components = @computer.components.includes(:component_type)
 
-    # Load connection groups this computer belongs to, with all data needed
-    # for the read-only connections section on the show page.
+    # Load connection groups this computer belongs to.
     #
-    # Eager-load strategy (prevents N+1):
-    #   :connection_type          — to display the type label or name
-    #   computers: :computer_model — to display peer computer model names as links
+    # Eager-load strategy (prevents N+1 for the multi-row connections table):
+    #   :connection_type                            — type name column
+    #   connection_members: { computer: :computer_model } — port rows with device names
     #
-    # The view filters peer computers in memory (group.computers.reject { ... })
-    # so the preloaded computers cache is used rather than firing per-row queries.
+    # The view iterates group.connection_members.sort_by(&:owner_member_id) using
+    # the preloaded in-memory collection — no extra DB query per group.
+    # Ordered by owner_group_id to respect the owner's numbering scheme.
     @connection_groups = @computer.connection_groups
-      .includes(:connection_type, computers: :computer_model)
-      .order(:id)
+      .includes(:connection_type, connection_members: { computer: :computer_model })
+      .order(:owner_group_id)
   end
 
   def new
-    # Build with the model default (computer: 0), then override device_type only
-    # when the param is explicitly present (e.g. "Add Appliance" passes
-    # device_type=appliance, "Add Peripheral" passes device_type=peripheral).
-    # Passing device_type: nil to build() would override the enum default and
-    # cause .capitalize to fail in the view — the key must be absent from the
-    # hash entirely, not present with a nil value.
     @computer = Current.owner.computers.build
     @computer.device_type = params[:device_type] if params[:device_type].present?
   end
@@ -115,9 +105,6 @@ class ComputersController < ApplicationController
     @computer = Current.owner.computers.build(computer_params)
 
     if @computer.save
-      # Use the record's actual device_type in the flash so "Appliance was
-      # successfully created." / "Peripheral was successfully created." is shown
-      # when those types are selected.
       device_label = @computer.device_type.capitalize
 
       if params[:add_another]
@@ -148,8 +135,6 @@ class ComputersController < ApplicationController
   end
 
   def destroy
-    # Capture owner and device label before destroy — both are unavailable
-    # after the record is deleted.
     owner        = @computer.owner
     device_label = @computer.device_type.capitalize
     @computer.destroy
@@ -163,11 +148,6 @@ class ComputersController < ApplicationController
 
   private
 
-  # Reads the device_context route default (injected by config/routes.rb) and
-  # sets all context-dependent instance variables used by the shared index views.
-  # "computer"   (default) — /computers index
-  # "appliance"            — /appliances index (device_type locked)
-  # "peripheral"           — /peripherals index (device_type locked)
   def set_device_context
     case params[:device_context]
     when "appliance"
@@ -207,8 +187,8 @@ class ComputersController < ApplicationController
       :run_status_id,
       :order_number,
       :history,
-      :device_type,   # hidden field only — type is fixed at creation, not editable via UI
-      :barter_status  # select on new/edit forms; members only
+      :device_type,
+      :barter_status
     )
   end
 end

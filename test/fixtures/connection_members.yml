@@ -1,33 +1,38 @@
 # decor/test/fixtures/connection_members.yml
-# version 1.0
-# Session 31: Part 1 — Connections feature foundation.
-# Four member rows forming two complete connection groups:
+# version 1.1
+# v1.1 (Session 38): Added owner_member_id to all four fixtures.
+#   Within each group, owner_member_ids are sequential starting at 1.
+#   label is left absent (nil) — optional field, not set in test data.
 #
-#   Group bob_pdp8_vt100 (bob's, 2 members):
-#     bob_pdp8_member  — bob's PDP-8 computer
-#     bob_vt100_member — bob's VT100 terminal (peripheral)
+#   Group bob_pdp8_vt100:
+#     bob_pdp8_member  → owner_member_id: 1
+#     bob_vt100_member → owner_member_id: 2
 #
-#   Group alice_pdp11_vax (alice's, 2 members):
-#     alice_pdp11_member — alice's PDP-11/70
-#     alice_vax_member   — alice's VAX-11/780
+#   Group alice_pdp11_vax:
+#     alice_pdp11_member → owner_member_id: 1
+#     alice_vax_member   → owner_member_id: 2
 #
-# UNIQUE constraint: (connection_group_id, computer_id) — each device appears
-# at most once per group. All four rows satisfy this constraint.
-# All devices in each group belong to the same owner (cross-owner integrity
-# satisfied: bob's group has only bob's devices, alice's only alice's).
+#   Unique index (connection_group_id, owner_member_id) is satisfied:
+#   IDs are unique within each group; two groups both having member IDs 1 and 2
+#   is correct (the constraint is scoped to the group, not global).
+# v1.0 (Session 31): Initial fixture data.
 
 bob_pdp8_member:
   connection_group: bob_pdp8_vt100
   computer: bob_pdp8
+  owner_member_id: 1
 
 bob_vt100_member:
   connection_group: bob_pdp8_vt100
   computer: bob_vt100
+  owner_member_id: 2
 
 alice_pdp11_member:
   connection_group: alice_pdp11_vax
   computer: alice_pdp11
+  owner_member_id: 1
 
 alice_vax_member:
   connection_group: alice_pdp11_vax
   computer: alice_vax
+  owner_member_id: 2

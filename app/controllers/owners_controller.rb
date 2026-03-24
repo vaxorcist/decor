@@ -1,4 +1,11 @@
-# decor/app/controllers/owners_controller.rb - version 1.7
+# decor/app/controllers/owners_controller.rb
+# version 1.8
+# v1.8 (Session 38): Connections sub-page.
+#   - show action: added @connection_group_count for the new 5th summary card.
+#   - Added connections action: loads @connection_groups ordered by owner_group_id,
+#     with all data needed for the connections table (connection_members and their
+#     computers+models eager-loaded to avoid N+1).
+#   - set_owner before_action list extended to include :connections.
 # v1.7 (Session 25): Added peripherals action for the new owner sub-page.
 #   - show action: added @peripheral_count (device_type: :peripheral).
 #   - Added peripherals action: loads @peripherals ordered by model name.
@@ -19,7 +26,7 @@
 #   computer-attached ones.
 
 class OwnersController < ApplicationController
-  before_action :set_owner, only: %i[show edit update destroy computers appliances peripherals components]
+  before_action :set_owner, only: %i[show edit update destroy computers appliances peripherals components connections]
   before_action -> { require_owner(@owner) }, only: %i[edit update destroy]
   before_action :load_invite, only: %i[new create]
 
@@ -61,12 +68,14 @@ class OwnersController < ApplicationController
   end
 
   # Summary page — shows profile info and section counts only.
-  # Full tables live in the computers / appliances / peripherals / components sub-pages.
+  # Full tables live in the computers / appliances / peripherals / components /
+  # connections sub-pages.
   def show
-    @computer_count   = @owner.computers.where(device_type: :computer).count
-    @appliance_count  = @owner.computers.where(device_type: :appliance).count
-    @peripheral_count = @owner.computers.where(device_type: :peripheral).count
-    @component_count  = @owner.components.count
+    @computer_count          = @owner.computers.where(device_type: :computer).count
+    @appliance_count         = @owner.computers.where(device_type: :appliance).count
+    @peripheral_count        = @owner.computers.where(device_type: :peripheral).count
+    @component_count         = @owner.components.count
+    @connection_group_count  = @owner.connection_groups.count
   end
 
   # Sub-page: owner's computers (device_type: computer).
@@ -113,12 +122,26 @@ class OwnersController < ApplicationController
                         )
   end
 
+  # Sub-page: owner's connections (connection groups).
+  # Ordered by owner_group_id so the owner's own numbering scheme is respected.
+  # Eager-load strategy (avoids N+1 on the multi-row connections table):
+  #   :connection_type                       — type name column
+  #   connection_members: { computer: :computer_model }  — port rows
+  # The view sorts members in memory via .sort_by(&:owner_member_id); the
+  # preloaded collection is used, so no extra DB queries fire per row.
+  def connections
+    @connection_groups = @owner.connection_groups
+                               .includes(:connection_type,
+                                         connection_members: { computer: :computer_model })
+                               .order(:owner_group_id)
+  end
+
   def edit
   end
 
   def update
-    # Check if user is attempting to change password
-    # Password change requires current password verification for security
+    # Check if user is attempting to change password.
+    # Password change requires current password verification for security.
     if password_change_attempted?
       if owner_params[:current_password].blank?
         @owner.errors.add(:current_password, "is required when changing password")
@@ -139,8 +162,8 @@ class OwnersController < ApplicationController
       end
     end
 
-    # Remove current_password from params before update
-    # current_password is not a database field - only used for verification
+    # Remove current_password from params before update.
+    # current_password is not a database field — only used for verification.
     update_params = owner_params.except(:current_password)
 
     if @owner.update(update_params)
@@ -150,11 +173,11 @@ class OwnersController < ApplicationController
     end
   end
 
-  # Account self-deletion
-  # User can only delete their own account (enforced by require_owner before_action)
-  # Requires password confirmation for security
-  # Automatically destroys all associated computers and components (dependent: :destroy)
-  # Logs out user and redirects to home page
+  # Account self-deletion.
+  # User can only delete their own account (enforced by require_owner before_action).
+  # Requires password confirmation for security.
+  # Automatically destroys all associated computers and components (dependent: :destroy).
+  # Logs out user and redirects to home page.
   def destroy
     unless params[:password].present? && @owner.authenticate(params[:password])
       redirect_to edit_owner_path(@owner), alert: "Incorrect password. Account was not deleted."
