@@ -1,7 +1,15 @@
 # decor/test/models/computer_model_test.rb
-# version 1.2
-# Added device_type enum tests: default value, predicates, scopes.
-# Pattern mirrors computer_test.rb v1.4 (Session 13).
+# version 1.3
+# v1.3 (Session 41): Appliances → Peripherals merger Phase 1.
+#   Removed all device_type_appliance? tests (enum value no longer exists).
+#   Rewrote predicate and scope tests to use peripheral:
+#     - "device_type_peripheral? returns true for peripheral fixture" replaces
+#       the appliance equivalent; uses hsc50 (formerly appliance, now peripheral).
+#     - "device_type_computer scope excludes peripheral models" replaces appliance version.
+#     - "device_type_computer and device_type_peripheral scopes are disjoint" replaces
+#       the appliance version.
+# v1.2: Added device_type enum tests: default value, predicates, scopes.
+#   Pattern mirrors computer_test.rb v1.4 (Session 13).
 
 require "test_helper"
 
@@ -31,7 +39,7 @@ class ComputerModelTest < ActiveSupport::TestCase
     model = ComputerModel.create!(name: "PDP-11/34")
     assert_equal "computer", model.device_type
     assert model.device_type_computer?
-    assert_not model.device_type_appliance?
+    assert_not model.device_type_peripheral?
   end
 
   # ── device_type enum — predicates ────────────────────────────────────────
@@ -39,33 +47,35 @@ class ComputerModelTest < ActiveSupport::TestCase
   test "device_type_computer? returns true for computer fixture" do
     model = computer_models(:pdp11_70)
     assert model.device_type_computer?
-    assert_not model.device_type_appliance?
+    assert_not model.device_type_peripheral?
   end
 
-  test "device_type_appliance? returns true for appliance fixture" do
+  test "device_type_peripheral? returns true for peripheral fixture" do
+    # hsc50 was formerly an appliance fixture (device_type: 1);
+    # it is now a peripheral fixture (device_type: 2) after the Session 41 merger.
     model = computer_models(:hsc50)
-    assert model.device_type_appliance?
+    assert model.device_type_peripheral?
     assert_not model.device_type_computer?
   end
 
   # ── device_type enum — scopes ─────────────────────────────────────────────
 
-  test "device_type_computer scope excludes appliance models" do
-    computer_ids  = ComputerModel.device_type_computer.pluck(:id)
-    appliance_ids = ComputerModel.device_type_appliance.pluck(:id)
+  test "device_type_computer scope excludes peripheral models" do
+    computer_ids   = ComputerModel.device_type_computer.pluck(:id)
+    peripheral_ids = ComputerModel.device_type_peripheral.pluck(:id)
 
     assert_includes computer_ids,  computer_models(:pdp11_70).id
     assert_not_includes computer_ids, computer_models(:hsc50).id
 
-    assert_includes appliance_ids, computer_models(:hsc50).id
-    assert_not_includes appliance_ids, computer_models(:pdp11_70).id
+    assert_includes peripheral_ids, computer_models(:hsc50).id
+    assert_not_includes peripheral_ids, computer_models(:pdp11_70).id
   end
 
-  test "device_type_computer and device_type_appliance scopes are disjoint" do
-    computer_ids  = ComputerModel.device_type_computer.pluck(:id)
-    appliance_ids = ComputerModel.device_type_appliance.pluck(:id)
+  test "device_type_computer and device_type_peripheral scopes are disjoint" do
+    computer_ids   = ComputerModel.device_type_computer.pluck(:id)
+    peripheral_ids = ComputerModel.device_type_peripheral.pluck(:id)
 
-    assert_empty computer_ids & appliance_ids,
-                 "computer and appliance scopes must not overlap"
+    assert_empty computer_ids & peripheral_ids,
+                 "computer and peripheral scopes must not overlap"
   end
 end

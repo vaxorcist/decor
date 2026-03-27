@@ -1,12 +1,16 @@
 # decor/test/fixtures/computer_models.yml
-# version 1.2
-# Added device_type to all entries (explicit is better than relying on DB default).
-# Added hsc50 (appliance, device_type: 1) assigned to no owner — computer_models
-# are reference data with no owner column, so neutral-owner pattern does not apply.
-# Existing computer model fixtures all use device_type: 0 (computer).
+# version 1.3
+# v1.3 (Session 41): Appliances → Peripherals merger Phase 1.
+#   hsc50: device_type changed from 1 (appliance) to 2 (peripheral).
+#   Updated comments to remove appliance references.
+# v1.2: Added device_type to all entries (explicit is better than relying on DB default).
+#   Added hsc50 (formerly appliance, now peripheral, device_type: 2).
+#   computer_models are reference data with no owner column, so neutral-owner
+#   pattern does not apply.
 # Session 26/27: added dec_vt278 (peripheral, device_type: 2) — used by
 #   computer_model_test.rb and computer_models_controller_test.rb to test the
 #   peripheral context. DEC VT278 is a ReGIS graphics terminal.
+# device_type values: 0 = computer (default), 2 = peripheral.
 
 pdp11_70:
   name: PDP-11/70
@@ -28,11 +32,13 @@ vt100:
   name: VT100
   device_type: 0
 
-# Appliance model fixture — used by computer_model_test.rb and
-# computer_models_controller_test.rb to test the appliance context.
+# Peripheral model fixture — used by computer_model_test.rb and
+# computer_models_controller_test.rb to test the peripheral context.
+# Formerly classified as appliance (device_type: 1); merged into peripheral
+# (device_type: 2) in Session 41. HSC50 is a DEC storage controller.
 hsc50:
   name: HSC50
-  device_type: 1
+  device_type: 2
 
 # Peripheral model fixture — used by computer_model_test.rb and
 # computer_models_controller_test.rb to test the peripheral context.

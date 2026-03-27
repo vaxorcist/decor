@@ -1,0 +1,482 @@
+Run options: --seed 10435
+Error:
+bin/rails test test/controllers/admin/computer_models_controller_test.rb:84
+Error:
+bin/rails test test/controllers/admin/computer_models_controller_test.rb:218
+Error:
+bin/rails test test/controllers/admin/computer_models_controller_test.rb:193
+Error:
+bin/rails test test/controllers/admin/computer_models_controller_test.rb:207
+Error:
+bin/rails test test/controllers/admin/computer_models_controller_test.rb:139
+Error:
+bin/rails test test/controllers/admin/computer_models_controller_test.rb:161
+Error:
+bin/rails test test/controllers/admin/computer_models_controller_test.rb:68
+Error:
+bin/rails test test/controllers/admin/computer_models_controller_test.rb:38
+Error:
+bin/rails test test/controllers/admin/computer_models_controller_test.rb:52
+Error:
+bin/rails test test/controllers/admin/computer_models_controller_test.rb:129
+Error:
+bin/rails test test/controllers/admin/computer_models_controller_test.rb:252
+Error:
+bin/rails test test/controllers/admin/computer_models_controller_test.rb:101
+Error:
+bin/rails test test/controllers/admin/computer_models_controller_test.rb:153
+Error:
+bin/rails test test/controllers/admin/computer_models_controller_test.rb:75
+Error:
+bin/rails test test/controllers/admin/computer_models_controller_test.rb:182
+Error:
+bin/rails test test/controllers/admin/computer_models_controller_test.rb:171
+Error:
+bin/rails test test/controllers/admin/computer_models_controller_test.rb:119
+Error:
+bin/rails test test/controllers/admin/computer_models_controller_test.rb:232
+Error:
+bin/rails test test/controllers/admin/computer_models_controller_test.rb:246
+Error:
+bin/rails test test/controllers/admin/invites_controller_test.rb:47
+Error:
+bin/rails test test/controllers/admin/invites_controller_test.rb:169
+Error:
+bin/rails test test/controllers/admin/invites_controller_test.rb:123
+Error:
+bin/rails test test/controllers/admin/invites_controller_test.rb:38
+Error:
+bin/rails test test/controllers/admin/invites_controller_test.rb:74
+Error:
+bin/rails test test/controllers/admin/invites_controller_test.rb:91
+Error:
+bin/rails test test/controllers/admin/invites_controller_test.rb:160
+Error:
+bin/rails test test/controllers/admin/invites_controller_test.rb:107
+Error:
+bin/rails test test/controllers/admin/invites_controller_test.rb:15
+Error:
+bin/rails test test/controllers/admin/invites_controller_test.rb:25
+Error:
+bin/rails test test/controllers/admin/invites_controller_test.rb:151
+Error:
+bin/rails test test/controllers/admin/invites_controller_test.rb:184
+Error:
+bin/rails test test/controllers/admin/site_texts_controller_test.rb:29
+Error:
+bin/rails test test/controllers/admin/site_texts_controller_test.rb:79
+Error:
+bin/rails test test/controllers/admin/site_texts_controller_test.rb:90
+Error:
+bin/rails test test/controllers/admin/site_texts_controller_test.rb:36
+Error:
+bin/rails test test/controllers/admin/site_texts_controller_test.rb:109
+Error:
+bin/rails test test/controllers/admin/site_texts_controller_test.rb:97
+Error:
+bin/rails test test/controllers/admin/site_texts_controller_test.rb:59
+Error:
+bin/rails test test/controllers/admin/site_texts_controller_test.rb:120
+Error:
+bin/rails test test/controllers/owners_controller_test.rb:171
+Error:
+bin/rails test test/controllers/owners_controller_test.rb:227
+Error:
+bin/rails test test/controllers/owners_controller_test.rb:18
+Error:
+bin/rails test test/controllers/owners_controller_test.rb:205
+Error:
+bin/rails test test/controllers/owners_controller_test.rb:216
+Error:
+bin/rails test test/controllers/owners_controller_test.rb:180
+Error:
+bin/rails test test/controllers/owners_controller_test.rb:192
+Error:
+bin/rails test test/services/owner_export_service_test.rb:189
+Error:
+bin/rails test test/services/owner_export_service_test.rb:196
+Failure:
+bin/rails test test/services/owner_export_service_test.rb:173
+Error:
+bin/rails test test/controllers/owners_controller_test.rb:111
+Error:
+bin/rails test test/controllers/owners_controller_test.rb:89
+Error:
+bin/rails test test/controllers/admin/component_types_controller_test.rb:27
+Error:
+bin/rails test test/controllers/admin/component_types_controller_test.rb:126
+Error:
+bin/rails test test/controllers/admin/component_types_controller_test.rb:99
+Error:
+bin/rails test test/services/owner_export_service_test.rb:105
+Error:
+bin/rails test test/controllers/admin/component_types_controller_test.rb:63
+Error:
+bin/rails test test/controllers/admin/component_types_controller_test.rb:149
+Error:
+bin/rails test test/controllers/admin/component_types_controller_test.rb:87
+Error:
+bin/rails test test/controllers/admin/component_types_controller_test.rb:137
+Error:
+bin/rails test test/controllers/admin/component_types_controller_test.rb:51
+Error:
+bin/rails test test/controllers/admin/component_types_controller_test.rb:38
+Error:
+bin/rails test test/controllers/admin/component_types_controller_test.rb:76
+Error:
+bin/rails test test/controllers/admin/component_types_controller_test.rb:16
+Error:
+bin/rails test test/controllers/admin/component_types_controller_test.rb:112
+Error:
+bin/rails test test/controllers/admin/component_types_controller_test.rb:158
+Error:
+bin/rails test test/controllers/connection_groups_controller_test.rb:161
+Error:
+bin/rails test test/controllers/connection_groups_controller_test.rb:187
+Error:
+bin/rails test test/controllers/connection_groups_controller_test.rb:127
+Error:
+bin/rails test test/controllers/connection_groups_controller_test.rb:175
+Error:
+bin/rails test test/controllers/connection_groups_controller_test.rb:66
+Error:
+bin/rails test test/controllers/connection_groups_controller_test.rb:146
+Error:
+bin/rails test test/controllers/connection_groups_controller_test.rb:90
+Error:
+bin/rails test test/controllers/connection_groups_controller_test.rb:106
+Error:
+bin/rails test test/controllers/connection_groups_controller_test.rb:210
+Error:
+bin/rails test test/controllers/connection_groups_controller_test.rb:117
+Error:
+bin/rails test test/controllers/connection_groups_controller_test.rb:78
+Error:
+bin/rails test test/controllers/connection_groups_controller_test.rb:72
+Error:
+bin/rails test test/controllers/connection_groups_controller_test.rb:99
+Error:
+bin/rails test test/controllers/connection_groups_controller_test.rb:197
+Error:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:100
+Error:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:110
+Error:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:154
+Error:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:302
+Error:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:255
+Error:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:370
+Error:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:320
+Error:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:235
+Error:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:203
+Error:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:355
+Error:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:247
+Error:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:191
+Error:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:75
+Error:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:164
+Error:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:213
+Error:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:92
+Error:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:225
+Error:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:434
+Error:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:265
+Error:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:338
+Error:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:182
+Error:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:142
+Error:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:398
+Error:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:56
+Error:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:384
+Error:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:45
+Error:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:125
+Error:
+bin/rails test test/controllers/components_controller_test.rb:133
+Error:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:284
+Error:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:273
+Error:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:83
+Error:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:421
+Error:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:67
+Error:
+bin/rails test test/controllers/components_controller_test.rb:122
+Error:
+bin/rails test test/controllers/components_controller_test.rb:31
+Error:
+bin/rails test test/controllers/components_controller_test.rb:65
+Error:
+bin/rails test test/controllers/components_controller_test.rb:42
+Error:
+bin/rails test test/controllers/components_controller_test.rb:53
+Error:
+bin/rails test test/controllers/components_controller_test.rb:111
+Error:
+bin/rails test test/controllers/components_controller_test.rb:88
+Error:
+bin/rails test test/controllers/components_controller_test.rb:100
+Error:
+bin/rails test test/controllers/admin/component_conditions_controller_test.rb:35
+Error:
+bin/rails test test/controllers/admin/component_conditions_controller_test.rb:134
+Error:
+bin/rails test test/controllers/admin/component_conditions_controller_test.rb:71
+Error:
+bin/rails test test/controllers/admin/component_conditions_controller_test.rb:107
+Error:
+bin/rails test test/controllers/admin/component_conditions_controller_test.rb:161
+Error:
+bin/rails test test/controllers/admin/component_conditions_controller_test.rb:146
+Error:
+bin/rails test test/controllers/admin/component_conditions_controller_test.rb:59
+Error:
+bin/rails test test/controllers/admin/component_conditions_controller_test.rb:95
+Error:
+bin/rails test test/controllers/admin/component_conditions_controller_test.rb:46
+Error:
+bin/rails test test/controllers/admin/component_conditions_controller_test.rb:84
+Error:
+bin/rails test test/controllers/admin/component_conditions_controller_test.rb:24
+Error:
+bin/rails test test/controllers/admin/component_conditions_controller_test.rb:120
+Error:
+bin/rails test test/controllers/admin/component_conditions_controller_test.rb:170
+Error:
+bin/rails test test/controllers/owners_controller_password_test.rb:47
+Error:
+bin/rails test test/controllers/owners_controller_password_test.rb:53
+Error:
+bin/rails test test/controllers/owners_controller_password_test.rb:14
+Error:
+bin/rails test test/controllers/owners_controller_password_test.rb:31
+Error:
+bin/rails test test/controllers/owners_controller_password_test.rb:59
+Error:
+bin/rails test test/controllers/owners_controller_password_test.rb:23
+Error:
+bin/rails test test/controllers/data_transfers_controller_test.rb:64
+Error:
+bin/rails test test/controllers/owners_controller_password_test.rb:39
+Error:
+bin/rails test test/controllers/data_transfers_controller_test.rb:74
+Error:
+bin/rails test test/controllers/data_transfers_controller_test.rb:108
+Error:
+bin/rails test test/controllers/data_transfers_controller_test.rb:165
+Error:
+bin/rails test test/controllers/data_transfers_controller_test.rb:183
+Error:
+bin/rails test test/controllers/data_transfers_controller_test.rb:55
+Error:
+bin/rails test test/controllers/data_transfers_controller_test.rb:41
+Error:
+bin/rails test test/controllers/data_transfers_controller_test.rb:82
+Error:
+bin/rails test test/controllers/data_transfers_controller_test.rb:126
+Error:
+bin/rails test test/controllers/data_transfers_controller_test.rb:143
+Error:
+bin/rails test test/controllers/data_transfers_controller_test.rb:98
+Error:
+bin/rails test test/controllers/data_transfers_controller_test.rb:47
+Error:
+bin/rails test test/controllers/admin/connection_types_controller_test.rb:37
+Error:
+bin/rails test test/controllers/admin/connection_types_controller_test.rb:77
+Error:
+bin/rails test test/controllers/admin/connection_types_controller_test.rb:89
+Error:
+bin/rails test test/controllers/admin/connection_types_controller_test.rb:127
+Error:
+bin/rails test test/controllers/admin/connection_types_controller_test.rb:50
+Error:
+bin/rails test test/controllers/admin/connection_types_controller_test.rb:25
+Error:
+bin/rails test test/controllers/admin/connection_types_controller_test.rb:152
+Error:
+bin/rails test test/controllers/admin/connection_types_controller_test.rb:203
+Error:
+bin/rails test test/controllers/admin/connection_types_controller_test.rb:167
+Error:
+bin/rails test test/controllers/admin/connection_types_controller_test.rb:139
+Error:
+bin/rails test test/controllers/admin/connection_types_controller_test.rb:180
+Error:
+bin/rails test test/controllers/admin/connection_types_controller_test.rb:63
+Error:
+bin/rails test test/controllers/admin/connection_types_controller_test.rb:194
+Error:
+bin/rails test test/controllers/admin/connection_types_controller_test.rb:103
+Error:
+bin/rails test test/controllers/admin/connection_types_controller_test.rb:115
+Error:
+bin/rails test test/controllers/admin/conditions_controller_test.rb:31
+Error:
+bin/rails test test/controllers/admin/conditions_controller_test.rb:130
+Error:
+bin/rails test test/controllers/admin/conditions_controller_test.rb:103
+Error:
+bin/rails test test/controllers/admin/conditions_controller_test.rb:153
+Error:
+bin/rails test test/controllers/admin/conditions_controller_test.rb:141
+Error:
+bin/rails test test/controllers/admin/conditions_controller_test.rb:67
+Error:
+bin/rails test test/controllers/admin/conditions_controller_test.rb:91
+Error:
+bin/rails test test/controllers/admin/conditions_controller_test.rb:55
+Error:
+bin/rails test test/controllers/admin/conditions_controller_test.rb:42
+Error:
+bin/rails test test/controllers/admin/conditions_controller_test.rb:80
+Error:
+bin/rails test test/controllers/admin/conditions_controller_test.rb:20
+Error:
+bin/rails test test/controllers/admin/conditions_controller_test.rb:162
+Error:
+bin/rails test test/controllers/admin/conditions_controller_test.rb:116
+Error:
+bin/rails test test/controllers/owners_controller_destroy_test.rb:58
+Error:
+bin/rails test test/controllers/owners_controller_destroy_test.rb:110
+Error:
+bin/rails test test/controllers/owners_controller_destroy_test.rb:85
+Error:
+bin/rails test test/controllers/owners_controller_destroy_test.rb:132
+Error:
+bin/rails test test/controllers/owners_controller_destroy_test.rb:35
+Error:
+bin/rails test test/controllers/owners_controller_destroy_test.rb:167
+Error:
+bin/rails test test/controllers/owners_controller_destroy_test.rb:46
+Error:
+bin/rails test test/controllers/owners_controller_destroy_test.rb:24
+Error:
+bin/rails test test/controllers/sessions_controller_test.rb:57
+Error:
+bin/rails test test/controllers/owners_controller_destroy_test.rb:145
+Error:
+bin/rails test test/controllers/owners_controller_destroy_test.rb:121
+Error:
+bin/rails test test/controllers/sessions_controller_test.rb:28
+Error:
+bin/rails test test/controllers/sessions_controller_test.rb:44
+Error:
+bin/rails test test/controllers/admin/run_statuses_controller_test.rb:27
+Error:
+bin/rails test test/controllers/admin/run_statuses_controller_test.rb:126
+Error:
+bin/rails test test/controllers/admin/run_statuses_controller_test.rb:99
+Error:
+bin/rails test test/controllers/admin/run_statuses_controller_test.rb:63
+Error:
+bin/rails test test/controllers/admin/run_statuses_controller_test.rb:149
+Error:
+bin/rails test test/controllers/admin/run_statuses_controller_test.rb:87
+Error:
+bin/rails test test/controllers/admin/run_statuses_controller_test.rb:137
+Error:
+bin/rails test test/controllers/admin/run_statuses_controller_test.rb:51
+Error:
+bin/rails test test/controllers/password_resets_controller_test.rb:152
+Error:
+bin/rails test test/controllers/password_resets_controller_test.rb:51
+Error:
+bin/rails test test/controllers/password_resets_controller_test.rb:13
+Error:
+bin/rails test test/controllers/admin/run_statuses_controller_test.rb:38
+Error:
+bin/rails test test/controllers/admin/run_statuses_controller_test.rb:16
+Error:
+bin/rails test test/controllers/admin/run_statuses_controller_test.rb:76
+Error:
+bin/rails test test/controllers/admin/run_statuses_controller_test.rb:158
+Error:
+bin/rails test test/controllers/admin/run_statuses_controller_test.rb:112
+Error:
+bin/rails test test/controllers/admin/admin_owners_controller_test.rb:82
+Error:
+bin/rails test test/controllers/admin/admin_owners_controller_test.rb:104
+Error:
+bin/rails test test/controllers/admin/admin_owners_controller_test.rb:70
+Error:
+bin/rails test test/controllers/admin/admin_owners_controller_test.rb:14
+Failure:
+bin/rails test test/services/computer_model_import_service_test.rb:36
+Failure:
+bin/rails test test/services/owner_import_service_test.rb:112
+Error:
+bin/rails test test/controllers/admin/admin_owners_controller_test.rb:93
+Error:
+bin/rails test test/controllers/admin/admin_owners_controller_test.rb:58
+Failure:
+bin/rails test test/services/owner_import_service_test.rb:132
+Error:
+bin/rails test test/controllers/admin/admin_owners_controller_test.rb:47
+Error:
+bin/rails test test/controllers/admin/admin_owners_controller_test.rb:26
+Error:
+bin/rails test test/controllers/password_resets_controller_test.rb:104
+Error:
+bin/rails test test/controllers/computers_controller_test.rb:214
+Error:
+bin/rails test test/controllers/computers_controller_test.rb:84
+Error:
+bin/rails test test/controllers/computers_controller_test.rb:192
+Error:
+bin/rails test test/controllers/computers_controller_test.rb:132
+Error:
+bin/rails test test/controllers/computers_controller_test.rb:237
+Error:
+bin/rails test test/controllers/computers_controller_test.rb:154
+Error:
+bin/rails test test/controllers/computers_controller_test.rb:203
+Error:
+bin/rails test test/controllers/computers_controller_test.rb:116
+Failure:
+bin/rails test test/services/computer_model_export_service_test.rb:75
+Failure:
+bin/rails test test/services/computer_model_export_service_test.rb:108
+Failure:
+bin/rails test test/services/computer_model_export_service_test.rb:69
+Error:
+bin/rails test test/controllers/computers_controller_test.rb:141
+Error:
+bin/rails test test/controllers/computers_controller_test.rb:66
+Error:
+bin/rails test test/controllers/computers_controller_test.rb:44
+Error:
+bin/rails test test/controllers/computers_controller_test.rb:105
+Error:
+bin/rails test test/controllers/computers_controller_test.rb:180
+Error:
+bin/rails test test/controllers/computers_controller_test.rb:54
+Error:
+bin/rails test test/controllers/computers_controller_test.rb:253
+Finished in 16.945946s, 35.7018 runs/s, 56.9458 assertions/s.
+605 runs, 965 assertions, 7 failures, 232 errors, 0 skips
+

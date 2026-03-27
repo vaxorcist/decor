@@ -1,16 +1,19 @@
 # decor/test/fixtures/computers.yml
-# version 1.8
+# version 1.9
+# v1.9 (Session 41): Appliances → Peripherals merger Phase 1.
+#   dec_unibus_router: device_type changed from 1 (appliance) to 2 (peripheral).
+#   Updated comments throughout to remove appliance references.
 # v1.8 (Session 25): Added charlie_dec_vt278 fixture for device_type: 2 (peripheral)
 #   enum tests and owners#peripherals smoke test.
 #   Assigned to owner three (charlie) — neutral owner with no hardcoded count
 #   assertions in any test file.
 # v1.7 (Session 21): Added barter_status values to two fixtures for filter tests.
-#   dec_unibus_router: barter_status: 1 (offered) — charlie's appliance.
+#   dec_unibus_router: barter_status: 1 (offered) — charlie's peripheral.
 #   alice_vax:         barter_status: 2 (wanted)  — alice's computer.
 #   All other fixtures: barter_status omitted → DB default 0 (no_barter).
 #   barter_status values: 0 = no_barter, 1 = offered, 2 = wanted.
 # v1.6: dec_unibus_router owner changed to three (charlie) — neutral owner.
-# device_type values: 0 = computer (default), 1 = appliance, 2 = peripheral.
+# device_type values: 0 = computer (default), 2 = peripheral.
 
 alice_pdp11:
   owner: one
@@ -59,10 +62,10 @@ unassigned_condition_test:
   run_status: defective
   history:
 
-# Appliance fixture for device_type enum tests.
-# Represents an autonomous network device that operates without a host computer.
+# Peripheral fixture for device_type enum tests and barter filter tests.
+# Represents a network device. Formerly classified as appliance (device_type: 1);
+# merged into peripheral (device_type: 2) in Session 41.
 # Assigned to owner three (charlie) — neutral owner with no hardcoded count assertions.
-# device_type: 1 = appliance.
 # barter_status: 1 = offered — used for barter filter tests.
 dec_unibus_router:
   owner: three
@@ -71,7 +74,7 @@ dec_unibus_router:
   order_number: ORD-RTR-001
   computer_condition: original
   run_status: working
-  device_type: 1
+  device_type: 2
   barter_status: 1
   history: Standalone UNIBUS-attached routing device.
 

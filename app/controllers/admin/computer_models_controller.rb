@@ -1,11 +1,13 @@
 # decor/app/controllers/admin/computer_models_controller.rb
-# version 1.3
+# version 1.4
+# v1.4 (Session 41): Appliances → Peripherals merger Phase 2.
+#   Removed "appliance" branch from set_device_context — the appliance_models
+#   admin route is gone; device_context: "appliance" is no longer used.
+#   Removed @device_type_value = 1 assignment and all @index_path / @new_path
+#   / path-method assignments for the appliance context.
 # v1.3 (Session 25): Extended set_device_context to handle device_context: "peripheral".
-#   peripheral branch: @device_type_value = 2, route helpers use :peripheral_models.
-#   No other changes — all actions are already driven entirely by the context
-#   variables set here, so the peripheral page works without any further edits.
 # v1.2: Added @create_path and @update_path_for to set_device_context so _form.html.erb
-#   can pass an explicit url: to form_with, routing submissions to the correct resource.
+#   can pass an explicit url: to form_with.
 
 module Admin
   class ComputerModelsController < BaseController
@@ -63,15 +65,15 @@ module Admin
     private
 
     # Derives all context from the device_context param injected by the router.
-    # "computer"   (default) → Computer Models page   (device_type: 0)
-    # "appliance"            → Appliance Models page  (device_type: 1)
-    # "peripheral"           → Peripheral Models page (device_type: 2)
+    # "peripheral" → Peripheral Models page (device_type: 2); covers all peripheral
+    #               models (formerly also appliance models, merged in Session 41).
+    # default      → Computer Models page (device_type: 0).
     #
     # Sets:
-    #   @model_label        — "Computer" / "Appliance" / "Peripheral"
-    #   @model_label_plural — "Computers" / "Appliances" / "Peripherals"
-    #   @device_type_key    — "computer" / "appliance" / "peripheral"
-    #   @device_type_value  — 0 / 1 / 2
+    #   @model_label        — "Computer" / "Peripheral"
+    #   @model_label_plural — "Computers" / "Peripherals"
+    #   @device_type_key    — "computer" / "peripheral"
+    #   @device_type_value  — 0 / 2
     #   @index_path         — collection index path
     #   @new_path           — new-record path
     #   @create_path        — collection POST path (form_with url: for new records)
@@ -80,17 +82,6 @@ module Admin
     #   @delete_path_for    — bound method (Delete button in index)
     def set_device_context
       case params[:device_context]
-      when "appliance"
-        @model_label        = "Appliance"
-        @model_label_plural = "Appliances"
-        @device_type_key    = "appliance"
-        @device_type_value  = 1
-        @index_path         = admin_appliance_models_path
-        @new_path           = new_admin_appliance_model_path
-        @create_path        = admin_appliance_models_path
-        @update_path_for    = method(:admin_appliance_model_path)
-        @edit_path_for      = method(:edit_admin_appliance_model_path)
-        @delete_path_for    = method(:admin_appliance_model_path)
       when "peripheral"
         @model_label        = "Peripheral"
         @model_label_plural = "Peripherals"

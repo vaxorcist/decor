@@ -1,15 +1,11 @@
-# decor/test/controllers/owners_controller_test.rb - version 1.7
+# decor/test/controllers/owners_controller_test.rb
+# version 1.8
+# v1.8 (Session 41): Appliances → Peripherals merger Phase 2.
+#   Removed "appliances sub-page returns 200 when logged in" test — the
+#   appliances action and its route have been removed from OwnersController.
 # v1.7 (Session 39): Corrected the unauthenticated connections test.
-#   OwnersController has no require_login before_action at all — the
-#   connections action (and all other read-only sub-pages) are publicly
-#   accessible without login. Unauthenticated request returns 200, not a
-#   redirect. The test description and assertion updated accordingly.
-# v1.6 (Session 39): Corrected two connections sub-page tests after reading
-#   authentication.rb and owners_controller.rb:
-#   - new_session_path (not login_path) for unauthenticated redirect.
-#   - No ownership guard on connections — cross-owner returns 200.
-# v1.5 (Session 39): Added three smoke tests for the connections sub-page
-#   introduced in owners_controller.rb v1.8 (Session 38).
+# v1.6 (Session 39): Corrected two connections sub-page tests.
+# v1.5 (Session 39): Added three smoke tests for the connections sub-page.
 # v1.4 (Session 25): Added peripherals sub-page smoke test.
 # v1.3 (Session 23): Added computers / appliances / components sub-page smoke tests.
 # v1.2: Refactored to use centralized AuthenticationHelper constants.
@@ -169,8 +165,8 @@ class OwnersControllerTest < ActionDispatch::IntegrationTest
 
   # ── Owner sub-page smoke tests ────────────────────────────────────────────
   # OwnersController has no require_login before_action. All read-only
-  # sub-pages (computers, appliances, peripherals, components, connections)
-  # are publicly accessible. Tests verify routes resolve and actions succeed.
+  # sub-pages (computers, peripherals, components, connections) are publicly
+  # accessible. Tests verify routes resolve and actions succeed.
 
   test "computers sub-page returns 200 when logged in" do
     owner = owners(:one)
@@ -181,18 +177,10 @@ class OwnersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  test "appliances sub-page returns 200 when logged in" do
-    owner = owners(:one)
-    login_as owner
-
-    get appliances_owner_url(owner)
-
-    assert_response :success
-  end
-
   test "peripherals sub-page returns 200 when logged in" do
-    # charlie has the charlie_dec_vt278 fixture (device_type: peripheral),
-    # exercising the non-empty table path.
+    # charlie has both dec_unibus_router and charlie_dec_vt278 (device_type: peripheral),
+    # exercising the non-empty table path. dec_unibus_router was formerly an appliance;
+    # it is now a peripheral after the Session 41 merger.
     owner = owners(:three)
     login_as owner
 

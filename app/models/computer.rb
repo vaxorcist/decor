@@ -1,5 +1,11 @@
 # decor/app/models/computer.rb
-# version 1.9
+# version 2.0
+# v2.0 (Session 41): Appliances → Peripherals merger Phase 1.
+#   Removed appliance: 1 from device_type enum. Enum is now hash form
+#   { computer: 0, peripheral: 2 } to preserve non-contiguous integer
+#   values — peripheral records in the DB carry device_type=2 and must
+#   not be renumbered. DB data migration (device_type=1 → 2) was run
+#   manually before this session.
 # v1.9 (Session 31): Added has_many :connection_members (dependent: :destroy)
 #   and has_many :connection_groups (through: :connection_members).
 #   dependent: :destroy (not :delete_all) is intentional: Ruby destroy fires
@@ -22,8 +28,8 @@ class Computer < ApplicationRecord
   belongs_to :run_status, optional: true
   has_many :components, dependent: :destroy
 
-  # Connections: a computer (appliance or peripheral) may participate in one or
-  # more connection groups. Each group records which devices are physically or
+  # Connections: a computer or peripheral may participate in one or more
+  # connection groups. Each group records which devices are physically or
   # logically connected to each other.
   #
   # dependent: :destroy — must use Ruby destroy (not delete_all) so that
@@ -34,13 +40,18 @@ class Computer < ApplicationRecord
 
   # Classifies the item stored in the computers table.
   # computer   — a general-purpose programmable machine
-  # appliance  — an autonomous device that operates without a host computer
-  #              (routers, switches, terminal servers, printers, etc.)
   # peripheral — a device that attaches to and requires a host computer
-  #              (terminals, word-processors, storage controllers, etc.)
-  # A CHECK(device_type IN (0,1,2)) constraint enforces valid values at the
-  # database level (migration 20260316100000).
-  enum :device_type, { computer: 0, appliance: 1, peripheral: 2 }, prefix: true
+  #              (terminals, word-processors, storage controllers, routers, etc.)
+  #
+  # Hash form is required because value 1 (formerly appliance) was removed in
+  # Session 41, leaving a gap in the sequence. Rails needs the explicit mapping
+  # { computer: 0, peripheral: 2 } to preserve the DB integer values.
+  # Do NOT renumber peripheral to 1 — that would corrupt all existing DB records.
+  #
+  # A CHECK(device_type IN (0,1,2)) constraint exists at the DB level
+  # (migration 20260316100000). Value 1 is no longer used by the application
+  # but the constraint is harmless and does not need updating.
+  enum :device_type, { computer: 0, peripheral: 2 }, prefix: true
 
   # Barter trade status for this item.
   # no_barter — not available for trade (the default for all records)

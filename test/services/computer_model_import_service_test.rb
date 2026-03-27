@@ -1,11 +1,12 @@
 # decor/test/services/computer_model_import_service_test.rb
-# version 1.1
-# Session 24: New test file — ComputerModelImportService.
-# Session 29: Added peripheral import test — same service, device_type: :peripheral.
-#
-# Tests use Tempfile to provide a real file object with .path, .content_type,
-# and .original_filename — matching what the controller passes to the service.
-# This mirrors the pattern used in owner_import_service_test.rb.
+# version 1.2
+# v1.2 (Session 41): Appliances → Peripherals merger Phase 4.
+#   Removed "imports a new appliance model with correct device_type" test —
+#   device_type: :appliance no longer exists; the enum value was removed in
+#   Session 41. Peripheral import (device_type: :peripheral) is already
+#   covered by the existing peripheral test below.
+# v1.1 (Session 29): Added peripheral import test.
+# v1.0 (Session 24): New test file — ComputerModelImportService.
 
 require "test_helper"
 require "csv"
@@ -31,21 +32,7 @@ class ComputerModelImportServiceTest < ActiveSupport::TestCase
     assert_equal 2, result[:count]
   end
 
-  # ── Happy path — appliance ─────────────────────────────────────────────────
-
-  test "imports a new appliance model with correct device_type" do
-    result = process_csv("name\nDECserver 100\n", device_type: :appliance)
-
-    assert result[:success]
-    model = ComputerModel.find_by!(name: "DECserver 100")
-    assert model.device_type_appliance?
-  end
-
   # ── Happy path — peripheral ────────────────────────────────────────────────
-
-  # Session 29: verify device_type: :peripheral is accepted and stamped correctly.
-  # The service already handles arbitrary device_type values — this test confirms
-  # it works end-to-end for the peripheral case.
 
   test "imports a new peripheral model with correct device_type" do
     result = process_csv("name\nLA120\n", device_type: :peripheral)
@@ -60,17 +47,15 @@ class ComputerModelImportServiceTest < ActiveSupport::TestCase
   # ── Duplicate handling ─────────────────────────────────────────────────────
 
   test "silently skips existing model and returns count 0" do
-    # PDP-11/70 already exists in fixtures
     result = process_csv("name\nPDP-11/70\n", device_type: :computer)
 
     assert result[:success], "Skip should not be an error"
     assert_equal 0, result[:count]
-    # Verify no duplicate was created
     assert_equal 1, ComputerModel.where(name: "PDP-11/70").count
   end
 
   test "imports new records and skips existing ones in the same file" do
-    csv_content = "name\nPDP-11/70\nPDP-11/44\n"  # first exists, second is new
+    csv_content = "name\nPDP-11/70\nPDP-11/44\n"
     result = process_csv(csv_content, device_type: :computer)
 
     assert result[:success]
@@ -86,11 +71,6 @@ class ComputerModelImportServiceTest < ActiveSupport::TestCase
     assert_match "Missing required CSV columns", result[:error]
     assert_match "name",                         result[:error]
   end
-
-  # Note: blank-name tests are omitted. In a single-column CSV a row whose only
-  # field is blank is indistinguishable from a blank line — the service silently
-  # skips it (correct behaviour). Rollback on parse error is covered by the
-  # missing-column test above.
 
   # ── File validation ────────────────────────────────────────────────────────
 
@@ -112,8 +92,6 @@ class ComputerModelImportServiceTest < ActiveSupport::TestCase
 
   private
 
-  # Build a Tempfile-backed upload and call the service.
-  # Keyword args match what is needed to exercise validation paths.
   def process_csv(content, device_type: :computer,
                             content_type: "text/csv",
                             filename: "test_import.csv")

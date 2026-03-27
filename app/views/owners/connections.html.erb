@@ -1,16 +1,14 @@
-<%# decor/app/views/owners/connections.html.erb - version 1.0 %>
-<%# Session 38: New owner sub-page — Connections. %>
-<%# Replaces the old /owners/:id/connection_groups standalone index. %>
+<%# decor/app/views/owners/connections.html.erb - version 1.1 %>
+<%# v1.1 (Session 41): Appliances → Peripherals merger Phase 2. %>
+<%#   Removed "Appliances" tab from the tab strip (appliances_owner_path gone). %>
+<%#   Tab order: Computers | Peripherals | Components | Connections (active). %>
+<%# v1.0 (Session 38): New owner sub-page — Connections. %>
 <%# %>
 <%# Table layout (one row per port, grouped): %>
 <%#   First row of each group: CONNECTION ID | TYPE | CONNECTION LABEL | PORT ID | CONNECTS | PORT LABEL | Edit Delete %>
 <%#   Subsequent rows:         (blank)       | (b)  | (blank)          | PORT ID | CONNECTS | PORT LABEL | (blank) %>
 <%# Groups are ordered by owner_group_id; ports within each group by owner_member_id. %>
 <%# A heavier top border (border-t-2 border-stone-300) separates consecutive groups. %>
-<%# %>
-<%# @connection_groups is loaded in owners_controller#connections (v1.8) with %>
-<%# eager-loaded connection_type and connection_members (with computer+model). %>
-<%# Members are sorted in memory (.sort_by) — no extra DB queries per row. %>
 
 <% content_for :title, "Connections" %>
 
@@ -23,8 +21,6 @@
   <%# Inactive: border-transparent + text-stone-600. %>
   <div class="flex gap-6 border-b border-stone-200 mb-6">
     <%= link_to "Computers",   computers_owner_path(@owner),
-          class: "pb-2 -mb-px border-b-2 border-transparent text-stone-600 hover:text-stone-900" %>
-    <%= link_to "Appliances",  appliances_owner_path(@owner),
           class: "pb-2 -mb-px border-b-2 border-transparent text-stone-600 hover:text-stone-900" %>
     <%= link_to "Peripherals", peripherals_owner_path(@owner),
           class: "pb-2 -mb-px border-b-2 border-transparent text-stone-600 hover:text-stone-900" %>
