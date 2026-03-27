@@ -1,29 +1,16 @@
 # decor/test/controllers/admin/data_transfers_controller_test.rb
-# version 1.1
-# Session 24: New test file — Admin::DataTransfersController (show, export, import).
-# Session 29: Added peripheral_models export and import tests.
-#   Peripheral model records are created dynamically within tests (fixture-independent)
-#   because the peripheral model fixture name added in Session 27 is not in context.
-#   Dynamic creation is also consistent with the approach used in
-#   owner_export_service_test.rb v1.2 for peripheral records.
-#
-# Fixture baseline used:
-#   owners(:one)  = alice (admin)
-#   owners(:two)  = bob   (non-admin)
-#   owners(:three)= charlie (non-admin, neutral owner)
-#   computer_models: pdp11_70 (device_type: 0), hsc50 (device_type: 1),
-#                    one peripheral model (device_type: 2) — added Session 27
-#   component_types: memory_board, cpu_board, disk_drive, tape_drive, power_supply, terminal
-#
-# Route helpers (admin namespace):
-#   admin_data_transfer_path         → GET  /admin/data_transfer
-#   admin_export_data_transfer_path  → GET  /admin/data_transfer/export
-#   admin_import_data_transfer_path  → POST /admin/data_transfer/import
-#
-# Auth: Admin::BaseController uses before_action :require_admin.
-#   - Not logged in       → redirected (require_admin triggers require_login first)
-#   - Logged in non-admin → redirected
-#   - Logged in admin     → allowed
+# version 1.2
+# v1.2 (Session 41): Appliances → Peripherals merger Phase 4.
+#   Removed "export appliance_models contains only device_type 1 records" test
+#     — admin_data_transfers no longer handles data_type: "appliance_models".
+#   Removed "import appliance_models creates record with device_type appliance" test
+#     — device_type: :appliance no longer exists.
+#   Fixed "export peripheral_models contains only device_type 2 records":
+#     hsc50 (formerly device_type: 1 appliance) is now device_type: 2 (peripheral),
+#     so it now correctly appears in the peripheral export. Removed the assertion
+#     that said HSC50 must not appear; replaced with assert_includes for HSC50.
+# v1.1 (Session 29): Added peripheral_models export and import tests.
+# v1.0 (Session 24): New test file.
 
 require "test_helper"
 require "csv"
@@ -114,30 +101,12 @@ class Admin::DataTransfersControllerTest < ActionDispatch::IntegrationTest
     csv   = CSV.parse(response.body, headers: true)
     names = csv.map { |row| row["name"] }
 
-    # pdp11_70 is device_type: 0 — must be present
     assert_includes names, "PDP-11/70"
-    # hsc50 is device_type: 1 — must NOT be present in computer export
+    # hsc50 is now device_type: 2 (peripheral) — must not appear in computer export
     refute_includes names, "HSC50"
   end
 
-  # ── export — appliance_models ─────────────────────────────────────────────
-
-  test "export appliance_models contains only device_type 1 records" do
-    login_as(@alice)
-    get admin_export_data_transfer_path, params: { data_type: "appliance_models" }
-
-    csv   = CSV.parse(response.body, headers: true)
-    names = csv.map { |row| row["name"] }
-
-    assert_includes names, "HSC50"
-    refute_includes names, "PDP-11/70"
-  end
-
   # ── export — peripheral_models ────────────────────────────────────────────
-
-  # Session 29: peripheral model tests use a dynamically-created record ("LA120")
-  # to avoid dependency on the Session 27 fixture whose label is not in context.
-  # LA120 is a DEC dot-matrix printer — an appropriate peripheral for this project.
 
   test "export peripheral_models returns CSV attachment with correct header" do
     ComputerModel.create!(name: "LA120", device_type: :peripheral)
@@ -162,8 +131,7 @@ class Admin::DataTransfersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "export peripheral_models contains only device_type 2 records" do
-    # Create a peripheral model to assert against.
-    # Verify it appears in peripheral export and that computer/appliance models do not.
+    # Create a peripheral model to assert against in addition to the fixtures.
     ComputerModel.create!(name: "LA120", device_type: :peripheral)
 
     login_as(@alice)
@@ -172,9 +140,11 @@ class Admin::DataTransfersControllerTest < ActionDispatch::IntegrationTest
     csv   = CSV.parse(response.body, headers: true)
     names = csv.map { |row| row["name"] }
 
-    assert_includes names, "LA120",     "LA120 (peripheral) must appear in peripheral export"
+    assert_includes names, "LA120",   "LA120 (peripheral) must appear in peripheral export"
+    # hsc50 is now device_type: 2 (peripheral) after the Session 41 merger —
+    # it correctly appears in the peripheral export.
+    assert_includes names, "HSC50",   "HSC50 is now a peripheral and must appear in peripheral export"
     refute_includes names, "PDP-11/70", "Computer model must not appear in peripheral export"
-    refute_includes names, "HSC50",     "Appliance model must not appear in peripheral export"
   end
 
   # ── export — component_types ──────────────────────────────────────────────
@@ -294,14 +264,12 @@ class Admin::DataTransfersControllerTest < ActionDispatch::IntegrationTest
     assert_match "computer model",  flash[:notice]
     assert_match "1",               flash[:notice]
 
-    # Verify the model was created with the correct device_type
     model = ComputerModel.find_by!(name: "PDP-11/44")
     assert model.device_type_computer?
   end
 
   test "import computer_models skips existing records silently" do
     login_as(@alice)
-    # PDP-11/70 already exists in fixtures
     csv_content = "name\nPDP-11/70\n"
 
     assert_no_difference "ComputerModel.count" do
@@ -309,31 +277,12 @@ class Admin::DataTransfersControllerTest < ActionDispatch::IntegrationTest
            params: { data_type: "computer_models", file: csv_upload(csv_content) }
     end
 
-    # Skipping is not an error — should succeed with 0 created
     assert_redirected_to admin_data_transfer_path
     assert_match "0",               flash[:notice]
     assert_nil flash[:alert]
   end
 
-  # ── import — appliance_models ─────────────────────────────────────────────
-
-  test "import appliance_models creates record with device_type appliance" do
-    login_as(@alice)
-    csv_content = "name\nDECserver 200\n"
-
-    assert_difference "ComputerModel.count", 1 do
-      post admin_import_data_transfer_path,
-           params: { data_type: "appliance_models", file: csv_upload(csv_content) }
-    end
-
-    model = ComputerModel.find_by!(name: "DECserver 200")
-    assert model.device_type_appliance?
-  end
-
   # ── import — peripheral_models ────────────────────────────────────────────
-
-  # Session 29: verify the peripheral_models import path creates a record with
-  # device_type: peripheral. Uses a unique name to avoid fixture conflicts.
 
   test "import peripheral_models creates record with device_type peripheral" do
     login_as(@alice)
@@ -353,7 +302,6 @@ class Admin::DataTransfersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "import peripheral_models skips existing records silently" do
-    # Create a peripheral model, then re-import the same name — must be skipped.
     existing = ComputerModel.create!(name: "LA120", device_type: :peripheral)
     login_as(@alice)
 
@@ -413,7 +361,6 @@ class Admin::DataTransfersControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to admin_data_transfer_path
     assert_match "computer", flash[:notice]
 
-    # Verify the computer belongs to charlie, not alice
     computer = Computer.find_by!(serial_number: "ADMIN-IMPORT-SN-01")
     assert_equal @charlie, computer.owner
   end
@@ -433,7 +380,6 @@ class Admin::DataTransfersControllerTest < ActionDispatch::IntegrationTest
 
   test "import computer_models with missing name column shows alert" do
     login_as(@alice)
-    # CSV has wrong column header
     csv_content = "model_name\nPDP-11/44\n"
 
     assert_no_difference "ComputerModel.count" do
@@ -447,10 +393,6 @@ class Admin::DataTransfersControllerTest < ActionDispatch::IntegrationTest
 
   private
 
-  # Wrap a CSV string in a Rack::Test::UploadedFile so it survives the
-  # integration test HTTP layer with .path / .content_type / .original_filename intact.
-  # ActionDispatch::Http::UploadedFile gets stringified through post params: —
-  # use Rack::Test::UploadedFile instead (see RAILS_SPECIFICS.md).
   def csv_upload(content, filename: "admin_import_test.csv", content_type: "text/csv")
     tempfile = Tempfile.new(["admin_import_test", ".csv"])
     tempfile.write(content)

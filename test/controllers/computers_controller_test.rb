@@ -1,23 +1,25 @@
-# decor/test/controllers/computers_controller_test.rb - version 1.7
+# decor/test/controllers/computers_controller_test.rb
+# version 1.8
+# v1.8 (Session 41): Appliances → Peripherals merger Phase 2.
+#   Removed appliance route tests (route gone):
+#     "GET /appliances loads successfully"
+#     "GET /appliances shows only appliances, not computers"
+#   Removed appliance filter test (enum value gone):
+#     "index filtered by device_type=appliance excludes computers"
+#   Removed appliance create test (enum value gone):
+#     "create with device_type=appliance stamps appliance and shows correct flash"
+#   Removed appliance-to-computer update test (appliance gone):
+#     "update computer record to device_type=appliance shows appliance flash"
+#   Updated peripheral-to-computer update test: dec_unibus_router is now a
+#     peripheral (not appliance) after fixture v1.9 change; test renamed accordingly.
+#   Updated destroy test: dec_unibus_router is now peripheral; expected flash
+#     changed from "Appliance was successfully deleted." to
+#     "Peripheral was successfully deleted."
+#   Updated fixture notes in this header comment.
+#
 # v1.7 (Session 35): Added two show-action tests for Part 3 connections display.
-#   show with connections: alice_pdp11 is in group alice_pdp11_vax (label "Lab setup",
-#     no connection_type, peer = alice_vax). Asserts group label and peer model name
-#     appear. NOTE: Connected-to column renders computer_model.name as link text,
-#     NOT the serial number — assertion uses computer_models(:vax11_780).name.
-#   show without connections: unassigned_condition_test (alice's, no group members).
-#     Asserts empty-state "No connections recorded" message appears.
-#
 # v1.6 (Session 22): Added barter_status filter tests.
-#   Logged-in default ("0+1"): alice_pdp11 (no_barter) visible; alice_vax (wanted) hidden.
-#   Logged-in barter_status=2: alice_vax (wanted) visible; alice_pdp11 hidden.
-#   Logged-out: no filter applied — all records visible regardless of barter_status.
-#   All tests use /computers path (device_type=computer by default), so only
-#   computer fixtures (not dec_unibus_router appliance) appear in the response.
-#
-# v1.5 (Session 18): Fixed two failing tests — login_as owners(:three) was
-#   silently failing because charlie's password ("DecorTest2026!") is not
-#   registered in detect_password. Both charlie tests now pass the password
-#   explicitly via login_as owners(:three), password: "DecorTest2026!".
+# v1.5 (Session 18): Fixed charlie password in login_as call.
 # v1.4 (Session 18): Added tests for device_type selector on new/edit form.
 # v1.3 (Session 17): Corrected stale filter test for unfiltered index.
 # v1.2: Added two appliances route tests.
@@ -29,36 +31,19 @@
 #   owners(:three)                 = charlie (neutral owner; no hardcoded count assertions)
 #   computers(:alice_pdp11)        = alice's PDP-11/70, serial SN12345, device_type: computer, barter_status: 0 (no_barter)
 #   computers(:alice_vax)          = alice's VAX,       device_type: computer, barter_status: 2 (wanted)
-#   computers(:dec_unibus_router)  = charlie's router,  device_type: appliance, barter_status: 1 (offered)
+#   computers(:dec_unibus_router)  = charlie's router,  device_type: peripheral (formerly appliance), barter_status: 1 (offered)
 #   Each test runs in a rolled-back transaction.
 
 require "test_helper"
 
 class ComputersControllerTest < ActionDispatch::IntegrationTest
   # ---------------------------------------------------------------------------
-  # Appliances route — index locked to device_type=appliance
-  # ---------------------------------------------------------------------------
-
-  test "GET /appliances loads successfully" do
-    login_as owners(:one)
-    get appliances_path
-    assert_response :success
-  end
-
-  test "GET /appliances shows only appliances, not computers" do
-    login_as owners(:one)
-    get appliances_path
-    assert_includes     response.body, computers(:dec_unibus_router).serial_number
-    assert_not_includes response.body, computers(:alice_pdp11).serial_number
-  end
-
-  # ---------------------------------------------------------------------------
   # Computers index — device_type filter
   # ---------------------------------------------------------------------------
 
-  test "index without device_type param shows only computers, not appliances" do
+  test "index without device_type param shows only computers, not peripherals" do
     # Computers page defaults to device_type=computer when no param is present.
-    # Appliances must not bleed through to the Computers page.
+    # Peripherals must not bleed through to the Computers page.
     login_as owners(:one)
     get computers_path
     assert_response :success
@@ -66,20 +51,12 @@ class ComputersControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, computers(:dec_unibus_router).serial_number
   end
 
-  test "index filtered by device_type=computer excludes appliances" do
+  test "index filtered by device_type=computer excludes peripherals" do
     login_as owners(:one)
     get computers_path(device_type: "computer")
     assert_response :success
     assert_includes     response.body, computers(:alice_pdp11).serial_number
     assert_not_includes response.body, computers(:dec_unibus_router).serial_number
-  end
-
-  test "index filtered by device_type=appliance excludes computers" do
-    login_as owners(:one)
-    get computers_path(device_type: "appliance")
-    assert_response :success
-    assert_includes     response.body, computers(:dec_unibus_router).serial_number
-    assert_not_includes response.body, computers(:alice_pdp11).serial_number
   end
 
   # ---------------------------------------------------------------------------
@@ -104,21 +81,21 @@ class ComputersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Computer was successfully created. You can now add components below.", flash[:notice]
   end
 
-  test "create with device_type=appliance stamps appliance and shows correct flash" do
+  test "create with device_type=peripheral stamps peripheral and shows correct flash" do
     login_as owners(:one)
     assert_difference "Computer.count", 1 do
       post computers_path, params: {
         computer: {
           computer_model_id: computer_models(:pdp11_70).id,
-          serial_number:     "NEW-APPL-001",
-          device_type:       "appliance"
+          serial_number:     "NEW-PERI-001",
+          device_type:       "peripheral"
         }
       }
     end
     created = Computer.last
-    assert_equal "appliance", created.device_type
+    assert_equal "peripheral", created.device_type
     assert_redirected_to edit_computer_path(created)
-    assert_equal "Appliance was successfully created. You can now add components below.", flash[:notice]
+    assert_equal "Peripheral was successfully created. You can now add components below.", flash[:notice]
   end
 
   # ---------------------------------------------------------------------------
@@ -136,21 +113,10 @@ class ComputersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Computer was successfully updated.", flash[:notice]
   end
 
-  test "update computer record to device_type=appliance shows appliance flash" do
-    # Changing an existing computer's type to appliance — flash must reflect the
-    # new type, not the old one (flash is built from @computer.device_type AFTER
-    # the update call in computers_controller.rb v1.10).
-    login_as owners(:one)
-    patch computer_path(computers(:alice_pdp11)), params: {
-      computer: { device_type: "appliance" }
-    }
-    assert_redirected_to computer_path(computers(:alice_pdp11))
-    assert_equal "Appliance was successfully updated.", flash[:notice]
-  end
-
-  test "update appliance record to device_type=computer shows computer flash" do
-    # dec_unibus_router is owned by charlie (owners(:three)).
+  test "update peripheral record to device_type=computer shows computer flash" do
+    # dec_unibus_router is a peripheral owned by charlie (owners(:three)).
     # Charlie's password is not in detect_password — must be passed explicitly.
+    # Flash must reflect the new type ("computer") after the update.
     login_as owners(:three), password: "DecorTest2026!"
     patch computer_path(computers(:dec_unibus_router)), params: {
       computer: { device_type: "computer" }
@@ -185,8 +151,8 @@ class ComputersControllerTest < ActionDispatch::IntegrationTest
   # Destroy — flash reflects the device_type of the deleted record
   # ---------------------------------------------------------------------------
 
-  test "destroy appliance shows appliance flash" do
-    # dec_unibus_router is an appliance owned by charlie (owners(:three)).
+  test "destroy peripheral shows peripheral flash" do
+    # dec_unibus_router is a peripheral (formerly appliance) owned by charlie.
     # Charlie's password is not in detect_password — must be passed explicitly.
     # device_label is captured before destroy in v1.10, so the flash is
     # available even after the record is gone.
@@ -195,7 +161,7 @@ class ComputersControllerTest < ActionDispatch::IntegrationTest
       delete computer_url(computers(:dec_unibus_router))
     end
     assert_redirected_to computers_path
-    assert_equal "Appliance was successfully deleted.", flash[:notice]
+    assert_equal "Peripheral was successfully deleted.", flash[:notice]
   end
 
   # ---------------------------------------------------------------------------
@@ -206,7 +172,7 @@ class ComputersControllerTest < ActionDispatch::IntegrationTest
   # device_type=computer by default):
   #   alice_pdp11  barter_status: 0 (no_barter)
   #   alice_vax    barter_status: 2 (wanted)
-  #   (dec_unibus_router is an appliance — never shown on /computers)
+  #   (dec_unibus_router is a peripheral — never shown on /computers)
   #
   # Default filter for logged-in users: "0+1" (no_barter + offered).
   # alice_vax (wanted) must be hidden; alice_pdp11 (no_barter) must be visible.

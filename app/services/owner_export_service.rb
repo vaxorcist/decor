@@ -1,45 +1,27 @@
 # decor/app/services/owner_export_service.rb
-# version 1.3
-# Session 37: Three additions:
-#
-#   1. Ordered export: devices now export in a fixed order — Computers first,
-#      then Peripherals, then Appliances — followed by Components.
-#      Previously export_computers emitted all device types mixed together sorted
-#      by model name. Now replaced by three sequential calls to
-#      export_devices_of_type driven by DEVICE_TYPE_EXPORT_ORDER.
-#
-#   2. Comment header: the first data row of every export is a human-readable
-#      comment (record_type starts with '#') containing the owner name and
-#      export date. The import parser skips all rows whose record_type starts
-#      with '#', so this row is safely ignored on re-import.
-#
-#   3. Connections section: after all components, if the owner has any connection
-#      groups, a sentinel row ('! --- connections ---') is written, followed by
-#      connection_group and connection_member rows. The import parser switches to
-#      connections-parsing mode when it encounters any row whose record_type starts
-#      with '!'. No new CSV headers are needed; existing columns are reused:
-#
-#        connection_group row:
-#          computer_model        → connection_type name (blank if group has no type)
-#          computer_order_number → group label (blank if label is nil)
-#
-#        connection_member row:
-#          computer_model         → device model name (for serial disambiguation)
-#          computer_serial_number → device serial number
-#
-# Session 16: device_type support — "appliance" record_type added.
-# Session 28: peripheral support — "peripheral" record_type added.
+# version 1.4
+# v1.4 (Session 41): Appliances → Peripherals merger Phase 4.
+#   Removed :appliance from DEVICE_TYPE_EXPORT_ORDER — appliance (device_type: 1)
+#   no longer exists as an enum value. Export order is now Computers → Peripherals.
+#   Updated CSV format comment to remove "appliance" record_type.
+#   Note: the import service maps the legacy CSV value "appliance" → peripheral
+#   for backward compatibility with CSVs exported before the merger.
+# v1.3 (Session 37): Ordered export; comment header; connections section.
+# v1.2 (Session 28): Peripheral record_type added.
+# v1.1 (Session 16): Appliance record_type added.
 #
 # CSV format — one row per record, record_type in the first column:
 #
 #   "#..."         comment row — skipped by importer (first data row = owner header)
 #   "computer"     device_type: 0 (general-purpose computer)
-#   "appliance"    device_type: 1 (standalone device: router, server, printer…)
-#   "peripheral"   device_type: 2 (I/O device: terminal, storage controller…)
+#   "peripheral"   device_type: 2 (I/O device: terminal, storage controller, router…)
 #   "component"    a component attached to or spare from a device
 #   "! ---..."     sentinel — starts the connections section
 #   "connection_group"   one connection group header
 #   "connection_member"  one member (device) of the preceding connection group
+#
+# Legacy CSV note: CSVs exported before Session 41 may contain "appliance" rows.
+# The import service maps "appliance" → peripheral for backward compatibility.
 
 require "csv"
 
@@ -61,12 +43,10 @@ class OwnerExportService
 
   # Defines the order in which device types are written to the CSV.
   # Each entry: [device_type_symbol_for_where_clause, record_type_string_in_csv].
-  # Computers first (general purpose), then Peripherals (attached I/O), then
-  # Appliances (standalone autonomous devices).
+  # Computers first (general purpose), then Peripherals (attached I/O devices).
   DEVICE_TYPE_EXPORT_ORDER = [
     [ :computer,   "computer"   ],
-    [ :peripheral, "peripheral" ],
-    [ :appliance,  "appliance"  ]
+    [ :peripheral, "peripheral" ]
   ].freeze
 
   def initialize(owner)
@@ -103,10 +83,10 @@ class OwnerExportService
   # ── Device rows ───────────────────────────────────────────────────────────
 
   # Export all devices of a given device_type in model-name + serial-number order.
-  # Called three times (by DEVICE_TYPE_EXPORT_ORDER) to produce the ordered block.
+  # Called for each entry in DEVICE_TYPE_EXPORT_ORDER.
   #
-  # device_type:      :computer, :peripheral, or :appliance — passed directly to
-  #                   .where() which Rails translates via the enum definition.
+  # device_type:      :computer or :peripheral — passed directly to .where()
+  #                   which Rails translates via the enum definition.
   # record_type_name: the string written into the record_type column of the CSV.
   def export_devices_of_type(csv, device_type, record_type_name)
     computers = @owner.computers
@@ -163,12 +143,6 @@ class OwnerExportService
 
   # Write the optional connections section at the end of the CSV.
   # Only written when the owner has at least one connection group.
-  #
-  # Structure written:
-  #   "! --- connections ---"  — sentinel row, signals start of connections section
-  #   For each group:
-  #     connection_group row   — connection_type name + label
-  #     connection_member rows — one per device in the group (model + serial)
   def export_connections(csv)
     groups = @owner.connection_groups
       .includes(:connection_type, connection_members: { computer: :computer_model })
@@ -176,29 +150,22 @@ class OwnerExportService
 
     return if groups.empty?
 
-    # Sentinel: any row whose record_type starts with '!' puts the importer into
-    # connections mode. The full string is kept human-readable.
     csv << ["! --- connections ---"]
 
     groups.each do |group|
-      # Group header: reuse computer_model for connection_type name,
-      # computer_order_number for the group label. Both may be blank.
       csv << [
         "connection_group",
-        group.connection_type&.name,  # computer_model column
-        group.label,                  # computer_order_number column
+        group.connection_type&.name,
+        group.label,
         nil, nil, nil, nil, nil, nil, nil, nil, nil
       ]
 
-      # Member rows: reuse computer_model + computer_serial_number for device
-      # identification. Model name is written so the importer can disambiguate
-      # when the same serial appears on different models (same owner, diff model).
       group.connection_members.each do |member|
         csv << [
           "connection_member",
-          member.computer.computer_model.name,  # computer_model column
+          member.computer.computer_model.name,
           nil,
-          member.computer.serial_number,         # computer_serial_number column
+          member.computer.serial_number,
           nil, nil, nil, nil, nil, nil, nil, nil
         ]
       end

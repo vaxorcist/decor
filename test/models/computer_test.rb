@@ -1,13 +1,15 @@
 # decor/test/models/computer_test.rb
-# version 1.6
+# version 1.7
+# v1.7 (Session 41): Appliances → Peripherals merger Phase 1.
+#   Removed all device_type_appliance? tests (enum value no longer exists).
+#   Rewrote device_type scope and predicate tests to use peripheral:
+#     - "device_type can be set to peripheral" replaces the appliance equivalent
+#     - "device_type_peripheral? is true for peripheral fixture" (dec_unibus_router,
+#       formerly appliance, now peripheral after fixture v1.9 change)
+#     - "device_type_computer scope excludes peripherals" replaces appliance version
+#     - "device_type_peripheral scope excludes computers" replaces appliance version
+#   dec_unibus_router fixture is still used in barter_status tests (unchanged).
 # v1.6 (Session 28): Added serial_number uniqueness validation tests.
-#   Constraint scope: (owner_id, computer_model_id, serial_number).
-#   - same owner + same model + duplicate serial         → invalid
-#   - same owner + different model + same serial         → valid
-#     (VT220 "unknown" and VT320 "unknown" are different physical devices)
-#   - different owner + same model + same serial         → valid
-#     (each owner may use their own numbering scheme)
-#   - duplicate serial produces a descriptive error message
 # v1.5 (Session 22): Added barter_status enum tests.
 # v1.4: Added device_type enum tests.
 
@@ -206,39 +208,41 @@ class ComputerTest < ActiveSupport::TestCase
       serial_number: "TEST-SN-DTYPE-002"
     )
     assert computer.device_type_computer?
-    assert_not computer.device_type_appliance?
+    assert_not computer.device_type_peripheral?
   end
 
-  test "device_type can be set to appliance" do
+  test "device_type can be set to peripheral" do
     computer = Computer.new(
       owner: owners(:one),
       computer_model: computer_models(:pdp11_70),
       serial_number: "TEST-SN-DTYPE-003",
-      device_type: :appliance
+      device_type: :peripheral
     )
-    assert_equal "appliance", computer.device_type
-    assert computer.device_type_appliance?
+    assert_equal "peripheral", computer.device_type
+    assert computer.device_type_peripheral?
     assert_not computer.device_type_computer?
   end
 
-  test "device_type_appliance? is true for appliance fixture" do
-    appliance = computers(:dec_unibus_router)
-    assert appliance.device_type_appliance?
-    assert_not appliance.device_type_computer?
+  test "device_type_peripheral? is true for peripheral fixture" do
+    # dec_unibus_router was formerly an appliance fixture (device_type: 1);
+    # it is now a peripheral fixture (device_type: 2) after the Session 41 merger.
+    peripheral = computers(:dec_unibus_router)
+    assert peripheral.device_type_peripheral?
+    assert_not peripheral.device_type_computer?
   end
 
-  test "device_type_computer scope excludes appliances" do
+  test "device_type_computer scope excludes peripherals" do
     computers = Computer.device_type_computer
     assert_not computers.exists?(computers(:dec_unibus_router).id),
-      "device_type_computer scope must not include appliances"
+      "device_type_computer scope must not include peripherals"
   end
 
-  test "device_type_appliance scope excludes computers" do
-    appliances = Computer.device_type_appliance
-    assert appliances.exists?(computers(:dec_unibus_router).id),
-      "device_type_appliance scope must include the appliance fixture"
-    assert_not appliances.exists?(computers(:alice_pdp11).id),
-      "device_type_appliance scope must not include computers"
+  test "device_type_peripheral scope excludes computers" do
+    peripherals = Computer.device_type_peripheral
+    assert peripherals.exists?(computers(:dec_unibus_router).id),
+      "device_type_peripheral scope must include the peripheral fixture"
+    assert_not peripherals.exists?(computers(:alice_pdp11).id),
+      "device_type_peripheral scope must not include computers"
   end
 
   # --- barter_status enum tests ---

@@ -1,33 +1,17 @@
 # decor/test/services/owner_import_service_test.rb
-# version 1.4
-# Session 37: Tests for OwnerImportService v1.4 additions:
-#   Comment rows (starting with '#') — skipped silently, never an error.
-#   Sentinel detection ('! --- connections ---') — switches parser to connections mode.
-#   Pass 3 connections — connection_group + connection_member rows:
-#     - Happy path: group created with correct type, label, and members.
-#     - connection_group_count in result hash.
-#     - Connection members can reference computers created in the same import (pass 1).
-#     - Unknown connection_type → error.
-#     - Unknown computer in member row → error.
-#     - Fewer than 2 members → fails model validation (minimum_two_members).
-#     - connection_group/member row before sentinel → treated as unknown record_type.
-#   Added build_csv_with_connections helper.
-# v1.3 (Session 28): Separate per-device-type counters in result hash.
+# version 1.5
+# v1.5 (Session 41): Appliances → Peripherals merger Phase 4.
+#   Rewrote two appliance import tests — "appliance" CSV value is now a
+#   legacy alias that maps to :peripheral on import (backward compat):
+#     "importing an 'appliance' row creates a computer with device_type peripheral"
+#       — was device_type_appliance?; now device_type_peripheral? + peripheral_count
+#     "'appliance' record_type is not treated as unknown"
+#       — still passes; appliance→peripheral is silently accepted
+#   Removed :appliance_count from result hash assertions (key no longer returned).
+# v1.4 (Session 37): Comment rows; sentinel; pass 3 connections tests.
+# v1.3 (Session 28): Separate per-device-type counters.
 # v1.2 (Session 28): Peripheral record_type tests.
 # v1.1 (Session 16): Appliance record_type tests.
-#
-# Fixture baseline:
-#   computer_models: pdp11_70 ("PDP-11/70"), vax11_780 ("VAX-11/780"),
-#                    pdp8 ("PDP-8"), vt100 ("VT100"),
-#                    hsc50 ("HSC50", device_type: 1),
-#                    dec_vt278 ("DEC VT278", device_type: 2)
-#   component_types: memory_board ("Memory Board"), cpu_board ("CPU Board")
-#   computer_conditions: original ("Completely original")
-#   component_conditions: working (condition: "Working")
-#   run_statuses: working ("Working")
-#   connection_types: rs232 ("RS-232 Serial"), ethernet ("Ethernet")
-#   alice (owners(:one)) — already has SN12345, VAX-780-001, TEST-001
-#   bob   (owners(:two)) — already has PDP8-7891, VT100-5432
 
 require "test_helper"
 require "tempfile"
@@ -107,9 +91,14 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
     assert_equal 1, result[:component_count]
   end
 
-  # ── device_type: appliance ────────────────────────────────────────────────
+  # ── device_type: appliance (legacy backward compatibility) ────────────────
+  #
+  # CSV record_type "appliance" is a legacy value from before the Session 41
+  # appliance→peripheral merger. OwnerImportService v1.5 maps it to :peripheral
+  # so that old CSVs remain importable. The imported record has device_type: peripheral.
 
-  test "importing an 'appliance' row creates a computer with device_type appliance" do
+  test "importing an 'appliance' row creates a computer with device_type peripheral" do
+    # "appliance" in the CSV is the legacy alias — it imports as peripheral.
     csv = build_csv([
       ["appliance", "HSC50", "APP-ORD-001", "APP-SN-001",
        nil, nil, "Storage controller",
@@ -119,24 +108,28 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
     assert_difference "@alice.computers.count", 1 do
       result = OwnerImportService.process(@alice, csv_upload(csv))
       assert result[:success], "Expected success, got: #{result[:error]}"
-      assert_equal 1, result[:appliance_count]
+      # Legacy appliance rows now increment peripheral_count
+      assert_equal 1, result[:peripheral_count]
       assert_equal 0, result[:computer_count]
     end
 
-    appliance = @alice.computers.find_by!(serial_number: "APP-SN-001")
-    assert appliance.device_type_appliance?
-    assert_equal "HSC50",              appliance.computer_model.name
-    assert_equal "Storage controller", appliance.history
+    # The record is stored as peripheral (device_type: 2), not appliance
+    peripheral = @alice.computers.find_by!(serial_number: "APP-SN-001")
+    assert peripheral.device_type_peripheral?,
+           "Legacy 'appliance' CSV row must import as peripheral (device_type: 2)"
+    assert_equal "HSC50",              peripheral.computer_model.name
+    assert_equal "Storage controller", peripheral.history
   end
 
   test "'appliance' record_type is not treated as unknown" do
+    # Backward compat: "appliance" is silently mapped to peripheral, not rejected.
     csv = build_csv([
       ["appliance", "HSC50", nil, "APP-SN-VALID", nil, nil, nil,
        nil, nil, nil, nil, nil]
     ])
 
     result = OwnerImportService.process(@alice, csv_upload(csv))
-    assert result[:success], "Expected 'appliance' to be valid, got: #{result[:error]}"
+    assert result[:success], "Expected 'appliance' to be valid (legacy alias), got: #{result[:error]}"
   end
 
   # ── device_type: peripheral ───────────────────────────────────────────────
@@ -293,7 +286,7 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
     assert_nil component.computer
   end
 
-  # ── Comment row handling (Session 37) ────────────────────────────────────
+  # ── Comment row handling ─────────────────────────────────────────────────
 
   test "comment rows (record_type starting with '#') are silently skipped" do
     csv = build_csv([
@@ -330,7 +323,7 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
     assert_equal 0, result[:connection_group_count].to_i
   end
 
-  # ── Connections import (Session 37) ──────────────────────────────────────
+  # ── Connections import ──────────────────────────────────────────────────
 
   test "CSV without a connections section imports normally with zero connection_group_count" do
     csv = build_csv([
@@ -343,8 +336,6 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
   end
 
   test "importing a connections section creates connection groups" do
-    # alice_pdp11 (SN12345, PDP-11/70) and alice_vax (VAX-780-001, VAX-11/780)
-    # already exist as alice's fixture computers.
     csv = build_csv_with_connections([], [
       { type: "RS-232 Serial", label: "My RS-232 link",
         members: [
@@ -424,7 +415,6 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
   end
 
   test "connection group members can reference computers created in the same import" do
-    # Import two new computers and a connection group between them in one file.
     csv = build_csv_with_connections(
       [
         ["computer", "PDP-11/70",  nil, "CONN-NEW-1", nil, nil, nil, nil, nil, nil, nil, nil],
@@ -501,7 +491,7 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
     csv = build_csv_with_connections([], [
       { type: nil, label: "Too small group",
         members: [
-          { model: "PDP-11/70", serial: "SN12345" }  # only 1 member
+          { model: "PDP-11/70", serial: "SN12345" }
         ] }
     ])
 
@@ -524,7 +514,6 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
   end
 
   test "connection_member before any connection_group row fails with descriptive error" do
-    # Manually build a CSV with a member row but no group row before it.
     csv = CSV.generate(headers: true, force_quotes: true) do |c|
       c << OwnerExportService::CSV_HEADERS
       c << ["! --- connections ---"]
@@ -538,7 +527,6 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
   end
 
   test "connection_group row before the sentinel is treated as unknown record_type" do
-    # connection_group outside of connections mode is an unknown type.
     csv = build_csv([
       ["connection_group", "RS-232 Serial", "My link",
        nil, nil, nil, nil, nil, nil, nil, nil, nil]
@@ -550,8 +538,6 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
   end
 
   test "bad connection group does not prevent earlier successful connection groups" do
-    # First group is valid; second group has only 1 member (fails validation).
-    # The transaction rolls back both — atomicity is at the file level.
     csv = build_csv_with_connections([], [
       { type: nil, label: "Valid group",
         members: [
@@ -564,7 +550,6 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
         ] }
     ])
 
-    # Entire import (both groups) must be rolled back — atomicity.
     assert_no_difference "ConnectionGroup.count" do
       result = OwnerImportService.process(@alice, csv_upload(csv))
       refute result[:success]
@@ -709,9 +694,6 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
 
   private
 
-  # ── Helpers ──────────────────────────────────────────────────────────────
-
-  # Build a CSV string with the standard headers followed by the given rows.
   def build_csv(rows)
     CSV.generate(headers: true, force_quotes: true) do |csv|
       csv << OwnerExportService::CSV_HEADERS
@@ -719,13 +701,6 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
     end
   end
 
-  # Build a CSV string with optional device/component rows in the device section,
-  # followed by the sentinel and one or more connection group definitions.
-  #
-  # connection_groups_data: array of hashes with keys:
-  #   type:    connection_type name string (or nil for no type)
-  #   label:   group label string (or nil)
-  #   members: array of { model: model_name, serial: serial_number }
   def build_csv_with_connections(device_rows, connection_groups_data)
     CSV.generate(headers: true, force_quotes: true) do |csv|
       csv << OwnerExportService::CSV_HEADERS

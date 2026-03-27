@@ -1,13 +1,11 @@
-<%# decor/app/views/owners/peripherals.html.erb - version 1.1 %>
+<%# decor/app/views/owners/peripherals.html.erb - version 1.2 %>
+<%# v1.2 (Session 41): Appliances → Peripherals merger Phase 2. %>
+<%#   Removed "Appliances" tab from the tab strip (appliances_owner_path gone). %>
+<%#   Tab order: Computers | Peripherals (active) | Components | Connections. %>
+<%#   Peripherals now covers all device_type_peripheral? records — former %>
+<%#   appliances were merged into this category in Session 41. %>
 <%# v1.1 (Session 38): Added Connections tab (inactive) to the tab strip. %>
 <%# v1.0 (Session 25): New sub-page for the owner's peripherals. %>
-<%#   Peripherals are devices that attach to a host computer (terminals, %>
-<%#   word-processors, storage controllers, etc.) — stored in the computers %>
-<%#   table with device_type = 2 (:peripheral). %>
-<%#   Renders the shared _profile partial, a four-tab strip to navigate between %>
-<%#   the sub-pages, and the peripherals table (device_type: peripheral only). %>
-<%#   Table column layout mirrors owners/appliances.html.erb. %>
-<%#   Tab strip highlights "Peripherals" as the active tab. %>
 
 <div class="max-w-7xl mx-auto">
   <%# Profile header + info panel %>
@@ -18,17 +16,11 @@
       Inactive tabs: border-transparent + text-stone-600. %>
   <div class="flex gap-6 border-b border-stone-200 mb-6">
     <%= link_to "Computers",  computers_owner_path(@owner),
-          class: "pb-2 -mb-px border-b-2 " \
-                 "border-transparent text-stone-600 hover:text-stone-900" %>
-    <%= link_to "Appliances", appliances_owner_path(@owner),
-          class: "pb-2 -mb-px border-b-2 " \
-                 "border-transparent text-stone-600 hover:text-stone-900" %>
+          class: "pb-2 -mb-px border-b-2 border-transparent text-stone-600 hover:text-stone-900" %>
     <%= link_to "Peripherals", peripherals_owner_path(@owner),
-          class: "pb-2 -mb-px border-b-2 font-medium " \
-                 "border-indigo-600 text-indigo-700" %>
+          class: "pb-2 -mb-px border-b-2 font-medium border-indigo-600 text-indigo-700" %>
     <%= link_to "Components", components_owner_path(@owner),
-          class: "pb-2 -mb-px border-b-2 " \
-                 "border-transparent text-stone-600 hover:text-stone-900" %>
+          class: "pb-2 -mb-px border-b-2 border-transparent text-stone-600 hover:text-stone-900" %>
     <%= link_to "Connections", connections_owner_path(@owner),
           class: "pb-2 -mb-px border-b-2 border-transparent text-stone-600 hover:text-stone-900" %>
   </div>

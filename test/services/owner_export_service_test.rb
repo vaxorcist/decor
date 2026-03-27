@@ -1,15 +1,14 @@
 # decor/test/services/owner_export_service_test.rb
-# version 1.3
-# Session 37: Tests for the three additions in OwnerExportService v1.3:
-#   1. Comment header row — first data row starts with '#'
-#   2. Ordered export — computers before peripherals before appliances
-#   3. Connections section — sentinel row, connection_group, connection_member rows
-#   Also replaced the hardcoded "total row count is computers + components" test
-#   with a data-derived version that accounts for the comment row, sentinel, and
-#   connection rows (the old test hardcoded 6 which breaks as soon as any new
-#   row type is added to the export).
-# Session 28: Peripheral record_type tests added.
-# Session 16: Appliance record_type tests added.
+# version 1.4
+# v1.4 (Session 41): Appliances → Peripherals merger Phase 4.
+#   Removed appliance record_type tests — OwnerExportService v1.4 no longer
+#   includes appliance in DEVICE_TYPE_EXPORT_ORDER.
+#   Rewrote "in a mixed export" ordering test: now verifies computers appear before
+#   peripherals (two device types; appliance creation removed).
+#   Updated fixture baseline comment: dec_unibus_router is now peripheral.
+# v1.3 (Session 37): Ordered export; comment header; connections section tests.
+# v1.2 (Session 28): Peripheral record_type tests.
+# v1.1 (Session 16): Appliance record_type tests.
 #
 # Fixture baseline (alice = owners(:one)):
 #   Computers:  alice_pdp11 (SN12345, PDP-11/70, device_type: 0)
@@ -20,7 +19,7 @@
 #                  members: alice_pdp11 SN12345 + alice_vax VAX-780-001)
 #
 # Fixture baseline (charlie = owners(:three)):
-#   dec_unibus_router  (RTR-001, PDP-11/70, device_type: 1 = appliance)
+#   dec_unibus_router  (RTR-001, PDP-11/70, device_type: 2 = peripheral)
 #   charlie_dec_vt278  (VT278-001, VT100 model, device_type: 2 = peripheral)
 #   No connection groups.
 
@@ -42,10 +41,8 @@ class OwnerExportServiceTest < ActiveSupport::TestCase
 
   # ── Row counts (data-derived) ────────────────────────────────────────────────
 
-  # Count only device and component rows — the comment row, sentinel, and connection
-  # rows are not included in the device/component counts.
   test "device row count equals owner's computer count" do
-    device_types    = %w[computer appliance peripheral]
+    device_types    = %w[computer peripheral]
     device_row_count = @csv.count { |r| device_types.include?(r["record_type"]) }
     assert_equal @alice.computers.count, device_row_count
   end
@@ -56,15 +53,13 @@ class OwnerExportServiceTest < ActiveSupport::TestCase
   end
 
   test "total row count accounts for comment, devices, components, sentinel, and connections" do
-    # Derive every expected row count from live data rather than hardcoding.
-    comment_rows  = 1  # write_comment_header always writes exactly one comment row
+    comment_rows  = 1
     device_count  = @alice.computers.count
     comp_count    = @alice.components.count
     group_count   = @alice.connection_groups.count
     member_count  = ConnectionMember.joins(:connection_group)
                                     .where(connection_groups: { owner: @alice })
                                     .count
-    # Sentinel is present only when the owner has at least one connection group.
     sentinel_count = group_count > 0 ? 1 : 0
 
     expected = comment_rows + device_count + comp_count +
@@ -100,15 +95,12 @@ class OwnerExportServiceTest < ActiveSupport::TestCase
     assert_match Date.today.to_s, @csv.first["record_type"]
   end
 
-  # ── Ordered export: Computers → Peripherals → Appliances ────────────────────
+  # ── Ordered export: Computers → Peripherals ──────────────────────────────────
 
   test "in a mixed export, all computers appear before all peripherals" do
-    # Build an owner with one device of each type to verify ordering precisely.
+    # Build an owner with one computer and one peripheral to verify ordering.
     owner = Owner.create!(user_name: "sorttest1", email: "st1@example.com",
                           password: "ValidTest2026!")
-    owner.computers.create!(serial_number: "SORT-APPL-01",
-                            computer_model: computer_models(:pdp11_70),
-                            device_type: :appliance)
     owner.computers.create!(serial_number: "SORT-COMP-01",
                             computer_model: computer_models(:pdp11_70),
                             device_type: :computer)
@@ -120,29 +112,24 @@ class OwnerExportServiceTest < ActiveSupport::TestCase
     rows       = csv.reject { |r| r["record_type"].to_s.start_with?("#") }
     rec_types  = rows.map { |r| r["record_type"] }
 
-    computer_idx  = rec_types.index("computer")
+    computer_idx   = rec_types.index("computer")
     peripheral_idx = rec_types.index("peripheral")
-    appliance_idx = rec_types.index("appliance")
 
-    assert_not_nil computer_idx,  "Expected a computer row"
+    assert_not_nil computer_idx,   "Expected a computer row"
     assert_not_nil peripheral_idx, "Expected a peripheral row"
-    assert_not_nil appliance_idx, "Expected an appliance row"
 
-    assert computer_idx  < peripheral_idx,
+    assert computer_idx < peripheral_idx,
            "All computers must appear before peripherals"
-    assert peripheral_idx < appliance_idx,
-           "All peripherals must appear before appliances"
   end
 
   test "all device rows (all types) appear before any component row" do
-    device_types = %w[computer appliance peripheral]
+    device_types = %w[computer peripheral]
     rows = @csv.reject { |r| r["record_type"].to_s.start_with?("#") }
     row_types = rows.map { |r| r["record_type"] }
 
-    last_device_idx    = row_types.rindex { |t| device_types.include?(t) }
+    last_device_idx     = row_types.rindex { |t| device_types.include?(t) }
     first_component_idx = row_types.index("component")
 
-    # Only assert ordering when both exist; alice has both so this always runs.
     if last_device_idx && first_component_idx
       assert last_device_idx < first_component_idx,
              "All device rows must precede all component rows"
@@ -151,15 +138,12 @@ class OwnerExportServiceTest < ActiveSupport::TestCase
 
   test "within each device type, rows are sorted by model name then serial number" do
     # Alice has two PDP-11/70s: SN12345 and TEST-001. PDP-11/70 < VAX-11/780 alphabetically.
-    # So order should be: PDP-11/70 SN12345, PDP-11/70 TEST-001, VAX-11/780 VAX-780-001.
     computer_rows = @csv.select { |r| r["record_type"] == "computer" }
 
     serials = computer_rows.map { |r| r["computer_serial_number"] }
     models  = computer_rows.map { |r| r["computer_model"] }
 
-    # PDP-11/70 rows should appear before VAX-11/780
-    last_pdp_idx = serials.rindex { |_| models[serials.index(_)] == "PDP-11/70" } ||
-                   models.rindex("PDP-11/70")
+    last_pdp_idx  = models.rindex("PDP-11/70")
     first_vax_idx = models.index("VAX-11/780")
 
     if last_pdp_idx && first_vax_idx
@@ -170,38 +154,12 @@ class OwnerExportServiceTest < ActiveSupport::TestCase
 
   # ── device_type / record_type mapping ───────────────────────────────────────
 
-  test "appliance (device_type: 1) exports with record_type 'appliance'" do
-    charlie       = owners(:three)
-    csv           = CSV.parse(OwnerExportService.export(charlie), headers: true)
-    appliance_rows = csv.select { |r| r["record_type"] == "appliance" }
-
-    assert_equal 1, appliance_rows.size
-    assert_equal "RTR-001", appliance_rows.first["computer_serial_number"]
-  end
-
   test "computer (device_type: 0) exports with record_type 'computer'" do
-    appliance_rows  = @csv.select { |r| r["record_type"] == "appliance" }
     peripheral_rows = @csv.select { |r| r["record_type"] == "peripheral" }
-    assert_empty appliance_rows,  "No appliance rows expected in alice's export"
     assert_empty peripheral_rows, "No peripheral rows expected in alice's export"
   end
 
-  test "appliance row carries correct model name" do
-    charlie = owners(:three)
-    csv     = CSV.parse(OwnerExportService.export(charlie), headers: true)
-    row     = csv.find { |r| r["record_type"] == "appliance" }
-    assert_equal "PDP-11/70", row["computer_model"]
-  end
-
-  test "appliance row has blank component columns" do
-    charlie = owners(:three)
-    csv     = CSV.parse(OwnerExportService.export(charlie), headers: true)
-    row     = csv.find { |r| r["record_type"] == "appliance" }
-    assert_nil row["component_type"].presence
-    assert_nil row["component_description"].presence
-  end
-
-  # ── Peripheral record_type mapping (Session 28) ──────────────────────────────
+  # ── Peripheral record_type mapping ──────────────────────────────────────────
 
   test "peripheral (device_type: 2) exports with record_type 'peripheral'" do
     owner = Owner.create!(user_name: "periphexp01", email: "periphexp01@example.com",
@@ -255,6 +213,30 @@ class OwnerExportServiceTest < ActiveSupport::TestCase
     csv          = CSV.parse(OwnerExportService.export(owner), headers: true)
     computer_rows = csv.select { |r| r["record_type"] == "computer" }
     assert_empty computer_rows, "A peripheral must not export with record_type 'computer'"
+  end
+
+  # ── dec_unibus_router is now peripheral (Session 41 merger) ─────────────────
+
+  test "dec_unibus_router (formerly appliance, now peripheral) exports with record_type 'peripheral'" do
+    # dec_unibus_router was device_type: 1 (appliance) before Session 41.
+    # It is now device_type: 2 (peripheral) after the merger.
+    charlie       = owners(:three)
+    csv           = CSV.parse(OwnerExportService.export(charlie), headers: true)
+    peripheral_rows = csv.select { |r| r["record_type"] == "peripheral" }
+
+    # Charlie has two peripherals: dec_unibus_router and charlie_dec_vt278
+    assert peripheral_rows.any? { |r| r["computer_serial_number"] == "RTR-001" },
+           "dec_unibus_router (RTR-001) must appear as a peripheral row"
+  end
+
+  test "dec_unibus_router row has blank component columns" do
+    charlie = owners(:three)
+    csv     = CSV.parse(OwnerExportService.export(charlie), headers: true)
+    row     = csv.find { |r| r["record_type"] == "peripheral" &&
+                              r["computer_serial_number"] == "RTR-001" }
+    assert_not_nil row, "Expected a peripheral row for RTR-001"
+    assert_nil row["component_type"].presence
+    assert_nil row["component_description"].presence
   end
 
   # ── Computer row content ─────────────────────────────────────────────────────
@@ -317,7 +299,6 @@ class OwnerExportServiceTest < ActiveSupport::TestCase
   end
 
   test "attached component row carries parent computer serial number as FK" do
-    # pdp11_memory is attached to alice_pdp11 (SN12345)
     assert_equal "SN12345", find_component_row("Memory Board")["computer_serial_number"]
   end
 
@@ -335,7 +316,6 @@ class OwnerExportServiceTest < ActiveSupport::TestCase
   # ── Connections export ───────────────────────────────────────────────────────
 
   test "sentinel row is present when owner has connection groups" do
-    # alice has alice_pdp11_vax group in fixtures
     sentinel_rows = @csv.select { |r| r["record_type"]&.start_with?("!") }
     assert_equal 1, sentinel_rows.size,
                  "Exactly one sentinel row expected when owner has connections"
@@ -348,8 +328,6 @@ class OwnerExportServiceTest < ActiveSupport::TestCase
   end
 
   test "connection_group rows appear after the sentinel" do
-    # Use map (not to_a) to get an array of CSV::Row objects that support ["column"]
-    # indexing. CSV::Table#to_a returns plain arrays which cannot be indexed by string.
     rows          = @csv.map { |r| r }
     sentinel_idx  = rows.index { |r| r["record_type"]&.start_with?("!") }
     assert_not_nil sentinel_idx
@@ -363,7 +341,6 @@ class OwnerExportServiceTest < ActiveSupport::TestCase
   end
 
   test "connection_group row with no connection_type has blank computer_model column" do
-    # alice_pdp11_vax has no connection_type (nullable, left nil in fixture)
     group_row = @csv.find { |r| r["record_type"] == "connection_group" }
     assert_not_nil group_row
     assert_nil group_row["computer_model"].presence,
@@ -380,8 +357,6 @@ class OwnerExportServiceTest < ActiveSupport::TestCase
     serials     = member_rows.map { |r| r["computer_serial_number"] }
     models      = member_rows.map { |r| r["computer_model"] }
 
-    # alice_pdp11_vax has alice_pdp11 (SN12345, PDP-11/70)
-    # and alice_vax (VAX-780-001, VAX-11/780)
     assert_includes serials, "SN12345",      "alice_pdp11 serial must appear in member rows"
     assert_includes serials, "VAX-780-001",  "alice_vax serial must appear in member rows"
     assert_includes models,  "PDP-11/70"
@@ -389,7 +364,6 @@ class OwnerExportServiceTest < ActiveSupport::TestCase
   end
 
   test "connection_member rows appear after the sentinel" do
-    # Use map (not to_a) to get CSV::Row objects — same reason as above.
     rows         = @csv.map { |r| r }
     sentinel_idx = rows.index { |r| r["record_type"]&.start_with?("!") }
     assert_not_nil sentinel_idx
@@ -411,7 +385,6 @@ class OwnerExportServiceTest < ActiveSupport::TestCase
   end
 
   test "connection group with a connection_type exports the type name in computer_model column" do
-    # Create an owner with a group that has a connection_type
     owner = Owner.create!(user_name: "cgtypetest", email: "cgt@example.com",
                           password: "ValidTest2026!")
     c1 = owner.computers.create!(serial_number: "CGT-001",
@@ -444,7 +417,6 @@ class OwnerExportServiceTest < ActiveSupport::TestCase
   # ── Owner isolation ────────────────────────────────────────────────────────
 
   test "export contains only the given owner's records" do
-    # Bob's serials must not appear in alice's export
     serials = @csv.select { |r| r["record_type"] == "computer" }
                   .map    { |r| r["computer_serial_number"] }
     refute_includes serials, "PDP8-7891"
@@ -457,7 +429,6 @@ class OwnerExportServiceTest < ActiveSupport::TestCase
     empty_owner = Owner.create!(user_name: "emptyowner2", email: "empty2@example.com",
                                 password: "ValidTest2026!")
     csv = CSV.parse(OwnerExportService.export(empty_owner), headers: true)
-    # Only the comment header row — no devices, no components, no sentinel.
     assert_equal 1, csv.size
     assert_equal OwnerExportService::CSV_HEADERS, csv.headers
     assert csv.first["record_type"].start_with?("#"), "Only row must be the comment header"

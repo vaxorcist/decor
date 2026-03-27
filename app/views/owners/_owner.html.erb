@@ -1,22 +1,17 @@
-<%# decor/app/views/owners/_owner.html.erb - version 3.4 %>
-<%# v3.4 (Session 17): Appliances link now passes device_type: "appliance" to %>
-<%#   computers_path, making it filter to appliances only. Previously it linked %>
-<%#   to all of the owner's computers regardless of device_type. %>
+<%# decor/app/views/owners/_owner.html.erb - version 3.5 %>
+<%# v3.5 (Session 41): Appliances → Peripherals merger Phase 2. %>
+<%#   Removed the Appliances count cell — device_type_appliance scope no longer %>
+<%#   exists. Former appliances are now peripherals (device_type: 2). %>
+<%#   Computers count cell remains (device_type_computer scope unchanged). %>
+<%# v3.4 (Session 17): Appliances link passed device_type: "appliance" to computers_path. %>
 <%# v3.3 (Session 16): Added Appliances count cell after Computers count cell. %>
-<%#   Uses device_type_appliance scope (enum prefix: true on Computer model). %>
-<%#   Links to computers_path filtered by owner_id, consistent with Computers cell. %>
-<%# Removed redundant "View" link from actions column — user_name already links to owner page %>
-<%# "Edit" link retained, shown only for the logged-in owner %>
+<%# Removed redundant "View" link from actions column. %>
+<%# "Edit" link retained, shown only for the logged-in owner. %>
 
 <tr id="<%= dom_id owner %>" class="hover:bg-stone-50">
   <!-- Computers Count (clickable - links to owner's computers, computers only) -->
   <td class="px-4 py-3 whitespace-nowrap font-medium text-stone-900">
     <%= link_to owner.computers.device_type_computer.count, computers_path(owner_id: owner.id, device_type: "computer"), class: "text-indigo-600 hover:text-indigo-900" %>
-  </td>
-
-  <!-- Appliances Count (clickable - links to owner's computers filtered to appliances only) -->
-  <td class="px-4 py-3 whitespace-nowrap font-medium text-stone-900">
-    <%= link_to owner.computers.device_type_appliance.count, computers_path(owner_id: owner.id, device_type: "appliance"), class: "text-indigo-600 hover:text-indigo-900" %>
   </td>
 
   <!-- User Name (clickable) -->

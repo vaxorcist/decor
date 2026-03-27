@@ -1,24 +1,27 @@
 # decor/test/services/computer_model_export_service_test.rb
-# version 1.1
-# Session 24: New test file — ComputerModelExportService.
-# Session 29: Added peripheral export tests section.
-#   Peripheral records created dynamically (fixture-independent) because the
-#   peripheral model fixture added to computer_models.yml in Session 27 is not
-#   visible in current context. Dynamic creation is also cleaner — it keeps the
-#   count assertions in computer/appliance sections unaffected by fixture changes.
+# version 1.2
+# v1.2 (Session 41): Appliances → Peripherals merger Phase 4.
+#   Removed entire "Appliance export" section — hsc50 is now device_type: 2
+#   (peripheral) after the merger; querying device_type: :appliance (1) returns
+#   zero rows.
+#   Fixed peripheral export tests: hsc50 (formerly appliance fixture) is now
+#   a peripheral fixture, so it now appears in the peripheral export. Removed
+#   the assertion that hsc50 must NOT appear in peripheral export.
+#   Updated fixture baseline comment accordingly.
+# v1.1 (Session 29): Added peripheral export tests section.
+# v1.0 (Session 24): New test file — ComputerModelExportService.
 #
-# Fixture baseline (computer_models.yml v1.2):
+# Fixture baseline (computer_models.yml v1.3):
 #   pdp11_70  name: PDP-11/70   device_type: 0 (computer)
 #   pdp8      name: PDP-8       device_type: 0 (computer)
 #   vax11_780 name: VAX-11/780  device_type: 0 (computer)
 #   pdp10     name: PDP-10      device_type: 0 (computer)
 #   vt100     name: VT100       device_type: 0 (computer)
-#   hsc50     name: HSC50       device_type: 1 (appliance)
-#   (one peripheral model added Session 27 — label/name not in current context)
+#   hsc50     name: HSC50       device_type: 2 (peripheral — formerly appliance)
+#   dec_vt278 name: DEC VT278   device_type: 2 (peripheral)
 #
 # Computer export: 5 rows (device_type: 0)
-# Appliance export: 1 row  (device_type: 1)
-# Peripheral export: at least 1 row (fixture + any dynamically created)
+# Peripheral export: at least 2 rows (hsc50 + dec_vt278 from fixtures)
 
 require "test_helper"
 require "csv"
@@ -49,9 +52,10 @@ class ComputerModelExportServiceTest < ActiveSupport::TestCase
     assert_includes names, "VT100"
   end
 
-  test "computer export does NOT include appliance models" do
+  test "computer export does NOT include peripheral models" do
     names = @computer_csv.map { |row| row["name"] }
-    refute_includes names, "HSC50", "Appliance model must not appear in computer export"
+    refute_includes names, "HSC50",     "Peripheral model must not appear in computer export"
+    refute_includes names, "DEC VT278", "Peripheral model must not appear in computer export"
   end
 
   test "computer export rows are sorted alphabetically by name" do
@@ -59,44 +63,25 @@ class ComputerModelExportServiceTest < ActiveSupport::TestCase
     assert_equal names.sort, names
   end
 
-  # ── Appliance export ───────────────────────────────────────────────────────
-
-  test "appliance export has correct headers" do
-    csv = CSV.parse(ComputerModelExportService.export(device_type: :appliance), headers: true)
-    assert_equal ComputerModelExportService::CSV_HEADERS, csv.headers
-  end
-
-  test "appliance export contains correct number of rows" do
-    # Fixtures have 1 appliance model (device_type: 1, hsc50)
-    csv = CSV.parse(ComputerModelExportService.export(device_type: :appliance), headers: true)
-    assert_equal 1, csv.size
-  end
-
-  test "appliance export includes hsc50" do
-    csv   = CSV.parse(ComputerModelExportService.export(device_type: :appliance), headers: true)
-    names = csv.map { |row| row["name"] }
-    assert_includes names, "HSC50"
-  end
-
-  test "appliance export does NOT include computer models" do
-    csv   = CSV.parse(ComputerModelExportService.export(device_type: :appliance), headers: true)
-    names = csv.map { |row| row["name"] }
-    refute_includes names, "PDP-11/70", "Computer model must not appear in appliance export"
-  end
-
   # ── Peripheral export ──────────────────────────────────────────────────────
   #
-  # Session 29: peripheral export tests.
-  # Dynamic records are used so these tests remain stable regardless of which
-  # peripheral fixture(s) are defined in computer_models.yml.
+  # hsc50 is now device_type: 2 (peripheral) after the Session 41 appliance merger.
+  # Both hsc50 and dec_vt278 are peripheral fixtures and appear in the peripheral export.
 
   test "peripheral export has correct headers" do
     csv = CSV.parse(ComputerModelExportService.export(device_type: :peripheral), headers: true)
     assert_equal ComputerModelExportService::CSV_HEADERS, csv.headers
   end
 
+  test "peripheral export includes hsc50 (formerly appliance, now peripheral)" do
+    # hsc50 was device_type: 1 (appliance) before Session 41; it is now device_type: 2.
+    csv   = CSV.parse(ComputerModelExportService.export(device_type: :peripheral), headers: true)
+    names = csv.map { |row| row["name"] }
+    assert_includes names, "HSC50",
+                    "HSC50 is now a peripheral fixture and must appear in peripheral export"
+  end
+
   test "peripheral export includes dynamically-created peripheral model" do
-    # Create a peripheral model within this test; the transaction rolls back after.
     ComputerModel.create!(name: "LA120", device_type: :peripheral)
 
     csv   = CSV.parse(ComputerModelExportService.export(device_type: :peripheral), headers: true)
@@ -105,25 +90,21 @@ class ComputerModelExportServiceTest < ActiveSupport::TestCase
     assert_includes names, "LA120", "Dynamically-created peripheral must appear in peripheral export"
   end
 
-  test "peripheral export does NOT include computer or appliance models" do
+  test "peripheral export does NOT include computer models" do
     csv   = CSV.parse(ComputerModelExportService.export(device_type: :peripheral), headers: true)
     names = csv.map { |row| row["name"] }
 
     refute_includes names, "PDP-11/70", "Computer model must not appear in peripheral export"
-    refute_includes names, "HSC50",     "Appliance model must not appear in peripheral export"
+    refute_includes names, "PDP-8",     "Computer model must not appear in peripheral export"
   end
 
   test "peripheral export row count matches live DB peripheral count" do
-    # Derive the expected count from the DB — robust against fixture additions.
-    # This replaces a hardcoded count (which would be the anti-pattern from
-    # PROGRAMMING_GENERAL.md — Derive Test Assertions from Data, Not Constants).
     expected = ComputerModel.where(device_type: :peripheral).count
     csv = CSV.parse(ComputerModelExportService.export(device_type: :peripheral), headers: true)
     assert_equal expected, csv.size
   end
 
   test "peripheral export rows are sorted alphabetically by name" do
-    # Ensure at least two peripheral records exist so sorting is observable.
     ComputerModel.create!(name: "VT220", device_type: :peripheral)
     ComputerModel.create!(name: "LA120", device_type: :peripheral)
 
@@ -135,11 +116,7 @@ class ComputerModelExportServiceTest < ActiveSupport::TestCase
 
   # ── Empty state ────────────────────────────────────────────────────────────
 
-  test "export for device_type with no records returns only headers" do
-    # device_type :terminal does not exist as an enum value on ComputerModel —
-    # use an integer that has no records (e.g. query by raw integer 99 is not
-    # possible via enum; instead delete all appliances and test). Instead:
-    # we verify the existing CSV matches the live DB count exactly.
+  test "export row count matches live DB count for the requested device_type" do
     expected_count = ComputerModel.where(device_type: :computer).count
     assert_equal expected_count, @computer_csv.size
   end

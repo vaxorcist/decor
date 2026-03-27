@@ -1,22 +1,17 @@
 # decor/app/controllers/computers_controller.rb
-# version 1.18
+# version 1.19
+# v1.19 (Session 41): Appliances → Peripherals merger Phase 2.
+#   Removed "appliance" branch from set_device_context — the appliances route is
+#   gone; device_context: "appliance" no longer exists.
+#   Removed "appliance" when branch from index device_type filter for the same reason.
+#   Peripherals now covers all device_type_peripheral? records.
 # v1.18 (Session 38): show action — updated @connection_groups eager-loading.
-#   - includes() changed from (computers: :computer_model) to
-#     (connection_members: { computer: :computer_model }) so the view can access
-#     individual member attributes (owner_member_id, label) needed for the new
-#     multi-row connections table.
-#   - .order(:id) changed to .order(:owner_group_id) to respect the owner's
-#     own numbering scheme.
-#   The view now sorts members in memory via .sort_by(&:owner_member_id).
 # v1.17 (Session 34): show action now loads @connection_groups with eager-loading.
 # v1.16 (Session 25): Extended set_device_context and index device_type filter
 #   to handle device_context: "peripheral" (device_type value 2).
 # v1.15 (Session 21): Added barter_status filter to index.
 # v1.14 (Session 20): Removed device_type selector from the form.
-# v1.13 (Session 18): build() without device_type key fix.
 # v1.10 (Session 18): Permitted :device_type; flash messages device_type-aware.
-# v1.9  (Session 17): computers route defaults device_type to "computer".
-# v1.8: set_device_context before_action; appliances route locks device_type.
 
 class ComputersController < ApplicationController
   before_action :set_device_context
@@ -33,10 +28,8 @@ class ComputersController < ApplicationController
 
     # Lock device_type to the route context on dedicated type pages.
     # On the computers route, fall back to the Type filter param or "computer"
-    # so appliances and peripherals never bleed onto the Computers page.
+    # so peripherals never bleed onto the Computers page.
     case @device_context
-    when "appliance"
-      computers = computers.where(device_type: "appliance")
     when "peripheral"
       computers = computers.where(device_type: "peripheral")
     else
@@ -148,14 +141,13 @@ class ComputersController < ApplicationController
 
   private
 
+  # Sets page context from the device_context router default.
+  # "peripheral" → Peripherals page (device_type: 2); covers all peripheral records
+  #               (formerly also appliances, which were merged into peripherals in
+  #               Session 41).
+  # default      → Computers page (device_type: 0).
   def set_device_context
     case params[:device_context]
-    when "appliance"
-      @device_context = "appliance"
-      @page_title     = "Appliances"
-      @index_path     = appliances_path
-      @turbo_tbody_id = "appliances"
-      @load_more_id   = :load_more_appliances
     when "peripheral"
       @device_context = "peripheral"
       @page_title     = "Peripherals"

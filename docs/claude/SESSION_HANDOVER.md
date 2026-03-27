@@ -1,15 +1,19 @@
 # decor/docs/claude/SESSION_HANDOVER.md
-# version 42.0
+# version 44.0
+# Session 40: Planning session only — no code written.
+#   Merger plan: appliances (old) + peripherals (old) → peripherals (new).
+#   Plan recorded in SESSION_HANDOVER.md and DECOR_PROJECT.md.
+#   Token budget exhausted at 90% after document load + planning response.
 
 **Date:** March 24, 2026
-**Branch:** feature/connections-enhancement (work in progress — not yet committed)
-**Status:** Session 38 complete. Tests not yet run to green — see Priority 1 below.
+**Branch:** main (Sessions 38+39 merged and deployed)
+**Status:** Session 40 complete (planning only). No code changes. All tests still green.
 
 ---
 
 ## !! RELIABILITY NOTICE — READ FIRST !!
 
-The `decor-session-rules` skill (v1.2) is installed. Read it before anything else.
+The `decor-session-rules` skill (v1.3) is installed. Read it before anything else.
 
 **MANDATORY at every session start:**
 
@@ -32,8 +36,10 @@ After each: log "Read FILENAME — N lines, complete."
 
 ## !! TOKEN BUDGET WARNING !!
 
-Sessions 28–38 hit ~45–91% context usage. Fixed overhead alone (~60–90%)
-leaves room for roughly one focused task per session.
+Sessions 28–40 hit ~40–90% context usage. Session 40 hit 90% after document
+load + one planning response. Fixed overhead alone (~60–90%) leaves room for
+roughly one focused task per session. Start sessions with the smallest possible
+document load when planning sessions are not needed.
 
 ---
 
@@ -43,137 +49,118 @@ Whenever a fixture file is modified, upload it to verify before closing the sess
 
 ---
 
-## Session 38 Summary
+## !! NEVER GUESS RULE (added Session 39) !!
 
-**Focus: Connections enhancement — owner_group_id, owner_member_id, port labels,
-new /owners/:id/connections sub-page, 5-card owner summary, multi-row show table**
+Before writing any code or test that depends on a value, path, method name,
+or behaviour in the codebase: READ THE FILE. Never infer from handover summaries
+or memory. See decor-session-rules skill v1.3 for the full rule and real example.
 
-### What was done
+---
 
-**Two migrations (both ran successfully):**
-- `20260323000000`: adds `owner_group_id INTEGER NOT NULL DEFAULT 0` to
-  `connection_groups` + UNIQUE INDEX (owner_id, owner_group_id). Table recreation.
-- `20260323010000`: adds `owner_member_id INTEGER NOT NULL DEFAULT 0` and
-  `label VARCHAR(100)` to `connection_members` + UNIQUE INDEX
-  (connection_group_id, owner_member_id). Keeps existing (group, computer) index.
+## Session 40 Summary
 
-**Models:**
-- `connection_group.rb` v1.2: owner_group_id validation + auto-assign callback;
-  label max 100; `no_duplicate_computers` group-level validator (prevents DB
-  constraint exception when same device selected twice).
-- `connection_member.rb` v1.1: owner_member_id validation + auto-assign callback
-  (handles in-memory siblings for new groups); label validation max 100.
+**Focus: Planning only — Appliances → Peripherals merger plan.**
 
-**Critical bug fixed (both models):**
-  `return if field.present?` → `return if field.to_i > 0`
-  `0.present?` is true in Ruby; DB DEFAULT 0 was never replaced by auto-assign.
-
-**Controllers:**
-- `owners_controller.rb` v1.8: added `connections` action (orders by owner_group_id,
-  eager-loads connection_type + connection_members with computer+model);
-  added `@connection_group_count` to show action.
-- `connection_groups_controller.rb` v1.1: index 301-redirects to connections_owner_path;
-  create/update/destroy redirect to connections_owner_path; new pre-suggests
-  owner_group_id; edit no longer pre-builds a blank member row.
-- `computers_controller.rb` v1.18: show action eager-load updated to
-  `connection_members: { computer: :computer_model }`, ordered by owner_group_id.
-
-**Views:**
-- `owners/show.html.erb` v2.1: grid-cols-4 → grid-cols-5; Connections card added.
-- `owners/connections.html.erb` v1.0: NEW — full connections table with
-  CONNECTION ID | TYPE | CONNECTION LABEL | PORT ID | CONNECTS | PORT LABEL | Edit Delete.
-  One row per port; first row of each group shows group columns; heavier separator
-  border between groups.
-- `owners/computers.html.erb` v1.2: Connections tab added (inactive).
-- `connection_groups/_form.html.erb` v1.2: owner_group_id field; per-member
-  owner_member_id + label fields; data-owner-member-id attribute on rendered rows.
-- `computers/show.html.erb` v2.1: connections section redesigned as multi-row table.
-
-**Stimulus:**
-- `connection_members_controller.js` v1.1: `add()` pre-fills owner_member_id with
-  max(existing)+1 by scanning data-owner-member-id attributes and input values.
-
-**Tests:**
-- `connection_groups_controller_test.rb` v1.1: URLs updated to connections_owner_path;
-  flash messages updated ("Connection group" → "Connection"); label >100 test corrected.
-- `connection_groups.yml` v1.1, `connection_members.yml` v1.1: added owner_group_id /
-  owner_member_id values.
-
-### Manual steps still needed (not yet done)
-1. **`decor/config/routes.rb`** — add `get :connections` to the owners member block.
-2. **`decor/app/views/common/_navigation.html.erb`** — change "My Connections" URL
-   from `owner_connection_groups_path` to `connections_owner_path`.
-3. **`appliances.html.erb`, `peripherals.html.erb`, `components.html.erb`** — add
-   Connections tab (inactive) at end of each tab strip:
-   ```erb
-   <%= link_to "Connections", connections_owner_path(@owner),
-         class: "pb-2 -mb-px border-b-2 border-transparent text-stone-600 hover:text-stone-900" %>
-   ```
+No code was written or committed this session. The merger plan was documented
+in SESSION_HANDOVER.md and DECOR_PROJECT.md.
 
 ### Files changed this session
 
-    decor/db/migrate/20260323000000_add_owner_group_id_to_connection_groups.rb         v1.0  new
-    decor/db/migrate/20260323010000_add_owner_member_id_and_label_to_connection_members.rb v1.0 new
-    decor/app/models/connection_group.rb                                                v1.2
-    decor/app/models/connection_member.rb                                               v1.1
-    decor/app/controllers/owners_controller.rb                                          v1.8
-    decor/app/controllers/connection_groups_controller.rb                               v1.1
-    decor/app/controllers/computers_controller.rb                                       v1.18
-    decor/app/views/owners/show.html.erb                                                v2.1
-    decor/app/views/owners/connections.html.erb                                         v1.0  new
-    decor/app/views/owners/computers.html.erb                                           v1.2
-    decor/app/views/connection_groups/_form.html.erb                                    v1.2
-    decor/app/views/computers/show.html.erb                                             v2.1
-    decor/app/javascript/controllers/connection_members_controller.js                   v1.1
-    decor/test/controllers/connection_groups_controller_test.rb                         v1.1
-    decor/test/fixtures/connection_groups.yml                                           v1.1
-    decor/test/fixtures/connection_members.yml                                          v1.1
+    decor/docs/claude/SESSION_HANDOVER.md     v44.0
+    decor/docs/claude/DECOR_PROJECT.md        v2.35
 
 ---
 
-## Priority 1 — Session 39 (FIRST TASK)
+## Priority 1 — Appliances → Peripherals Merger (Sessions 41–44)
 
-**Write missing tests, then run to green, then commit.**
+### Background
 
-### Missing tests — exact brief
+`appliance` (device_type=1) and `peripheral` (device_type=2) are being merged.
+Peripherals (new) absorbs all appliances (old). The DB data migration is handled
+by the user manually BEFORE Session 41 starts:
 
-**`decor/test/models/connection_group_test.rb`** (extend existing file):
-```
-- duplicate computer in same group produces friendly error (no_duplicate_computers)
-- owner_group_id auto-assigns on create when left blank
-- owner_group_id auto-assigns as max+1 when groups already exist for this owner
-- owner_group_id uniqueness scoped to owner (same value for different owners is ok)
-- label over 100 characters is invalid
+```sql
+UPDATE computers SET device_type = 2 WHERE device_type = 1;
 ```
 
-**`decor/test/models/connection_member_test.rb`** (extend existing file):
-```
-- owner_member_id auto-assigns on create (single new member, persisted group)
-- owner_member_id auto-assigns with in-memory siblings (new group, 2+ members built at once)
-- label over 100 characters is invalid
-```
+Verify this has been run in production before starting Phase 1.
 
-**New file: `decor/test/controllers/owners_controller_test.rb`** (or extend if exists):
-```
-- connections action renders successfully for owner
-- connections action redirects to root for a different owner
-- connections action redirects to login when not authenticated
-```
+### Phase 1 — Enum + fixtures + model tests (Session 41)
 
-Upload `connection_group_test.rb` and `connection_member_test.rb` at session start
-so the new tests can be appended to the existing files.
-Check whether `owners_controller_test.rb` exists before creating it.
+**Goal:** Remove `appliance` from the enum; update all fixtures and model tests.
+Leave test suite green and commit.
 
-### After tests pass
-- Complete manual steps (routes, nav, 3 tab files)
-- `bin/rails test` → green
-- `bundle exec rubocop -A && bundle exec rubocop`
-- `bin/brakeman --no-pager`
-- Commit and deploy
+- Run grep sweep at session start — read the actual files, do not rely on this summary:
+  ```bash
+  grep -rn "appliance" decor/app/ decor/test/ decor/config/
+  ```
+- Update `decor/app/models/computer.rb`:
+  Change enum to hash form `{ computer: 0, peripheral: 2 }` (non-contiguous is valid Rails)
+- Update `decor/test/fixtures/computers.yml`:
+  Convert all `device_type: appliance` entries to `device_type: peripheral`
+  Known case: `dec_unibus_router` (charlie's fixture, Session 13)
+- Update `decor/test/models/computer_test.rb`:
+  Remove or replace all `device_type_appliance?` predicate tests
+- Prerequisite: confirm DB UPDATE has been run before this session
+
+### Phase 2 — Routes + controllers + controller tests (Session 42)
+
+**Goal:** Remove the `appliances` route and action; update ComputersController
+filter logic; update controller tests. Leave test suite green and commit.
+
+- Update `decor/config/routes.rb`: remove `appliances` member route
+- Update `decor/app/controllers/owners_controller.rb`:
+  Remove `appliances` action; update `peripherals` action to cover all device_type_peripheral?
+  (former appliances are already peripheral in the DB after the data migration)
+- Update `decor/app/controllers/computers_controller.rb`:
+  Remove appliance from sort/filter logic
+- Update `decor/test/controllers/owners_controller_test.rb`:
+  Remove appliance action tests
+- Update `decor/test/controllers/computers_controller_test.rb` if appliance tests exist
+
+### Phase 3 — Views + navigation (Session 43)
+
+**Goal:** Remove all user-facing references to "Appliance". Leave test suite green and commit.
+
+- Delete `decor/app/views/owners/appliances.html.erb`
+- Update `decor/app/views/owners/peripherals.html.erb`:
+  Verify no "Appliance" label remains; it now covers the unified device type
+- Update `decor/app/views/owners/show.html.erb`:
+  Remove the Appliances section from the owner summary
+- Update `decor/app/views/computers/show.html.erb`:
+  Change device_type label display: "Appliance" → "Peripheral"
+- Update `decor/app/views/owners/computers.html.erb` if device_type labels appear
+- Update `decor/app/views/common/_navigation.html.erb`:
+  Remove the Appliances navigation entry
+- Spot-check `decor/app/views/connection_groups/_form.html.erb` and connections views
+
+### Phase 4 — Services + service tests + documentation cleanup (Session 44)
+
+**Goal:** Update import/export services; add backward-compat import alias;
+update docs. Leave test suite green, deploy.
+
+- Update `decor/app/services/owner_export_service.rb`:
+  Write `peripheral` (never `appliance`) for device_type=2
+- Update `decor/app/services/owner_import_service.rb`:
+  Add legacy alias: CSV value `appliance` → mapped to `peripheral` on import
+  (supports CSVs exported before the merger)
+- Update `decor/test/services/owner_export_service_test.rb`:
+  Change device_type values from appliance to peripheral
+- Update `decor/test/services/owner_import_service_test.rb`:
+  Add backward-compat test: import a CSV containing `appliance` → verify stored as `peripheral`
+- Update `RAILS_SPECIFICS.md`: fix enum assertion example (remove "appliance" references)
+- Update DECOR_PROJECT.md and produce new SESSION_HANDOVER.md
+- Deploy
+
+### Important: Read Files Before Writing (Never Guess rule)
+
+Before writing any file in any phase, read the actual file from the project.
+Do NOT rely on the phase descriptions above as a substitute for reading the real code.
+The descriptions are a planning guide, not a specification.
 
 ---
 
-## Priority 2 — Future Sessions
+## Priority 2 — Future Sessions (post-merger)
 
 1. **Legal/Compliance** — Impressum, Privacy Policy, GDPR, Cookie Consent, TOS.
 2. **System tests** — decor/test/system/ still empty.
@@ -212,6 +199,11 @@ connection_members
 `/owners/:id/connections` → `connections_owner_path(@owner)`
 Route: `get :connections` in owners member block (routes.rb).
 The old `/owners/:id/connection_groups` 301-redirects to the new URL.
+
+### OwnersController — access model
+All read-only sub-pages (computers, peripherals, components, connections)
+have NO require_login and NO ownership guard. They are publicly accessible.
+Only edit / update / destroy are guarded by require_owner.
 
 ### Auto-assign rules
 - `owner_group_id`: assigned on create as `max(owner.connection_groups.owner_group_id) + 1`

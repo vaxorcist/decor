@@ -1,0 +1,47 @@
+Run options: --seed 17867
+Failure:
+bin/rails test test/services/owner_import_service_test.rb:112
+Failure:
+bin/rails test test/services/owner_import_service_test.rb:132
+Error:
+bin/rails test test/services/owner_export_service_test.rb:189
+Failure:
+bin/rails test test/services/owner_export_service_test.rb:173
+Error:
+bin/rails test test/services/owner_export_service_test.rb:196
+Failure:
+bin/rails test test/services/computer_model_export_service_test.rb:69
+Failure:
+bin/rails test test/services/computer_model_export_service_test.rb:108
+Failure:
+bin/rails test test/services/computer_model_export_service_test.rb:75
+Error:
+bin/rails test test/services/owner_export_service_test.rb:105
+Error:
+bin/rails test test/controllers/connection_groups_controller_test.rb:90
+Error:
+bin/rails test test/controllers/connection_groups_controller_test.rb:99
+Error:
+bin/rails test test/controllers/connection_groups_controller_test.rb:106
+Failure:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:125
+Failure:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:164
+Failure:
+bin/rails test test/controllers/admin/data_transfers_controller_test.rb:320
+Failure:
+bin/rails test test/services/computer_model_import_service_test.rb:36
+Error:
+bin/rails test test/controllers/owners_controller_test.rb:192
+Error:
+bin/rails test test/controllers/owners_controller_test.rb:227
+Error:
+bin/rails test test/controllers/owners_controller_test.rb:171
+Error:
+bin/rails test test/controllers/owners_controller_test.rb:216
+Error:
+bin/rails test test/controllers/owners_controller_test.rb:180
+Error:
+bin/rails test test/controllers/owners_controller_test.rb:205
+Finished in 17.653803s, 34.2702 runs/s, 114.2530 assertions/s.
+605 runs, 2017 assertions, 10 failures, 12 errors, 0 skips

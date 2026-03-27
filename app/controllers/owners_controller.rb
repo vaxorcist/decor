@@ -1,32 +1,18 @@
 # decor/app/controllers/owners_controller.rb
-# version 1.8
-# v1.8 (Session 38): Connections sub-page.
-#   - show action: added @connection_group_count for the new 5th summary card.
-#   - Added connections action: loads @connection_groups ordered by owner_group_id,
-#     with all data needed for the connections table (connection_members and their
-#     computers+models eager-loaded to avoid N+1).
-#   - set_owner before_action list extended to include :connections.
-# v1.7 (Session 25): Added peripherals action for the new owner sub-page.
-#   - show action: added @peripheral_count (device_type: :peripheral).
-#   - Added peripherals action: loads @peripherals ordered by model name.
-#   - set_owner before_action extended to cover the new peripherals action.
-#   Follows the identical pattern as the existing appliances action.
+# version 1.9
+# v1.9 (Session 41): Appliances → Peripherals merger Phase 2.
+#   Removed :appliances from before_action :set_owner list.
+#   Removed @appliance_count from show action (no longer a separate device type).
+#   Removed appliances action entirely — peripheral action already covers
+#   device_type_peripheral? records, which now includes former appliances.
+# v1.8 (Session 38): Connections sub-page added.
+# v1.7 (Session 25): Added peripherals action and @peripheral_count.
 # v1.6 (Session 23): Split owner show page into three sub-pages.
-#   - show action: now loads only counts for the summary card view (no full eager_load).
-#   - Added computers action: loads @computers (device_type: computer) with eager_load.
-#   - Added appliances action: loads @appliances (device_type: appliance) with eager_load.
-#   - Added components action: loads @components with eager_load.
-#   - set_owner before_action extended to cover all three new actions.
-#   Query patterns (eager_load, Arel.sql ORDER BY) carried over unchanged from v1.5.
-# v1.5 (Session 18): show action: split @computers into @computers (device_type:
-#   computer) and @appliances (device_type: appliance).
-# v1.4: show action: computers ordered by model name; components ordered by computer
-#   model name, computer serial number, component type name. eager_load used so joined
-#   table columns are available in ORDER BY. NULLS LAST puts spare components after
-#   computer-attached ones.
+# v1.5 (Session 18): show action: split @computers into computer/appliance.
+# v1.4: computers and components ordered; eager_load for ORDER BY on joined tables.
 
 class OwnersController < ApplicationController
-  before_action :set_owner, only: %i[show edit update destroy computers appliances peripherals components connections]
+  before_action :set_owner, only: %i[show edit update destroy computers peripherals components connections]
   before_action -> { require_owner(@owner) }, only: %i[edit update destroy]
   before_action :load_invite, only: %i[new create]
 
@@ -68,14 +54,14 @@ class OwnersController < ApplicationController
   end
 
   # Summary page — shows profile info and section counts only.
-  # Full tables live in the computers / appliances / peripherals / components /
-  # connections sub-pages.
+  # Full tables live in the computers / peripherals / components / connections sub-pages.
+  # @peripheral_count covers all device_type_peripheral? records (formerly also
+  # appliances, merged in Session 41).
   def show
-    @computer_count          = @owner.computers.where(device_type: :computer).count
-    @appliance_count         = @owner.computers.where(device_type: :appliance).count
-    @peripheral_count        = @owner.computers.where(device_type: :peripheral).count
-    @component_count         = @owner.components.count
-    @connection_group_count  = @owner.connection_groups.count
+    @computer_count         = @owner.computers.where(device_type: :computer).count
+    @peripheral_count       = @owner.computers.where(device_type: :peripheral).count
+    @component_count        = @owner.components.count
+    @connection_group_count = @owner.connection_groups.count
   end
 
   # Sub-page: owner's computers (device_type: computer).
@@ -87,19 +73,9 @@ class OwnersController < ApplicationController
                        .order(Arel.sql("computer_models.name ASC"))
   end
 
-  # Sub-page: owner's appliances (device_type: appliance).
-  # Same ordering pattern as computers.
-  def appliances
-    @appliances = @owner.computers
-                        .where(device_type: :appliance)
-                        .eager_load(:computer_model)
-                        .order(Arel.sql("computer_models.name ASC"))
-  end
-
   # Sub-page: owner's peripherals (device_type: peripheral).
-  # Peripherals are devices that attach to a host computer (terminals,
-  # word-processors, storage controllers, etc.). Same ordering pattern
-  # as computers and appliances.
+  # Covers all peripheral records — former appliances were merged into this
+  # device type in Session 41. Same ordering pattern as computers.
   def peripherals
     @peripherals = @owner.computers
                          .where(device_type: :peripheral)

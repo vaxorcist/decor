@@ -1,13 +1,13 @@
 # decor/docs/claude/DECOR_PROJECT.md
-# version 2.33
-# Session 38: Connections enhancement — owner_group_id, owner_member_id, port labels,
-#   new connections sub-page at /owners/:id/connections, 5th summary card,
-#   multi-row connections table on computer show page, form UI overhaul.
+# version 2.35
+# Session 40: Planning session — no code written.
+#   Added "Appliances → Peripherals Merger" section with 4-phase plan.
+#   Full plan detail in SESSION_HANDOVER.md Priority 1.
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** March 24, 2026 (Session 38)
-**Current Status:** Sessions 1–37 committed and deployed. Session 38 in progress: all files produced and partially tested. Tests for new validations pending (Session 39).
+**Last Updated:** March 24, 2026 (Session 40)
+**Current Status:** Sessions 1–39 committed and deployed. Session 40: planning only.
 
 ---
 
@@ -47,20 +47,25 @@ decor//
 │       └── 20260323010000_add_owner_member_id_and_label_to_connection_members.rb ← Session 38 new
 └── test/
     ├── controllers/
-    │   └── connection_groups_controller_test.rb             ← Session 38 updated (v1.1)
-    └── fixtures/
-        ├── connection_groups.yml                            ← Session 38 updated (v1.1)
-        └── connection_members.yml                           ← Session 38 updated (v1.1)
+    │   ├── connection_groups_controller_test.rb             ← Session 38 updated (v1.1)
+    │   └── owners_controller_test.rb                       ← Session 39 updated (v1.7)
+    ├── fixtures/
+    │   ├── connection_groups.yml                            ← Session 38 updated (v1.1)
+    │   └── connection_members.yml                           ← Session 38 updated (v1.1)
+    └── models/
+        ├── connection_group_test.rb                         ← Session 39 updated (v1.2)
+        └── connection_member_test.rb                        ← Session 39 updated (v1.1)
 ```
-
-Note: `appliances.html.erb`, `peripherals.html.erb`, `components.html.erb` each need
-one manually added Connections tab line (see Session 38 summary). Routes.rb needs
-`get :connections` added to the owners member block.
 
 ---
 
 **Key file versions** (updated each session):
 
+    decor/docs/claude/DECOR_PROJECT.md                                                  v2.35 ← Session 40
+    decor/docs/claude/SESSION_HANDOVER.md                                               v44.0 ← Session 40
+    decor/test/models/connection_group_test.rb                                          v1.2  ← Session 39
+    decor/test/models/connection_member_test.rb                                         v1.1  ← Session 39
+    decor/test/controllers/owners_controller_test.rb                                    v1.7  ← Session 39
     decor/db/migrate/20260323000000_add_owner_group_id_to_connection_groups.rb         v1.0  ← Session 38 new
     decor/db/migrate/20260323010000_add_owner_member_id_and_label_to_connection_members.rb v1.0 ← Session 38 new
     decor/app/models/connection_group.rb                                                v1.2  ← Session 38
@@ -85,7 +90,6 @@ one manually added Connections tab line (see Session 38 summary). Routes.rb need
     decor/test/controllers/data_transfers_controller_test.rb                            v1.2  ← Session 37
     decor/config/routes.rb                                                              v2.4  ← Session 36
     decor/app/views/common/_navigation.html.erb                                         v1.8  ← Session 36
-    decor/docs/claude/SESSION_HANDOVER.md                                               v42.0 ← Session 38
 
 ---
 
@@ -104,7 +108,9 @@ one manually added Connections tab line (see Session 38 summary). Routes.rb need
 - has_many :components, dependent: :destroy
 - has_many :connection_members, dependent: :destroy
 - has_many :connection_groups, through: :connection_members
-- device_type enum: 0=computer, 1=appliance, 2=peripheral (prefix: true)
+- device_type enum: 0=computer, 2=peripheral (prefix: true)
+  NOTE: value 1 (appliance) was removed in Session 41; DB migration run manually by user.
+  The enum uses hash form { computer: 0, peripheral: 2 } to preserve existing IDs.
 - barter_status enum: 0=no_barter, 1=offered, 2=wanted (prefix: true)
 
 ### ConnectionType
@@ -136,6 +142,43 @@ one manually added Connections tab line (see Session 38 summary). Routes.rb need
 
 ---
 
+## Appliances → Peripherals Merger — Plan (Session 40)
+
+### Decision
+`appliance` (device_type=1) and `peripheral` (device_type=2) are being merged.
+Peripherals (new) absorbs all appliances. The distinction was too small and
+caused user confusion.
+
+### DB data migration (user-managed, BEFORE Session 41)
+```sql
+UPDATE computers SET device_type = 2 WHERE device_type = 1;
+```
+Verify this is run in production before starting Phase 1.
+
+### Four-phase plan
+
+    Phase 1 — Enum + fixtures + model tests            Session 41
+    Phase 2 — Routes + controllers + controller tests  Session 42
+    Phase 3 — Views + navigation                       Session 43
+    Phase 4 — Services + service tests + docs          Session 44
+
+**Full phase detail:** see SESSION_HANDOVER.md Priority 1.
+
+### Key technical note — enum hash form
+After removing `appliance: 1`, the enum must be written in hash form to
+preserve non-contiguous integer values:
+```ruby
+enum :device_type, { computer: 0, peripheral: 2 }, prefix: true
+```
+This is valid Rails. Do NOT renumber peripheral to 1 — that would invalidate
+all existing DB records that are already `peripheral` (device_type=2).
+
+### Import service backward compatibility
+The import service must map the legacy CSV value `appliance` → `peripheral`
+so that CSVs exported before the merger remain importable. Added in Phase 4.
+
+---
+
 ## Connections Feature — Status
 
     Part 1a: Migrations + models + fixtures             DONE (Session 31)
@@ -143,11 +186,17 @@ one manually added Connections tab line (see Session 38 summary). Routes.rb need
     Part 2:  Admin ConnectionTypes CRUD                 DONE (Session 33)
     Part 3:  Owner device show pages — read-only        DONE (Sessions 34–35)
     Part 4:  Owner ConnectionGroup CRUD                 DONE (Session 36)
-    Part 5:  owner_group_id / owner_member_id / labels  DONE (Session 38) ← tests pending
+    Part 5:  owner_group_id / owner_member_id / labels  DONE (Sessions 38–39) ✓
 
 ---
 
 ## Known Issues & Solutions
+
+### Never Guess — Read the File or Ask (Session 39)
+Claude must never invent a path helper, method name, or behaviour without reading
+the actual file. In Session 39, two controller tests were written without reading
+`authentication.rb` or `owners_controller.rb` — both failed. The rule is now
+captured in the decor-session-rules skill (v1.3). See that skill for full detail.
 
 ### owner_group_id / owner_member_id — 0.present? is true (Session 38)
 Rails initialises integer columns with the DB DEFAULT (0). `0.present?` returns true

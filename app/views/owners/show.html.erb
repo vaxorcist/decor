@@ -1,26 +1,20 @@
-<%# decor/app/views/owners/show.html.erb - version 2.1 %>
+<%# decor/app/views/owners/show.html.erb - version 2.2 %>
+<%# v2.2 (Session 41): Appliances → Peripherals merger Phase 2. %>
+<%#   Removed Appliances summary card (@appliance_count and appliances_owner_path gone). %>
+<%#   Grid changed from grid-cols-5 to grid-cols-4 (four cards remain: %>
+<%#   Computers | Peripherals | Components | Connections). %>
+<%#   @peripheral_count now covers all peripheral records (former appliances merged). %>
 <%# v2.1 (Session 38): Added Connections summary card (5th). %>
-<%#   - Grid changed from grid-cols-4 to grid-cols-5. %>
-<%#   - @connection_group_count loaded by owners_controller#show v1.8. %>
-<%#   - Card links to connections_owner_path; owner sees "+ Add" link for new group. %>
 <%# v2.0 (Session 25): Added Peripherals summary card. %>
-<%#   - Grid changed from grid-cols-3 to grid-cols-4 to accommodate the new card. %>
-<%#   - @peripheral_count loaded by owners_controller#show v1.7. %>
-<%#   - Card order: Computers | Appliances | Peripherals | Components. %>
-<%#   - "Add Peripheral" link pre-selects device_type: "peripheral" on the new form. %>
-<%# v1.9 (Session 23): Replaced the three inline tables with a summary card view. %>
-<%#   Profile header and info panel extracted to owners/_profile.html.erb. %>
-<%#   Three cards (Computers / Appliances / Components) show item counts and link %>
-<%#   to the corresponding sub-pages (/owners/:id/computers etc.). %>
-<%#   Owner of the account also sees an "Add" link on each card. %>
+<%# v1.9 (Session 23): Replaced inline tables with summary card view. %>
 
 <div class="max-w-5xl mx-auto">
   <%# Profile header + info panel (shared with sub-pages) %>
   <%= render "profile" %>
 
   <%# Section cards: one per collection, showing count + navigation.
-      Five cards in a single row on standard viewports. %>
-  <div class="grid grid-cols-5 gap-4">
+      Four cards in a single row on standard viewports. %>
+  <div class="grid grid-cols-4 gap-4">
 
     <%# Computers card %>
     <div class="bg-white border border-stone-200 rounded p-5">
@@ -38,23 +32,8 @@
       </div>
     </div>
 
-    <%# Appliances card %>
-    <div class="bg-white border border-stone-200 rounded p-5">
-      <div class="flex justify-between items-start mb-3">
-        <h2 class="font-semibold text-stone-700">Appliances</h2>
-        <span class="text-2xl font-bold text-stone-300"><%= @appliance_count %></span>
-      </div>
-      <div class="flex items-center justify-between">
-        <%= link_to "View →", appliances_owner_path(@owner),
-              class: "text-sm text-indigo-600 hover:text-indigo-900" %>
-        <% if Current.owner == @owner %>
-          <%= link_to "+ Add", new_computer_path(device_type: "appliance"),
-                class: "text-sm text-indigo-600 hover:text-indigo-900" %>
-        <% end %>
-      </div>
-    </div>
-
-    <%# Peripherals card %>
+    <%# Peripherals card — covers all device_type_peripheral? records. %>
+    <%# Former appliances were merged into this category in Session 41. %>
     <div class="bg-white border border-stone-200 rounded p-5">
       <div class="flex justify-between items-start mb-3">
         <h2 class="font-semibold text-stone-700">Peripherals</h2>
@@ -86,7 +65,7 @@
       </div>
     </div>
 
-    <%# Connections card — links to the new connections sub-page %>
+    <%# Connections card — links to the connections sub-page %>
     <div class="bg-white border border-stone-200 rounded p-5">
       <div class="flex justify-between items-start mb-3">
         <h2 class="font-semibold text-stone-700">Connections</h2>
