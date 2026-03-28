@@ -1,4 +1,13 @@
-<%# decor/app/views/data_transfers/show.html.erb - version 1.7 %>
+<%# decor/app/views/data_transfers/show.html.erb - version 1.8 %>
+<%# v1.8 (Session 42): Appliances → Peripherals merger cleanup. %>
+<%#   Removed "appliances" from user-visible prose in the Export description, %>
+<%#   Import description, import notes bullets, and CSV Format section intro. %>
+<%#   "Appliance Model" removed from the referenced-model bullet (that model type is gone). %>
+<%#   Intentionally preserved: %>
+<%#     - record_type column reference still lists "appliance" as a valid value — %>
+<%#       OwnerImportService v1.5 accepts it as a legacy alias for peripheral, so %>
+<%#       users with old exports can still re-import them. %>
+<%#     - Example CSV row with record_type=appliance retained for the same reason. %>
 <%# Session 28: Removed inline flash rendering block (notice + alert divs). %>
 <%#   Flash is now rendered exclusively by the layout's _flashes.html.erb partial, %>
 <%#   which is shared across all pages. Having both caused the flash message to %>
@@ -19,7 +28,7 @@
   <div class="bg-white border border-stone-200 rounded p-6 mb-6">
     <h2 class="text-lg font-semibold mb-3">Export</h2>
     <p class="text-sm text-stone-600 mb-4">
-      Download all of your computers, appliances, peripherals and components as a CSV file.
+      Download all of your computers, peripherals and components as a CSV file.
       The file can be re-imported here or used as a backup.
     </p>
     <%# inline-flex items-center w-fit: constrains width to text (matching submit button), %>
@@ -35,13 +44,13 @@
     <h2 class="text-lg font-semibold mb-3">Import</h2>
     <p class="text-sm text-stone-600 mb-1">
       Upload a CSV file in the format described below to add computers,
-      appliances, peripherals and components to your account.
+      peripherals and components to your account.
     </p>
     <ul class="text-sm text-stone-600 mb-4 list-disc list-inside space-y-1">
       <li>Records that already exist (matched by serial number) are skipped — safe to re-import.</li>
-      <li>If a referenced Computer Model, Appliance Model, Peripheral Model, Component Type, Condition, or Run Status does not exist,
+      <li>If a referenced Computer Model, Peripheral Model, Component Type, Condition, or Run Status does not exist,
           the row is rejected and the entire import is rolled back.</li>
-      <li>A component whose parent computer/appliance/peripheral is not found is imported as a spare (not an error).</li>
+      <li>A component whose parent computer/peripheral is not found is imported as a spare (not an error).</li>
       <li>The entire file is imported atomically — all rows succeed or none are saved.</li>
     </ul>
 
@@ -69,9 +78,9 @@
   <div class="bg-white border border-stone-200 rounded p-6 mb-6">
     <h2 class="text-lg font-semibold mb-3">CSV Format</h2>
     <p class="text-sm text-stone-600 mb-4">
-      Each row represents either one computer, one appliance, one peripheral, or one component,
+      Each row represents either one computer, one peripheral, or one component,
       indicated by the <code class="font-mono bg-stone-100 px-1 rounded">record_type</code> column.
-      <br>All columns for computers apply for appliances and peripherals as well.
+      <br>All columns for computers apply for peripherals as well.
       <br>Blank cells are allowed for optional fields.
     </p>
 
@@ -88,12 +97,14 @@
         <tbody class="divide-y divide-stone-100 text-stone-700">
           <tr class="bg-white">
             <td class="px-3 py-2 font-mono">record_type</td>
+            <%# "appliance" is intentionally listed — OwnerImportService v1.5 accepts it %>
+            <%# as a legacy alias for "peripheral" so old exports can still be re-imported. %>
             <td class="px-3 py-2"><span class="font-medium">Required.</span> Value: <code class="font-mono bg-stone-100 px-1 rounded">computer</code>, <code class="font-mono bg-stone-100 px-1 rounded">appliance</code>, or <code class="font-mono bg-stone-100 px-1 rounded">peripheral</code></td>
             <td class="px-3 py-2"><span class="font-medium">Required.</span> Value: <code class="font-mono bg-stone-100 px-1 rounded">component</code></td>
           </tr>
           <tr class="bg-stone-50">
             <td class="px-3 py-2 font-mono">computer_model</td>
-            <td class="px-3 py-2"><span class="font-medium">Required.</span> Must match an existing computer/appliance/peripheral model.</td>
+            <td class="px-3 py-2"><span class="font-medium">Required.</span> Must match an existing computer/peripheral model.</td>
             <td class="px-3 py-2 text-stone-400">Leave blank.</td>
           </tr>
           <tr class="bg-white">
@@ -104,7 +115,7 @@
           <tr class="bg-stone-50">
             <td class="px-3 py-2 font-mono">computer_serial_number</td>
             <td class="px-3 py-2"><span class="font-medium">Required.</span> Max 20 characters.</td>
-            <td class="px-3 py-2">Optional. Serial of the <em>parent computer/appliance/peripheral</em> to attach this component to. Leave blank for spare components.</td>
+            <td class="px-3 py-2">Optional. Serial of the <em>parent computer/peripheral</em> to attach this component to. Leave blank for spare components.</td>
           </tr>
           <tr class="bg-white">
             <td class="px-3 py-2 font-mono">computer_condition</td>
@@ -151,6 +162,8 @@
     </div>
 
     <%# Example — matches the column order exactly so the user can use it as a template %>
+    <%# The "appliance" row is intentional — it demonstrates the legacy import alias %>
+    <%# (OwnerImportService v1.5 maps appliance → peripheral silently on import). %>
     <h3 class="text-sm font-semibold text-stone-700 mb-2">Example</h3>
     <pre class="text-xs bg-stone-50 border border-stone-200 rounded p-3 overflow-x-auto text-stone-700">record_type,computer_model,computer_order_number,computer_serial_number,computer_condition,computer_run_status,computer_history,component_type,component_order_number,component_serial_number,component_condition,component_description
 computer,PDP-11/70,AA-1234567-A,12345678,Completely original,Running,"Acquired 1978",,,,, 

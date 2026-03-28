@@ -1,5 +1,10 @@
 # RAILS_SPECIFICS.md
-# version 2.4
+# version 2.5
+# Session 42: Fixed stale enum assertion example in "Enum Assertions in Tests" section.
+#   "appliance" → "peripheral" throughout the correct/wrong examples and the
+#   predicate form examples. The appliance enum value was removed in Session 41;
+#   leaving it in the example was misleading. Also updated the fixture ownership
+#   real-example note: "appliance enum fixture" → "peripheral fixture (formerly appliance)".
 # Session 37: Added "CSV::Table — Never Use #to_a When You Need Row Indexing" section.
 #   CSV::Table#to_a returns plain arrays; iterating with map/each yields CSV::Row objects
 #   that support string-key indexing. Real example: OwnerExportServiceTest Session 37.
@@ -18,7 +23,7 @@
 
 **Ruby on Rails Specific Patterns and Best Practices**
 
-**Last Updated:** March 4, 2026 (v2.1: explicit column names rule in SQLite table recreation; Session 15)
+**Last Updated:** March 28, 2026 (v2.5: stale enum assertion example fixed; Session 42)
 
 ---
 
@@ -171,12 +176,13 @@ grep -rn "\.count" decor/test/ | grep -i "alice\|bob\|owners(:one)\|owners(:two)
 If any hardcoded counts exist → use the neutral owner instead.
 
 **Real example (Session 13, March 3, 2026):**
-`dec_unibus_router` (appliance enum fixture) was first assigned to alice (owners(:one))
-→ broke `OwnerExportServiceTest` (computer count 3 ≠ 2). Moved to bob (owners(:two))
-→ broke `OwnersControllerDestroyTest` (computer count 3 ≠ 2). Both alice and bob had
+`dec_unibus_router` (peripheral fixture — formerly appliance, merged in Session 41)
+was first assigned to alice (owners(:one)) → broke `OwnerExportServiceTest`
+(computer count 3 ≠ 2). Moved to bob (owners(:two)) → broke
+`OwnersControllerDestroyTest` (computer count 3 ≠ 2). Both alice and bob had
 independent hardcoded count assertions in different test files. Fix: added
-`three` (charlie) as a neutral owner. Longer-term fix: replace all hardcoded count
-assertions with data-derived assertions (see PROGRAMMING_GENERAL.md).
+`three` (charlie) as a neutral owner. Longer-term fix: replace all hardcoded
+count assertions with data-derived assertions (see PROGRAMMING_GENERAL.md).
 
 ---
 
@@ -647,7 +653,7 @@ will replace the tree block and update the versions table in `DECOR_PROJECT.md`.
 
 **Rails enum accessors always return the mapped string label, never the raw integer.**
 This applies to ALL access methods: `.device_type`, `read_attribute(:device_type)`,
-and `model[:device_type]` — all return `"computer"` or `"appliance"`, not `0` or `1`.
+and `model[:device_type]` — all return `"computer"` or `"peripheral"`, not `0` or `2`.
 
 **Wrong — all three forms return the string, not the integer:**
 ```ruby
@@ -660,11 +666,11 @@ assert_equal 0, model.device_type                    # returns "computer"
 ```ruby
 # Form 1: assert against the string label (explicit, readable)
 assert_equal "computer", model.device_type
-assert_equal "appliance", created.device_type
+assert_equal "peripheral", created.device_type
 
 # Form 2: use the generated predicate (most idiomatic)
 assert model.device_type_computer?
-assert_not model.device_type_appliance?
+assert_not model.device_type_peripheral?
 ```
 
 **When to use which form:**
@@ -674,7 +680,7 @@ assert_not model.device_type_appliance?
 
 **To read the raw integer (rare — only if you genuinely need the DB value):**
 ```ruby
-model.read_attribute_before_type_cast(:device_type)   # returns 0 or 1
+model.read_attribute_before_type_cast(:device_type)   # returns 0 or 2
 ```
 
 **Real example (Session 14, March 3, 2026):**

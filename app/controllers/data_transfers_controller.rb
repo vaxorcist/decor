@@ -1,6 +1,12 @@
 # decor/app/controllers/data_transfers_controller.rb
-# version 1.4
-# Session 37: Added connection_group_count to the import flash message.
+# version 1.5
+# v1.5 (Session 42): Removed dead appliance_count code from the import flash
+#   message builder. OwnerImportService v1.5 (Session 41) no longer returns
+#   :appliance_count — legacy appliance rows are silently mapped to :peripheral
+#   on import. The variable was always 0, its parts<< line never fired, and it
+#   added 0 to the total. Removed all three occurrences to match the service
+#   contract and eliminate misleading dead code.
+# v1.4 (Session 37): Added connection_group_count to the import flash message.
 #   When connection groups are imported the flash now shows e.g.
 #   "Successfully imported 2 computer(s), 1 connection group(s)."
 #   connection_group_count is included in the total-zero check (a file containing
@@ -44,13 +50,15 @@ class DataTransfersController < ApplicationController
     result = OwnerImportService.process(Current.owner, file)
 
     if result[:success]
-      computer_count          = result[:computer_count].to_i
-      appliance_count         = result[:appliance_count].to_i
-      peripheral_count        = result[:peripheral_count].to_i
-      component_count         = result[:component_count].to_i
-      connection_group_count  = result[:connection_group_count].to_i
+      computer_count         = result[:computer_count].to_i
+      peripheral_count       = result[:peripheral_count].to_i
+      component_count        = result[:component_count].to_i
+      connection_group_count = result[:connection_group_count].to_i
 
-      total = computer_count + appliance_count + peripheral_count +
+      # OwnerImportService v1.5 no longer returns :appliance_count — legacy
+      # appliance rows are silently mapped to peripheral on import. The key
+      # is absent from result; do not reference it here.
+      total = computer_count + peripheral_count +
               component_count + connection_group_count
 
       if total == 0
@@ -60,11 +68,10 @@ class DataTransfersController < ApplicationController
       else
         # Build a readable summary, omitting zero-count categories.
         parts = []
-        parts << "#{computer_count} computer(s)"              if computer_count          > 0
-        parts << "#{appliance_count} appliance(s)"            if appliance_count         > 0
-        parts << "#{peripheral_count} peripheral(s)"          if peripheral_count        > 0
-        parts << "#{component_count} component(s)"            if component_count         > 0
-        parts << "#{connection_group_count} connection group(s)" if connection_group_count > 0
+        parts << "#{computer_count} computer(s)"                 if computer_count         > 0
+        parts << "#{peripheral_count} peripheral(s)"             if peripheral_count       > 0
+        parts << "#{component_count} component(s)"               if component_count        > 0
+        parts << "#{connection_group_count} connection group(s)"  if connection_group_count > 0
 
         flash[:notice] = "Successfully imported #{parts.join(', ')}."
       end

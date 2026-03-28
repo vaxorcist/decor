@@ -1,13 +1,12 @@
 # decor/docs/claude/SESSION_HANDOVER.md
-# version 44.0
-# Session 40: Planning session only — no code written.
-#   Merger plan: appliances (old) + peripherals (old) → peripherals (new).
-#   Plan recorded in SESSION_HANDOVER.md and DECOR_PROJECT.md.
-#   Token budget exhausted at 90% after document load + planning response.
+# version 46.0
+# Session 42: Appliances → Peripherals merger — cleanup and verification complete.
+#   Four live files updated. Bug found and fixed: computer_models DB rows at
+#   device_type=1 were never migrated — manual fix applied to dev and production.
 
-**Date:** March 24, 2026
-**Branch:** main (Sessions 38+39 merged and deployed)
-**Status:** Session 40 complete (planning only). No code changes. All tests still green.
+**Date:** March 28, 2026
+**Branch:** main (Session 42 merged and deployed)
+**Status:** Session 42 complete. All tests green. No outstanding failures.
 
 ---
 
@@ -36,10 +35,9 @@ After each: log "Read FILENAME — N lines, complete."
 
 ## !! TOKEN BUDGET WARNING !!
 
-Sessions 28–40 hit ~40–90% context usage. Session 40 hit 90% after document
-load + one planning response. Fixed overhead alone (~60–90%) leaves room for
-roughly one focused task per session. Start sessions with the smallest possible
-document load when planning sessions are not needed.
+Session 42 used ~69% of the context window. Fixed overhead alone (~40–60%)
+leaves room for roughly one focused task per session. Start sessions with the
+smallest possible document load when planning sessions are not needed.
 
 ---
 
@@ -52,115 +50,77 @@ Whenever a fixture file is modified, upload it to verify before closing the sess
 ## !! NEVER GUESS RULE (added Session 39) !!
 
 Before writing any code or test that depends on a value, path, method name,
-or behaviour in the codebase: READ THE FILE. Never infer from handover summaries
-or memory. See decor-session-rules skill v1.3 for the full rule and real example.
+or behaviour in the codebase: READ THE FILE. See decor-session-rules skill v1.3.
 
 ---
 
-## Session 40 Summary
+## !! REMOVE ROUTES AFTER VIEWS (learned Session 41) !!
 
-**Focus: Planning only — Appliances → Peripherals merger plan.**
-
-No code was written or committed this session. The merger plan was documented
-in SESSION_HANDOVER.md and DECOR_PROJECT.md.
-
-### Files changed this session
-
-    decor/docs/claude/SESSION_HANDOVER.md     v44.0
-    decor/docs/claude/DECOR_PROJECT.md        v2.35
+When removing a route, always update the views that call that path helper FIRST.
+See Session 41 entry for full detail.
 
 ---
 
-## Priority 1 — Appliances → Peripherals Merger (Sessions 41–44)
+## !! MANUAL DATA MIGRATIONS — CHECK ALL TABLES (learned Session 42) !!
 
-### Background
+When running a manual data migration that changes an enum value, grep for ALL
+tables that share that enum/column before assuming the migration is complete.
 
-`appliance` (device_type=1) and `peripheral` (device_type=2) are being merged.
-Peripherals (new) absorbs all appliances (old). The DB data migration is handled
-by the user manually BEFORE Session 41 starts:
+In Session 42: the appliance → peripheral data migration (device_type 1 → 2)
+was run against `computers` only. `computer_models` was missed — its rows sat
+at device_type=1, invisible to both computer (0) and peripheral (2) queries.
+Tests passed because fixtures define device_type explicitly and the test DB is
+rebuilt from fixtures on every run; the bug only existed in databases migrated
+incrementally.
 
-```sql
-UPDATE computers SET device_type = 2 WHERE device_type = 1;
+The grep to run before declaring a manual migration complete:
+```bash
+grep -rn "device_type" decor/db/schema.rb
 ```
-
-Verify this has been run in production before starting Phase 1.
-
-### Phase 1 — Enum + fixtures + model tests (Session 41)
-
-**Goal:** Remove `appliance` from the enum; update all fixtures and model tests.
-Leave test suite green and commit.
-
-- Run grep sweep at session start — read the actual files, do not rely on this summary:
-  ```bash
-  grep -rn "appliance" decor/app/ decor/test/ decor/config/
-  ```
-- Update `decor/app/models/computer.rb`:
-  Change enum to hash form `{ computer: 0, peripheral: 2 }` (non-contiguous is valid Rails)
-- Update `decor/test/fixtures/computers.yml`:
-  Convert all `device_type: appliance` entries to `device_type: peripheral`
-  Known case: `dec_unibus_router` (charlie's fixture, Session 13)
-- Update `decor/test/models/computer_test.rb`:
-  Remove or replace all `device_type_appliance?` predicate tests
-- Prerequisite: confirm DB UPDATE has been run before this session
-
-### Phase 2 — Routes + controllers + controller tests (Session 42)
-
-**Goal:** Remove the `appliances` route and action; update ComputersController
-filter logic; update controller tests. Leave test suite green and commit.
-
-- Update `decor/config/routes.rb`: remove `appliances` member route
-- Update `decor/app/controllers/owners_controller.rb`:
-  Remove `appliances` action; update `peripherals` action to cover all device_type_peripheral?
-  (former appliances are already peripheral in the DB after the data migration)
-- Update `decor/app/controllers/computers_controller.rb`:
-  Remove appliance from sort/filter logic
-- Update `decor/test/controllers/owners_controller_test.rb`:
-  Remove appliance action tests
-- Update `decor/test/controllers/computers_controller_test.rb` if appliance tests exist
-
-### Phase 3 — Views + navigation (Session 43)
-
-**Goal:** Remove all user-facing references to "Appliance". Leave test suite green and commit.
-
-- Delete `decor/app/views/owners/appliances.html.erb`
-- Update `decor/app/views/owners/peripherals.html.erb`:
-  Verify no "Appliance" label remains; it now covers the unified device type
-- Update `decor/app/views/owners/show.html.erb`:
-  Remove the Appliances section from the owner summary
-- Update `decor/app/views/computers/show.html.erb`:
-  Change device_type label display: "Appliance" → "Peripheral"
-- Update `decor/app/views/owners/computers.html.erb` if device_type labels appear
-- Update `decor/app/views/common/_navigation.html.erb`:
-  Remove the Appliances navigation entry
-- Spot-check `decor/app/views/connection_groups/_form.html.erb` and connections views
-
-### Phase 4 — Services + service tests + documentation cleanup (Session 44)
-
-**Goal:** Update import/export services; add backward-compat import alias;
-update docs. Leave test suite green, deploy.
-
-- Update `decor/app/services/owner_export_service.rb`:
-  Write `peripheral` (never `appliance`) for device_type=2
-- Update `decor/app/services/owner_import_service.rb`:
-  Add legacy alias: CSV value `appliance` → mapped to `peripheral` on import
-  (supports CSVs exported before the merger)
-- Update `decor/test/services/owner_export_service_test.rb`:
-  Change device_type values from appliance to peripheral
-- Update `decor/test/services/owner_import_service_test.rb`:
-  Add backward-compat test: import a CSV containing `appliance` → verify stored as `peripheral`
-- Update `RAILS_SPECIFICS.md`: fix enum assertion example (remove "appliance" references)
-- Update DECOR_PROJECT.md and produce new SESSION_HANDOVER.md
-- Deploy
-
-### Important: Read Files Before Writing (Never Guess rule)
-
-Before writing any file in any phase, read the actual file from the project.
-Do NOT rely on the phase descriptions above as a substitute for reading the real code.
-The descriptions are a planning guide, not a specification.
+Every table with that column needs the same migration.
 
 ---
 
-## Priority 2 — Future Sessions (post-merger)
+## Session 42 Summary
+
+**Focus: Appliances → Peripherals merger — cleanup and verification.**
+
+Ran a grep for all remaining non-comment `appliance` references. Found and fixed
+four live files. Also found and fixed a database bug: `computer_models` rows were
+still at device_type=1 (not migrated in Session 41).
+
+### Files changed this session (4 files)
+
+    decor/app/views/admin/data_transfers/show.html.erb   v1.2
+    decor/app/controllers/data_transfers_controller.rb   v1.5
+    decor/app/views/data_transfers/show.html.erb         v1.8
+    decor/app/helpers/computers_helper.rb                v1.6
+    decor/docs/claude/DECOR_PROJECT.md                   v2.37
+    decor/docs/claude/SESSION_HANDOVER.md                v46.0
+    decor/docs/claude/RAILS_SPECIFICS.md                 v2.5
+
+### Bug found and fixed (no code change — DB only)
+
+`computer_models` table had rows at device_type=1 (appliance) that were never
+migrated. The Session 41 manual migration ran against `computers` only.
+Fix: `UPDATE computer_models SET device_type = 2 WHERE device_type = 1;`
+Applied to both development and production databases.
+
+---
+
+## Appliances → Peripherals Merger — FULLY COMPLETE
+
+All live code references to `appliance` are now either:
+- Intentional backward-compat (OwnerImportService legacy alias mapping;
+  `record_type` column reference and example CSV in owner-facing data_transfers view)
+- Historical context in test names and comments
+
+The only remaining non-live reference is `RAILS_SPECIFICS.md` — updated this
+session (v2.5) to replace the stale enum assertion example.
+
+---
+
+## Priority 1 — Future Sessions
 
 1. **Legal/Compliance** — Impressum, Privacy Policy, GDPR, Cookie Consent, TOS.
 2. **System tests** — decor/test/system/ still empty.
@@ -198,7 +158,6 @@ connection_members
 ### Connections sub-page URL
 `/owners/:id/connections` → `connections_owner_path(@owner)`
 Route: `get :connections` in owners member block (routes.rb).
-The old `/owners/:id/connection_groups` 301-redirects to the new URL.
 
 ### OwnersController — access model
 All read-only sub-pages (computers, peripherals, components, connections)
