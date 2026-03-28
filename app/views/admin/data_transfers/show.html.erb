@@ -1,9 +1,13 @@
 <%# decor/app/views/admin/data_transfers/show.html.erb %>
-<%# version 1.1 %>
-<%# Session 24: New view — admin import/export selector page. %>
-<%# Session 29: Added "Peripheral Models" option to both export and import selectors. %>
+<%# version 1.2 %>
+<%# v1.2 (Session 42): Removed "Appliance Models" from the export and import data-type %>
+<%#   selectors — appliance_models was removed from the controller in Session 41 and %>
+<%#   submitting it returned "Unknown data type". Removed "Appliance /" from the import %>
+<%#   format notes bullet and the CSV Formats section heading. Updated supported data-type %>
+<%#   comment list to match the controller. %>
+<%# v1.1 (Session 29): Added "Peripheral Models" option to both export and import selectors. %>
 <%#   Updated import format notes and CSV format reference section to mention peripherals. %>
-<%#   "Computer / Appliance Models" format note now covers all three device-type model types. %>
+<%# Session 24: New view — admin import/export selector page. %>
 <%# %>
 <%#   Two sections: Export (id="export") and Import (id="import"), stacked vertically. %>
 <%#   Each section has a data type selector and an owner dropdown. %>
@@ -13,7 +17,6 @@
 <%# %>
 <%# Supported data types: %>
 <%#   computer_models   — exports/imports ComputerModel records (device_type: computer) %>
-<%#   appliance_models  — exports/imports ComputerModel records (device_type: appliance) %>
 <%#   peripheral_models — exports/imports ComputerModel records (device_type: peripheral) %>
 <%#   component_types   — exports/imports ComponentType records %>
 <%#   owner_collection  — exports/imports one owner's computers + components %>
@@ -59,7 +62,6 @@
               options_for_select([
                 ["— Select —",             ""],
                 ["Computer Models",        "computer_models"],
-                ["Appliance Models",       "appliance_models"],
                 ["Peripheral Models",      "peripheral_models"],
                 ["Component Types",        "component_types"],
                 ["Owner Collection Data",  "owner_collection"]
@@ -103,7 +105,7 @@
       or serial number) are silently skipped — safe to re-import the same file.
     </p>
     <ul class="text-sm text-stone-600 mb-4 list-disc list-inside space-y-1">
-      <li>Computer / Appliance / Peripheral Models: CSV must have a <code class="font-mono bg-stone-100 px-1 rounded">name</code> column.</li>
+      <li>Computer / Peripheral Models: CSV must have a <code class="font-mono bg-stone-100 px-1 rounded">name</code> column.</li>
       <li>Component Types: CSV must have a <code class="font-mono bg-stone-100 px-1 rounded">name</code> column.</li>
       <li>Owner Collection Data: use the CSV format exported from the owner's Export / Import page.
           Select the target owner below. "All owners" is not available for import.</li>
@@ -121,7 +123,6 @@
               options_for_select([
                 ["— Select —",             ""],
                 ["Computer Models",        "computer_models"],
-                ["Appliance Models",       "appliance_models"],
                 ["Peripheral Models",      "peripheral_models"],
                 ["Component Types",        "component_types"],
                 ["Owner Collection Data",  "owner_collection"]
@@ -171,8 +172,8 @@
   <div class="bg-white border border-stone-200 rounded p-6 mb-6">
     <h2 class="text-lg font-semibold mb-3">CSV Formats</h2>
 
-    <%# Computer / Appliance / Peripheral Models — all share the same single-column format %>
-    <h3 class="text-sm font-semibold text-stone-700 mb-1">Computer / Appliance / Peripheral Models</h3>
+    <%# Computer / Peripheral Models — share the same single-column format %>
+    <h3 class="text-sm font-semibold text-stone-700 mb-1">Computer / Peripheral Models</h3>
     <p class="text-sm text-stone-600 mb-2">
       One record per row. The device type is determined by the selector, not the CSV.
     </p>

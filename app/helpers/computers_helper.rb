@@ -1,5 +1,9 @@
 # decor/app/helpers/computers_helper.rb
-# version 1.5
+# version 1.6
+# v1.6 (Session 42): Replaced ["Appliance", "appliance"] with ["Peripheral", "peripheral"]
+#   in COMPUTER_DEVICE_TYPE_FILTER_OPTIONS. The appliance enum value (device_type=1)
+#   was removed in Session 41; the filter option was dead (would silently return
+#   zero results). peripheral (device_type=2) is the correct replacement.
 # v1.5 (Session 21): Added barter_status filter support.
 #   COMPUTER_BARTER_STATUS_FILTER_OPTIONS — options for the barter status
 #   filter selector in _filters.html.erb (members only).
@@ -21,9 +25,10 @@ module ComputersHelper
   }.freeze
 
   # Device type options used by the index filter sidebar.
+  # "Appliance" (device_type=1) was removed in Session 41 — peripheral replaces it.
   COMPUTER_DEVICE_TYPE_FILTER_OPTIONS = [
-    ["Computer", "computer"],
-    ["Appliance", "appliance"]
+    ["Computer",   "computer"],
+    ["Peripheral", "peripheral"]
   ].freeze
 
   # Barter status filter options for the index filter sidebar (members only).

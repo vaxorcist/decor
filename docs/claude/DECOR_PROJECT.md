@@ -1,13 +1,13 @@
 # decor/docs/claude/DECOR_PROJECT.md
-# version 2.35
-# Session 40: Planning session — no code written.
-#   Added "Appliances → Peripherals Merger" section with 4-phase plan.
-#   Full plan detail in SESSION_HANDOVER.md Priority 1.
+# version 2.37
+# Session 42: Appliances → Peripherals merger fully complete.
+#   Four live files cleaned up. DB bug fixed (computer_models device_type=1 rows).
+#   Stale "cosmetic work remaining" note removed — all done.
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** March 24, 2026 (Session 40)
-**Current Status:** Sessions 1–39 committed and deployed. Session 40: planning only.
+**Last Updated:** March 28, 2026 (Session 42)
+**Current Status:** Sessions 1–42 committed and deployed.
 
 ---
 
@@ -18,78 +18,137 @@
 tree decor/ -I "node_modules|.git|tmp|storage|log|.DS_Store|*.lock|assets|cache|pids|sockets" --dirsfirst -F --prune -L 6 > decor_tree.txt
 ```
 
-**Current tree** (as of Session 37 — Session 38 adds/changes marked below):
+**Current tree** (as of Session 41 — upload decor_tree.txt to refresh):
 ```
 decor//
 ├── app/
 │   ├── controllers/
-│   │   ├── computers_controller.rb                           ← Session 38 updated (v1.18)
-│   │   ├── connection_groups_controller.rb                   ← Session 38 updated (v1.1)
-│   │   └── owners_controller.rb                             ← Session 38 updated (v1.8)
-│   ├── javascript/
-│   │   └── controllers/
-│   │       └── connection_members_controller.js              ← Session 38 updated (v1.1)
+│   │   ├── admin/
+│   │   │   ├── base_controller.rb
+│   │   │   ├── bulk_uploads_controller.rb
+│   │   │   ├── component_conditions_controller.rb
+│   │   │   ├── component_types_controller.rb
+│   │   │   ├── computer_models_controller.rb           ← Session 41 (v1.4)
+│   │   │   ├── conditions_controller.rb
+│   │   │   ├── connection_types_controller.rb
+│   │   │   ├── data_transfers_controller.rb            ← Session 41 (v1.2)
+│   │   │   ├── invites_controller.rb
+│   │   │   ├── owners_controller.rb
+│   │   │   ├── run_statuses_controller.rb
+│   │   │   └── site_texts_controller.rb
+│   │   ├── concerns/
+│   │   │   ├── authentication.rb
+│   │   │   └── pagination.rb
+│   │   ├── application_controller.rb
+│   │   ├── components_controller.rb
+│   │   ├── computers_controller.rb                     ← Session 41 (v1.19)
+│   │   ├── connection_groups_controller.rb
+│   │   ├── data_transfers_controller.rb                ← Session 42 (v1.5)
+│   │   ├── home_controller.rb
+│   │   ├── owners_controller.rb                        ← Session 41 (v1.9)
+│   │   ├── password_resets_controller.rb
+│   │   ├── sessions_controller.rb
+│   │   └── site_texts_controller.rb
+│   ├── helpers/
+│   │   └── computers_helper.rb                        ← Session 42 (v1.6)
 │   ├── models/
-│   │   ├── connection_group.rb                               ← Session 38 updated (v1.2)
-│   │   └── connection_member.rb                             ← Session 38 updated (v1.1)
+│   │   ├── computer.rb                                 ← Session 41 (v2.0)
+│   │   └── computer_model.rb                          ← Session 41 (v1.3)
+│   ├── services/
+│   │   ├── owner_export_service.rb                     ← Session 41 (v1.4)
+│   │   └── owner_import_service.rb                     ← Session 41 (v1.5)
 │   └── views/
-│       ├── connection_groups/
-│       │   └── _form.html.erb                               ← Session 38 updated (v1.2)
-│       ├── computers/
-│       │   └── show.html.erb                                ← Session 38 updated (v2.1)
+│       ├── admin/
+│       │   └── data_transfers/
+│       │       └── show.html.erb                      ← Session 42 (v1.2)
+│       ├── common/
+│       │   └── _navigation.html.erb                   ← Session 41 (v2.0)
+│       ├── data_transfers/
+│       │   └── show.html.erb                          ← Session 42 (v1.8)
+│       ├── layouts/
+│       │   └── admin.html.erb                         ← Session 41 (v2.0)
 │       └── owners/
-│           ├── computers.html.erb                           ← Session 38 updated (v1.2)
-│           ├── connections.html.erb                         ← Session 38 NEW
-│           └── show.html.erb                                ← Session 38 updated (v2.1)
-├── db/
-│   └── migrate/
-│       ├── 20260323000000_add_owner_group_id_to_connection_groups.rb   ← Session 38 new
-│       └── 20260323010000_add_owner_member_id_and_label_to_connection_members.rb ← Session 38 new
+│           ├── _owner.html.erb                        ← Session 41 (v3.5)
+│           ├── computers.html.erb                     ← Session 41 (v1.3)
+│           ├── connections.html.erb                   ← Session 41 (v1.1)
+│           ├── peripherals.html.erb                   ← Session 41 (v1.2)
+│           └── show.html.erb                          ← Session 41 (v2.2)
+├── config/
+│   └── routes.rb                                      ← Session 41 (v2.6)
 └── test/
     ├── controllers/
-    │   ├── connection_groups_controller_test.rb             ← Session 38 updated (v1.1)
-    │   └── owners_controller_test.rb                       ← Session 39 updated (v1.7)
+    │   ├── admin/
+    │   │   ├── computer_models_controller_test.rb      ← Session 41 (v1.3)
+    │   │   └── data_transfers_controller_test.rb       ← Session 41 (v1.2)
+    │   ├── computers_controller_test.rb                ← Session 41 (v1.8)
+    │   └── owners_controller_test.rb                  ← Session 41 (v1.8)
     ├── fixtures/
-    │   ├── connection_groups.yml                            ← Session 38 updated (v1.1)
-    │   └── connection_members.yml                           ← Session 38 updated (v1.1)
-    └── models/
-        ├── connection_group_test.rb                         ← Session 39 updated (v1.2)
-        └── connection_member_test.rb                        ← Session 39 updated (v1.1)
+    │   ├── computer_models.yml                         ← Session 41 (v1.3)
+    │   └── computers.yml                              ← Session 41 (v1.9)
+    ├── models/
+    │   ├── computer_model_test.rb                     ← Session 41 (v1.3)
+    │   └── computer_test.rb                           ← Session 41 (v1.7)
+    └── services/
+        ├── computer_model_export_service_test.rb      ← Session 41 (v1.2)
+        ├── computer_model_import_service_test.rb      ← Session 41 (v1.2)
+        ├── owner_export_service_test.rb               ← Session 41 (v1.4)
+        └── owner_import_service_test.rb               ← Session 41 (v1.5)
 ```
 
 ---
 
 **Key file versions** (updated each session):
 
-    decor/docs/claude/DECOR_PROJECT.md                                                  v2.35 ← Session 40
-    decor/docs/claude/SESSION_HANDOVER.md                                               v44.0 ← Session 40
+    decor/docs/claude/DECOR_PROJECT.md                                                  v2.37 ← Session 42
+    decor/docs/claude/SESSION_HANDOVER.md                                               v46.0 ← Session 42
+    decor/docs/claude/RAILS_SPECIFICS.md                                                v2.5  ← Session 42
+    decor/app/views/admin/data_transfers/show.html.erb                                  v1.2  ← Session 42
+    decor/app/controllers/data_transfers_controller.rb                                  v1.5  ← Session 42
+    decor/app/views/data_transfers/show.html.erb                                        v1.8  ← Session 42
+    decor/app/helpers/computers_helper.rb                                               v1.6  ← Session 42
+    decor/app/models/computer.rb                                                        v2.0  ← Session 41
+    decor/app/models/computer_model.rb                                                  v1.3  ← Session 41
+    decor/app/controllers/computers_controller.rb                                       v1.19 ← Session 41
+    decor/app/controllers/owners_controller.rb                                          v1.9  ← Session 41
+    decor/app/controllers/admin/computer_models_controller.rb                           v1.4  ← Session 41
+    decor/app/controllers/admin/data_transfers_controller.rb                            v1.2  ← Session 41
+    decor/app/services/owner_export_service.rb                                          v1.4  ← Session 41
+    decor/app/services/owner_import_service.rb                                          v1.5  ← Session 41
+    decor/app/views/common/_navigation.html.erb                                         v2.0  ← Session 41
+    decor/app/views/layouts/admin.html.erb                                              v2.0  ← Session 41
+    decor/app/views/owners/_owner.html.erb                                              v3.5  ← Session 41
+    decor/app/views/owners/computers.html.erb                                           v1.3  ← Session 41
+    decor/app/views/owners/connections.html.erb                                         v1.1  ← Session 41
+    decor/app/views/owners/peripherals.html.erb                                         v1.2  ← Session 41
+    decor/app/views/owners/show.html.erb                                                v2.2  ← Session 41
+    decor/config/routes.rb                                                              v2.6  ← Session 41
+    decor/test/fixtures/computers.yml                                                   v1.9  ← Session 41
+    decor/test/fixtures/computer_models.yml                                             v1.3  ← Session 41
+    decor/test/models/computer_test.rb                                                  v1.7  ← Session 41
+    decor/test/models/computer_model_test.rb                                            v1.3  ← Session 41
+    decor/test/controllers/computers_controller_test.rb                                 v1.8  ← Session 41
+    decor/test/controllers/owners_controller_test.rb                                    v1.8  ← Session 41
+    decor/test/controllers/admin/computer_models_controller_test.rb                     v1.3  ← Session 41
+    decor/test/controllers/admin/data_transfers_controller_test.rb                      v1.2  ← Session 41
+    decor/test/services/owner_export_service_test.rb                                    v1.4  ← Session 41
+    decor/test/services/owner_import_service_test.rb                                    v1.5  ← Session 41
+    decor/test/services/computer_model_export_service_test.rb                           v1.2  ← Session 41
+    decor/test/services/computer_model_import_service_test.rb                           v1.2  ← Session 41
     decor/test/models/connection_group_test.rb                                          v1.2  ← Session 39
     decor/test/models/connection_member_test.rb                                         v1.1  ← Session 39
-    decor/test/controllers/owners_controller_test.rb                                    v1.7  ← Session 39
-    decor/db/migrate/20260323000000_add_owner_group_id_to_connection_groups.rb         v1.0  ← Session 38 new
-    decor/db/migrate/20260323010000_add_owner_member_id_and_label_to_connection_members.rb v1.0 ← Session 38 new
+    decor/test/controllers/connection_groups_controller_test.rb                         v1.1  ← Session 38
+    decor/db/migrate/20260323000000_add_owner_group_id_to_connection_groups.rb         v1.0  ← Session 38
+    decor/db/migrate/20260323010000_add_owner_member_id_and_label_to_connection_members.rb v1.0 ← Session 38
     decor/app/models/connection_group.rb                                                v1.2  ← Session 38
     decor/app/models/connection_member.rb                                               v1.1  ← Session 38
-    decor/app/controllers/owners_controller.rb                                          v1.8  ← Session 38
     decor/app/controllers/connection_groups_controller.rb                               v1.1  ← Session 38
-    decor/app/controllers/computers_controller.rb                                       v1.18 ← Session 38
-    decor/app/views/owners/show.html.erb                                                v2.1  ← Session 38
-    decor/app/views/owners/connections.html.erb                                         v1.0  ← Session 38 new
-    decor/app/views/owners/computers.html.erb                                           v1.2  ← Session 38
     decor/app/views/connection_groups/_form.html.erb                                    v1.2  ← Session 38
     decor/app/views/computers/show.html.erb                                             v2.1  ← Session 38
     decor/app/javascript/controllers/connection_members_controller.js                   v1.1  ← Session 38
-    decor/test/controllers/connection_groups_controller_test.rb                         v1.1  ← Session 38
     decor/test/fixtures/connection_groups.yml                                           v1.1  ← Session 38
     decor/test/fixtures/connection_members.yml                                          v1.1  ← Session 38
-    decor/app/services/owner_export_service.rb                                          v1.3  ← Session 37
-    decor/app/services/owner_import_service.rb                                          v1.4  ← Session 37
-    decor/app/controllers/data_transfers_controller.rb                                  v1.4  ← Session 37
-    decor/test/services/owner_export_service_test.rb                                    v1.3  ← Session 37
-    decor/test/services/owner_import_service_test.rb                                    v1.4  ← Session 37
-    decor/test/controllers/data_transfers_controller_test.rb                            v1.2  ← Session 37
-    decor/config/routes.rb                                                              v2.4  ← Session 36
-    decor/app/views/common/_navigation.html.erb                                         v1.8  ← Session 36
+    decor/app/services/computer_model_export_service.rb                                 v1.0  ← Session 24
+    decor/app/services/computer_model_import_service.rb                                 v1.0  ← Session 24
 
 ---
 
@@ -108,10 +167,19 @@ decor//
 - has_many :components, dependent: :destroy
 - has_many :connection_members, dependent: :destroy
 - has_many :connection_groups, through: :connection_members
-- device_type enum: 0=computer, 2=peripheral (prefix: true)
+- device_type enum: { computer: 0, peripheral: 2 }, prefix: true
   NOTE: value 1 (appliance) was removed in Session 41; DB migration run manually by user.
-  The enum uses hash form { computer: 0, peripheral: 2 } to preserve existing IDs.
+  Hash form required to preserve non-contiguous integers (0 and 2).
+  Do NOT renumber peripheral to 1 — that would corrupt existing DB records.
 - barter_status enum: 0=no_barter, 1=offered, 2=wanted (prefix: true)
+
+### ComputerModel
+- device_type enum: { computer: 0, peripheral: 2 }, prefix: true
+  Same hash form as Computer; appliance: 1 removed in Session 41.
+  NOTE: DB migration for computer_models (device_type 1 → 2) was missed in Session 41
+  and applied manually in Session 42. Both computers and computer_models are now clean.
+- has_many :computers, dependent: :restrict_with_error
+- validates :name, presence: true, uniqueness: true
 
 ### ConnectionType
 - has_many :connection_groups, dependent: :restrict_with_error
@@ -142,40 +210,24 @@ decor//
 
 ---
 
-## Appliances → Peripherals Merger — Plan (Session 40)
+## Appliances → Peripherals Merger — FULLY COMPLETE (Sessions 41–42)
 
-### Decision
-`appliance` (device_type=1) and `peripheral` (device_type=2) are being merged.
-Peripherals (new) absorbs all appliances. The distinction was too small and
-caused user confusion.
+### What changed
+- `appliance` (device_type=1) removed from enum on `Computer` and `ComputerModel`.
+- Both enums now use hash form `{ computer: 0, peripheral: 2 }`.
+- DB data migration (device_type=1 → 2) run on `computers` in Session 41 and on
+  `computer_models` in Session 42 (the table was missed in Session 41).
+- All fixtures, views, routes, controllers, helpers, services, and tests updated.
+- Import backward compat: CSV record_type `"appliance"` → mapped to `:peripheral`
+  (OwnerImportService v1.5) so CSVs exported before the merger remain importable.
+- Admin and owner-facing data transfer views cleaned up (Session 42).
+- `ComputersHelper` device type filter updated: Appliance → Peripheral (Session 42).
 
-### DB data migration (user-managed, BEFORE Session 41)
-```sql
-UPDATE computers SET device_type = 2 WHERE device_type = 1;
-```
-Verify this is run in production before starting Phase 1.
-
-### Four-phase plan
-
-    Phase 1 — Enum + fixtures + model tests            Session 41
-    Phase 2 — Routes + controllers + controller tests  Session 42
-    Phase 3 — Views + navigation                       Session 43
-    Phase 4 — Services + service tests + docs          Session 44
-
-**Full phase detail:** see SESSION_HANDOVER.md Priority 1.
-
-### Key technical note — enum hash form
-After removing `appliance: 1`, the enum must be written in hash form to
-preserve non-contiguous integer values:
-```ruby
-enum :device_type, { computer: 0, peripheral: 2 }, prefix: true
-```
-This is valid Rails. Do NOT renumber peripheral to 1 — that would invalidate
-all existing DB records that are already `peripheral` (device_type=2).
-
-### Import service backward compatibility
-The import service must map the legacy CSV value `appliance` → `peripheral`
-so that CSVs exported before the merger remain importable. Added in Phase 4.
+### Intentional remaining references
+- `OwnerImportService` — legacy alias mapping (`"appliance"` → `:peripheral`). Keep.
+- `record_type` column in owner-facing data_transfers view — lists `appliance` as
+  a valid value with a note. Keep — old exports must remain importable.
+- Test names and comments documenting migration history. Keep.
 
 ---
 
@@ -192,30 +244,30 @@ so that CSVs exported before the merger remain importable. Added in Phase 4.
 
 ## Known Issues & Solutions
 
+### Manual data migrations — check ALL tables (Session 42)
+When running a manual data migration for an enum column, verify every table
+that uses that column. In Session 42 the device_type migration ran on `computers`
+only; `computer_models` was missed and sat at device_type=1 until fixed manually.
+Grep `db/schema.rb` for the column name to find all affected tables.
+
 ### Never Guess — Read the File or Ask (Session 39)
 Claude must never invent a path helper, method name, or behaviour without reading
-the actual file. In Session 39, two controller tests were written without reading
-`authentication.rb` or `owners_controller.rb` — both failed. The rule is now
-captured in the decor-session-rules skill (v1.3). See that skill for full detail.
+the actual file. See decor-session-rules skill v1.3 for full detail.
+
+### enum hash form required after non-contiguous gap (Session 41)
+`enum :device_type, { computer: 0, peripheral: 2 }, prefix: true`
+Do NOT renumber peripheral to 1.
 
 ### owner_group_id / owner_member_id — 0.present? is true (Session 38)
-Rails initialises integer columns with the DB DEFAULT (0). `0.present?` returns true
-in Ruby, so a guard of `return if field.present?` never auto-assigns. Guard must be
-`return if field.to_i > 0` to distinguish "user set a valid value" from "default 0".
+Guard must be `return if field.to_i > 0` not `return if field.present?`.
 
-### Duplicate computers in same group — DB constraint fires before validation (Session 38)
-Rails' per-record uniqueness validator for `computer_id` scoped to `connection_group_id`
-only queries the DB — it cannot detect two new in-memory members with the same ID.
-The DB unique constraint fires and raises `ActiveRecord::RecordNotUnique`. Fix: add a
-group-level `no_duplicate_computers` validator that checks `computer_id` uniqueness
-across the in-memory collection before save.
+### Remove routes AFTER updating views (Session 41)
+Removing routes before views causes cascade test failures — every page render
+that calls the removed path helper explodes. Update views first, then remove routes.
 
 ### SQLite ALTER TABLE Limitations
 Cannot add NOT NULL columns to existing tables — requires full table recreation.
 Use `disable_ddl_transaction!` + raw SQL. See RAILS_SPECIFICS.md.
-
-### Opening separator missing (Session 31)
-Both opening and closing `================================================================================` are mandatory on every response.
 
 ### safe_join for arrays of links — never .map.join.html_safe (Session 35)
 ### Connections show page — peer filtering uses reject not where.not (Session 34)
