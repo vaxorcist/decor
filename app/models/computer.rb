@@ -1,5 +1,9 @@
 # decor/app/models/computer.rb
-# version 2.0
+# version 2.1
+# v2.1 (Session 43): Added has_many :software_items, dependent: :destroy.
+#   Deleting a computer destroys all software installed on it (design decision).
+#   The DB FK also carries ON DELETE CASCADE as defense-in-depth (mirrors the
+#   components → computers FK pattern). Positioned after has_many :components.
 # v2.0 (Session 41): Appliances → Peripherals merger Phase 1.
 #   Removed appliance: 1 from device_type enum. Enum is now hash form
 #   { computer: 0, peripheral: 2 } to preserve non-contiguous integer
@@ -27,6 +31,14 @@ class Computer < ApplicationRecord
   belongs_to :computer_condition, optional: true
   belongs_to :run_status, optional: true
   has_many :components, dependent: :destroy
+
+  # Software items installed on this computer or peripheral.
+  # dependent: :destroy — deleting a hardware item destroys all software
+  # installed on it (user decision, Session 43). The DB FK mirrors this with
+  # ON DELETE CASCADE as a safety net for direct DB operations.
+  # Note: peripherals (device_type=2) live in this same table, so this
+  # association covers software installed on peripherals too.
+  has_many :software_items, dependent: :destroy
 
   # Connections: a computer or peripheral may participate in one or more
   # connection groups. Each group records which devices are physically or

@@ -1,0 +1,24 @@
+# decor/test/fixtures/software_names.yml
+# version 1.0
+# Session 43: Initial fixtures for software_names admin-managed lookup table.
+#   Four DEC software titles covering the range of name lengths and presence
+#   of optional description. Used by software_items fixtures and model tests.
+#
+#   vms and rt11 are referenced by software_items fixtures — do not rename
+#   without updating software_items.yml.
+
+vms:
+  name: VMS
+  description: Virtual Memory System operating system for VAX
+
+rt11:
+  name: RT-11
+  description: Single-user real-time OS for PDP-11
+
+rsts_e:
+  name: RSTS/E
+  description: Time-sharing OS for PDP-11
+
+tops20:
+  name: TOPS-20
+  # No description — tests the optional description path.

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_23_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_01_000200) do
   create_table "component_conditions", force: :cascade do |t|
     t.string "condition", limit: 40, null: false
     t.datetime "created_at", precision: nil, null: false
@@ -168,6 +168,40 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_23_010000) do
     t.index ["key"], name: "index_site_texts_on_key", unique: true
   end
 
+  create_table "software_conditions", force: :cascade do |t|
+    t.datetime "created_at", precision: nil, null: false
+    t.string "description", limit: 100
+    t.string "name", limit: 40, null: false
+    t.datetime "updated_at", precision: nil, null: false
+    t.index ["name"], name: "index_software_conditions_on_name", unique: true
+  end
+
+  create_table "software_items", force: :cascade do |t|
+    t.integer "barter_status", default: 0, null: false
+    t.integer "computer_id"
+    t.datetime "created_at", precision: nil, null: false
+    t.string "description", limit: 100
+    t.string "history", limit: 200
+    t.integer "owner_id", null: false
+    t.integer "software_condition_id"
+    t.integer "software_name_id", null: false
+    t.datetime "updated_at", precision: nil, null: false
+    t.string "version", limit: 20
+    t.index ["barter_status"], name: "index_software_items_on_barter_status"
+    t.index ["computer_id"], name: "index_software_items_on_computer_id"
+    t.index ["owner_id"], name: "index_software_items_on_owner_id"
+    t.index ["software_condition_id"], name: "index_software_items_on_software_condition_id"
+    t.index ["software_name_id"], name: "index_software_items_on_software_name_id"
+  end
+
+  create_table "software_names", force: :cascade do |t|
+    t.datetime "created_at", precision: nil, null: false
+    t.string "description", limit: 100
+    t.string "name", limit: 40, null: false
+    t.datetime "updated_at", precision: nil, null: false
+    t.index ["name"], name: "index_software_names_on_name", unique: true
+  end
+
   add_foreign_key "components", "component_conditions"
   add_foreign_key "components", "component_types"
   add_foreign_key "components", "computers", on_delete: :cascade
@@ -180,4 +214,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_23_010000) do
   add_foreign_key "connection_groups", "owners"
   add_foreign_key "connection_members", "computers"
   add_foreign_key "connection_members", "connection_groups", on_delete: :cascade
+  add_foreign_key "software_items", "computers", on_delete: :cascade
+  add_foreign_key "software_items", "owners"
+  add_foreign_key "software_items", "software_conditions"
+  add_foreign_key "software_items", "software_names"
 end

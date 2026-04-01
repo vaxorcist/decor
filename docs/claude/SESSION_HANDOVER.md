@@ -1,12 +1,12 @@
 # decor/docs/claude/SESSION_HANDOVER.md
-# version 46.0
-# Session 42: Appliances → Peripherals merger — cleanup and verification complete.
-#   Four live files updated. Bug found and fixed: computer_models DB rows at
-#   device_type=1 were never migrated — manual fix applied to dev and production.
+# version 47.0
+# Session 43: Software feature — Session A complete.
+#   Three migrations, three models, two model updates, three fixture files,
+#   three model test files. All tests green.
 
-**Date:** March 28, 2026
-**Branch:** main (Session 42 merged and deployed)
-**Status:** Session 42 complete. All tests green. No outstanding failures.
+**Date:** April 1, 2026
+**Branch:** main (Session 42 merged and deployed; Session 43 ready to commit)
+**Status:** Session 43 complete. All tests green. No outstanding failures.
 
 ---
 
@@ -35,9 +35,9 @@ After each: log "Read FILENAME — N lines, complete."
 
 ## !! TOKEN BUDGET WARNING !!
 
-Session 42 used ~69% of the context window. Fixed overhead alone (~40–60%)
-leaves room for roughly one focused task per session. Start sessions with the
-smallest possible document load when planning sessions are not needed.
+Session 43 used ~72% of the context window (estimate). Fixed overhead alone
+(~40–60%) leaves room for roughly one focused task per session. Start sessions
+with the smallest possible document load when planning sessions are not needed.
 
 ---
 
@@ -66,13 +66,6 @@ See Session 41 entry for full detail.
 When running a manual data migration that changes an enum value, grep for ALL
 tables that share that enum/column before assuming the migration is complete.
 
-In Session 42: the appliance → peripheral data migration (device_type 1 → 2)
-was run against `computers` only. `computer_models` was missed — its rows sat
-at device_type=1, invisible to both computer (0) and peripheral (2) queries.
-Tests passed because fixtures define device_type explicitly and the test DB is
-rebuilt from fixtures on every run; the bug only existed in databases migrated
-incrementally.
-
 The grep to run before declaring a manual migration complete:
 ```bash
 grep -rn "device_type" decor/db/schema.rb
@@ -81,52 +74,78 @@ Every table with that column needs the same migration.
 
 ---
 
-## Session 42 Summary
+## Session 43 Summary
 
-**Focus: Appliances → Peripherals merger — cleanup and verification.**
+**Focus: Software feature — Session A (migrations, models, fixtures, model tests).**
 
-Ran a grep for all remaining non-comment `appliance` references. Found and fixed
-four live files. Also found and fixed a database bug: `computer_models` rows were
-still at device_type=1 (not migrated in Session 41).
+Design decision: Option C — full separation. Software is NOT a variant of
+Components. Three new tables (`software_names`, `software_conditions`,
+`software_items`) fully independent of the components infrastructure.
 
-### Files changed this session (4 files)
+### Files changed this session (14 files)
 
-    decor/app/views/admin/data_transfers/show.html.erb   v1.2
-    decor/app/controllers/data_transfers_controller.rb   v1.5
-    decor/app/views/data_transfers/show.html.erb         v1.8
-    decor/app/helpers/computers_helper.rb                v1.6
-    decor/docs/claude/DECOR_PROJECT.md                   v2.37
-    decor/docs/claude/SESSION_HANDOVER.md                v46.0
-    decor/docs/claude/RAILS_SPECIFICS.md                 v2.5
+    decor/db/migrate/20260401000000_create_software_names.rb        v1.0  (new)
+    decor/db/migrate/20260401000100_create_software_conditions.rb   v1.0  (new)
+    decor/db/migrate/20260401000200_create_software_items.rb        v1.0  (new)
+    decor/app/models/software_name.rb                               v1.0  (new)
+    decor/app/models/software_condition.rb                          v1.0  (new)
+    decor/app/models/software_item.rb                               v1.0  (new)
+    decor/app/models/owner.rb                                       v1.5
+    decor/app/models/computer.rb                                    v2.1
+    decor/test/fixtures/software_names.yml                          v1.0  (new)
+    decor/test/fixtures/software_conditions.yml                     v1.0  (new)
+    decor/test/fixtures/software_items.yml                          v1.0  (new)
+    decor/test/models/software_name_test.rb                         v1.0  (new)
+    decor/test/models/software_condition_test.rb                    v1.0  (new)
+    decor/test/models/software_item_test.rb                         v1.0  (new)
 
-### Bug found and fixed (no code change — DB only)
+### Key design decisions (Session 43)
 
-`computer_models` table had rows at device_type=1 (appliance) that were never
-migrated. The Session 41 manual migration ran against `computers` only.
-Fix: `UPDATE computer_models SET device_type = 2 WHERE device_type = 1;`
-Applied to both development and production databases.
+- `computer_id` on `software_items` covers both computers and peripherals
+  (peripherals are device_type=2 rows in the computers table — one FK suffices).
+- Deleting a computer DESTROYS all software installed on it (`dependent: :destroy`
+  at Ruby level + `ON DELETE CASCADE` at DB level as defense-in-depth).
+- `software_conditions` uses column `name` (not `condition` like the legacy
+  `component_conditions` table — cleaner convention for a new table).
+- Initial software conditions: Complete, Incomplete, Subset.
+- Raw SQL migrations required for CHECK constraints (SQLite ignores VARCHAR(n)
+  without them). All three migrations use `disable_ddl_transaction!`.
 
 ---
 
-## Appliances → Peripherals Merger — FULLY COMPLETE
+## Software Feature — Session Plan
 
-All live code references to `appliance` are now either:
-- Intentional backward-compat (OwnerImportService legacy alias mapping;
-  `record_type` column reference and example CSV in owner-facing data_transfers view)
-- Historical context in test names and comments
+The Software feature is divided into six independent sessions. Each ends with
+a green test suite and a deployable state.
 
-The only remaining non-live reference is `RAILS_SPECIFICS.md` — updated this
-session (v2.5) to replace the stale enum assertion example.
+    Session A  Migrations, models, fixtures, model tests              DONE ✓
+    Session B  Admin CRUD: SoftwareNames + SoftwareConditions         next
+    Session C  Owner-facing: Software index + show (read-only)
+    Session D  Owner-facing: Software create + edit + destroy
+    Session E  Computer/peripheral show page integration
+    Session F  Export/Import service updates (deferrable)
+
+### Session B — files needed before starting
+
+Read these files before writing a single line:
+
+    decor/app/controllers/admin/component_types_controller.rb
+    decor/app/controllers/admin/component_conditions_controller.rb
+    (corresponding views for both)
+    decor/app/views/layouts/admin.html.erb
+    decor/config/routes.rb
+    decor/test/controllers/admin/component_types_controller_test.rb
 
 ---
 
 ## Priority 1 — Future Sessions
 
-1. **Legal/Compliance** — Impressum, Privacy Policy, GDPR, Cookie Consent, TOS.
-2. **System tests** — decor/test/system/ still empty.
-3. **Account deletion + data export** (GDPR).
-4. **Spam / Postmark DNS fix** — awaiting Rob's dashboard findings.
-5. **BulkUploadService stale model references** — low priority.
+1. **Software feature** — Session B next (see plan above).
+2. **Legal/Compliance** — Impressum, Privacy Policy, GDPR, Cookie Consent, TOS.
+3. **System tests** — decor/test/system/ still empty.
+4. **Account deletion + data export** (GDPR).
+5. **Spam / Postmark DNS fix** — awaiting Rob's dashboard findings.
+6. **BulkUploadService stale model references** — low priority.
 
 ---
 
