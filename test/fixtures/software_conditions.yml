@@ -1,0 +1,18 @@
+# decor/test/fixtures/software_conditions.yml
+# version 1.0
+# Session 43: Initial fixtures for software_conditions admin-managed lookup table.
+#   Three conditions per design spec: Complete, Incomplete, Subset.
+#   complete is referenced by software_items fixtures — do not rename without
+#   updating software_items.yml.
+
+complete:
+  name: Complete
+  description: All components present — media, manuals, and licence documentation
+
+incomplete:
+  name: Incomplete
+  description: Some components missing
+
+subset:
+  name: Subset
+  description: A subset of the full distribution (e.g. selected kits only)

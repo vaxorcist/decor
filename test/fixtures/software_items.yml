@@ -1,0 +1,48 @@
+# decor/test/fixtures/software_items.yml
+# version 1.0
+# Session 43: Initial fixtures for software_items.
+#   Covers: attached (computer_id set) and unattached (no computer_id),
+#   all three barter_status values, optional fields present and absent,
+#   multiple owners.
+#
+#   Fixture → owner mapping:
+#     alice_vms         — owner one (alice), installed on alice_pdp11
+#     alice_rt11_spare  — owner one (alice), unattached (not installed anywhere)
+#     bob_rsts          — owner two (bob),   installed on bob_pdp8
+#     charlie_rt11      — owner three (charlie, neutral owner), installed on dec_unibus_router
+#
+#   barter_status integer values: 0 = no_barter, 1 = offered, 2 = wanted.
+#
+#   charlie_rt11 is assigned to the neutral owner (three/charlie) — the owner
+#   whose record counts no existing test asserts. Use this fixture for
+#   enum/filter test coverage that needs a third distinct item.
+
+alice_vms:
+  owner: one
+  computer: alice_pdp11
+  software_name: vms
+  software_condition: complete
+  version: "V5.5"
+  description: Primary OS for the VAX cluster
+  barter_status: 0
+
+alice_rt11_spare:
+  owner: one
+  computer:
+  software_name: rt11
+  software_condition: incomplete
+  version: "V5.3"
+  barter_status: 1
+
+bob_rsts:
+  owner: two
+  computer: bob_pdp8
+  software_name: rsts_e
+  barter_status: 0
+
+charlie_rt11:
+  owner: three
+  computer: dec_unibus_router
+  software_name: rt11
+  software_condition: subset
+  barter_status: 2

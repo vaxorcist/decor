@@ -1,13 +1,15 @@
 # decor/docs/claude/DECOR_PROJECT.md
-# version 2.37
-# Session 42: Appliances → Peripherals merger fully complete.
-#   Four live files cleaned up. DB bug fixed (computer_models device_type=1 rows).
-#   Stale "cosmetic work remaining" note removed — all done.
+# version 2.38
+# Session 43: Software feature Session A complete.
+#   Added three new models (SoftwareName, SoftwareCondition, SoftwareItem)
+#   to the Data Model Overview. Updated key file versions table with all
+#   14 new/modified files. Directory tree needs refresh (upload decor_tree.txt
+#   at next session start).
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** March 28, 2026 (Session 42)
-**Current Status:** Sessions 1–42 committed and deployed.
+**Last Updated:** April 1, 2026 (Session 43)
+**Current Status:** Sessions 1–42 committed and deployed. Session 43 ready to commit.
 
 ---
 
@@ -18,7 +20,7 @@
 tree decor/ -I "node_modules|.git|tmp|storage|log|.DS_Store|*.lock|assets|cache|pids|sockets" --dirsfirst -F --prune -L 6 > decor_tree.txt
 ```
 
-**Current tree** (as of Session 41 — upload decor_tree.txt to refresh):
+**Current tree** (as of Session 41 — Session 43 adds new files; upload decor_tree.txt to refresh):
 ```
 decor//
 ├── app/
@@ -52,8 +54,12 @@ decor//
 │   ├── helpers/
 │   │   └── computers_helper.rb                        ← Session 42 (v1.6)
 │   ├── models/
-│   │   ├── computer.rb                                 ← Session 41 (v2.0)
-│   │   └── computer_model.rb                          ← Session 41 (v1.3)
+│   │   ├── computer.rb                                 ← Session 43 (v2.1)
+│   │   ├── computer_model.rb                          ← Session 41 (v1.3)
+│   │   ├── owner.rb                                   ← Session 43 (v1.5)
+│   │   ├── software_condition.rb                      ← Session 43 (v1.0) NEW
+│   │   ├── software_item.rb                           ← Session 43 (v1.0) NEW
+│   │   └── software_name.rb                           ← Session 43 (v1.0) NEW
 │   ├── services/
 │   │   ├── owner_export_service.rb                     ← Session 41 (v1.4)
 │   │   └── owner_import_service.rb                     ← Session 41 (v1.5)
@@ -75,6 +81,11 @@ decor//
 │           └── show.html.erb                          ← Session 41 (v2.2)
 ├── config/
 │   └── routes.rb                                      ← Session 41 (v2.6)
+├── db/
+│   └── migrate/
+│       ├── 20260401000000_create_software_names.rb    ← Session 43 (v1.0) NEW
+│       ├── 20260401000100_create_software_conditions.rb ← Session 43 (v1.0) NEW
+│       └── 20260401000200_create_software_items.rb    ← Session 43 (v1.0) NEW
 └── test/
     ├── controllers/
     │   ├── admin/
@@ -84,10 +95,16 @@ decor//
     │   └── owners_controller_test.rb                  ← Session 41 (v1.8)
     ├── fixtures/
     │   ├── computer_models.yml                         ← Session 41 (v1.3)
-    │   └── computers.yml                              ← Session 41 (v1.9)
+    │   ├── computers.yml                              ← Session 41 (v1.9)
+    │   ├── software_conditions.yml                    ← Session 43 (v1.0) NEW
+    │   ├── software_items.yml                         ← Session 43 (v1.0) NEW
+    │   └── software_names.yml                         ← Session 43 (v1.0) NEW
     ├── models/
     │   ├── computer_model_test.rb                     ← Session 41 (v1.3)
-    │   └── computer_test.rb                           ← Session 41 (v1.7)
+    │   ├── computer_test.rb                           ← Session 41 (v1.7)
+    │   ├── software_condition_test.rb                 ← Session 43 (v1.0) NEW
+    │   ├── software_item_test.rb                      ← Session 43 (v1.0) NEW
+    │   └── software_name_test.rb                      ← Session 43 (v1.0) NEW
     └── services/
         ├── computer_model_export_service_test.rb      ← Session 41 (v1.2)
         ├── computer_model_import_service_test.rb      ← Session 41 (v1.2)
@@ -99,14 +116,27 @@ decor//
 
 **Key file versions** (updated each session):
 
-    decor/docs/claude/DECOR_PROJECT.md                                                  v2.37 ← Session 42
-    decor/docs/claude/SESSION_HANDOVER.md                                               v46.0 ← Session 42
+    decor/docs/claude/DECOR_PROJECT.md                                                  v2.38 ← Session 43
+    decor/docs/claude/SESSION_HANDOVER.md                                               v47.0 ← Session 43
+    decor/db/migrate/20260401000000_create_software_names.rb                            v1.0  ← Session 43 NEW
+    decor/db/migrate/20260401000100_create_software_conditions.rb                       v1.0  ← Session 43 NEW
+    decor/db/migrate/20260401000200_create_software_items.rb                            v1.0  ← Session 43 NEW
+    decor/app/models/software_name.rb                                                   v1.0  ← Session 43 NEW
+    decor/app/models/software_condition.rb                                              v1.0  ← Session 43 NEW
+    decor/app/models/software_item.rb                                                   v1.0  ← Session 43 NEW
+    decor/app/models/owner.rb                                                           v1.5  ← Session 43
+    decor/app/models/computer.rb                                                        v2.1  ← Session 43
+    decor/test/fixtures/software_names.yml                                              v1.0  ← Session 43 NEW
+    decor/test/fixtures/software_conditions.yml                                         v1.0  ← Session 43 NEW
+    decor/test/fixtures/software_items.yml                                              v1.0  ← Session 43 NEW
+    decor/test/models/software_name_test.rb                                             v1.0  ← Session 43 NEW
+    decor/test/models/software_condition_test.rb                                        v1.0  ← Session 43 NEW
+    decor/test/models/software_item_test.rb                                             v1.0  ← Session 43 NEW
     decor/docs/claude/RAILS_SPECIFICS.md                                                v2.5  ← Session 42
     decor/app/views/admin/data_transfers/show.html.erb                                  v1.2  ← Session 42
     decor/app/controllers/data_transfers_controller.rb                                  v1.5  ← Session 42
     decor/app/views/data_transfers/show.html.erb                                        v1.8  ← Session 42
     decor/app/helpers/computers_helper.rb                                               v1.6  ← Session 42
-    decor/app/models/computer.rb                                                        v2.0  ← Session 41
     decor/app/models/computer_model.rb                                                  v1.3  ← Session 41
     decor/app/controllers/computers_controller.rb                                       v1.19 ← Session 41
     decor/app/controllers/owners_controller.rb                                          v1.9  ← Session 41
@@ -157,6 +187,7 @@ decor//
 ### Owner
 - has_many :computers, dependent: :destroy
 - has_many :components, dependent: :destroy
+- has_many :software_items, dependent: :destroy        ← Session 43
 - has_many :connection_groups, dependent: :destroy
 
 ### Computer
@@ -165,6 +196,7 @@ decor//
 - belongs_to :computer_condition (optional)
 - belongs_to :run_status (optional)
 - has_many :components, dependent: :destroy
+- has_many :software_items, dependent: :destroy        ← Session 43
 - has_many :connection_members, dependent: :destroy
 - has_many :connection_groups, through: :connection_members
 - device_type enum: { computer: 0, peripheral: 2 }, prefix: true
@@ -176,10 +208,35 @@ decor//
 ### ComputerModel
 - device_type enum: { computer: 0, peripheral: 2 }, prefix: true
   Same hash form as Computer; appliance: 1 removed in Session 41.
-  NOTE: DB migration for computer_models (device_type 1 → 2) was missed in Session 41
-  and applied manually in Session 42. Both computers and computer_models are now clean.
 - has_many :computers, dependent: :restrict_with_error
 - validates :name, presence: true, uniqueness: true
+
+### SoftwareName  ← Session 43
+- has_many :software_items, dependent: :restrict_with_error
+- validates :name, presence: true, uniqueness: true, length max 40
+- validates :description, length max 100, optional
+- Admin-managed (analogous to ComponentType)
+
+### SoftwareCondition  ← Session 43
+- has_many :software_items, dependent: :restrict_with_error
+- validates :name, presence: true, uniqueness: true, length max 40
+- validates :description, length max 100, optional
+- Admin-managed. Initial values: Complete, Incomplete, Subset.
+- NOTE: column is "name" (not "condition" like legacy component_conditions table)
+
+### SoftwareItem  ← Session 43
+- belongs_to :owner
+- belongs_to :computer, optional: true    ← "installed on"; covers peripherals too
+- belongs_to :software_name
+- belongs_to :software_condition, optional: true
+- barter_status enum: 0=no_barter, 1=offered, 2=wanted (prefix: true) — same as Computer/Component
+- version VARCHAR(20), optional
+- description VARCHAR(100), optional
+- history VARCHAR(200), optional
+- Deleting a computer DESTROYS all software installed on it (dependent: :destroy
+  at Ruby level + ON DELETE CASCADE at DB level as defense-in-depth).
+- Deleting an owner destroys all their software items.
+- computer_id nullable → software not installed on any hardware is valid.
 
 ### ConnectionType
 - has_many :connection_groups, dependent: :restrict_with_error
@@ -210,6 +267,19 @@ decor//
 
 ---
 
+## Software Feature — Session Plan  ← Session 43
+
+Option C (full separation) chosen. Software is NOT a variant of Components.
+
+    Session A  Migrations, models, fixtures, model tests              DONE ✓ (Session 43)
+    Session B  Admin CRUD: SoftwareNames + SoftwareConditions         next
+    Session C  Owner-facing: Software index + show (read-only)
+    Session D  Owner-facing: Software create + edit + destroy
+    Session E  Computer/peripheral show page integration
+    Session F  Export/Import service updates (deferrable)
+
+---
+
 ## Appliances → Peripherals Merger — FULLY COMPLETE (Sessions 41–42)
 
 ### What changed
@@ -220,8 +290,6 @@ decor//
 - All fixtures, views, routes, controllers, helpers, services, and tests updated.
 - Import backward compat: CSV record_type `"appliance"` → mapped to `:peripheral`
   (OwnerImportService v1.5) so CSVs exported before the merger remain importable.
-- Admin and owner-facing data transfer views cleaned up (Session 42).
-- `ComputersHelper` device type filter updated: Appliance → Peripheral (Session 42).
 
 ### Intentional remaining references
 - `OwnerImportService` — legacy alias mapping (`"appliance"` → `:peripheral`). Keep.

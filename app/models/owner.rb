@@ -1,4 +1,9 @@
-# decor/app/models/owner.rb - version 1.4
+# decor/app/models/owner.rb - version 1.5
+# v1.5 (Session 43): Added has_many :software_items, dependent: :destroy.
+#   Positioned after has_many :components and before has_many :connection_groups.
+#   No ordering constraint with :computers (unlike :connection_groups which must
+#   come after :computers to ensure ConnectionMember after_destroy callbacks fire
+#   before the group destroy — see v1.4 comment).
 # v1.4 (Session 31): Added has_many :connection_groups, dependent: :destroy.
 #   Declared AFTER has_many :computers so Rails destroys computers first during
 #   owner deletion. Computer destruction triggers the ConnectionMember after_destroy
@@ -19,6 +24,11 @@ class Owner < ApplicationRecord
   # attempts to destroy connection_groups directly.
   has_many :computers, dependent: :destroy
   has_many :components, dependent: :destroy
+
+  # Software items owned by this owner. Destroyed when the owner is deleted.
+  # No ordering constraint relative to :computers — software_item destruction
+  # has no cross-dependency callbacks.
+  has_many :software_items, dependent: :destroy
 
   # Connection groups owned by this owner. Destroyed after computers (see note above).
   # All member devices in these groups must belong to this owner (model validation).
