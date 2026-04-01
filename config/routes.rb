@@ -1,5 +1,7 @@
 # decor/config/routes.rb
-# version 2.6
+# version 2.7
+# v2.7 (Session 44): Software feature Session B.
+#   Added resources :software_names and :software_conditions in admin namespace.
 # v2.6 (Session 41): Appliances → Peripherals merger Phase 2.
 #   Removed get :appliances from owners member block (sub-page gone).
 #   Removed resources :appliances top-level route (device_context "appliance" gone).
@@ -78,6 +80,11 @@ Rails.application.routes.draw do
     resources :component_conditions,  only: %i[index new create edit update destroy]
     resources :run_statuses,          only: %i[index new create edit update destroy]
     resources :bulk_uploads,          only: %i[new create]
+
+    # Software lookup tables — admin-managed, analogous to component_types /
+    # component_conditions. Added Session 44 (Software feature Session B).
+    resources :software_names,      only: %i[index new create edit update destroy]
+    resources :software_conditions,  only: %i[index new create edit update destroy]
 
     # Site text management — generic upload and delete pages for all named texts.
     resources :site_texts, only: %i[new create destroy], param: :key do

@@ -1,15 +1,14 @@
 # decor/docs/claude/DECOR_PROJECT.md
-# version 2.38
-# Session 43: Software feature Session A complete.
-#   Added three new models (SoftwareName, SoftwareCondition, SoftwareItem)
-#   to the Data Model Overview. Updated key file versions table with all
-#   14 new/modified files. Directory tree needs refresh (upload decor_tree.txt
-#   at next session start).
+# version 2.39
+# Session 44: Software feature Session B complete.
+#   Added 14 files: two admin controllers, eight views (4 per controller),
+#   updated routes.rb and admin.html.erb, two controller test files.
+#   Directory tree needs refresh (upload decor_tree.txt at next session start).
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** April 1, 2026 (Session 43)
-**Current Status:** Sessions 1–42 committed and deployed. Session 43 ready to commit.
+**Last Updated:** April 1, 2026 (Session 44)
+**Current Status:** Sessions 1–43 committed and deployed. Session 44 ready to commit.
 
 ---
 
@@ -116,7 +115,21 @@ decor//
 
 **Key file versions** (updated each session):
 
-    decor/docs/claude/DECOR_PROJECT.md                                                  v2.38 ← Session 43
+    decor/docs/claude/DECOR_PROJECT.md                                                  v2.39 ← Session 44
+    decor/app/controllers/admin/software_names_controller.rb                            v1.0  ← Session 44 NEW
+    decor/app/controllers/admin/software_conditions_controller.rb                       v1.0  ← Session 44 NEW
+    decor/app/views/admin/software_names/index.html.erb                                 v1.0  ← Session 44 NEW
+    decor/app/views/admin/software_names/new.html.erb                                   v1.0  ← Session 44 NEW
+    decor/app/views/admin/software_names/edit.html.erb                                  v1.0  ← Session 44 NEW
+    decor/app/views/admin/software_names/_form.html.erb                                 v1.0  ← Session 44 NEW
+    decor/app/views/admin/software_conditions/index.html.erb                            v1.0  ← Session 44 NEW
+    decor/app/views/admin/software_conditions/new.html.erb                              v1.0  ← Session 44 NEW
+    decor/app/views/admin/software_conditions/edit.html.erb                             v1.0  ← Session 44 NEW
+    decor/app/views/admin/software_conditions/_form.html.erb                            v1.0  ← Session 44 NEW
+    decor/config/routes.rb                                                              v2.7  ← Session 44
+    decor/app/views/layouts/admin.html.erb                                              v2.1  ← Session 44
+    decor/test/controllers/admin/software_names_controller_test.rb                      v1.0  ← Session 44 NEW
+    decor/test/controllers/admin/software_conditions_controller_test.rb                 v1.0  ← Session 44 NEW
     decor/docs/claude/SESSION_HANDOVER.md                                               v47.0 ← Session 43
     decor/db/migrate/20260401000000_create_software_names.rb                            v1.0  ← Session 43 NEW
     decor/db/migrate/20260401000100_create_software_conditions.rb                       v1.0  ← Session 43 NEW
@@ -272,7 +285,8 @@ decor//
 Option C (full separation) chosen. Software is NOT a variant of Components.
 
     Session A  Migrations, models, fixtures, model tests              DONE ✓ (Session 43)
-    Session B  Admin CRUD: SoftwareNames + SoftwareConditions         next
+    Session B  Admin CRUD: SoftwareNames + SoftwareConditions         DONE ✓ (Session 44)
+    Session C  Owner-facing: Software index + show (read-only)        next
     Session C  Owner-facing: Software index + show (read-only)
     Session D  Owner-facing: Software create + edit + destroy
     Session E  Computer/peripheral show page integration
