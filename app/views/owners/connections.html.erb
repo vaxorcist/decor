@@ -1,4 +1,7 @@
-<%# decor/app/views/owners/connections.html.erb - version 1.1 %>
+<%# decor/app/views/owners/connections.html.erb - version 1.2 %>
+<%# v1.2 (Session 45): Software feature Session C. %>
+<%#   Added Software tab (inactive) to the tab strip. %>
+<%#   Tab order: Computers | Peripherals | Components | Connections (active) | Software. %>
 <%# v1.1 (Session 41): Appliances → Peripherals merger Phase 2. %>
 <%#   Removed "Appliances" tab from the tab strip (appliances_owner_path gone). %>
 <%#   Tab order: Computers | Peripherals | Components | Connections (active). %>
@@ -28,6 +31,8 @@
           class: "pb-2 -mb-px border-b-2 border-transparent text-stone-600 hover:text-stone-900" %>
     <%= link_to "Connections", connections_owner_path(@owner),
           class: "pb-2 -mb-px border-b-2 font-medium border-indigo-600 text-indigo-700" %>
+    <%= link_to "Software",    software_owner_path(@owner),
+          class: "pb-2 -mb-px border-b-2 border-transparent text-stone-600 hover:text-stone-900" %>
   </div>
 
   <%# Section header %>

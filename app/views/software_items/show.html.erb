@@ -1,0 +1,94 @@
+<%# decor/app/views/software_items/show.html.erb - version 1.0 %>
+<%# Session 45: Software feature Session C — read-only detail page. %>
+<%# Displays all fields of a single SoftwareItem. No Edit/Delete actions; %>
+<%# those will be added in Session D. %>
+<%# %>
+<%# Fields shown: %>
+<%#   Software name | Version | Condition | Installed On | Description | History %>
+<%# Trade is shown to logged-in users; it reads barter_status on the item. %>
+<%# A "Back to [owner]'s software" link navigates to the owner sub-page. %>
+
+<div class="max-w-3xl mx-auto">
+
+  <%# Page header %>
+  <div class="flex justify-between items-start mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-stone-800"><%= @software_item.software_name.name %></h1>
+      <%# Owner attribution line — always visible %>
+      <p class="text-sm text-stone-500 mt-1">
+        Owned by
+        <%= link_to @software_item.owner.user_name, @software_item.owner,
+              class: "text-indigo-600 hover:text-indigo-900" %>
+      </p>
+    </div>
+    <%# Edit / Delete will be added here in Session D %>
+  </div>
+
+  <%# Detail card %>
+  <div class="bg-white border border-stone-200 rounded divide-y divide-stone-100">
+
+    <%# Version %>
+    <div class="px-5 py-3 flex gap-4">
+      <dt class="w-36 flex-shrink-0 text-xs font-medium text-stone-500 uppercase tracking-wider pt-0.5">Version</dt>
+      <dd class="text-sm text-stone-700"><%= @software_item.version.presence || "—" %></dd>
+    </div>
+
+    <%# Condition %>
+    <div class="px-5 py-3 flex gap-4">
+      <dt class="w-36 flex-shrink-0 text-xs font-medium text-stone-500 uppercase tracking-wider pt-0.5">Condition</dt>
+      <dd class="text-sm text-stone-700"><%= @software_item.software_condition&.name || "—" %></dd>
+    </div>
+
+    <%# Installed On — link to computer/peripheral show page, or "Not installed" %>
+    <div class="px-5 py-3 flex gap-4">
+      <dt class="w-36 flex-shrink-0 text-xs font-medium text-stone-500 uppercase tracking-wider pt-0.5">Installed On</dt>
+      <dd class="text-sm">
+        <% if @software_item.computer %>
+          <%= link_to "#{@software_item.computer.computer_model.name} \u2013 #{@software_item.computer.serial_number}",
+                computer_path(@software_item.computer),
+                class: "text-indigo-600 hover:text-indigo-900" %>
+        <% else %>
+          <span class="text-stone-400">Not installed on any hardware</span>
+        <% end %>
+      </dd>
+    </div>
+
+    <%# Description — uses whitespace-pre-wrap; tag and content on same line %>
+    <%# to prevent ERB indentation rendering as visible leading space. %>
+    <div class="px-5 py-3 flex gap-4">
+      <dt class="w-36 flex-shrink-0 text-xs font-medium text-stone-500 uppercase tracking-wider pt-0.5">Description</dt>
+      <dd class="text-sm text-stone-700 whitespace-pre-wrap"><%= @software_item.description.presence || "—" %></dd>
+    </div>
+
+    <%# History — uses whitespace-pre-wrap for the same reason %>
+    <div class="px-5 py-3 flex gap-4">
+      <dt class="w-36 flex-shrink-0 text-xs font-medium text-stone-500 uppercase tracking-wider pt-0.5">History</dt>
+      <dd class="text-sm text-stone-700 whitespace-pre-wrap"><%= @software_item.history.presence || "—" %></dd>
+    </div>
+
+    <%# Trade status — visible to logged-in members only %>
+    <% if logged_in? %>
+      <div class="px-5 py-3 flex gap-4">
+        <dt class="w-36 flex-shrink-0 text-xs font-medium text-stone-500 uppercase tracking-wider pt-0.5">Trade</dt>
+        <dd class="text-sm">
+          <% if @software_item.barter_status_offered? %>
+            <span class="text-green-700">Offered</span>
+          <% elsif @software_item.barter_status_wanted? %>
+            <span class="text-amber-600">Wanted</span>
+          <% else %>
+            <span class="text-stone-400">—</span>
+          <% end %>
+        </dd>
+      </div>
+    <% end %>
+
+  </div>
+
+  <%# Navigation footer %>
+  <div class="mt-4 text-sm">
+    <%= link_to "\u2190 Back to #{@software_item.owner.user_name}'s software",
+          software_owner_path(@software_item.owner),
+          class: "text-indigo-600 hover:text-indigo-900" %>
+  </div>
+
+</div>

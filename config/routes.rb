@@ -1,5 +1,9 @@
 # decor/config/routes.rb
-# version 2.7
+# version 2.8
+# v2.8 (Session 45): Software feature Session C.
+#   Added get :software to owners member block — /owners/:id/software sub-page.
+#   Added resources :software_items, only: [:show] — individual item detail page.
+#   Both are read-only (no create/edit/destroy until Session D).
 # v2.7 (Session 44): Software feature Session B.
 #   Added resources :software_names and :software_conditions in admin namespace.
 # v2.6 (Session 41): Appliances → Peripherals merger Phase 2.
@@ -39,6 +43,7 @@ Rails.application.routes.draw do
       get :peripherals  # /owners/:id/peripherals — peripherals table (device_type: peripheral)
       get :components   # /owners/:id/components  — components table
       get :connections  # /owners/:id/connections — connections table
+      get :software     # /owners/:id/software    — software items table (Session 45)
     end
     # Full CRUD for connection groups; no :show (index suffices).
     resources :connection_groups, only: %i[index new create edit update destroy]
@@ -53,6 +58,11 @@ Rails.application.routes.draw do
                            defaults: { device_context: "peripheral" }
 
   resources :components
+
+  # Software items — read-only in Session C (show only).
+  # create/edit/update/destroy will be added in Session D.
+  # No device_context needed — SoftwareItem is not a Computer variant.
+  resources :software_items, only: [:show]
 
   # Owner data export / import — always scoped to Current.owner (no id in URL).
   get  "data_transfer",        to: "data_transfers#show",   as: :data_transfer

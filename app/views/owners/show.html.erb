@@ -1,4 +1,8 @@
-<%# decor/app/views/owners/show.html.erb - version 2.2 %>
+<%# decor/app/views/owners/show.html.erb - version 2.3 %>
+<%# v2.3 (Session 45): Software feature Session C. %>
+<%#   Added Software summary card (fifth card). %>
+<%#   Grid changed from grid-cols-4 to grid-cols-5. %>
+<%#   No "+ Add" link on the Software card — create will be added in Session D. %>
 <%# v2.2 (Session 41): Appliances → Peripherals merger Phase 2. %>
 <%#   Removed Appliances summary card (@appliance_count and appliances_owner_path gone). %>
 <%#   Grid changed from grid-cols-5 to grid-cols-4 (four cards remain: %>
@@ -13,8 +17,8 @@
   <%= render "profile" %>
 
   <%# Section cards: one per collection, showing count + navigation.
-      Four cards in a single row on standard viewports. %>
-  <div class="grid grid-cols-4 gap-4">
+      Five cards in a single row on standard viewports. %>
+  <div class="grid grid-cols-5 gap-4">
 
     <%# Computers card %>
     <div class="bg-white border border-stone-200 rounded p-5">
@@ -78,6 +82,19 @@
           <%= link_to "+ Add", new_owner_connection_group_path(@owner),
                 class: "text-sm text-indigo-600 hover:text-indigo-900" %>
         <% end %>
+      </div>
+    </div>
+
+    <%# Software card — added Session 45. %>
+    <%# No "+ Add" link until Session D adds the create action. %>
+    <div class="bg-white border border-stone-200 rounded p-5">
+      <div class="flex justify-between items-start mb-3">
+        <h2 class="font-semibold text-stone-700">Software</h2>
+        <span class="text-2xl font-bold text-stone-300"><%= @software_count %></span>
+      </div>
+      <div class="flex items-center justify-between">
+        <%= link_to "View →", software_owner_path(@owner),
+              class: "text-sm text-indigo-600 hover:text-indigo-900" %>
       </div>
     </div>
 

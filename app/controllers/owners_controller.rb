@@ -1,5 +1,11 @@
 # decor/app/controllers/owners_controller.rb
-# version 1.9
+# version 2.0
+# v2.0 (Session 45): Software feature Session C.
+#   Added :software to the before_action :set_owner list.
+#   Added @software_count to show action (drives the summary card count).
+#   Added software action — loads @software_items with eager_load for
+#   ORDER BY on software_names.name. No auth guard (public, consistent with
+#   all other read-only sub-pages in this controller).
 # v1.9 (Session 41): Appliances → Peripherals merger Phase 2.
 #   Removed :appliances from before_action :set_owner list.
 #   Removed @appliance_count from show action (no longer a separate device type).
@@ -12,7 +18,7 @@
 # v1.4: computers and components ordered; eager_load for ORDER BY on joined tables.
 
 class OwnersController < ApplicationController
-  before_action :set_owner, only: %i[show edit update destroy computers peripherals components connections]
+  before_action :set_owner, only: %i[show edit update destroy computers peripherals components connections software]
   before_action -> { require_owner(@owner) }, only: %i[edit update destroy]
   before_action :load_invite, only: %i[new create]
 
@@ -54,14 +60,17 @@ class OwnersController < ApplicationController
   end
 
   # Summary page — shows profile info and section counts only.
-  # Full tables live in the computers / peripherals / components / connections sub-pages.
+  # Full tables live in the computers / peripherals / components / connections /
+  # software sub-pages.
   # @peripheral_count covers all device_type_peripheral? records (formerly also
   # appliances, merged in Session 41).
+  # @software_count added Session 45.
   def show
     @computer_count         = @owner.computers.where(device_type: :computer).count
     @peripheral_count       = @owner.computers.where(device_type: :peripheral).count
     @component_count        = @owner.components.count
     @connection_group_count = @owner.connection_groups.count
+    @software_count         = @owner.software_items.count
   end
 
   # Sub-page: owner's computers (device_type: computer).
@@ -110,6 +119,24 @@ class OwnersController < ApplicationController
                                .includes(:connection_type,
                                          connection_members: { computer: :computer_model })
                                .order(:owner_group_id)
+  end
+
+  # Sub-page: owner's software items.
+  # Ordered by software name (joined table — needs eager_load), then version
+  # NULLS LAST so items without a version sort after versioned ones.
+  # No auth guard — publicly accessible, consistent with all other read-only
+  # sub-pages in this controller.
+  # Added Session 45 (Software feature Session C).
+  def software
+    @software_items = @owner.software_items
+                            .eager_load(:software_name, :software_condition,
+                                        computer: :computer_model)
+                            .order(
+                              Arel.sql(
+                                "software_names.name ASC, " \
+                                "software_items.version ASC NULLS LAST"
+                              )
+                            )
   end
 
   def edit
