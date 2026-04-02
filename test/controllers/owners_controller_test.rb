@@ -1,5 +1,11 @@
 # decor/test/controllers/owners_controller_test.rb
-# version 1.8
+# version 1.9
+# v1.9 (Session 45): Software feature Session C.
+#   Added three smoke tests for the software sub-page:
+#     - Returns 200 when logged in as own page (alice, non-empty table path)
+#     - Returns 200 when a different logged-in owner views it (public access)
+#     - Returns 200 when not authenticated (no require_login guard)
+#   Pattern matches the connections sub-page tests added in Session 39.
 # v1.8 (Session 41): Appliances → Peripherals merger Phase 2.
 #   Removed "appliances sub-page returns 200 when logged in" test — the
 #   appliances action and its route have been removed from OwnersController.
@@ -165,8 +171,8 @@ class OwnersControllerTest < ActionDispatch::IntegrationTest
 
   # ── Owner sub-page smoke tests ────────────────────────────────────────────
   # OwnersController has no require_login before_action. All read-only
-  # sub-pages (computers, peripherals, components, connections) are publicly
-  # accessible. Tests verify routes resolve and actions succeed.
+  # sub-pages (computers, peripherals, components, connections, software) are
+  # publicly accessible. Tests verify routes resolve and actions succeed.
 
   test "computers sub-page returns 200 when logged in" do
     owner = owners(:one)
@@ -230,6 +236,43 @@ class OwnersControllerTest < ActionDispatch::IntegrationTest
     owner = owners(:two)
 
     get connections_owner_url(owner)
+
+    assert_response :success
+  end
+
+  # ── Software sub-page tests ────────────────────────────────────────────────
+  # software has no ownership guard and no login requirement — consistent
+  # with all other read-only sub-pages in this controller.
+  # alice (owners(:one)) has two fixtures: alice_vms (with computer) and
+  # alice_rt11_spare (unattached), exercising both the attached and unattached
+  # paths in the view.
+
+  test "software sub-page returns 200 when logged in as own page" do
+    owner = owners(:one)
+    login_as owner
+
+    get software_owner_url(owner)
+
+    assert_response :success
+  end
+
+  test "software sub-page returns 200 when a different logged-in owner views it" do
+    # No ownership guard on read-only sub-pages — any logged-in user may view.
+    alice = owners(:one)
+    bob   = owners(:two)
+    login_as alice
+
+    get software_owner_url(bob)
+
+    assert_response :success
+  end
+
+  test "software sub-page returns 200 when not authenticated" do
+    # OwnersController has no require_login before_action.
+    # Unauthenticated requests to read-only sub-pages are permitted.
+    owner = owners(:one)
+
+    get software_owner_url(owner)
 
     assert_response :success
   end

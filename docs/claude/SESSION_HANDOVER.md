@@ -1,12 +1,12 @@
 # decor/docs/claude/SESSION_HANDOVER.md
-# version 47.0
-# Session 43: Software feature — Session A complete.
-#   Three migrations, three models, two model updates, three fixture files,
-#   three model test files. All tests green.
+# version 48.0
+# Session 44: Software feature — Session B complete.
+#   Two admin controllers, eight views, updated routes + admin layout,
+#   two controller test files. All tests green.
 
-**Date:** April 1, 2026
-**Branch:** main (Session 42 merged and deployed; Session 43 ready to commit)
-**Status:** Session 43 complete. All tests green. No outstanding failures.
+**Date:** April 2, 2026
+**Branch:** main (Session 43 merged and deployed; Session 44 ready to commit)
+**Status:** Session 44 complete. All tests green. No outstanding failures.
 
 ---
 
@@ -74,6 +74,44 @@ Every table with that column needs the same migration.
 
 ---
 
+## Session 44 Summary
+
+**Focus: Software feature — Session B (admin CRUD for SoftwareNames + SoftwareConditions).**
+
+### Files changed this session (14 files)
+
+    decor/app/controllers/admin/software_names_controller.rb        v1.0  (new)
+    decor/app/controllers/admin/software_conditions_controller.rb   v1.0  (new)
+    decor/app/views/admin/software_names/index.html.erb             v1.0  (new)
+    decor/app/views/admin/software_names/new.html.erb               v1.0  (new)
+    decor/app/views/admin/software_names/edit.html.erb              v1.0  (new)
+    decor/app/views/admin/software_names/_form.html.erb             v1.0  (new)
+    decor/app/views/admin/software_conditions/index.html.erb        v1.0  (new)
+    decor/app/views/admin/software_conditions/new.html.erb          v1.0  (new)
+    decor/app/views/admin/software_conditions/edit.html.erb         v1.0  (new)
+    decor/app/views/admin/software_conditions/_form.html.erb        v1.0  (new)
+    decor/config/routes.rb                                          v2.7
+    decor/app/views/layouts/admin.html.erb                          v2.1
+    decor/test/controllers/admin/software_names_controller_test.rb  v1.0  (new)
+    decor/test/controllers/admin/software_conditions_controller_test.rb v1.0 (new)
+
+### Key design decisions (Session 44)
+
+- Both controllers model on `Admin::ComponentConditionsController` (the version
+  with the if/else destroy guard), not `ComponentTypesController` (no guard).
+  Both SoftwareName and SoftwareCondition use `dependent: :restrict_with_error`.
+- `SoftwareConditionsController` uses `:name` throughout (not `:condition`) —
+  matching the clean column convention chosen in Session 43.
+- Both forms include `:description` as an optional field (not present on
+  ComponentType/ComponentCondition). Strong params permit both `:name` and
+  `:description`.
+- "Software" dropdown added to admin nav between Connections and Imports/Exports.
+- Destroy-blocked tests use fixture records known to have software_items (`:vms`
+  and `:complete`); destroy-succeeds tests create fresh records to avoid fixture
+  coupling.
+
+---
+
 ## Session 43 Summary
 
 **Focus: Software feature — Session A (migrations, models, fixtures, model tests).**
@@ -119,28 +157,30 @@ The Software feature is divided into six independent sessions. Each ends with
 a green test suite and a deployable state.
 
     Session A  Migrations, models, fixtures, model tests              DONE ✓
-    Session B  Admin CRUD: SoftwareNames + SoftwareConditions         next
-    Session C  Owner-facing: Software index + show (read-only)
+    Session B  Admin CRUD: SoftwareNames + SoftwareConditions         DONE ✓
+    Session C  Owner-facing: Software index + show (read-only)        next
     Session D  Owner-facing: Software create + edit + destroy
     Session E  Computer/peripheral show page integration
     Session F  Export/Import service updates (deferrable)
 
-### Session B — files needed before starting
+### Session C — files needed before starting
 
 Read these files before writing a single line:
 
-    decor/app/controllers/admin/component_types_controller.rb
-    decor/app/controllers/admin/component_conditions_controller.rb
-    (corresponding views for both)
-    decor/app/views/layouts/admin.html.erb
+    decor/app/controllers/owners_controller.rb
+    decor/app/views/owners/computers.html.erb       (sub-page pattern to follow)
+    decor/app/views/owners/components.html.erb      (sub-page pattern to follow)
     decor/config/routes.rb
-    decor/test/controllers/admin/component_types_controller_test.rb
+    decor/test/controllers/owners_controller_test.rb
+    decor/test/fixtures/software_items.yml
+    decor/test/fixtures/software_names.yml
+    decor/test/fixtures/software_conditions.yml
 
 ---
 
 ## Priority 1 — Future Sessions
 
-1. **Software feature** — Session B next (see plan above).
+1. **Software feature** — Session C next (see plan above).
 2. **Legal/Compliance** — Impressum, Privacy Policy, GDPR, Cookie Consent, TOS.
 3. **System tests** — decor/test/system/ still empty.
 4. **Account deletion + data export** (GDPR).
