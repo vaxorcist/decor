@@ -1,23 +1,18 @@
-<%# decor/app/views/owners/show.html.erb - version 2.3 %>
+<%# decor/app/views/owners/show.html.erb - version 2.4 %>
+<%# v2.4 (Session 46): Software feature Session D. %>
+<%#   Added "+ Add" link to the Software card (create action now available). %>
 <%# v2.3 (Session 45): Software feature Session C. %>
-<%#   Added Software summary card (fifth card). %>
-<%#   Grid changed from grid-cols-4 to grid-cols-5. %>
-<%#   No "+ Add" link on the Software card — create will be added in Session D. %>
+<%#   Added Software summary card (fifth card). Grid changed to grid-cols-5. %>
+<%#   No "+ Add" link on Software card — create was not yet available. %>
 <%# v2.2 (Session 41): Appliances → Peripherals merger Phase 2. %>
-<%#   Removed Appliances summary card (@appliance_count and appliances_owner_path gone). %>
-<%#   Grid changed from grid-cols-5 to grid-cols-4 (four cards remain: %>
-<%#   Computers | Peripherals | Components | Connections). %>
-<%#   @peripheral_count now covers all peripheral records (former appliances merged). %>
-<%# v2.1 (Session 38): Added Connections summary card (5th). %>
+<%#   Removed Appliances card. Grid changed to grid-cols-4. %>
+<%# v2.1 (Session 38): Added Connections summary card. %>
 <%# v2.0 (Session 25): Added Peripherals summary card. %>
 <%# v1.9 (Session 23): Replaced inline tables with summary card view. %>
 
 <div class="max-w-5xl mx-auto">
-  <%# Profile header + info panel (shared with sub-pages) %>
   <%= render "profile" %>
 
-  <%# Section cards: one per collection, showing count + navigation.
-      Five cards in a single row on standard viewports. %>
   <div class="grid grid-cols-5 gap-4">
 
     <%# Computers card %>
@@ -37,7 +32,6 @@
     </div>
 
     <%# Peripherals card — covers all device_type_peripheral? records. %>
-    <%# Former appliances were merged into this category in Session 41. %>
     <div class="bg-white border border-stone-200 rounded p-5">
       <div class="flex justify-between items-start mb-3">
         <h2 class="font-semibold text-stone-700">Peripherals</h2>
@@ -69,7 +63,7 @@
       </div>
     </div>
 
-    <%# Connections card — links to the connections sub-page %>
+    <%# Connections card %>
     <div class="bg-white border border-stone-200 rounded p-5">
       <div class="flex justify-between items-start mb-3">
         <h2 class="font-semibold text-stone-700">Connections</h2>
@@ -85,8 +79,7 @@
       </div>
     </div>
 
-    <%# Software card — added Session 45. %>
-    <%# No "+ Add" link until Session D adds the create action. %>
+    <%# Software card — "+ Add" link added in Session 46 (create action now available). %>
     <div class="bg-white border border-stone-200 rounded p-5">
       <div class="flex justify-between items-start mb-3">
         <h2 class="font-semibold text-stone-700">Software</h2>
@@ -95,6 +88,10 @@
       <div class="flex items-center justify-between">
         <%= link_to "View →", software_owner_path(@owner),
               class: "text-sm text-indigo-600 hover:text-indigo-900" %>
+        <% if Current.owner == @owner %>
+          <%= link_to "+ Add", new_software_item_path,
+                class: "text-sm text-indigo-600 hover:text-indigo-900" %>
+        <% end %>
       </div>
     </div>
 
