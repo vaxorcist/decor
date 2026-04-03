@@ -1,0 +1,111 @@
+<%# decor/app/views/software_items/_form.html.erb - version 1.0 %>
+<%# Session 46: Software feature Session D — shared form partial for new and edit. %>
+<%# %>
+<%# Layout: %>
+<%#   Row 1 (3-col): Software Name (required) | Version | Condition (optional) %>
+<%#   Row 2 (2-col): Installed On / Computer (optional) | Trade Status %>
+<%#   Row 3 (full):  Description %>
+<%#   Row 4 (full):  History %>
+<%# %>
+<%# Computer dropdown: includes all of the owner's computers AND peripherals. %>
+<%#   Peripherals live in the computers table (device_type: peripheral), so %>
+<%#   Current.owner.computers returns both. The join + Arel.sql() ordering is %>
+<%#   required because the ORDER BY references a joined table (RAILS_SPECIFICS.md). %>
+<%# %>
+<%# barter_status: string keys submitted to the enum ("no_barter", "offered", "wanted"). %>
+<%#   Rails maps the string key to the integer automatically. %>
+<%# %>
+<%# "Done" fallback: show page for existing records; owner's software sub-page for new ones. %>
+
+<%# Collect and sort the owner's computers and peripherals for the "Installed On" dropdown. %>
+<%# Arel.sql() is required because ORDER BY references computer_models (joined table) %>
+<%# and uses NULLS LAST — Rails rejects bare multi-table ORDER BY strings. %>
+<% owner_computers = Current.owner.computers
+                       .includes(:computer_model)
+                       .joins(:computer_model)
+                       .order(Arel.sql("computer_models.name ASC, computers.serial_number ASC NULLS LAST")) %>
+
+<%# Build display labels: "Model  /  serial_number" — same style used in components/_form.html.erb. %>
+<% computer_options = owner_computers.map { |c|
+     ["#{c.computer_model.name}  /  #{c.serial_number.presence || '—'}", c.id]
+   } %>
+
+<%= form_with model: software_item, class: "space-y-4" do |f| %>
+  <%= render "common/record_errors", record: software_item %>
+
+  <%# ─── Row 1: Software Name | Version | Condition ─── %>
+  <div class="grid grid-cols-3 gap-4">
+    <div>
+      <%= f.label :software_name_id, "Software Name", class: "block text-sm font-medium text-stone-700" %>
+      <%# Required field — prompt instead of include_blank to force a selection. %>
+      <%= f.collection_select :software_name_id, SoftwareName.order(:name), :id, :name,
+            { prompt: "Select a title" },
+            class: field_classes %>
+    </div>
+
+    <div>
+      <%= f.label :version, "Version", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.text_field :version, maxlength: 20, placeholder: "e.g. V5.5", class: field_classes %>
+      <p class="mt-1 text-xs text-stone-500">Maximum 20 characters. Leave blank if unknown.</p>
+    </div>
+
+    <div>
+      <%= f.label :software_condition_id, "Condition", class: "block text-sm font-medium text-stone-700" %>
+      <%# Optional — include_blank shows "Unknown" when no condition has been recorded. %>
+      <%= f.collection_select :software_condition_id, SoftwareCondition.order(:name), :id, :name,
+            { include_blank: "Unknown" },
+            class: field_classes %>
+    </div>
+  </div>
+
+  <%# ─── Row 2: Installed On | Trade Status ─── %>
+  <div class="grid grid-cols-2 gap-4">
+    <div>
+      <%= f.label :computer_id, "Installed On", class: "block text-sm font-medium text-stone-700" %>
+      <%# Optional — blank means "not currently installed on any hardware". %>
+      <%= f.select :computer_id,
+            computer_options,
+            { include_blank: "Spare (not installed on any hardware)" },
+            class: field_classes %>
+      <p class="mt-1 text-xs text-stone-500">Leave blank if this software is not currently installed.</p>
+    </div>
+
+    <div>
+      <%= f.label :barter_status, "Trade Status", class: "block text-sm font-medium text-stone-700" %>
+      <%# String keys — Rails maps to the integer enum value automatically. %>
+      <%= f.select :barter_status,
+            [["No Trade", "no_barter"], ["Offered", "offered"], ["Wanted", "wanted"]],
+            {},
+            class: field_classes %>
+      <p class="mt-1 text-xs text-stone-500">Visible to members only.</p>
+    </div>
+  </div>
+
+  <%# ─── Row 3: Description — full width ─── %>
+  <div>
+    <%= f.label :description, "Description", class: "block text-sm font-medium text-stone-700" %>
+    <%= f.text_field :description, maxlength: 100, class: field_classes %>
+    <p class="mt-1 text-xs text-stone-500">Maximum 100 characters.</p>
+  </div>
+
+  <%# ─── Row 4: History — full width ─── %>
+  <%# text_area for multi-line entry; maxlength enforces the VARCHAR(200) DB limit. %>
+  <div>
+    <%= f.label :history, "History", class: "block text-sm font-medium text-stone-700" %>
+    <%= f.text_area :history, maxlength: 200, rows: 3, style: "min-height: 4.5rem;", class: field_classes %>
+    <p class="mt-1 text-xs text-stone-500">Maximum 200 characters. Provenance, previous owners, acquisition details.</p>
+  </div>
+
+  <div class="flex gap-3">
+    <%= f.submit class: button_classes(style: :primary) %>
+    <% unless software_item.persisted? %>
+      <%# "Create and add another" — only on new form, not edit. %>
+      <%= f.submit "Create and add another", name: "add_another", class: button_classes(style: :secondary) %>
+    <% end %>
+    <%# "Done" — never "Cancel" (project convention: DECOR_PROJECT.md Design Patterns). %>
+    <%# Persisted: return to the item's show page. New: return to owner's software sub-page. %>
+    <%= link_to "Done",
+          (software_item.persisted? ? software_item_path(software_item) : software_owner_path(Current.owner)),
+          class: button_classes(style: :secondary) %>
+  </div>
+<% end %>

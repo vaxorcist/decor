@@ -1,0 +1,19 @@
+<%# decor/app/views/software_items/edit.html.erb - version 1.0 %>
+<%# Session 46: Software feature Session D — edit software item form. %>
+<%# Pattern: identical structure to components/edit.html.erb. %>
+<%# Stimulus Back button: history.back() primary; item show page as fallback. %>
+
+<div class="max-w-5xl mx-auto">
+  <h1 class="text-2xl font-semibold mb-4">Edit Software</h1>
+
+  <%= render "form", software_item: @software_item %>
+
+  <%# Stimulus Back button — history.back() primary; show page as fallback. %>
+  <div class="mt-4">
+    <a href="#"
+       data-controller="back"
+       data-back-fallback-url-value="<%= software_item_path(@software_item) %>"
+       data-action="click->back#go"
+       class="text-sm text-stone-700 hover:text-stone-900">← Back</a>
+  </div>
+</div>

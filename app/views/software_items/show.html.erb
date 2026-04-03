@@ -1,12 +1,13 @@
-<%# decor/app/views/software_items/show.html.erb - version 1.0 %>
-<%# Session 45: Software feature Session C — read-only detail page. %>
-<%# Displays all fields of a single SoftwareItem. No Edit/Delete actions; %>
-<%# those will be added in Session D. %>
+<%# decor/app/views/software_items/show.html.erb - version 1.1 %>
+<%# v1.1 (Session 46): Software feature Session D. %>
+<%#   Added Edit and Delete action links in the page header (right side). %>
+<%#   Visible only when the logged-in owner is the record's owner. %>
+<%#   Delete uses data-turbo-method: :delete and data-turbo-confirm for safety. %>
+<%# v1.0 (Session 45): Software feature Session C — read-only detail page. %>
+<%#   Displays all fields of a single SoftwareItem. %>
 <%# %>
-<%# Fields shown: %>
-<%#   Software name | Version | Condition | Installed On | Description | History %>
-<%# Trade is shown to logged-in users; it reads barter_status on the item. %>
-<%# A "Back to [owner]'s software" link navigates to the owner sub-page. %>
+<%# Fields: Software name | Version | Condition | Installed On | Description | History %>
+<%# Trade is shown to logged-in users only. %>
 
 <div class="max-w-3xl mx-auto">
 
@@ -21,7 +22,18 @@
               class: "text-indigo-600 hover:text-indigo-900" %>
       </p>
     </div>
-    <%# Edit / Delete will be added here in Session D %>
+
+    <%# Edit / Delete — visible to the owner only %>
+    <% if Current.owner == @software_item.owner %>
+      <div class="flex gap-4 items-center">
+        <%= link_to "Edit", edit_software_item_path(@software_item),
+              class: "text-sm text-indigo-600 hover:text-indigo-900" %>
+        <%= link_to "Delete", software_item_path(@software_item),
+              data: { turbo_method: :delete,
+                      turbo_confirm: "Delete this software item? This cannot be undone." },
+              class: "text-sm text-red-600 hover:text-red-900" %>
+      </div>
+    <% end %>
   </div>
 
   <%# Detail card %>
@@ -53,14 +65,14 @@
       </dd>
     </div>
 
-    <%# Description — uses whitespace-pre-wrap; tag and content on same line %>
-    <%# to prevent ERB indentation rendering as visible leading space. %>
+    <%# Description — whitespace-pre-wrap; ERB on same line as tag to prevent %>
+    <%# indentation rendering as visible leading space (RAILS_SPECIFICS.md). %>
     <div class="px-5 py-3 flex gap-4">
       <dt class="w-36 flex-shrink-0 text-xs font-medium text-stone-500 uppercase tracking-wider pt-0.5">Description</dt>
       <dd class="text-sm text-stone-700 whitespace-pre-wrap"><%= @software_item.description.presence || "—" %></dd>
     </div>
 
-    <%# History — uses whitespace-pre-wrap for the same reason %>
+    <%# History — whitespace-pre-wrap for the same reason %>
     <div class="px-5 py-3 flex gap-4">
       <dt class="w-36 flex-shrink-0 text-xs font-medium text-stone-500 uppercase tracking-wider pt-0.5">History</dt>
       <dd class="text-sm text-stone-700 whitespace-pre-wrap"><%= @software_item.history.presence || "—" %></dd>

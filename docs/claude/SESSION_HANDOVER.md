@@ -1,12 +1,14 @@
 # decor/docs/claude/SESSION_HANDOVER.md
-# version 48.0
-# Session 44: Software feature — Session B complete.
-#   Two admin controllers, eight views, updated routes + admin layout,
-#   two controller test files. All tests green.
+# version 49.0
+# Session 45: Software feature — Session C complete.
+#   Two controllers (owners_controller updated + software_items_controller new),
+#   seven views (software sub-page, show page, five tab-strip updates),
+#   two test files (owners_controller_test updated + software_items_controller_test new).
+#   All files delivered; tests expected green.
 
 **Date:** April 2, 2026
-**Branch:** main (Session 43 merged and deployed; Session 44 ready to commit)
-**Status:** Session 44 complete. All tests green. No outstanding failures.
+**Branch:** main (Session 44 merged and deployed; Session 45 ready to commit)
+**Status:** Session 45 complete. All files delivered. No outstanding failures.
 
 ---
 
@@ -35,9 +37,8 @@ After each: log "Read FILENAME — N lines, complete."
 
 ## !! TOKEN BUDGET WARNING !!
 
-Session 43 used ~72% of the context window (estimate). Fixed overhead alone
-(~40–60%) leaves room for roughly one focused task per session. Start sessions
-with the smallest possible document load when planning sessions are not needed.
+Session 45 used ~73% of the context window (estimate). Session D is a full
+CRUD session — comparable in size to Session B (14 files). Start fresh.
 
 ---
 
@@ -71,6 +72,46 @@ The grep to run before declaring a manual migration complete:
 grep -rn "device_type" decor/db/schema.rb
 ```
 Every table with that column needs the same migration.
+
+---
+
+## Session 45 Summary
+
+**Focus: Software feature — Session C (owner-facing index + show, read-only).**
+
+### Files changed this session (12 files)
+
+    decor/config/routes.rb                                          v2.8
+    decor/app/controllers/owners_controller.rb                      v2.0
+    decor/app/controllers/software_items_controller.rb              v1.0  (new)
+    decor/app/views/owners/software.html.erb                        v1.0  (new)
+    decor/app/views/software_items/show.html.erb                    v1.0  (new)
+    decor/app/views/owners/show.html.erb                            v2.3
+    decor/app/views/owners/computers.html.erb                       v1.4
+    decor/app/views/owners/peripherals.html.erb                     v1.3
+    decor/app/views/owners/components.html.erb                      v1.4
+    decor/app/views/owners/connections.html.erb                     v1.2
+    decor/test/controllers/owners_controller_test.rb                v1.9
+    decor/test/controllers/software_items_controller_test.rb        v1.0  (new)
+
+### Key design decisions (Session 45)
+
+- `SoftwareItemsController#show` has no `require_login` — publicly accessible,
+  consistent with `ComputersController` and `ComponentsController` show pages.
+- `OwnersController#software` also has no `require_login` — consistent with all
+  other owner read-only sub-pages (computers, peripherals, components, connections).
+- Ordering: `software_names.name ASC, software_items.version ASC NULLS LAST`
+  (items without a version sort after versioned ones within the same title).
+- `eager_load` used in both the sub-page and the controller's `set_software_item`
+  to avoid N+1 on `software_name`, `software_condition`, `computer.computer_model`,
+  and `owner`.
+- `show.html.erb` grid changes from `grid-cols-4` to `grid-cols-5`; Software card
+  has no "+ Add" link until Session D adds the create action.
+- Tab strip updated in all five existing sub-pages — Software tab appended at the
+  end, inactive on all but `owners/software.html.erb`.
+- `whitespace-pre-wrap` in the show view has ERB on the same line as the opening
+  tag (per RAILS_SPECIFICS.md — prevents indentation rendering as visible space).
+- New directory created: `decor/app/views/software_items/`.
 
 ---
 
@@ -112,45 +153,6 @@ Every table with that column needs the same migration.
 
 ---
 
-## Session 43 Summary
-
-**Focus: Software feature — Session A (migrations, models, fixtures, model tests).**
-
-Design decision: Option C — full separation. Software is NOT a variant of
-Components. Three new tables (`software_names`, `software_conditions`,
-`software_items`) fully independent of the components infrastructure.
-
-### Files changed this session (14 files)
-
-    decor/db/migrate/20260401000000_create_software_names.rb        v1.0  (new)
-    decor/db/migrate/20260401000100_create_software_conditions.rb   v1.0  (new)
-    decor/db/migrate/20260401000200_create_software_items.rb        v1.0  (new)
-    decor/app/models/software_name.rb                               v1.0  (new)
-    decor/app/models/software_condition.rb                          v1.0  (new)
-    decor/app/models/software_item.rb                               v1.0  (new)
-    decor/app/models/owner.rb                                       v1.5
-    decor/app/models/computer.rb                                    v2.1
-    decor/test/fixtures/software_names.yml                          v1.0  (new)
-    decor/test/fixtures/software_conditions.yml                     v1.0  (new)
-    decor/test/fixtures/software_items.yml                          v1.0  (new)
-    decor/test/models/software_name_test.rb                         v1.0  (new)
-    decor/test/models/software_condition_test.rb                    v1.0  (new)
-    decor/test/models/software_item_test.rb                         v1.0  (new)
-
-### Key design decisions (Session 43)
-
-- `computer_id` on `software_items` covers both computers and peripherals
-  (peripherals are device_type=2 rows in the computers table — one FK suffices).
-- Deleting a computer DESTROYS all software installed on it (`dependent: :destroy`
-  at Ruby level + `ON DELETE CASCADE` at DB level as defense-in-depth).
-- `software_conditions` uses column `name` (not `condition` like the legacy
-  `component_conditions` table — cleaner convention for a new table).
-- Initial software conditions: Complete, Incomplete, Subset.
-- Raw SQL migrations required for CHECK constraints (SQLite ignores VARCHAR(n)
-  without them). All three migrations use `disable_ddl_transaction!`.
-
----
-
 ## Software Feature — Session Plan
 
 The Software feature is divided into six independent sessions. Each ends with
@@ -158,20 +160,24 @@ a green test suite and a deployable state.
 
     Session A  Migrations, models, fixtures, model tests              DONE ✓
     Session B  Admin CRUD: SoftwareNames + SoftwareConditions         DONE ✓
-    Session C  Owner-facing: Software index + show (read-only)        next
-    Session D  Owner-facing: Software create + edit + destroy
+    Session C  Owner-facing: Software index + show (read-only)        DONE ✓
+    Session D  Owner-facing: Software create + edit + destroy         next
     Session E  Computer/peripheral show page integration
     Session F  Export/Import service updates (deferrable)
 
-### Session C — files needed before starting
+### Session D — files needed before starting
 
 Read these files before writing a single line:
 
-    decor/app/controllers/owners_controller.rb
-    decor/app/views/owners/computers.html.erb       (sub-page pattern to follow)
-    decor/app/views/owners/components.html.erb      (sub-page pattern to follow)
+    decor/app/controllers/software_items_controller.rb   (just created — in context)
+    decor/app/controllers/components_controller.rb       (CRUD pattern to follow)
+    decor/app/views/components/new.html.erb
+    decor/app/views/components/edit.html.erb
+    decor/app/views/components/_form.html.erb
+    decor/app/views/owners/software.html.erb             (just created — add Edit/Delete)
+    decor/app/views/software_items/show.html.erb         (just created — add Edit/Delete)
     decor/config/routes.rb
-    decor/test/controllers/owners_controller_test.rb
+    decor/test/controllers/software_items_controller_test.rb  (just created — extend)
     decor/test/fixtures/software_items.yml
     decor/test/fixtures/software_names.yml
     decor/test/fixtures/software_conditions.yml
@@ -180,7 +186,7 @@ Read these files before writing a single line:
 
 ## Priority 1 — Future Sessions
 
-1. **Software feature** — Session C next (see plan above).
+1. **Software feature** — Session D next (see plan above).
 2. **Legal/Compliance** — Impressum, Privacy Policy, GDPR, Cookie Consent, TOS.
 3. **System tests** — decor/test/system/ still empty.
 4. **Account deletion + data export** (GDPR).
@@ -219,7 +225,7 @@ connection_members
 Route: `get :connections` in owners member block (routes.rb).
 
 ### OwnersController — access model
-All read-only sub-pages (computers, peripherals, components, connections)
+All read-only sub-pages (computers, peripherals, components, connections, software)
 have NO require_login and NO ownership guard. They are publicly accessible.
 Only edit / update / destroy are guarded by require_owner.
 
