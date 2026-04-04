@@ -1,29 +1,22 @@
 # RAILS_SPECIFICS.md
-# version 2.5
+# version 2.6
+# Session 46: Added "before_action :set_resource — Always Scope with only:" section.
+#   Root cause: software_items_controller v1.0 (Session 45, read-only) shipped with
+#   an unscoped before_action :set_software_item. Harmless when only :show existed,
+#   but would have crashed new/create (no :id param) the moment those actions were
+#   added. Caught at pre-implementation review in Session 46 before any code was written.
+#   Rule: whenever a controller has new/create alongside set_resource callbacks, the
+#   callback must be scoped with only: %i[show edit update destroy].
 # Session 42: Fixed stale enum assertion example in "Enum Assertions in Tests" section.
-#   "appliance" → "peripheral" throughout the correct/wrong examples and the
-#   predicate form examples. The appliance enum value was removed in Session 41;
-#   leaving it in the example was misleading. Also updated the fixture ownership
-#   real-example note: "appliance enum fixture" → "peripheral fixture (formerly appliance)".
 # Session 37: Added "CSV::Table — Never Use #to_a When You Need Row Indexing" section.
-#   CSV::Table#to_a returns plain arrays; iterating with map/each yields CSV::Row objects
-#   that support string-key indexing. Real example: OwnerExportServiceTest Session 37.
-#   Without this option, blank form rows (user adds a member row but leaves it
-#   empty) attempt to build child records with missing required attributes,
-#   producing confusing validation errors before the parent-level validator runs.
 # decor/docs/claude/RAILS_SPECIFICS.md
-# Added (Session 13): Fixture Ownership section — derive counts from data;
-#   use a neutral owner for test-support fixtures to avoid breaking hardcoded
-#   count assertions in unrelated test files.
-# Session 19: Task-type file checklists added — five task types with file lists
-#   and reasoning prompts to eliminate incremental file-requesting.
-# Added (Session 15): SQLite table recreation — always use explicit column names
-#   in INSERT/SELECT, never SELECT *. Positional copy fails silently when
-#   schema.rb column order differs from SQLite storage order.
+# Added (Session 13): Fixture Ownership section.
+# Session 19: Task-type file checklists added.
+# Added (Session 15): SQLite table recreation — always use explicit column names.
 
 **Ruby on Rails Specific Patterns and Best Practices**
 
-**Last Updated:** March 28, 2026 (v2.5: stale enum assertion example fixed; Session 42)
+**Last Updated:** April 3, 2026 (v2.6: before_action only: scope rule added; Session 46)
 
 ---
 
@@ -127,6 +120,42 @@ Rails-specific requirements. Follow these BEFORE writing any code.
 
 ---
 
+## before_action :set_resource — Always Scope with only: (MANDATORY)
+
+**RULE: Whenever a controller has new or create actions alongside a set_resource
+callback, the callback MUST be scoped with `only:` to exclude new and create.**
+
+`new` and `create` have no `:id` param. An unscoped `before_action :set_resource`
+will call `Model.find(params[:id])` with a nil or missing id, raising
+`ActiveRecord::RecordNotFound` before either action runs. The failure is
+silent at write time — it only explodes when the action is first exercised.
+
+**Wrong — crashes on new and create:**
+```ruby
+before_action :set_software_item
+```
+
+**Correct:**
+```ruby
+before_action :set_software_item, only: %i[show edit update destroy]
+```
+
+**When to use which set:**
+- `only: %i[show edit update destroy]` — the standard set for a resourceful
+  controller where new/create build from `Current.owner` or `Model.new`.
+- Adjust if the controller has non-standard actions (e.g. a custom `duplicate`
+  action that does take an :id param should be added to the only: list).
+
+**Why this rule exists (Session 46, April 3, 2026):**
+`software_items_controller.rb` v1.0 (Session 45) shipped as read-only with only
+a `show` action. The `before_action :set_software_item` had no `only:` restriction
+— harmless when show was the only action, because show always has an :id. In
+Session 46, when `new` and `create` were about to be added, the pre-implementation
+review caught the gap. The v1.0 code would have crashed `new` and `create` as
+soon as they were wired up. Rule added so this is caught at write time, not at test time.
+
+---
+
 ## Fixture Ownership — Derive Counts from Data; Use Neutral Owners for Support Fixtures
 
 ### General Rule
@@ -162,27 +191,16 @@ whose record counts no test ever asserts.
 
 In decor: `owners(:three)` / charlie is this neutral owner.
 
-- ✅ Assign all new test-support fixtures (enum test records, edge case records,
-  etc.) to the neutral owner
+- ✅ Assign all new test-support fixtures to the neutral owner
 - ✅ Document the intent clearly in `owners.yml`
 - ❌ Never add hardcoded count assertions for the neutral owner
 
 **Grep check before assigning a fixture to an existing owner:**
 ```bash
-# Verify no hardcoded count assertions target this owner before adding a fixture
 grep -rn "\.count" decor/test/ | grep -i "alice\|bob\|owners(:one)\|owners(:two)"
 ```
 
 If any hardcoded counts exist → use the neutral owner instead.
-
-**Real example (Session 13, March 3, 2026):**
-`dec_unibus_router` (peripheral fixture — formerly appliance, merged in Session 41)
-was first assigned to alice (owners(:one)) → broke `OwnerExportServiceTest`
-(computer count 3 ≠ 2). Moved to bob (owners(:two)) → broke
-`OwnersControllerDestroyTest` (computer count 3 ≠ 2). Both alice and bob had
-independent hardcoded count assertions in different test files. Fix: added
-`three` (charlie) as a neutral owner. Longer-term fix: replace all hardcoded
-count assertions with data-derived assertions (see PROGRAMMING_GENERAL.md).
 
 ---
 
@@ -193,28 +211,13 @@ count assertions with data-derived assertions (see PROGRAMMING_GENERAL.md).
 Run a grep across the ENTIRE project for the old name in all contexts:
 
 ```bash
-# Old association accessor in views, helpers, controllers
 grep -rn "\.old_name" decor/app/
-
-# Old class name in Ruby files
 grep -rn "OldClassName" decor/app/ decor/test/
-
-# Old fixture helper in tests
 grep -rn "old_names(:" decor/test/
-
-# Old column name in params, where clauses, strong params
 grep -rn "old_name_id" decor/app/
 ```
 
 Fix ALL occurrences found before running the test suite.
-
-**Real example (Session 7, February 25, 2026):**
-- Renamed `computer.condition` → `computer.computer_condition` in models and primary views
-- Did not grep `decor/app/views/` for remaining `.condition` occurrences
-- Result: 3 separate runtime errors in `_computer.html.erb`, `owners/show.html.erb`,
-  and `computers/show.html.erb` — each requiring a separate upload-fix-test cycle
-- Fix: one `grep -rn "\.condition" decor/app/views/` before starting would have
-  revealed all occurrences at once
 
 ---
 
@@ -228,10 +231,10 @@ Fix ALL occurrences found before running the test suite.
 ```
 test/
 ├── support/
-│   ├── authentication_helper.rb  # Login/auth methods
-│   ├── test_constants.rb         # Shared constants
-│   └── factory_helpers.rb        # Test data creation
-├── test_helper.rb               # Include support modules here
+│   ├── authentication_helper.rb
+│   ├── test_constants.rb
+│   └── factory_helpers.rb
+├── test_helper.rb
 └── ... rest of tests
 ```
 
@@ -263,17 +266,6 @@ end
 
 class ActionDispatch::IntegrationTest
   include AuthenticationHelper
-end
-```
-
-### Test Data Constants
-
-**Centralized:**
-```ruby
-# test/support/test_constants.rb
-module TestConstants
-  TEST_PASSWORD_VALID = "password12345".freeze
-  TEST_EMAIL_VALID = "test@example.com".freeze
 end
 ```
 
@@ -354,14 +346,6 @@ execute <<~SQL
 SQL
 ```
 
-**Cross-reference:** The general rule (always use VARCHAR with length; ask before TEXT)
-is in PROGRAMMING_GENERAL.md — Database Column Types section. This SQLite note
-explains the implementation detail that makes the rule meaningful on this stack.
-
-**Real example (Session 7, February 25, 2026):** All type-cleanup columns used
-`VARCHAR(n) + CHECK(length(col) <= n)` to ensure actual enforcement, not just
-documentation.
-
 ---
 
 ## SQLite Foreign Key Enforcement — MANDATORY for New Projects
@@ -399,9 +383,9 @@ All counts must be 0. Verify production BEFORE deploying — not after.
 
 ### disable_ddl_transaction! Required for PRAGMA in Migrations
 
-`PRAGMA foreign_keys = OFF/ON` is a no-op inside a transaction. Rails wraps
-migrations in transactions by default. Use `disable_ddl_transaction!` in any
-migration that needs to temporarily suspend FK enforcement:
+`PRAGMA foreign_keys = OFF/ON` is a no-op inside a transaction. Use
+`disable_ddl_transaction!` in any migration that needs to temporarily suspend
+FK enforcement:
 
 ```ruby
 class MyMigration < ActiveRecord::Migration[8.1]
@@ -428,7 +412,6 @@ Use backup-in-migration pattern for safety.
 2. `CREATE TABLE new_name (...)`
 3. `INSERT INTO new_name (col1, col2, ...) SELECT col1, col2, ... FROM old_name`
    — ALWAYS use explicit column names on both sides; never `SELECT *`
-     (see "SQLite Table Recreation — Always Use Explicit Column Names" below)
 4. `DROP TABLE old_name`
 5. `ALTER TABLE new_name RENAME TO old_name`
 6. Recreate all indexes
@@ -449,16 +432,16 @@ Use backup-in-migration pattern for safety.
 
 **`save!(validate: false)` skips `before_validation` callbacks entirely.**
 
-**Wrong — skips ALL before_validation callbacks:**
+**Wrong:**
 ```ruby
 record = Model.new(email: "x@example.com")
 record.save!(validate: false)  # before_validation never runs
 ```
 
-**Correct — use create! then override with update_columns:**
+**Correct:**
 ```ruby
-record = Model.create!(email: "x@example.com")  # all callbacks run normally
-record.update_columns(sent_at: 21.days.ago)      # override timestamp directly in DB
+record = Model.create!(email: "x@example.com")
+record.update_columns(sent_at: 21.days.ago)
 ```
 
 ---
@@ -483,35 +466,24 @@ ALWAYS use the `view` tool immediately — do NOT assume the content is visible.
 
 ## ERB + whitespace-pre-wrap — Literal Whitespace Gotcha
 
-`whitespace-pre-wrap` (and CSS `white-space: pre-wrap`) renders ALL whitespace
-literally — including the newline and indentation that ERB templating adds
-between a tag and its `<%= %>` content block.
+`whitespace-pre-wrap` renders ALL whitespace literally — including the newline
+and indentation between a tag and its `<%= %>` content block.
 
-**Symptom:** text appears indented from the left even though no alignment
-CSS is set. Adding `text-align: left` has no effect because the cause is
-rendered whitespace, not CSS alignment.
-
-**Wrong (indentation rendered as visible leading space):**
+**Wrong:**
 ```erb
 <dd class="whitespace-pre-wrap">
   <%= record.description %>
 </dd>
 ```
 
-**Correct (no whitespace between tag and content):**
+**Correct:**
 ```erb
 <dd class="whitespace-pre-wrap"><%= record.description %></dd>
 ```
 
 **Rule:** whenever `whitespace-pre-wrap` is used on an element whose content
 comes from an ERB tag, the `<%= %>` tag MUST be on the same line as the
-opening HTML tag — no newline, no leading spaces between them.
-
-**Real example (Session 9, February 27, 2026):**
-`components/show.html.erb` Description box — two iterations spent adding
-`text-align: left` and `vertical-align: top` inline styles with no effect.
-Root cause was the newline + indentation between `<dd>` and `<%= %>` being
-rendered literally by `whitespace-pre-wrap`. Fixed by collapsing to one line.
+opening HTML tag.
 
 ---
 
@@ -521,44 +493,11 @@ rendered literally by `whitespace-pre-wrap`. Fixed by collapsing to one line.
 
 Use `Rack::Test::UploadedFile`, NOT `ActionDispatch::Http::UploadedFile`.
 
-**Wrong — ActionDispatch::Http::UploadedFile gets stringified in the HTTP layer:**
 ```ruby
-# This causes NoMethodError: undefined method 'content_type' for an instance of String
-upload = ActionDispatch::Http::UploadedFile.new(
-  tempfile:  tempfile,
-  filename:  "file.csv",
-  type:      "text/csv"
-)
-post path, params: { file: upload }  # upload arrives as a String in the controller
-```
-
-**Correct — Rack::Test::UploadedFile survives the integration test HTTP layer:**
-```ruby
-tempfile = Tempfile.new(["prefix", ".csv"])
-tempfile.write(csv_content)
-tempfile.rewind
-tempfile.close
-
 upload = Rack::Test::UploadedFile.new(tempfile.path, "text/csv", false,
                                        original_filename: "file.csv")
-post path, params: { file: upload }  # controller receives a proper UploadedFile
+post path, params: { file: upload }
 ```
-
-**Why the difference:**
-Integration tests encode params through the full Rack/HTTP stack. `ActionDispatch::Http::UploadedFile`
-is not designed to survive that encoding and gets collapsed to its string representation.
-`Rack::Test::UploadedFile` is designed for exactly this context and maintains its interface
-(`.path`, `.content_type`, `.original_filename`, `.size`) through the test request.
-
-**Note:** This does NOT affect unit/service tests that call service objects directly —
-those pass the object without HTTP encoding, so either class works. The issue is
-specific to `ActionDispatch::IntegrationTest` using `post`/`patch` etc.
-
-**Real example (Session 10, February 28, 2026):**
-`DataTransfersControllerTest` — three import tests failed with
-`NoMethodError: undefined method 'content_type' for an instance of String`
-because `ActionDispatch::Http::UploadedFile` was used. Switching to
-`Rack::Test::UploadedFile.new(path, content_type)` fixed all three.
 
 ---
 
@@ -568,16 +507,14 @@ because `ActionDispatch::Http::UploadedFile` was used. Switching to
 
 Any `.order()` argument containing a dot (`table.column`), a SQL keyword
 (`NULLS LAST`, `ASC`, `DESC` with spaces), or anything that is not a simple
-attribute name will raise `ActiveRecord::UnknownAttributeReference` with:
+attribute name will raise `ActiveRecord::UnknownAttributeReference`.
 
-> Dangerous query method called with non-attribute argument(s): "..."
-
-**Wrong — bare string causes UnknownAttributeReference:**
+**Wrong:**
 ```ruby
 .order("computer_models.name ASC NULLS LAST, computers.serial_number ASC")
 ```
 
-**Correct — wrap in Arel.sql() to declare the string as developer-controlled:**
+**Correct:**
 ```ruby
 .order(Arel.sql("computer_models.name ASC NULLS LAST, computers.serial_number ASC"))
 ```
@@ -587,18 +524,8 @@ attribute name will raise `ActiveRecord::UnknownAttributeReference` with:
 - `NULLS LAST` / `NULLS FIRST`
 - Any expression that is not a bare column symbol (`:created_at`) or hash (`created_at: :asc`)
 
-**When it is NOT required:**
-- `.order(:column_name)` — symbol form, always safe
-- `.order(column_name: :asc)` — hash form, always safe
-
-**Safety note:** `Arel.sql()` is an explicit whitelist declaration.
-Only wrap strings that are fully hardcoded in the application — NEVER wrap
-user-supplied input (request params, model attributes) in `Arel.sql()`.
-
-**Real example (Session 11, March 1, 2026):**
-`OwnersController#show` raised `UnknownAttributeReference` on the component
-ordering query. Fixed by wrapping both ORDER BY strings in `Arel.sql()`.
-
+**Safety note:** Only wrap strings that are fully hardcoded — NEVER wrap
+user-supplied input in `Arel.sql()`.
 
 ---
 
@@ -610,18 +537,15 @@ record of the project's file structure. It must be kept current.
 ### When to update
 
 Update `DECOR_PROJECT.md` (Directory Tree + Key file versions table) whenever:
-- A new file is created (migration, controller, view, helper, JS controller, test, etc.)
+- A new file is created
 - A file is deleted
 - A file's version number changes
 
 ### How to update
 
-1. Claude updates the **Key file versions** table in `DECOR_PROJECT.md` inline
-   (adding new rows, bumping version numbers) after every file change.
+1. Claude updates the **Key file versions** table inline after every file change.
 2. The full tree block is replaced only when the user re-runs the tree command
-   and uploads a fresh `decor_tree.txt`. This happens:
-   - At the start of each new session (recommended)
-   - After any session that adds or removes files
+   and uploads a fresh `decor_tree.txt`.
 
 ### Tree command (run from parent of decor/)
 
@@ -632,63 +556,24 @@ tree decor/ \
   > decor_tree.txt
 ```
 
-Upload `decor_tree.txt` and Claude will replace the tree block in
-`DECOR_PROJECT.md` and present the updated file for download.
-
-### What Claude must NOT do
-
-- ❌ Ask for files that Claude itself created or modified in the current session
-- ❌ Leave the Key file versions table stale after creating/modifying files
-- ❌ Omit new files from the versions table
-
-**Real example (Session 14, March 3, 2026):**
-The tree command and upload procedure was established this session. From Session 15
-onwards, the user will upload a fresh `decor_tree.txt` at session start; Claude
-will replace the tree block and update the versions table in `DECOR_PROJECT.md`.
-
-
 ---
 
 ## Enum Assertions in Tests — Use String or Predicate, Not Integer
 
 **Rails enum accessors always return the mapped string label, never the raw integer.**
-This applies to ALL access methods: `.device_type`, `read_attribute(:device_type)`,
-and `model[:device_type]` — all return `"computer"` or `"peripheral"`, not `0` or `2`.
 
-**Wrong — all three forms return the string, not the integer:**
+**Wrong:**
 ```ruby
 assert_equal 0, model.read_attribute(:device_type)   # returns "computer"
 assert_equal 0, model[:device_type]                  # returns "computer"
 assert_equal 0, model.device_type                    # returns "computer"
 ```
 
-**Correct — two acceptable forms:**
+**Correct:**
 ```ruby
-# Form 1: assert against the string label (explicit, readable)
 assert_equal "computer", model.device_type
-assert_equal "peripheral", created.device_type
-
-# Form 2: use the generated predicate (most idiomatic)
 assert model.device_type_computer?
-assert_not model.device_type_peripheral?
 ```
-
-**When to use which form:**
-- Predicate form (`device_type_computer?`) — preferred for boolean pass/fail assertions
-- String form (`assert_equal "computer", model.device_type`) — preferred when the
-  test is specifically verifying that the correct value was stamped (e.g. create action)
-
-**To read the raw integer (rare — only if you genuinely need the DB value):**
-```ruby
-model.read_attribute_before_type_cast(:device_type)   # returns 0 or 2
-```
-
-**Real example (Session 14, March 3, 2026):**
-`computer_model_test.rb` and `computer_models_controller_test.rb` both used
-`read_attribute(:device_type)` and `model[:device_type]` expecting integers.
-Both returned strings. Three test failures across two rounds of fixes.
-The correct pattern was already present in `computer_test.rb` v1.4 (Session 13) —
-reading that file before writing the parallel test would have prevented all failures.
 
 ---
 
@@ -697,39 +582,11 @@ reading that file before writing the parallel test would have prevented all fail
 **RULE: Never use `SELECT *` in the INSERT step of a SQLite table recreation
 migration. Always name every column explicitly on both sides.**
 
-SQLite stores columns in the order they were added by successive migrations.
-`schema.rb` lists columns alphabetically. These two orderings frequently differ.
-`SELECT *` returns columns in storage order; if the new table definition uses a
-different order, data lands in the wrong columns — silently, with no warning
-unless a NOT NULL or type constraint happens to catch it.
-
-**Wrong — positional copy, order mismatch causes silent data corruption:**
 ```ruby
-execute "INSERT INTO components_new SELECT * FROM components"
-```
-
-**Correct — name-based copy, immune to column order differences:**
-```ruby
-COLUMNS = %w[id component_category component_condition_id component_type_id
-             computer_id created_at description history order_number
-             owner_id serial_number updated_at].freeze
-
+COLUMNS = %w[id col1 col2 col3 created_at updated_at].freeze
 col_list = COLUMNS.join(", ")
 execute "INSERT INTO components_new (#{col_list}) SELECT #{col_list} FROM components"
 ```
-
-The COLUMNS constant also serves as self-documentation of the table's structure
-at migration time, and makes the `down` method a straightforward copy of `up`.
-
-**Real example (Session 15, March 4, 2026):**
-`AddCascadeDeleteComponentsComputer` (v1.0) used `SELECT *`. The INSERT failed
-with `NOT NULL constraint failed: components_new.component_type_id` even though
-the source data had no NULL values — the data was correct but landed in the wrong
-column due to storage-order vs. schema.rb-order mismatch. Fixed in v1.1 by using
-explicit column names on both sides.
-
----
-
 
 ---
 
@@ -738,149 +595,61 @@ explicit column names on both sides.
 **When using `accepts_nested_attributes_for` with a form that lets the user add
 rows dynamically, always include `reject_if: :all_blank`.**
 
-Without it, a blank row submitted by the user (e.g. an "Add member" dropdown
-left unselected) attempts to build a child record with all attributes missing.
-This fails the child model's `belongs_to` presence validation before the
-parent-level validator (e.g. `minimum_two_members`) even runs — producing a
-confusing error message that points at the wrong thing.
-
-**Wrong — blank rows cause misleading belongs_to presence errors:**
-```ruby
-accepts_nested_attributes_for :connection_members, allow_destroy: true
-```
-
-**Correct — blank rows are silently discarded before validation:**
 ```ruby
 accepts_nested_attributes_for :connection_members,
                                allow_destroy: true,
                                reject_if:     :all_blank
 ```
 
-**What `:all_blank` does:** Rails calls the check on each nested-attributes hash
-before building the child object. If every value in the hash is blank (empty
-string, nil, or "0" for `_destroy`), the hash is discarded entirely — no child
-record is built, no validation runs.
-
-**When `:all_blank` is NOT appropriate:**
-- When every attribute on the child is optional and a fully-blank record is
-  intentionally valid. This is rare — if a child record can be blank, question
-  whether it should exist at all.
-- When you need finer-grained rejection logic — use a proc instead:
-  `reject_if: ->(attrs) { attrs[:computer_id].blank? }`
-
-**Real example (Session 36, March 19, 2026):**
-`ConnectionGroup` accepted nested `connection_members`. Without `reject_if: :all_blank`,
-a blank dropdown row submitted the hash `{ computer_id: "" }`, which tried to build
-a `ConnectionMember` with no `computer_id`, failing `belongs_to :computer` presence
-validation. The error shown was "Computer must exist" — not "minimum 2 members" —
-which was confusing because the blank row was not intentional. Adding
-`reject_if: :all_blank` silently discarded the empty row before any validation ran.
-
 ---
 
 ## Task-Type File Checklists
 
-These checklists answer "which files do I need before starting?" for the most
-common task types in this project. They encode the reasoning that should happen
-before any file is requested — not a full dependency map, but the key chains
-that are easy to miss.
-
-### Table Column Changes (reorder / add / remove columns)
-
-A column change touches header + row in lock-step. Sub-tables on other pages
-must be found by asking "where else is this model displayed as a table?"
+### Table Column Changes
 
 ```
 Always need:
   [ ] The index view                    app/views/MODEL/index.html.erb
   [ ] The row partial                   app/views/MODEL/_MODEL.html.erb
-  [ ] Turbo stream (check: does it      app/views/MODEL/index.turbo_stream.erb
-      render the partial? usually no
-      header change needed)
-
-Ask: "Is this model also shown as a sub-table on another page?"
-  Components appear in:
-    [ ] app/views/owners/show.html.erb          (Components section)
-    [ ] app/views/computers/_form.html.erb       (Computer's Components section)
-  Computers appear in:
-    [ ] app/views/owners/show.html.erb          (Computers + Appliances sections)
-
-Ask: "Does edit.html.erb render _form.html.erb?"
-  If yes → _form.html.erb contains the sub-table, NOT edit.html.erb itself.
-  Always get _form.html.erb, not edit.html.erb, for sub-table changes.
+  [ ] Turbo stream (check if needed)    app/views/MODEL/index.turbo_stream.erb
 ```
 
-### Sort / Filter Changes (add or modify sort options or filter selectors)
-
-Sort and filter options span exactly three files in this project — no exceptions.
+### Sort / Filter Changes
 
 ```
 Always need (all three):
-  [ ] app/views/MODEL/_filters.html.erb    — the filter/sort UI selector
-  [ ] app/helpers/MODEL_helper.rb          — sort/filter option constants + helpers
-  [ ] app/controllers/MODEL_controller.rb  — the case/when sort logic
-
-Key patterns to check in the controller:
-  - Does the new sort reference a joined table?  → need .joins(:assoc)
-  - Does ORDER BY contain a dot or SQL keyword?  → need Arel.sql()
-  - Does it reference the model's own column?    → no join; Arel.sql() only if NULLS LAST
+  [ ] app/views/MODEL/_filters.html.erb
+  [ ] app/helpers/MODEL_helper.rb
+  [ ] app/controllers/MODEL_controller.rb
 ```
 
-### Controller Action Changes (new action, redirect logic, flash messages, params)
+### Controller Action Changes
 
 ```
 Always need:
   [ ] app/controllers/MODEL_controller.rb
-  [ ] test/controllers/MODEL_controller_test.rb  (existing tests to avoid breaking)
-  [ ] test/fixtures/MODELs.yml                   (to know available test data)
-
-If the action renders a view:
-  [ ] app/views/MODEL/ACTION.html.erb
-
-If the action involves a form (create/update):
-  [ ] app/views/MODEL/_form.html.erb             (strong params must match form fields)
-
-If auth behaviour is changing:
-  [ ] app/controllers/concerns/authentication.rb (check before_action names)
+  [ ] test/controllers/MODEL_controller_test.rb
+  [ ] test/fixtures/MODELs.yml
 ```
 
-### Model / Association Changes (new field, rename, validation, enum)
+### Model / Association Changes
 
 ```
 Always need:
   [ ] app/models/MODEL.rb
-  [ ] test/models/MODEL_test.rb                  (existing tests to avoid breaking)
-  [ ] test/fixtures/MODELs.yml                   (values must satisfy new validations)
-
-Run grep sweep BEFORE writing any files:
-  grep -rn ".OLD_NAME"         app/        (accessor used in views/helpers/controllers)
-  grep -rn "OldClassName"      app/ test/  (class name references)
-  grep -rn ":OLD_NAME"         app/ test/  (symbol form in params, scopes, fixtures)
-  grep -rn "old_name_id"       app/        (FK column references)
-
-If adding a migration:
-  [ ] db/schema.rb (read after migration to verify result)
-  [ ] Check for SQLite limitations (ALTER TABLE, CHECK constraints, explicit column
-      names in INSERT/SELECT) — see SQLite sections in this file.
+  [ ] test/models/MODEL_test.rb
+  [ ] test/fixtures/MODELs.yml
+Run grep sweep BEFORE writing any files.
 ```
 
-### New Page / Route (new controller action + view + navigation entry)
+### New Page / Route
 
 ```
 Always need:
   [ ] config/routes.rb
-  [ ] The controller file (existing or new)
-  [ ] app/views/layouts/application.html.erb     (public nav)
-        OR app/views/layouts/admin.html.erb      (admin nav)
-        OR app/views/common/_navigation.html.erb (shared nav partial)
-
-If it is a public page requiring no login:
-  [ ] Verify no before_action :require_login covers the new action
-  [ ] Add to navigation partial (leftmost = most prominent)
-
-If it is an admin page:
-  [ ] app/controllers/admin/base_controller.rb   (check inherited auth guard)
-  [ ] app/views/layouts/admin.html.erb           (dropdown menu)
+  [ ] The controller file
+  [ ] app/views/layouts/application.html.erb  (public nav)
+        OR app/views/layouts/admin.html.erb   (admin nav)
 ```
 
 ---
@@ -889,39 +658,18 @@ If it is an admin page:
 
 **`CSV::Table#to_a` returns plain arrays, not `CSV::Row` objects.**
 
-When you call `csv_table.to_a`, Ruby returns an array of plain arrays —
-the first element is the headers array, the rest are value arrays. Plain
-arrays cannot be indexed by a string column name; attempting it raises:
-
-```
-TypeError: no implicit conversion of String into Integer
-```
-
-**Wrong — #to_a produces plain arrays:**
+**Wrong:**
 ```ruby
 rows = @csv.to_a
 sentinel_idx = rows.index { |r| r["record_type"]&.start_with?("!") }
 # → TypeError: no implicit conversion of String into Integer
 ```
 
-**Correct — iterate with map/select/each to get CSV::Row objects:**
+**Correct:**
 ```ruby
-rows = @csv.map { |r| r }   # or @csv.each.to_a — both yield CSV::Row objects
+rows = @csv.map { |r| r }
 sentinel_idx = rows.index { |r| r["record_type"]&.start_with?("!") }
-# → works correctly
 ```
-
-**When this matters:**
-- Any time you need to collect `CSV::Row` objects into a plain array for
-  subsequent indexed access (e.g. `rows[i..]` slicing, position-based lookup).
-- Parsing CSV in tests that iterate and then slice by position.
-- The normal `@csv.select { }`, `@csv.find { }`, `@csv.each { }` patterns
-  already yield `CSV::Row` objects and are not affected.
-
-**Real example (Session 37, March 23, 2026):**
-`OwnerExportServiceTest` — two tests called `@csv.to_a` to collect rows for
-position-based sentinel detection. Both failed with `TypeError` on the first
-`r["record_type"]` access. Fixed by replacing `.to_a` with `.map { |r| r }`.
 
 ---
 

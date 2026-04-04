@@ -1,5 +1,12 @@
 # decor/app/controllers/computers_controller.rb
-# version 1.19
+# version 1.20
+# v1.20 (Session 47): Software feature Session E.
+#   show action: added @software_items eager-load.
+#   Loads software installed on this computer/peripheral for the read-only
+#   Software section added to computers/show.html.erb.
+#   Ordered by created_at ascending — no join needed, no Arel.sql required.
+#   includes :software_name and :software_condition to avoid N+1 in the table.
+#
 # v1.19 (Session 41): Appliances → Peripherals merger Phase 2.
 #   Removed "appliance" branch from set_device_context — the appliances route is
 #   gone; device_context: "appliance" no longer exists.
@@ -87,6 +94,18 @@ class ComputersController < ApplicationController
     @connection_groups = @computer.connection_groups
       .includes(:connection_type, connection_members: { computer: :computer_model })
       .order(:owner_group_id)
+
+    # Load software installed on this computer/peripheral (Session E).
+    #
+    # Eager-loads :software_name and :software_condition to prevent N+1 in the
+    # Software section table. computer_id is nullable on software_items, so only
+    # items explicitly linked to this computer are included — unattached items
+    # (computer_id: nil) are excluded automatically by the association scope.
+    #
+    # Ordered by created_at ascending — stable, predictable order without a join.
+    @software_items = @computer.software_items
+      .includes(:software_name, :software_condition)
+      .order(created_at: :asc)
   end
 
   def new

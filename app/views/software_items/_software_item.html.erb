@@ -1,0 +1,63 @@
+<%# decor/app/views/software_items/_software_item.html.erb - version 1.0 %>
+<%# v1.0 (Session 48): Software feature Session F — row partial for the public index. %>
+<%# %>
+<%# Rendered by both index.html.erb and index.turbo_stream.erb. %>
+<%# Expects local variable: software_item (SoftwareItem instance). %>
+<%# All associations (software_name, software_condition, owner, computer, %>
+<%#   computer: :computer_model) are eager-loaded by the controller — no N+1. %>
+<%# %>
+<%# Columns: Owner | Software | Version | Condition | Installed On | Barter (logged_in only) %>
+<%# %>
+<%# Barter column: matches the guard in index.html.erb — same logged_in? check on both %>
+<%#   the <th> header and this <td> cell, consistent with computers index pattern. %>
+<%# Color conventions (DECOR_PROJECT.md Design Patterns): %>
+<%#   Clickable:     text-indigo-600 hover:text-indigo-900 %>
+<%#   Non-clickable: text-stone-600 %>
+<%#   Absent/null:   text-stone-400 (em-dash) %>
+<%#   Barter offered: text-green-700 %>
+<%#   Barter wanted:  text-amber-600 %>
+
+<tr class="hover:bg-stone-50">
+  <%# Owner — link to owner profile page. %>
+  <td class="px-4 py-3 whitespace-nowrap">
+    <%= link_to software_item.owner.user_name, owner_path(software_item.owner),
+          class: "text-indigo-600 hover:text-indigo-900" %>
+  </td>
+
+  <%# Software name — link to the software item show page. %>
+  <td class="px-4 py-3 whitespace-nowrap font-medium">
+    <%= link_to software_item.software_name.name, software_item_path(software_item),
+          class: "text-indigo-600 hover:text-indigo-900" %>
+  </td>
+
+  <%# Version — optional; em-dash when absent. %>
+  <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= software_item.version || "—" %></td>
+
+  <%# Condition — optional; em-dash when absent. %>
+  <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= software_item.software_condition&.name || "—" %></td>
+
+  <%# Installed On — "Model – serial" link, or em-dash when not installed anywhere. %>
+  <%# computer association is optional (nullable FK); guard with if. %>
+  <td class="px-4 py-3 whitespace-nowrap text-stone-600">
+    <% if software_item.computer %>
+      <%= link_to "#{software_item.computer.computer_model.name} \u2013 #{software_item.computer.serial_number}",
+            computer_path(software_item.computer),
+            class: "text-indigo-600 hover:text-indigo-900" %>
+    <% else %>
+      <span class="text-stone-400">—</span>
+    <% end %>
+  </td>
+
+  <%# Barter — logged-in members only (matches <th> guard in index.html.erb). %>
+  <% if logged_in? %>
+    <td class="px-4 py-3 whitespace-nowrap">
+      <% if software_item.barter_status_offered? %>
+        <span class="text-green-700">Offered</span>
+      <% elsif software_item.barter_status_wanted? %>
+        <span class="text-amber-600">Wanted</span>
+      <% else %>
+        <span class="text-stone-400">—</span>
+      <% end %>
+    </td>
+  <% end %>
+</tr>

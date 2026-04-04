@@ -1,0 +1,20 @@
+<%# decor/app/views/software_items/index.turbo_stream.erb - version 1.0 %>
+<%# v1.0 (Session 48): Software feature Session F — turbo stream for load-more pagination. %>
+<%# %>
+<%# Mirrors the pattern established in computers/index.turbo_stream.erb v1.1: %>
+<%#   1. Append the next page of rows to the existing tbody (identified by @turbo_tbody_id). %>
+<%#   2. Replace the load_more partial (identified by @load_more_id) so the button %>
+<%#      either advances to the next page or disappears when all pages are loaded. %>
+<%# %>
+<%# All values (@turbo_tbody_id, @load_more_id, @index_path) come from the controller %>
+<%# so this template never needs to hardcode resource-specific identifiers. %>
+
+<%= turbo_stream.append @turbo_tbody_id do %>
+  <% @page.records.each do |item| %>
+    <%= render "software_item", software_item: item %>
+  <% end %>
+<% end %>
+
+<%= turbo_stream.replace @load_more_id do %>
+  <%= render "shared/load_more", id: @load_more_id, page: @page, path: @index_path %>
+<% end %>
