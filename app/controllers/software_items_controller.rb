@@ -1,5 +1,12 @@
 # decor/app/controllers/software_items_controller.rb
-# version 1.1
+# version 1.2
+# v1.2 (Session 48): Software feature Session F — public index action.
+#   Added index: all software items across all owners, publicly accessible,
+#   paginated with geared_pagination. Ordered by software name ASC then
+#   owner user_name ASC (multi-table ORDER BY requires Arel.sql()).
+#   eager_load used (not includes) so the LEFT OUTER JOIN is present for
+#   the ORDER BY on joined table columns.
+#
 # v1.1 (Session 46): Software feature Session D — owner-facing CRUD.
 #   Added new, create, edit, update, destroy actions.
 #   Added require_login guard for all mutating actions (new/create/edit/update/destroy).
@@ -11,28 +18,50 @@
 # v1.0 (Session 45): Software feature Session C — read-only actions.
 #   show action only; create/edit/update/destroy will be added in Session D.
 #
-#   Access model (unchanged from v1.0):
-#     show is publicly accessible — no require_login guard.
-#     new/create/edit/update/destroy require login; edit/update/destroy also require
-#     that the current owner owns the record.
+#   Access model:
+#     index             — publicly accessible (no login required)
+#     show              — publicly accessible (no login required)
+#     new/create        — require_login; scoped to Current.owner
+#     edit/update       — require_login + must own the record
+#     destroy           — require_login + must own the record
 #
 #   Redirect after destroy: always goes to the owner's software sub-page, since the
-#   destroyed record can no longer be shown. No source-param logic needed here —
-#   unlike ComponentsController there is no embedded form on the computer page yet
-#   (that is Session E).
+#   destroyed record can no longer be shown.
 
 class SoftwareItemsController < ApplicationController
   # set_software_item only for actions that have an :id param.
-  # new and create build a new record from Current.owner instead.
+  # index, new, and create build from scope/Current.owner instead.
   before_action :set_software_item, only: %i[show edit update destroy]
 
   # Mutating actions require a logged-in session.
-  # show is intentionally excluded — publicly accessible.
+  # index and show are intentionally excluded — publicly accessible.
   before_action :require_login, only: %i[new create edit update destroy]
 
   # Ownership guard for edit/update/destroy — delegates to require_owner.
   # new and create are implicitly scoped to Current.owner (no ownership check needed).
   before_action :ensure_software_item_belongs_to_current_owner, only: %i[edit update destroy]
+
+  # GET /software_items
+  # Publicly accessible. All software items across all owners, paginated.
+  # Ordered by software name (joined), then owner user_name (joined) as tiebreaker.
+  # Arel.sql() is required because the ORDER BY references joined table columns
+  # (software_names.name and owners.user_name). See RAILS_SPECIFICS.md.
+  # eager_load produces a LEFT OUTER JOIN so those columns are available for sorting.
+  def index
+    scope = SoftwareItem
+              .eager_load(:software_name, :software_condition, :owner,
+                          computer: :computer_model)
+              .order(Arel.sql("software_names.name ASC, owners.user_name ASC"))
+
+    # paginate sets @page as a side effect via set_page_and_extract_portion_from.
+    # Must NOT be assigned — assigning overwrites @page with respond_to's return value (nil).
+    # Pattern confirmed from computers_controller.rb: `paginate computers` (no assignment).
+    paginate scope
+    @page_title     = "Software"
+    @turbo_tbody_id = "software_items"
+    @load_more_id   = "load_more_software_items"
+    @index_path     = software_items_path
+  end
 
   # GET /software_items/:id
   # Publicly accessible detail page for a single software item.

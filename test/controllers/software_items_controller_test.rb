@@ -1,11 +1,20 @@
 # decor/test/controllers/software_items_controller_test.rb
-# version 1.1
+# version 1.2
+# v1.2 (Session 48): Software feature Session F — index action tests.
+#   Added three index tests:
+#     - GET /software_items returns 200 when not logged in (publicly accessible)
+#     - GET /software_items returns 200 when logged in
+#     - Response body includes a fixture software name (derive-from-data rule)
+#   Content assertion derives the expected name from the fixture association
+#   (software_items(:alice_vms).software_name.name) — never hardcoded.
+#
 # v1.1 (Session 46): Software feature Session D — CRUD controller tests.
 #   Added tests for new, create, edit, update, destroy.
 #   Covers: success paths, validation failures, login guard, ownership guard.
 # v1.0 (Session 45): Software feature Session C — read-only show tests.
 #
 # SoftwareItemsController access model:
+#   index             — publicly accessible (no login required)
 #   show              — publicly accessible (no login required)
 #   new / create      — require_login; scoped to Current.owner
 #   edit / update     — require_login + must own the record
@@ -24,6 +33,36 @@
 require "test_helper"
 
 class SoftwareItemsControllerTest < ActionDispatch::IntegrationTest
+  # ═══════════════════════════════════════════════════════════════════════════
+  # index
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  test "index returns 200 when not logged in" do
+    # The public software index requires no authentication — analogous to
+    # the computers and components index pages.
+    get software_items_url
+
+    assert_response :success
+  end
+
+  test "index returns 200 when logged in" do
+    login_as owners(:one)
+
+    get software_items_url
+
+    assert_response :success
+  end
+
+  test "index response body includes a fixture software name" do
+    # Derives the expected name from the fixture association — never hardcoded.
+    # alice_vms is the richest fixture and is included in every index response.
+    expected_name = software_items(:alice_vms).software_name.name
+
+    get software_items_url
+
+    assert_match expected_name, response.body
+  end
+
   # ═══════════════════════════════════════════════════════════════════════════
   # show
   # ═══════════════════════════════════════════════════════════════════════════

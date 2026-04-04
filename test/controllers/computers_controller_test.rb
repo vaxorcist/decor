@@ -1,5 +1,14 @@
 # decor/test/controllers/computers_controller_test.rb
-# version 1.8
+# version 1.9
+# v1.9 (Session 47): Software feature Session E.
+#   Added two show-action tests for the Software section:
+#     "show with software renders software name in software section"
+#     "show without software renders software empty-state message"
+#   alice_pdp11 has alice_vms (software_name: vms) — used for the populated test.
+#   unassigned_condition_test has no software items — used for the empty-state test.
+#   Software name string derived from fixture at test time (software_items(:alice_vms)
+#   .software_name.name) — never hardcoded, follows derive-from-data rule.
+#
 # v1.8 (Session 41): Appliances → Peripherals merger Phase 2.
 #   Removed appliance route tests (route gone):
 #     "GET /appliances loads successfully"
@@ -32,6 +41,8 @@
 #   computers(:alice_pdp11)        = alice's PDP-11/70, serial SN12345, device_type: computer, barter_status: 0 (no_barter)
 #   computers(:alice_vax)          = alice's VAX,       device_type: computer, barter_status: 2 (wanted)
 #   computers(:dec_unibus_router)  = charlie's router,  device_type: peripheral (formerly appliance), barter_status: 1 (offered)
+#   computers(:unassigned_condition_test) = alice's device, not in any connection group, no software items
+#   software_items(:alice_vms)     = installed on alice_pdp11; software_name: vms
 #   Each test runs in a rolled-back transaction.
 
 require "test_helper"
@@ -259,5 +270,42 @@ class ComputersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, "No connections recorded",
       "Empty-state message should appear for a device with no connections"
+  end
+
+  # ---------------------------------------------------------------------------
+  # Show — software section (Session E)
+  # ---------------------------------------------------------------------------
+  #
+  # Fixture software data:
+  #   alice_pdp11           → alice_vms (software_name: vms) — populated state
+  #   unassigned_condition_test → no software items           — empty state
+
+  test "show with software renders software name in software section" do
+    # alice_pdp11 has alice_vms installed on it.
+    # The software name (derived from the fixture at test time — never hardcoded)
+    # must appear in the Software section as a link to software_item_path.
+    # The link text is software_name.name; the href contains the item's id.
+    item = software_items(:alice_vms)
+    login_as owners(:one)
+
+    get computer_path(computers(:alice_pdp11))
+
+    assert_response :success
+    assert_includes response.body, item.software_name.name,
+      "Software name should appear in the Software section table"
+    assert_includes response.body, software_item_path(item),
+      "Link to software_items/show should appear in the Software section"
+  end
+
+  test "show without software renders software empty-state message" do
+    # unassigned_condition_test has no software items.
+    # The Software section must show the empty-state paragraph.
+    login_as owners(:one)
+
+    get computer_path(computers(:unassigned_condition_test))
+
+    assert_response :success
+    assert_includes response.body, "No software installed on this",
+      "Empty-state message should appear for a device with no software"
   end
 end

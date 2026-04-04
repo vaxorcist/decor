@@ -1,14 +1,14 @@
 # decor/docs/claude/SESSION_HANDOVER.md
-# version 49.0
-# Session 45: Software feature — Session C complete.
-#   Two controllers (owners_controller updated + software_items_controller new),
-#   seven views (software sub-page, show page, five tab-strip updates),
-#   two test files (owners_controller_test updated + software_items_controller_test new).
-#   All files delivered; tests expected green.
+# version 51.0
+# Session 47: Software feature — Session E complete.
+#   Three files: computers_controller v1.20, computers/show.html.erb v2.2,
+#   computers_controller_test v1.9.
+#   Software section added to computer/peripheral show page (read-only).
+#   Session also surfaced a missing /software public index page — added to Session F scope.
 
-**Date:** April 2, 2026
-**Branch:** main (Session 44 merged and deployed; Session 45 ready to commit)
-**Status:** Session 45 complete. All files delivered. No outstanding failures.
+**Date:** April 4, 2026
+**Branch:** main (Session 46 merged and deployed; Session 47 ready to commit)
+**Status:** Session 47 complete. All files delivered. No outstanding failures.
 
 ---
 
@@ -37,8 +37,7 @@ After each: log "Read FILENAME — N lines, complete."
 
 ## !! TOKEN BUDGET WARNING !!
 
-Session 45 used ~73% of the context window (estimate). Session D is a full
-CRUD session — comparable in size to Session B (14 files). Start fresh.
+Session 47 ended at ~90% of the context window. Start Session F fresh.
 
 ---
 
@@ -67,7 +66,6 @@ See Session 41 entry for full detail.
 When running a manual data migration that changes an enum value, grep for ALL
 tables that share that enum/column before assuming the migration is complete.
 
-The grep to run before declaring a manual migration complete:
 ```bash
 grep -rn "device_type" decor/db/schema.rb
 ```
@@ -75,81 +73,62 @@ Every table with that column needs the same migration.
 
 ---
 
-## Session 45 Summary
+## !! before_action :set_resource — ALWAYS scope with only: (learned Session 46) !!
 
-**Focus: Software feature — Session C (owner-facing index + show, read-only).**
+When a controller has new/create actions alongside show/edit/update/destroy,
+the set_resource before_action MUST be scoped with only: to exclude new and create.
 
-### Files changed this session (12 files)
+Those two actions have no :id param; an unscoped callback crashes with
+ActiveRecord::RecordNotFound before either action runs.
 
-    decor/config/routes.rb                                          v2.8
-    decor/app/controllers/owners_controller.rb                      v2.0
-    decor/app/controllers/software_items_controller.rb              v1.0  (new)
-    decor/app/views/owners/software.html.erb                        v1.0  (new)
-    decor/app/views/software_items/show.html.erb                    v1.0  (new)
-    decor/app/views/owners/show.html.erb                            v2.3
-    decor/app/views/owners/computers.html.erb                       v1.4
-    decor/app/views/owners/peripherals.html.erb                     v1.3
-    decor/app/views/owners/components.html.erb                      v1.4
-    decor/app/views/owners/connections.html.erb                     v1.2
-    decor/test/controllers/owners_controller_test.rb                v1.9
-    decor/test/controllers/software_items_controller_test.rb        v1.0  (new)
+**Wrong (crashes on new and create):**
+```ruby
+before_action :set_software_item
+```
 
-### Key design decisions (Session 45)
+**Correct:**
+```ruby
+before_action :set_software_item, only: %i[show edit update destroy]
+```
 
-- `SoftwareItemsController#show` has no `require_login` — publicly accessible,
-  consistent with `ComputersController` and `ComponentsController` show pages.
-- `OwnersController#software` also has no `require_login` — consistent with all
-  other owner read-only sub-pages (computers, peripherals, components, connections).
-- Ordering: `software_names.name ASC, software_items.version ASC NULLS LAST`
-  (items without a version sort after versioned ones within the same title).
-- `eager_load` used in both the sub-page and the controller's `set_software_item`
-  to avoid N+1 on `software_name`, `software_condition`, `computer.computer_model`,
-  and `owner`.
-- `show.html.erb` grid changes from `grid-cols-4` to `grid-cols-5`; Software card
-  has no "+ Add" link until Session D adds the create action.
-- Tab strip updated in all five existing sub-pages — Software tab appended at the
-  end, inactive on all but `owners/software.html.erb`.
-- `whitespace-pre-wrap` in the show view has ERB on the same line as the opening
-  tag (per RAILS_SPECIFICS.md — prevents indentation rendering as visible space).
-- New directory created: `decor/app/views/software_items/`.
+See RAILS_SPECIFICS.md v2.6 for the full rule.
 
 ---
 
-## Session 44 Summary
+## Session 47 Summary
 
-**Focus: Software feature — Session B (admin CRUD for SoftwareNames + SoftwareConditions).**
+**Focus: Software feature — Session E (computer/peripheral show page integration).**
 
-### Files changed this session (14 files)
+### Files changed this session (3 files)
 
-    decor/app/controllers/admin/software_names_controller.rb        v1.0  (new)
-    decor/app/controllers/admin/software_conditions_controller.rb   v1.0  (new)
-    decor/app/views/admin/software_names/index.html.erb             v1.0  (new)
-    decor/app/views/admin/software_names/new.html.erb               v1.0  (new)
-    decor/app/views/admin/software_names/edit.html.erb              v1.0  (new)
-    decor/app/views/admin/software_names/_form.html.erb             v1.0  (new)
-    decor/app/views/admin/software_conditions/index.html.erb        v1.0  (new)
-    decor/app/views/admin/software_conditions/new.html.erb          v1.0  (new)
-    decor/app/views/admin/software_conditions/edit.html.erb         v1.0  (new)
-    decor/app/views/admin/software_conditions/_form.html.erb        v1.0  (new)
-    decor/config/routes.rb                                          v2.7
-    decor/app/views/layouts/admin.html.erb                          v2.1
-    decor/test/controllers/admin/software_names_controller_test.rb  v1.0  (new)
-    decor/test/controllers/admin/software_conditions_controller_test.rb v1.0 (new)
+    decor/app/controllers/computers_controller.rb       v1.20
+    decor/app/views/computers/show.html.erb             v2.2
+    decor/test/controllers/computers_controller_test.rb v1.9
+    decor/docs/claude/DECOR_PROJECT.md                  v2.42
 
-### Key design decisions (Session 44)
+### Key design decisions (Session 47)
 
-- Both controllers model on `Admin::ComponentConditionsController` (the version
-  with the if/else destroy guard), not `ComponentTypesController` (no guard).
-  Both SoftwareName and SoftwareCondition use `dependent: :restrict_with_error`.
-- `SoftwareConditionsController` uses `:name` throughout (not `:condition`) —
-  matching the clean column convention chosen in Session 43.
-- Both forms include `:description` as an optional field (not present on
-  ComponentType/ComponentCondition). Strong params permit both `:name` and
-  `:description`.
-- "Software" dropdown added to admin nav between Connections and Imports/Exports.
-- Destroy-blocked tests use fixture records known to have software_items (`:vms`
-  and `:complete`); destroy-succeeds tests create fresh records to avoid fixture
-  coupling.
+- `@software_items` loaded in `show` via
+  `.includes(:software_name, :software_condition).order(created_at: :asc)`.
+  No join required — `created_at` is on software_items itself, so no `Arel.sql()` needed.
+- Software section placed after Connections, before Back button.
+  Three columns: Name (link to `software_item_path`), Version, Condition.
+  Trade status deliberately omitted from this embedded table — full detail one click away.
+  Add/Edit/Delete from this page deferred (still Session F scope).
+- Empty state: "No software installed on this `<device_type>`."
+  `device_type` comes from `@computer.device_type` — renders "computer" or "peripheral".
+- 2 new tests: populated (alice_pdp11 / alice_vms) and empty (unassigned_condition_test).
+  Software name string derived from `software_items(:alice_vms).software_name.name` at
+  test time — never hardcoded. Follows derive-from-data rule.
+
+---
+
+## Session 46 Summary
+
+**Focus: Software feature — Session D (owner-facing create + edit + destroy).**
+10 files: software_items_controller v1.1, routes v2.9, three new views (new/edit/_form),
+owners/software.html.erb v1.1, software_items/show.html.erb v1.1,
+owners/show.html.erb v2.4, software_items_controller_test v1.1, DECOR_PROJECT.md v2.41.
 
 ---
 
@@ -161,32 +140,38 @@ a green test suite and a deployable state.
     Session A  Migrations, models, fixtures, model tests              DONE ✓
     Session B  Admin CRUD: SoftwareNames + SoftwareConditions         DONE ✓
     Session C  Owner-facing: Software index + show (read-only)        DONE ✓
-    Session D  Owner-facing: Software create + edit + destroy         next
-    Session E  Computer/peripheral show page integration
-    Session F  Export/Import service updates (deferrable)
+    Session D  Owner-facing: Software create + edit + destroy         DONE ✓
+    Session E  Computer/peripheral show page integration              DONE ✓
+    Session F  Public /software index + nav link + export/import      next
 
-### Session D — files needed before starting
+### Session F — scope
+
+Two items surfaced at the end of Session E:
+
+1. **Public `/software` index page** — missing. Analogous to `/computers` and
+   `/peripherals`. All software items across all owners, publicly accessible,
+   paginated. Nav link needed in `decor/app/views/common/_navigation.html.erb`.
+
+2. **Export/Import service updates** — previously deferrable; now bundled with
+   Session F since the session is already open for the index page.
+
+### Session F — files needed before starting
 
 Read these files before writing a single line:
 
-    decor/app/controllers/software_items_controller.rb   (just created — in context)
-    decor/app/controllers/components_controller.rb       (CRUD pattern to follow)
-    decor/app/views/components/new.html.erb
-    decor/app/views/components/edit.html.erb
-    decor/app/views/components/_form.html.erb
-    decor/app/views/owners/software.html.erb             (just created — add Edit/Delete)
-    decor/app/views/software_items/show.html.erb         (just created — add Edit/Delete)
-    decor/config/routes.rb
-    decor/test/controllers/software_items_controller_test.rb  (just created — extend)
-    decor/test/fixtures/software_items.yml
-    decor/test/fixtures/software_names.yml
-    decor/test/fixtures/software_conditions.yml
+    decor/app/controllers/software_items_controller.rb   (v1.1 — add index action)
+    decor/app/views/common/_navigation.html.erb          (add Software nav link)
+    decor/app/views/owners/software.html.erb             (owner-scoped list — pattern)
+    decor/app/views/computers/index.html.erb             (public index pattern)
+    decor/config/routes.rb                               (v2.9 — routes already in place)
+    decor/test/controllers/software_items_controller_test.rb  (v1.1 — add index tests)
+    decor/test/fixtures/software_items.yml               (fixture data for index tests)
 
 ---
 
 ## Priority 1 — Future Sessions
 
-1. **Software feature** — Session D next (see plan above).
+1. **Software feature** — Session F next (see plan above).
 2. **Legal/Compliance** — Impressum, Privacy Policy, GDPR, Cookie Consent, TOS.
 3. **System tests** — decor/test/system/ still empty.
 4. **Account deletion + data export** (GDPR).

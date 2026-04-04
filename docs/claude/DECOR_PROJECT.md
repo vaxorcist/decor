@@ -1,18 +1,22 @@
 # decor/docs/claude/DECOR_PROJECT.md
-# version 2.41
-# Session 46: Software feature Session D complete.
-#   9 files: software_items_controller updated (v1.1), routes.rb updated (v2.9),
-#   three new views (new/edit/_form for software_items, v1.0),
-#   owners/software.html.erb updated (v1.1),
-#   software_items/show.html.erb updated (v1.1),
-#   owners/show.html.erb updated (v2.4),
-#   software_items_controller_test updated (v1.1).
-#   Directory tree needs refresh (upload decor_tree.txt at next session start).
+# version 2.43
+# Session 48: Software feature Session F — public index + nav link.
+#   6 files: software_items_controller v1.2, software_items/index.html.erb v1.0 (NEW),
+#   software_items/index.turbo_stream.erb v1.0 (NEW),
+#   software_items/_software_item.html.erb v1.0 (NEW),
+#   _navigation.html.erb v2.1, software_items_controller_test v1.2.
+#   Public /software index page added; "Software" nav link + "My Software" dropdown added.
+#
+# Session 47: Software feature Session E complete.
+#   3 files: computers_controller v1.20, computers/show.html.erb v2.2,
+#   computers_controller_test v1.9.
+#   Software section added to computer/peripheral show page (read-only).
+#   Add/Edit/Delete from this page deferred to Session F.
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** April 3, 2026 (Session 46)
-**Current Status:** Sessions 1–45 committed and deployed. Session 46 ready to commit.
+**Last Updated:** April 4, 2026 (Session 48)
+**Current Status:** Sessions 1–47 committed and deployed. Session 48 ready to commit.
 
 ---
 
@@ -23,7 +27,7 @@
 tree decor/ -I "node_modules|.git|tmp|storage|log|.DS_Store|*.lock|assets|cache|pids|sockets" --dirsfirst -F --prune -L 6 > decor_tree.txt
 ```
 
-**Current tree** (as of Session 41 — Sessions 43–46 add new files; upload decor_tree.txt to refresh):
+**Current tree** (as of Session 41 — Sessions 43–47 add new files; upload decor_tree.txt to refresh):
 ```
 decor//
 ├── app/
@@ -48,7 +52,7 @@ decor//
 │   │   │   └── pagination.rb
 │   │   ├── application_controller.rb
 │   │   ├── components_controller.rb
-│   │   ├── computers_controller.rb                     ← Session 41 (v1.19)
+│   │   ├── computers_controller.rb                     ← Session 47 (v1.20)
 │   │   ├── connection_groups_controller.rb
 │   │   ├── data_transfers_controller.rb                ← Session 42 (v1.5)
 │   │   ├── home_controller.rb
@@ -89,6 +93,8 @@ decor//
 │       │   └── show.html.erb                          ← Session 42 (v1.8)
 │       ├── layouts/
 │       │   └── admin.html.erb                         ← Session 44 (v2.1)
+│       ├── computers/
+│       │   └── show.html.erb                          ← Session 47 (v2.2)
 │       ├── owners/
 │       │   ├── _owner.html.erb                        ← Session 41 (v3.5)
 │       │   ├── computers.html.erb                     ← Session 45 (v1.4)
@@ -99,7 +105,10 @@ decor//
 │       │   └── software.html.erb                      ← Session 46 (v1.1)
 │       └── software_items/
 │           ├── _form.html.erb                         ← Session 46 (v1.0) NEW
+│           ├── _software_item.html.erb                ← Session 48 (v1.0) NEW
 │           ├── edit.html.erb                          ← Session 46 (v1.0) NEW
+│           ├── index.html.erb                         ← Session 48 (v1.0) NEW
+│           ├── index.turbo_stream.erb                 ← Session 48 (v1.0) NEW
 │           ├── new.html.erb                           ← Session 46 (v1.0) NEW
 │           └── show.html.erb                          ← Session 46 (v1.1)
 ├── config/
@@ -116,7 +125,7 @@ decor//
     │   │   ├── data_transfers_controller_test.rb       ← Session 41 (v1.2)
     │   │   ├── software_conditions_controller_test.rb  ← Session 44 (v1.0) NEW
     │   │   └── software_names_controller_test.rb       ← Session 44 (v1.0) NEW
-    │   ├── computers_controller_test.rb                ← Session 41 (v1.8)
+    │   ├── computers_controller_test.rb                ← Session 47 (v1.9)
     │   ├── owners_controller_test.rb                  ← Session 45 (v1.9)
     │   └── software_items_controller_test.rb          ← Session 46 (v1.1)
     ├── fixtures/
@@ -142,8 +151,17 @@ decor//
 
 **Key file versions** (updated each session):
 
-    decor/docs/claude/DECOR_PROJECT.md                                                  v2.41 ← Session 46
-    decor/docs/claude/SESSION_HANDOVER.md                                               v49.0 ← Session 45 (update at wrap-up)
+    decor/docs/claude/DECOR_PROJECT.md                                                  v2.43 ← Session 48
+    decor/docs/claude/SESSION_HANDOVER.md                                               v51.0 ← Session 47 (update at wrap-up)
+    decor/app/controllers/software_items_controller.rb                                  v1.2  ← Session 48
+    decor/app/views/software_items/index.html.erb                                       v1.0  ← Session 48 NEW
+    decor/app/views/software_items/index.turbo_stream.erb                               v1.0  ← Session 48 NEW
+    decor/app/views/software_items/_software_item.html.erb                              v1.0  ← Session 48 NEW
+    decor/app/views/common/_navigation.html.erb                                         v2.1  ← Session 48
+    decor/test/controllers/software_items_controller_test.rb                            v1.2  ← Session 48
+    decor/app/controllers/computers_controller.rb                                       v1.20 ← Session 47
+    decor/app/views/computers/show.html.erb                                             v2.2  ← Session 47
+    decor/test/controllers/computers_controller_test.rb                                 v1.9  ← Session 47
     decor/config/routes.rb                                                              v2.9  ← Session 46
     decor/app/controllers/software_items_controller.rb                                  v1.1  ← Session 46
     decor/app/views/software_items/new.html.erb                                         v1.0  ← Session 46 NEW
@@ -186,13 +204,12 @@ decor//
     decor/test/models/software_name_test.rb                                             v1.0  ← Session 43 NEW
     decor/test/models/software_condition_test.rb                                        v1.0  ← Session 43 NEW
     decor/test/models/software_item_test.rb                                             v1.0  ← Session 43 NEW
-    decor/docs/claude/RAILS_SPECIFICS.md                                                v2.5  ← Session 42
+    decor/docs/claude/RAILS_SPECIFICS.md                                                v2.6  ← Session 46
     decor/app/views/admin/data_transfers/show.html.erb                                  v1.2  ← Session 42
     decor/app/controllers/data_transfers_controller.rb                                  v1.5  ← Session 42
     decor/app/views/data_transfers/show.html.erb                                        v1.8  ← Session 42
     decor/app/helpers/computers_helper.rb                                               v1.6  ← Session 42
     decor/app/models/computer_model.rb                                                  v1.3  ← Session 41
-    decor/app/controllers/computers_controller.rb                                       v1.19 ← Session 41
     decor/app/controllers/admin/computer_models_controller.rb                           v1.4  ← Session 41
     decor/app/controllers/admin/data_transfers_controller.rb                            v1.2  ← Session 41
     decor/app/services/owner_export_service.rb                                          v1.4  ← Session 41
@@ -203,7 +220,6 @@ decor//
     decor/test/fixtures/computer_models.yml                                             v1.3  ← Session 41
     decor/test/models/computer_test.rb                                                  v1.7  ← Session 41
     decor/test/models/computer_model_test.rb                                            v1.3  ← Session 41
-    decor/test/controllers/computers_controller_test.rb                                 v1.8  ← Session 41
     decor/test/controllers/admin/computer_models_controller_test.rb                     v1.3  ← Session 41
     decor/test/controllers/admin/data_transfers_controller_test.rb                      v1.2  ← Session 41
     decor/test/services/owner_export_service_test.rb                                    v1.4  ← Session 41
@@ -219,7 +235,6 @@ decor//
     decor/app/models/connection_member.rb                                               v1.1  ← Session 38
     decor/app/controllers/connection_groups_controller.rb                               v1.1  ← Session 38
     decor/app/views/connection_groups/_form.html.erb                                    v1.2  ← Session 38
-    decor/app/views/computers/show.html.erb                                             v2.1  ← Session 38
     decor/app/javascript/controllers/connection_members_controller.js                   v1.1  ← Session 38
     decor/test/fixtures/connection_groups.yml                                           v1.1  ← Session 38
     decor/test/fixtures/connection_members.yml                                          v1.1  ← Session 38
@@ -318,8 +333,8 @@ Option C (full separation) chosen. Software is NOT a variant of Components.
     Session B  Admin CRUD: SoftwareNames + SoftwareConditions         DONE ✓ (Session 44)
     Session C  Owner-facing: Software index + show (read-only)        DONE ✓ (Session 45)
     Session D  Owner-facing: Software create + edit + destroy         DONE ✓ (Session 46)
-    Session E  Computer/peripheral show page integration              next
-    Session F  Export/Import service updates (deferrable)
+    Session E  Computer/peripheral show page integration              DONE ✓ (Session 47)
+    Session F  Export/Import service updates (deferrable)             in progress (Session 48)
 
 ---
 
