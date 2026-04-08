@@ -1,11 +1,9 @@
 # PROGRAMMING_GENERAL.md
-# version 1.9
-# Added: "Derive Test Assertions from Data, Not Constants" rule in Test Data Management.
-# General principle: never hardcode in a test a value that the test data can provide.
-# Cross-referenced in RAILS_SPECIFICS.md — Fixture Ownership section.
-# Session 20: Reinforced End-of-Task Test Coverage Check — rule already existed but
-#   was not being applied proactively. Added explicit wording that the check must be
-#   offered after EVERY implementation task without waiting for the user to ask.
+# version 2.0
+# Session 49: Added "Export / Import — Always Include a Stable Unique Key" rule.
+#   Root cause: connection group duplicate detection used member-set comparison,
+#   which broke when a port was added. Fix: use owner_group_id (stable unique key).
+#   Rule generalised: every exported record type must carry a stable unique key.
 
 **General Programming Rules for All Technical Projects**
 
@@ -265,6 +263,31 @@ If a value comes from data, read it from the data — don't copy it into the cod
 
 **Cross-reference:** See RAILS_SPECIFICS.md — Fixture Ownership section for the
 Rails/fixture-specific elaboration including the neutral-owner pattern.
+
+---
+
+## Export / Import — Always Include a Stable Unique Key
+
+**RULE: Every exported record type must carry a stable unique field (or unique
+combination of fields) that the importer uses for duplicate detection.**
+
+Never rely on derived properties (computed member sets, content hashes, row
+position) to decide whether a record already exists. Derived properties change
+as soon as the data changes — causing duplicates on re-import.
+
+**Use the actual database key or a natural unique identifier:**
+- computers / peripherals: (computer_model, serial_number) — already present
+- components: (component_type, serial_number) — already present
+- software items: (software_name, computer, version) — already present
+- connection groups: owner_group_id — added Session 49 after the member-set
+  approach failed
+
+**Real example (Session 49, April 2026):**
+Connection groups had no unique key in the export. The importer used the set
+of member computer IDs as a proxy. Adding a new port changed the set, so the
+group was no longer recognised as a duplicate and was saved a second time.
+Fix: export owner_group_id (UNIQUE INDEX on owner_id + owner_group_id) and
+check exists?(owner_group_id:) — one line, always correct.
 
 ---
 

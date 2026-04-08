@@ -1,15 +1,52 @@
 # decor/test/controllers/data_transfers_controller_test.rb
-# version 1.2
-# Session 37: Added test verifying that connection_group_count appears in the
-#   import flash message when connection groups are successfully imported.
-#   Added build_csv_with_connections private helper (mirrors the one in the
-#   service test) so the controller test can build a connections CSV without
-#   depending on the service test's helpers.
-# v1.1: Fixed three issues found in first test run:
-#   1. Auth redirect target: require_login redirects to new_session_path.
-#   2. Missing before_action :require_login in controller.
-#   3. csv_upload used ActionDispatch::Http::UploadedFile (fails through HTTP layer).
-#      Replaced with Rack::Test::UploadedFile.
+# version 1.4
+# v1.4 (Session 50): Fixed two remaining test failures after v1.3 changes.
+#
+#   1. "import flash includes connection group count when groups are imported"
+#      Was: assert_match "1 connection group", flash[:notice]
+#      Actual controller phrasing (data_transfers_controller v1.6) uses
+#      "connection(s)" not "connection group". Fixed to assert_match "1 connection".
+#
+#   2. "import with unknown computer model shows alert and no records saved"
+#      Was: assert_match "Import failed", flash[:alert]
+#      OwnerImportService v1.11 partial success: unknown model → row_error (row
+#      skipped), result[:success] remains true, so the controller sets
+#      flash[:row_errors] instead of flash[:alert]. Fixed to assert
+#      flash[:row_errors].present?.
+#
+# v1.3 (Session 50): Removed all OwnerExportService::CSV_HEADERS references.
+#   OwnerExportService v1.7 (Session 48) removed the global CSV_HEADERS constant
+#   in favour of per-section sentinels and section-specific column-declaration rows.
+#   Failures fixed:
+#
+#   1. "export response body is valid CSV with correct headers"
+#      Was: CSV.parse(response.body, headers: true) + assert csv.headers == CSV_HEADERS
+#      The new export starts with a comment row ("# Owner: ..."), so CSV.parse with
+#      headers: true uses that comment as the header, not a column-declaration row.
+#      Fix: replaced with "export response body uses per-section CSV format" which
+#      checks that the computers section sentinel is present in the body.
+#
+#   2. "export contains only the logged-in owner's records"
+#      Was: CSV.parse(response.body, headers: true).select { r["record_type"] }
+#           → always empty because comment row is treated as the header row;
+#           also used non-existent column name "computer_serial_number".
+#      Fix: replaced CSV parsing with plain string assert_includes / refute_includes
+#           on the raw response body. Serial numbers are unique strings that won't
+#           appear anywhere except their own data rows.
+#
+#   3. All import CSV builders that used OwnerExportService::CSV_HEADERS as the
+#      global header row and 12-column data rows.
+#      Fix: switched to per-section format: "! --- computers ---" sentinel,
+#      COMPUTER_SECTION_HEADERS column-declaration row, 8-column data rows.
+#      OwnerImportService v1.11 supports both old and new formats.
+#
+#   4. build_csv_with_connections helper
+#      Was: prepended CSV_HEADERS (old global header) + old 12-column device rows.
+#      Fix: per-section format for both the optional device block and the
+#      connections block.
+#
+# v1.2 (Session 37): Added connection_group_count flash tests + build_csv_with_connections.
+# v1.1: Fixed auth redirect, require_login, Rack::Test::UploadedFile.
 
 require "test_helper"
 
@@ -71,26 +108,27 @@ class DataTransfersControllerTest < ActionDispatch::IntegrationTest
     assert_match ".csv",          disposition
   end
 
-  test "export response body is valid CSV with correct headers" do
+  test "export response body uses per-section CSV format" do
+    # OwnerExportService v1.7+ writes per-section sentinels instead of a global
+    # header row. Alice has computers, so the computers sentinel must be present.
     login_as(@alice)
     get export_data_transfer_path
 
-    csv = CSV.parse(response.body, headers: true)
-    assert_equal OwnerExportService::CSV_HEADERS, csv.headers
+    assert_includes response.body, "! --- computers ---"
   end
 
   test "export contains only the logged-in owner's records" do
+    # Bob's fixture computers: PDP8-7891, VT100-5432.
+    # Alice's fixture computers: SN12345, VAX-780-001.
+    # Serial numbers are unique strings; string-contains check is reliable here
+    # and avoids having to parse the per-section CSV format in a controller test.
     login_as(@bob)
     get export_data_transfer_path
 
-    csv            = CSV.parse(response.body, headers: true)
-    serial_numbers = csv.select { |r| r["record_type"] == "computer" }
-                        .map    { |r| r["computer_serial_number"] }
-
-    assert_includes serial_numbers, "PDP8-7891"
-    assert_includes serial_numbers, "VT100-5432"
-    refute_includes serial_numbers, "SN12345"
-    refute_includes serial_numbers, "VAX-780-001"
+    assert_includes response.body, "PDP8-7891"
+    assert_includes response.body, "VT100-5432"
+    refute_includes response.body, "SN12345"
+    refute_includes response.body, "VAX-780-001"
   end
 
   # ── import — missing file ─────────────────────────────────────────────────
@@ -108,10 +146,13 @@ class DataTransfersControllerTest < ActionDispatch::IntegrationTest
   test "import with valid CSV creates records and shows success notice" do
     login_as(@alice)
 
-    csv_content = CSV.generate(headers: true, force_quotes: true) do |csv|
-      csv << OwnerExportService::CSV_HEADERS
-      csv << ["computer", "PDP-11/70", nil, "CTRL-TEST-SN-01",
-              nil, nil, nil, nil, nil, nil, nil, nil]
+    # Per-section format (v1.7+): sentinel + column-declaration row + data rows.
+    # COMPUTER_SECTION_HEADERS: record_type, model, order_number, serial_number,
+    #   condition, run_status, history, barter_status (8 columns).
+    csv_content = CSV.generate(force_quotes: true) do |csv|
+      csv << ["! --- computers ---"]
+      csv << OwnerExportService::COMPUTER_SECTION_HEADERS
+      csv << ["computer", "PDP-11/70", nil, "CTRL-TEST-SN-01", nil, nil, nil, nil]
     end
 
     assert_difference "Computer.count", 1 do
@@ -126,10 +167,10 @@ class DataTransfersControllerTest < ActionDispatch::IntegrationTest
   test "import creates records for the logged-in owner, not someone else" do
     login_as(@bob)
 
-    csv_content = CSV.generate(headers: true, force_quotes: true) do |csv|
-      csv << OwnerExportService::CSV_HEADERS
-      csv << ["computer", "PDP-11/70", nil, "CTRL-BOB-SN-01",
-              nil, nil, nil, nil, nil, nil, nil, nil]
+    csv_content = CSV.generate(force_quotes: true) do |csv|
+      csv << ["! --- computers ---"]
+      csv << OwnerExportService::COMPUTER_SECTION_HEADERS
+      csv << ["computer", "PDP-11/70", nil, "CTRL-BOB-SN-01", nil, nil, nil, nil]
     end
 
     post import_data_transfer_path, params: { file: csv_upload(csv_content) }
@@ -159,16 +200,16 @@ class DataTransfersControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to data_transfer_path
     assert_match "Successfully imported",  flash[:notice]
-    assert_match "1 connection group",     flash[:notice]
+    assert_match "1 connection",           flash[:notice]
   end
 
   test "import flash omits connection group count when no groups are imported" do
     login_as(@alice)
 
-    csv_content = CSV.generate(headers: true, force_quotes: true) do |csv|
-      csv << OwnerExportService::CSV_HEADERS
-      csv << ["computer", "PDP-11/70", nil, "CTRL-NOGROUP-SN",
-              nil, nil, nil, nil, nil, nil, nil, nil]
+    csv_content = CSV.generate(force_quotes: true) do |csv|
+      csv << ["! --- computers ---"]
+      csv << OwnerExportService::COMPUTER_SECTION_HEADERS
+      csv << ["computer", "PDP-11/70", nil, "CTRL-NOGROUP-SN", nil, nil, nil, nil]
     end
 
     post import_data_transfer_path, params: { file: csv_upload(csv_content) }
@@ -183,18 +224,21 @@ class DataTransfersControllerTest < ActionDispatch::IntegrationTest
   test "import with unknown computer model shows alert and no records saved" do
     login_as(@alice)
 
-    csv_content = CSV.generate(headers: true, force_quotes: true) do |csv|
-      csv << OwnerExportService::CSV_HEADERS
-      csv << ["computer", "Nonexistent Model XYZ", nil, "ERR-SN-01",
-              nil, nil, nil, nil, nil, nil, nil, nil]
+    csv_content = CSV.generate(force_quotes: true) do |csv|
+      csv << ["! --- computers ---"]
+      csv << OwnerExportService::COMPUTER_SECTION_HEADERS
+      csv << ["computer", "Nonexistent Model XYZ", nil, "ERR-SN-01", nil, nil, nil, nil]
     end
 
     assert_no_difference "Computer.count" do
       post import_data_transfer_path, params: { file: csv_upload(csv_content) }
     end
 
+    # OwnerImportService v1.11 uses partial success: an unknown model is a row_error
+    # (the row is skipped) rather than a file-level failure. result[:success] is true,
+    # so the controller sets flash[:row_errors], not flash[:alert].
     assert_redirected_to data_transfer_path
-    assert_match "Import failed", flash[:alert]
+    assert flash[:row_errors].present?, "row_errors should be set when a model is unknown"
   end
 
   private
@@ -213,21 +257,43 @@ class DataTransfersControllerTest < ActionDispatch::IntegrationTest
                                   original_filename: filename)
   end
 
-  # Build a CSV with an optional device section followed by the connections sentinel
-  # and connection_group/member rows.
+  # Build a per-section CSV with an optional computers block followed by a
+  # connections block.
+  #
+  # device_rows: array of 8-element arrays matching COMPUTER_SECTION_HEADERS.
+  #   Pass [] to omit the computers section entirely.
+  # connection_groups_data: array of hashes:
+  #   { type: String|nil, label: String|nil,
+  #     members: [ { model: String, serial: String }, ... ] }
+  #
+  # CONNECTION_SECTION_HEADERS:
+  #   record_type, owner_group_id, connection_type_or_model, label, serial_number
+  #
+  # owner_group_id is left nil here (fresh import, not a re-import of an existing
+  # export). The importer treats nil owner_group_id as a new group.
+  #
   # Mirrors the helper in OwnerImportServiceTest — needed here because controller
   # tests cannot call service-test helpers.
   def build_csv_with_connections(device_rows, connection_groups_data)
-    CSV.generate(headers: true, force_quotes: true) do |csv|
-      csv << OwnerExportService::CSV_HEADERS
-      device_rows.each { |row| csv << row }
+    CSV.generate(force_quotes: true) do |csv|
+      unless device_rows.empty?
+        csv << ["! --- computers ---"]
+        csv << OwnerExportService::COMPUTER_SECTION_HEADERS
+        device_rows.each { |row| csv << row }
+      end
+
       csv << ["! --- connections ---"]
+      csv << OwnerExportService::CONNECTION_SECTION_HEADERS
+
       connection_groups_data.each do |g|
-        csv << ["connection_group", g[:type], g[:label],
-                nil, nil, nil, nil, nil, nil, nil, nil, nil]
+        # connection_group row: owner_group_id blank (new import), connection_type_or_model
+        # holds the connection type name, serial blank.
+        csv << ["connection_group", nil, g[:type], g[:label], nil]
+
         g[:members].each do |m|
-          csv << ["connection_member", m[:model], nil, m[:serial],
-                  nil, nil, nil, nil, nil, nil, nil, nil]
+          # connection_member row: owner_group_id blank, connection_type_or_model holds
+          # the computer's model name, label blank, serial holds the computer's serial.
+          csv << ["connection_member", nil, m[:model], nil, m[:serial]]
         end
       end
     end

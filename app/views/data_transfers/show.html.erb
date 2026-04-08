@@ -1,57 +1,83 @@
-<%# decor/app/views/data_transfers/show.html.erb - version 1.8 %>
+<%# decor/app/views/data_transfers/show.html.erb %>
+<%# version 1.9 %>
+<%# v1.9 (Session 49 — Session G): Complete rewrite for OwnerImportService v1.8 and %>
+<%#   OwnerExportService v1.8 (per-section CSV format). %>
+<%#   Import notes: removed "all rows succeed or none are saved" (atomicity) bullet; %>
+<%#     added per-row independent save note; updated error-row bullet. %>
+<%#   Added flash[:row_warnings] display block (amber) — rows saved with a caveat. %>
+<%#   Added flash[:row_errors] display block (red) — rows that were skipped. %>
+<%#   CSV Format section: complete rewrite for v1.7+ per-section format. %>
+<%#     Replaced the old single 12-column table with separate per-section column tables %>
+<%#     (computers/peripherals, components, connections, software). %>
+<%#     Updated example CSV to show sentinel + section-header + data-row layout. %>
+<%#     Retained "appliance" backward-compatibility note (importer still accepts it). %>
 <%# v1.8 (Session 42): Appliances → Peripherals merger cleanup. %>
-<%#   Removed "appliances" from user-visible prose in the Export description, %>
-<%#   Import description, import notes bullets, and CSV Format section intro. %>
-<%#   "Appliance Model" removed from the referenced-model bullet (that model type is gone). %>
-<%#   Intentionally preserved: %>
-<%#     - record_type column reference still lists "appliance" as a valid value — %>
-<%#       OwnerImportService v1.5 accepts it as a legacy alias for peripheral, so %>
-<%#       users with old exports can still re-import them. %>
-<%#     - Example CSV row with record_type=appliance retained for the same reason. %>
-<%# Session 28: Removed inline flash rendering block (notice + alert divs). %>
-<%#   Flash is now rendered exclusively by the layout's _flashes.html.erb partial, %>
-<%#   which is shared across all pages. Having both caused the flash message to %>
-<%#   appear twice on this page — once from the layout and once from this view. %>
-<%# Session 28: Added "peripheral" as a fourth valid record_type value. %>
-<%# Session 16: Added "appliance" as a third valid record_type value. %>
-<%# Owner data export / import page. %>
-<%# Only reachable by logged-in owners (auth enforced globally by Authentication concern). %>
+<%# Session 28: Removed inline flash rendering (layout's _flashes.html.erb handles notice + alert). %>
 <%# %>
-<%# Two sections: %>
-<%#   Export — one-click CSV download of all the owner's computers and components. %>
-<%#   Import — file upload form that calls POST /data_transfer/import. %>
+<%# Auth: before_action :require_login in DataTransfersController (v1.1+). %>
+<%# flash[:notice] and flash[:alert] are rendered by the layout — not duplicated here. %>
+<%# flash[:row_errors] and flash[:row_warnings] are custom and rendered inline below. %>
 
 <div class="max-w-3xl mx-auto">
   <h1 class="text-2xl font-semibold mb-6">Export / Import Your Data</h1>
 
-  <%# ── Export section ──────────────────────────────────────────────────── %>
+  <%# ── Row warnings — rows saved with a caveat (e.g. software imported as %>
+  <%# unattached because the specified computer was not found). %>
+  <%# Rendered here rather than by the layout because these are custom flash keys. %>
+  <% if flash[:row_warnings].present? %>
+    <div class="mb-4 p-4 rounded border border-amber-300 bg-amber-50 text-amber-800 text-sm">
+      <p class="font-medium mb-2">Import warnings — these rows were saved with adjustments:</p>
+      <ul class="list-disc list-inside space-y-1">
+        <% flash[:row_warnings].each do |warning| %>
+          <li><%= warning %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <%# ── Row errors — rows that were skipped (not saved). %>
+  <% if flash[:row_errors].present? %>
+    <div class="mb-6 p-4 rounded border border-red-300 bg-red-50 text-red-800 text-sm">
+      <p class="font-medium mb-2">The following rows could not be imported and were skipped:</p>
+      <ul class="list-disc list-inside space-y-1">
+        <% flash[:row_errors].each do |error| %>
+          <li><%= error %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <%# ════════════════════════════════════════════════════════════════════════ %>
+  <%# EXPORT SECTION                                                           %>
+  <%# ════════════════════════════════════════════════════════════════════════ %>
   <div class="bg-white border border-stone-200 rounded p-6 mb-6">
     <h2 class="text-lg font-semibold mb-3">Export</h2>
     <p class="text-sm text-stone-600 mb-4">
-      Download all of your computers, peripherals and components as a CSV file.
-      The file can be re-imported here or used as a backup.
+      Download all of your computers, peripherals, components, connections, and
+      software items as a CSV file. The file can be re-imported here or used as a backup.
     </p>
-    <%# inline-flex items-center w-fit: constrains width to text (matching submit button), %>
-    <%# and vertically centres the label the same way flex does on a submit element. %>
-    <%# inline-block alone does not provide vertical centring. %>
+    <%# inline-flex items-center w-fit: constrains width to text and vertically centres %>
+    <%# the label the same way flex does on a submit element. %>
     <%= link_to "Download CSV",
           export_data_transfer_path,
           class: "#{button_classes(style: :primary)} inline-flex items-center w-fit" %>
   </div>
 
-  <%# ── Import section ──────────────────────────────────────────────────── %>
+  <%# ════════════════════════════════════════════════════════════════════════ %>
+  <%# IMPORT SECTION                                                           %>
+  <%# ════════════════════════════════════════════════════════════════════════ %>
   <div class="bg-white border border-stone-200 rounded p-6 mb-6">
     <h2 class="text-lg font-semibold mb-3">Import</h2>
     <p class="text-sm text-stone-600 mb-1">
       Upload a CSV file in the format described below to add computers,
-      peripherals and components to your account.
+      peripherals, components, connections, and software items to your account.
     </p>
     <ul class="text-sm text-stone-600 mb-4 list-disc list-inside space-y-1">
       <li>Records that already exist (matched by serial number) are skipped — safe to re-import.</li>
-      <li>If a referenced Computer Model, Peripheral Model, Component Type, Condition, or Run Status does not exist,
-          the row is rejected and the entire import is rolled back.</li>
-      <li>A component whose parent computer/peripheral is not found is imported as a spare (not an error).</li>
-      <li>The entire file is imported atomically — all rows succeed or none are saved.</li>
+      <li>Each row is imported independently — rows that succeed are saved even if other rows fail.</li>
+      <li>If a required lookup fails (model, condition, etc.), that row is skipped and listed below after import.</li>
+      <li>A software item whose computer is not found is saved as unattached (a warning, not an error).</li>
+      <li>A component whose parent computer is not found is imported as a spare (not an error).</li>
     </ul>
 
     <%# multipart: true is required for file uploads %>
@@ -74,106 +100,155 @@
     <% end %>
   </div>
 
-  <%# ── CSV format reference ────────────────────────────────────────────── %>
+  <%# ════════════════════════════════════════════════════════════════════════ %>
+  <%# CSV FORMAT REFERENCE                                                     %>
+  <%# ════════════════════════════════════════════════════════════════════════ %>
   <div class="bg-white border border-stone-200 rounded p-6 mb-6">
     <h2 class="text-lg font-semibold mb-3">CSV Format</h2>
     <p class="text-sm text-stone-600 mb-4">
-      Each row represents either one computer, one peripheral, or one component,
-      indicated by the <code class="font-mono bg-stone-100 px-1 rounded">record_type</code> column.
-      <br>All columns for computers apply for peripherals as well.
-      <br>Blank cells are allowed for optional fields.
+      The CSV uses a <strong>per-section format</strong>. Each section starts with a sentinel
+      line (<code class="font-mono bg-stone-100 px-1 rounded">! --- section-name ---</code>)
+      followed by a column-declaration row, then data rows for that section.
+      Empty sections are omitted. Blank cells are allowed for optional columns.
     </p>
 
-    <%# Column reference table %>
-    <div class="overflow-x-auto mb-4">
+    <%# ── Computers / Peripherals ── %>
+    <h3 class="text-sm font-semibold text-stone-700 mt-4 mb-1">Computers &amp; Peripherals</h3>
+    <p class="text-sm text-stone-600 mb-2">
+      Section sentinels: <code class="font-mono bg-stone-100 px-1 rounded">! --- computers ---</code>
+      and <code class="font-mono bg-stone-100 px-1 rounded">! --- peripherals ---</code>.
+      Both sections use the same columns.
+    </p>
+    <div class="overflow-x-auto mb-3">
       <table class="min-w-full text-xs">
         <thead class="bg-stone-50">
           <tr>
             <th class="px-3 py-2 text-left font-medium text-stone-500 uppercase tracking-wider">Column</th>
-            <th class="px-3 py-2 text-left font-medium text-stone-500 uppercase tracking-wider">Computer row</th>
-            <th class="px-3 py-2 text-left font-medium text-stone-500 uppercase tracking-wider">Component row</th>
+            <th class="px-3 py-2 text-left font-medium text-stone-500 uppercase tracking-wider">Notes</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-stone-100 text-stone-700">
-          <tr class="bg-white">
-            <td class="px-3 py-2 font-mono">record_type</td>
-            <%# "appliance" is intentionally listed — OwnerImportService v1.5 accepts it %>
-            <%# as a legacy alias for "peripheral" so old exports can still be re-imported. %>
-            <td class="px-3 py-2"><span class="font-medium">Required.</span> Value: <code class="font-mono bg-stone-100 px-1 rounded">computer</code>, <code class="font-mono bg-stone-100 px-1 rounded">appliance</code>, or <code class="font-mono bg-stone-100 px-1 rounded">peripheral</code></td>
-            <td class="px-3 py-2"><span class="font-medium">Required.</span> Value: <code class="font-mono bg-stone-100 px-1 rounded">component</code></td>
-          </tr>
-          <tr class="bg-stone-50">
-            <td class="px-3 py-2 font-mono">computer_model</td>
-            <td class="px-3 py-2"><span class="font-medium">Required.</span> Must match an existing computer/peripheral model.</td>
-            <td class="px-3 py-2 text-stone-400">Leave blank.</td>
-          </tr>
-          <tr class="bg-white">
-            <td class="px-3 py-2 font-mono">computer_order_number</td>
-            <td class="px-3 py-2">Optional. Max 20 characters.</td>
-            <td class="px-3 py-2 text-stone-400">Leave blank.</td>
-          </tr>
-          <tr class="bg-stone-50">
-            <td class="px-3 py-2 font-mono">computer_serial_number</td>
-            <td class="px-3 py-2"><span class="font-medium">Required.</span> Max 20 characters.</td>
-            <td class="px-3 py-2">Optional. Serial of the <em>parent computer/peripheral</em> to attach this component to. Leave blank for spare components.</td>
-          </tr>
-          <tr class="bg-white">
-            <td class="px-3 py-2 font-mono">computer_condition</td>
-            <td class="px-3 py-2">Optional. Must match an existing condition.</td>
-            <td class="px-3 py-2 text-stone-400">Leave blank.</td>
-          </tr>
-          <tr class="bg-stone-50">
-            <td class="px-3 py-2 font-mono">computer_run_status</td>
-            <td class="px-3 py-2">Optional. Must match an existing run status.</td>
-            <td class="px-3 py-2 text-stone-400">Leave blank.</td>
-          </tr>
-          <tr class="bg-white">
-            <td class="px-3 py-2 font-mono">computer_history</td>
-            <td class="px-3 py-2">Optional. Free text.</td>
-            <td class="px-3 py-2 text-stone-400">Leave blank.</td>
-          </tr>
-          <tr class="bg-stone-50">
-            <td class="px-3 py-2 font-mono">component_type</td>
-            <td class="px-3 py-2 text-stone-400">Leave blank.</td>
-            <td class="px-3 py-2"><span class="font-medium">Required.</span> Must match an existing component type.</td>
-          </tr>
-          <tr class="bg-white">
-            <td class="px-3 py-2 font-mono">component_order_number</td>
-            <td class="px-3 py-2 text-stone-400">Leave blank.</td>
-            <td class="px-3 py-2">Optional. Max 20 characters.</td>
-          </tr>
-          <tr class="bg-stone-50">
-            <td class="px-3 py-2 font-mono">component_serial_number</td>
-            <td class="px-3 py-2 text-stone-400">Leave blank.</td>
-            <td class="px-3 py-2">Optional. Max 20 characters.</td>
-          </tr>
-          <tr class="bg-white">
-            <td class="px-3 py-2 font-mono">component_condition</td>
-            <td class="px-3 py-2 text-stone-400">Leave blank.</td>
-            <td class="px-3 py-2">Optional. Must match an existing component condition.</td>
-          </tr>
-          <tr class="bg-stone-50">
-            <td class="px-3 py-2 font-mono">component_description</td>
-            <td class="px-3 py-2 text-stone-400">Leave blank.</td>
-            <td class="px-3 py-2">Optional. Free text.</td>
-          </tr>
+          <tr class="bg-white"><td class="px-3 py-2 font-mono">record_type</td><td class="px-3 py-2"><span class="font-medium">Required.</span> <code class="font-mono bg-stone-100 px-1 rounded">computer</code> or <code class="font-mono bg-stone-100 px-1 rounded">peripheral</code>.</td></tr>
+          <tr class="bg-stone-50"><td class="px-3 py-2 font-mono">model</td><td class="px-3 py-2"><span class="font-medium">Required.</span> Must match an existing computer or peripheral model.</td></tr>
+          <tr class="bg-white"><td class="px-3 py-2 font-mono">order_number</td><td class="px-3 py-2">Optional. Max 20 characters.</td></tr>
+          <tr class="bg-stone-50"><td class="px-3 py-2 font-mono">serial_number</td><td class="px-3 py-2"><span class="font-medium">Required.</span> Max 20 characters. Used to detect duplicates.</td></tr>
+          <tr class="bg-white"><td class="px-3 py-2 font-mono">condition</td><td class="px-3 py-2">Optional. Must match an existing condition.</td></tr>
+          <tr class="bg-stone-50"><td class="px-3 py-2 font-mono">run_status</td><td class="px-3 py-2">Optional. Must match an existing run status.</td></tr>
+          <tr class="bg-white"><td class="px-3 py-2 font-mono">history</td><td class="px-3 py-2">Optional. Free text.</td></tr>
+          <tr class="bg-stone-50"><td class="px-3 py-2 font-mono">barter_status</td><td class="px-3 py-2">Optional. <code class="font-mono bg-stone-100 px-1 rounded">no_barter</code>, <code class="font-mono bg-stone-100 px-1 rounded">offered</code>, or <code class="font-mono bg-stone-100 px-1 rounded">wanted</code>. Defaults to <code class="font-mono bg-stone-100 px-1 rounded">no_barter</code>.</td></tr>
         </tbody>
       </table>
     </div>
 
-    <%# Example — matches the column order exactly so the user can use it as a template %>
-    <%# The "appliance" row is intentional — it demonstrates the legacy import alias %>
-    <%# (OwnerImportService v1.5 maps appliance → peripheral silently on import). %>
-    <h3 class="text-sm font-semibold text-stone-700 mb-2">Example</h3>
-    <pre class="text-xs bg-stone-50 border border-stone-200 rounded p-3 overflow-x-auto text-stone-700">record_type,computer_model,computer_order_number,computer_serial_number,computer_condition,computer_run_status,computer_history,component_type,component_order_number,component_serial_number,component_condition,component_description
-computer,PDP-11/70,AA-1234567-A,12345678,Completely original,Running,"Acquired 1978",,,,, 
-appliance,HSC50,HS-5001,HSC-001,Completely original,Running,"Storage controller",,,,, 
-peripheral,DEC VT278,,,,,,,,,, 
-component,,,12345678,,,, Memory Board,MB-001,,Working,"256KB core memory"
-component,,,,,,, Memory Board,,,,Spare 256KB board</pre>
+    <%# ── Components ── %>
+    <h3 class="text-sm font-semibold text-stone-700 mt-4 mb-1">Components</h3>
+    <p class="text-sm text-stone-600 mb-2">
+      Section sentinel: <code class="font-mono bg-stone-100 px-1 rounded">! --- components ---</code>.
+    </p>
+    <div class="overflow-x-auto mb-3">
+      <table class="min-w-full text-xs">
+        <thead class="bg-stone-50">
+          <tr>
+            <th class="px-3 py-2 text-left font-medium text-stone-500 uppercase tracking-wider">Column</th>
+            <th class="px-3 py-2 text-left font-medium text-stone-500 uppercase tracking-wider">Notes</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-stone-100 text-stone-700">
+          <tr class="bg-white"><td class="px-3 py-2 font-mono">record_type</td><td class="px-3 py-2"><span class="font-medium">Required.</span> Value: <code class="font-mono bg-stone-100 px-1 rounded">component</code>.</td></tr>
+          <tr class="bg-stone-50"><td class="px-3 py-2 font-mono">installed_on_serial</td><td class="px-3 py-2">Optional. Serial of the parent computer/peripheral. Leave blank for spares.</td></tr>
+          <tr class="bg-white"><td class="px-3 py-2 font-mono">type</td><td class="px-3 py-2"><span class="font-medium">Required.</span> Must match an existing component type.</td></tr>
+          <tr class="bg-stone-50"><td class="px-3 py-2 font-mono">category</td><td class="px-3 py-2">Optional. <code class="font-mono bg-stone-100 px-1 rounded">integral</code> or <code class="font-mono bg-stone-100 px-1 rounded">peripheral</code>. Defaults to <code class="font-mono bg-stone-100 px-1 rounded">integral</code>.</td></tr>
+          <tr class="bg-white"><td class="px-3 py-2 font-mono">order_number</td><td class="px-3 py-2">Optional. Max 20 characters.</td></tr>
+          <tr class="bg-stone-50"><td class="px-3 py-2 font-mono">serial_number</td><td class="px-3 py-2">Optional. Max 20 characters. Used to detect duplicates.</td></tr>
+          <tr class="bg-white"><td class="px-3 py-2 font-mono">condition</td><td class="px-3 py-2">Optional. Must match an existing component condition.</td></tr>
+          <tr class="bg-stone-50"><td class="px-3 py-2 font-mono">description</td><td class="px-3 py-2">Optional. Free text.</td></tr>
+          <tr class="bg-white"><td class="px-3 py-2 font-mono">barter_status</td><td class="px-3 py-2">Optional. Defaults to <code class="font-mono bg-stone-100 px-1 rounded">no_barter</code>.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <%# ── Connections ── %>
+    <h3 class="text-sm font-semibold text-stone-700 mt-4 mb-1">Connections</h3>
+    <p class="text-sm text-stone-600 mb-2">
+      Section sentinel: <code class="font-mono bg-stone-100 px-1 rounded">! --- connections ---</code>.
+      Each group row is followed immediately by its member rows.
+    </p>
+    <div class="overflow-x-auto mb-3">
+      <table class="min-w-full text-xs">
+        <thead class="bg-stone-50">
+          <tr>
+            <th class="px-3 py-2 text-left font-medium text-stone-500 uppercase tracking-wider">Column</th>
+            <th class="px-3 py-2 text-left font-medium text-stone-500 uppercase tracking-wider">Group row</th>
+            <th class="px-3 py-2 text-left font-medium text-stone-500 uppercase tracking-wider">Member row</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-stone-100 text-stone-700">
+          <tr class="bg-white"><td class="px-3 py-2 font-mono">record_type</td><td class="px-3 py-2"><code class="font-mono bg-stone-100 px-1 rounded">connection_group</code></td><td class="px-3 py-2"><code class="font-mono bg-stone-100 px-1 rounded">connection_member</code></td></tr>
+          <tr class="bg-stone-50"><td class="px-3 py-2 font-mono">connection_type_or_model</td><td class="px-3 py-2">Optional. Connection type name.</td><td class="px-3 py-2">Optional. Computer model name (helps disambiguate serials).</td></tr>
+          <tr class="bg-white"><td class="px-3 py-2 font-mono">label</td><td class="px-3 py-2">Optional. Group label.</td><td class="px-3 py-2">Leave blank.</td></tr>
+          <tr class="bg-stone-50"><td class="px-3 py-2 font-mono">serial_number</td><td class="px-3 py-2">Leave blank.</td><td class="px-3 py-2"><span class="font-medium">Required.</span> Serial of the computer/peripheral.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <%# ── Software ── %>
+    <h3 class="text-sm font-semibold text-stone-700 mt-4 mb-1">Software</h3>
+    <p class="text-sm text-stone-600 mb-2">
+      Section sentinel: <code class="font-mono bg-stone-100 px-1 rounded">! --- software ---</code>.
+    </p>
+    <div class="overflow-x-auto mb-3">
+      <table class="min-w-full text-xs">
+        <thead class="bg-stone-50">
+          <tr>
+            <th class="px-3 py-2 text-left font-medium text-stone-500 uppercase tracking-wider">Column</th>
+            <th class="px-3 py-2 text-left font-medium text-stone-500 uppercase tracking-wider">Notes</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-stone-100 text-stone-700">
+          <tr class="bg-white"><td class="px-3 py-2 font-mono">record_type</td><td class="px-3 py-2"><span class="font-medium">Required.</span> Value: <code class="font-mono bg-stone-100 px-1 rounded">software_item</code>.</td></tr>
+          <tr class="bg-stone-50"><td class="px-3 py-2 font-mono">installed_on_model</td><td class="px-3 py-2">Optional. Model name of the computer it is installed on.</td></tr>
+          <tr class="bg-white"><td class="px-3 py-2 font-mono">installed_on_serial</td><td class="px-3 py-2">Optional. Serial of the computer it is installed on. Leave blank for unattached software.</td></tr>
+          <tr class="bg-stone-50"><td class="px-3 py-2 font-mono">name</td><td class="px-3 py-2"><span class="font-medium">Required.</span> Must match an existing software name.</td></tr>
+          <tr class="bg-white"><td class="px-3 py-2 font-mono">version</td><td class="px-3 py-2">Optional. Max 20 characters.</td></tr>
+          <tr class="bg-stone-50"><td class="px-3 py-2 font-mono">condition</td><td class="px-3 py-2">Optional. Must match an existing software condition.</td></tr>
+          <tr class="bg-white"><td class="px-3 py-2 font-mono">description</td><td class="px-3 py-2">Optional. Max 100 characters.</td></tr>
+          <tr class="bg-stone-50"><td class="px-3 py-2 font-mono">history</td><td class="px-3 py-2">Optional. Max 200 characters.</td></tr>
+          <tr class="bg-white"><td class="px-3 py-2 font-mono">barter_status</td><td class="px-3 py-2">Optional. Defaults to <code class="font-mono bg-stone-100 px-1 rounded">no_barter</code>.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <%# ── Example CSV ── %>
+    <h3 class="text-sm font-semibold text-stone-700 mt-4 mb-2">Example</h3>
+    <pre class="text-xs bg-stone-50 border border-stone-200 rounded p-3 overflow-x-auto text-stone-700"># Owner: alice — exported 2026-04-06
+! --- computers ---
+record_type,model,order_number,serial_number,condition,run_status,history,barter_status
+computer,PDP-11/70,ORD-1985-001,SN12345,Completely original,Working,Lab system,no_barter
+! --- peripherals ---
+record_type,model,order_number,serial_number,condition,run_status,history,barter_status
+peripheral,DEC VT278,,,VT-001,,,no_barter
+! --- components ---
+record_type,installed_on_serial,type,category,order_number,serial_number,condition,description,barter_status
+component,SN12345,Memory Board,integral,MB-001,MB-SN-01,Working,256KB core memory,no_barter
+component,,Memory Board,integral,,,,,no_barter
+! --- connections ---
+record_type,connection_type_or_model,label,serial_number
+connection_group,RS-232 Serial,Lab link,
+connection_member,PDP-11/70,,SN12345
+connection_member,VAX-11/780,,VAX-001
+! --- software ---
+record_type,installed_on_model,installed_on_serial,name,version,condition,description,history,barter_status
+software_item,PDP-11/70,SN12345,TOPS-20,V7.0,Complete,,Production system,no_barter
+software_item,,,RT-11,V5.3,Complete,Unattached copy,,no_barter</pre>
     <p class="mt-2 text-xs text-stone-500">
-      The last row (spare component) has no <code class="font-mono">computer_serial_number</code> —
-      it will be imported unattached.
+      The spare component row has no <code class="font-mono">installed_on_serial</code> — imported unattached.
+      The second software row has no <code class="font-mono">installed_on_serial</code> — imported as unattached software.
+    </p>
+    <p class="mt-2 text-xs text-stone-500">
+      <strong>Backward compatibility:</strong> CSVs exported before v1.7 use a single global header row
+      instead of per-section sentinels. The importer accepts both formats.
+      The legacy record_type value <code class="font-mono">appliance</code> is also accepted
+      and treated as <code class="font-mono">peripheral</code>.
     </p>
   </div>
 
