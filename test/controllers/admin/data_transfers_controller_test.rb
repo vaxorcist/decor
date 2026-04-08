@@ -1,14 +1,23 @@
 # decor/test/controllers/admin/data_transfers_controller_test.rb
-# version 1.2
+# version 1.3
+# v1.3 (Session 50): Removed OwnerExportService::CSV_HEADERS references.
+#   Two tests updated:
+#
+#   1. "export owner_collection for specific owner returns CSV with correct headers"
+#      Was: CSV.parse(response.body, headers: true) + assert csv.headers == CSV_HEADERS
+#      The new export (v1.7+) has no global header row — first row is a comment.
+#      CSV.parse with headers: true would treat the comment as the header, making
+#      the assertion meaningless and raising NameError on the missing constant.
+#      Fix: renamed to "...uses per-section CSV format"; checks that the computers
+#      section sentinel and alice's serial number are present in the response body.
+#
+#   2. "import owner_collection for specific owner creates records"
+#      Was: CSV_HEADERS as global header + 12-column data row (old format).
+#      Fix: switched to per-section format — sentinel + COMPUTER_SECTION_HEADERS
+#      column-declaration row + 8-column data row. OwnerImportService v1.11
+#      supports both old and new formats.
+#
 # v1.2 (Session 41): Appliances → Peripherals merger Phase 4.
-#   Removed "export appliance_models contains only device_type 1 records" test
-#     — admin_data_transfers no longer handles data_type: "appliance_models".
-#   Removed "import appliance_models creates record with device_type appliance" test
-#     — device_type: :appliance no longer exists.
-#   Fixed "export peripheral_models contains only device_type 2 records":
-#     hsc50 (formerly device_type: 1 appliance) is now device_type: 2 (peripheral),
-#     so it now correctly appears in the peripheral export. Removed the assertion
-#     that said HSC50 must not appear; replaced with assert_includes for HSC50.
 # v1.1 (Session 29): Added peripheral_models export and import tests.
 # v1.0 (Session 24): New test file.
 
@@ -170,14 +179,17 @@ class Admin::DataTransfersControllerTest < ActionDispatch::IntegrationTest
 
   # ── export — owner_collection (specific owner) ────────────────────────────
 
-  test "export owner_collection for specific owner returns CSV with correct headers" do
+  test "export owner_collection for specific owner uses per-section CSV format" do
+    # OwnerExportService v1.7+ writes per-section sentinels — no global header row.
+    # Alice has computers (SN12345, VAX-780-001 from fixtures) so the computers
+    # section sentinel and her serial numbers must be present in the response body.
     login_as(@alice)
     get admin_export_data_transfer_path,
         params: { data_type: "owner_collection", owner_id: @alice.id }
 
     assert_response :ok
-    csv = CSV.parse(response.body, headers: true)
-    assert_equal OwnerExportService::CSV_HEADERS, csv.headers
+    assert_includes response.body, "! --- computers ---"
+    assert_includes response.body, "SN12345"
   end
 
   test "export owner_collection filename contains owner user_name and date" do
@@ -346,10 +358,13 @@ class Admin::DataTransfersControllerTest < ActionDispatch::IntegrationTest
   test "import owner_collection for specific owner creates records" do
     login_as(@alice)
 
-    csv_content = CSV.generate(headers: true, force_quotes: true) do |csv|
-      csv << OwnerExportService::CSV_HEADERS
-      csv << ["computer", "PDP-11/70", nil, "ADMIN-IMPORT-SN-01",
-              nil, nil, nil, nil, nil, nil, nil, nil]
+    # Per-section format (v1.7+): sentinel + column-declaration row + data rows.
+    # COMPUTER_SECTION_HEADERS: record_type, model, order_number, serial_number,
+    #   condition, run_status, history, barter_status (8 columns).
+    csv_content = CSV.generate(force_quotes: true) do |csv|
+      csv << ["! --- computers ---"]
+      csv << OwnerExportService::COMPUTER_SECTION_HEADERS
+      csv << ["computer", "PDP-11/70", nil, "ADMIN-IMPORT-SN-01", nil, nil, nil, nil]
     end
 
     assert_difference "Computer.count", 1 do
