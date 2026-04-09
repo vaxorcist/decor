@@ -1,11 +1,15 @@
-<%# /home/ulli/gunkies.org/GitHub/case_001 Add the 11-780 picture/decor/app/views/home/index.html.erb - v4.3 %>
+<%# decor/app/views/home/index.html.erb - v4.4 %>
+<%# Session 51: Added "Version 0.9" line below the h1 heading. %>
+<%# Added Statistics section (heading + 3 data lines) below the introductory paragraph. %>
+<%# Version / Statistics labels: clamp(1.1rem, 1.7vw, 1.3rem) — one step above intro text. %>
+<%# Stat data lines: same clamp(0.95rem, 1.4vw, 1.15rem) as intro paragraph. %>
 <%# Home page index view displaying welcome message and rotating daily image %>
 <%# Resolution-independent responsive design using fluid spacing and dynamic calculations %>
 <%# Text on left (~38%), image on right (~62%) - scales with viewport %>
 <%# Aspect ratio always preserved %>
 <%# Works across multiple resolutions: 1600x900, 1920x1080, 1440x810, 1368x768 %>
 <%# Optimized for images with aspect ratios: 0.62 (portrait), 1.13 (square), 1.71 (landscape) %>
-<%# Images rotate daily: automatically detects 1.gif through 100.gif in /home/ulli/gunkies.org/GitHub/case_001 Add the 11-780 picture/decor/app/assets/images/ %>
+<%# Images rotate daily: automatically detects 1.gif through 100.gif in decor/app/assets/images/ %>
 
 <%
   # Automatically detect how many sequential numbered images exist (1.gif, 2.gif, etc.)
@@ -58,7 +62,7 @@
     <%# gap: clamp(0.75rem, 1.5vw, 2rem) - reduced fluid spacing: min 12px, scales, max 32px %>
     <%# w-full ensures container fills available width %>
     
-    <%# Left column: Welcome text and description %>
+    <%# Left column: Welcome text, version, description, and statistics %>
     <%# Increased max width to 600px to prevent logo wrap %>
     <div class="flex flex-col text-xl flex-shrink-0" style="width: clamp(320px, 38%, 600px); gap: clamp(1rem, 3vh, 2rem);">
       <%# width: clamp(320px, 38%, 600px) - gives enough room for heading %>
@@ -77,11 +81,34 @@
         <%# vertical-align: middle centers logo with text baseline %>
         <span class="sr-only">DECOR</span>
       </h1>
+
+      <%# Version number — one step larger than the introductory paragraph text %>
+      <%# clamp(1.1rem, 1.7vw, 1.3rem) sits between the intro text and the h1 %>
+      <p style="font-size: clamp(1.1rem, 1.7vw, 1.3rem); line-height: 1.4;">
+        Version 0.9
+      </p>
+
       <p style="font-size: clamp(0.95rem, 1.4vw, 1.15rem); line-height: 1.6;">
         <%# font-size: clamp(0.95rem, 1.4vw, 1.15rem) - maintains proportion %>
         <%# line-height: 1.6 provides good readability %>
         DECOR is a community-driven registry of Digital Equipment Corporation (DEC) computers and their owners. Explore the rich history of DEC by browsing through our extensive database of vintage machines and their components.
       </p>
+
+      <%# Statistics section — appears below the introductory paragraph %>
+      <%# The heading uses the same font size as the Version line (one step above data lines). %>
+      <%# The three data lines use the same font size as the introductory paragraph. %>
+      <div>
+        <%# "Statistics" heading: clamp(1.1rem, 1.7vw, 1.3rem) — matches Version line %>
+        <p style="font-size: clamp(1.1rem, 1.7vw, 1.3rem); line-height: 1.6;">
+          Statistics
+        </p>
+        <%# Data lines: clamp(0.95rem, 1.4vw, 1.15rem) — matches introductory paragraph %>
+        <p style="font-size: clamp(0.95rem, 1.4vw, 1.15rem); line-height: 1.6;">
+          Owners: <%= @stat_owners %><br>
+          Computers total: <%= @stat_computers_total %><br>
+          Computer models: <%= @stat_computer_models %>
+        </p>
+      </div>
     </div>
     
     <%# Right column: Daily rotating image in container with narrow grey border %>
@@ -106,7 +133,7 @@
     </div>
     <%# Image selection logic: %>
     <%# - Automatically detects sequential numbered images (1.gif, 2.gif, ..., 100.gif) %>
-    <%# - Counts only images that actually exist in /home/ulli/gunkies.org/GitHub/case_001 Add the 11-780 picture/decor/app/assets/images/ %>
+    <%# - Counts only images that actually exist in decor/app/assets/images/ %>
     <%# - Images must be numbered sequentially starting from 1 %>
     <%# - Calculates days since epoch for consistency %>
     <%# - Uses modulo to cycle through available images %>
