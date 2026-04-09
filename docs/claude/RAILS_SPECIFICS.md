@@ -1,5 +1,12 @@
 # RAILS_SPECIFICS.md
-# version 2.6
+# version 2.7
+# Session 50: Added "Response Body Assertions — Use assert_body_includes" rule.
+#   Root cause: assert_match / refute_match print the entire response.body on
+#   failure, dumping 5,000–20,000 chars of HTML into the test output.
+#   Fix: ResponseHelpers (test/support/response_helpers.rb v1.0) provides
+#   assert_body_includes / refute_body_includes which truncate to 300 chars.
+#   Rule: always use the project helpers in integration tests; never the default
+#   assert_match(text, response.body) form.
 # Session 46: Added "before_action :set_resource — Always Scope with only:" section.
 #   Root cause: software_items_controller v1.0 (Session 45, read-only) shipped with
 #   an unscoped before_action :set_software_item. Harmless when only :show existed,
@@ -498,6 +505,40 @@ upload = Rack::Test::UploadedFile.new(tempfile.path, "text/csv", false,
                                        original_filename: "file.csv")
 post path, params: { file: upload }
 ```
+
+---
+
+## Response Body Assertions — Use assert_body_includes (MANDATORY)
+
+**In integration tests, NEVER use `assert_match(text, response.body)` or
+`refute_match(text, response.body)`.**
+
+The default `assert_match` / `refute_match` helpers print the entire "actual"
+value on failure. For controller tests that check `response.body`, this dumps
+the full rendered HTML (often 5,000–20,000 characters) making the failure
+message impossible to read.
+
+**Use the project helpers instead:**
+
+```ruby
+# WRONG — dumps the full HTML page on failure
+assert_match "SN12345", response.body
+refute_match "PDP8-7891", response.body
+
+# CORRECT — truncates to 300 chars on failure
+assert_body_includes "SN12345"
+refute_body_includes "PDP8-7891"
+```
+
+`assert_body_includes` and `refute_body_includes` are defined in
+`test/support/response_helpers.rb` and included in
+`ActionDispatch::IntegrationTest` via `test_helper.rb`.
+
+**Why this rule exists (Session 50, April 2026):**
+Filter tests for the software index produced 7 failures. Each failure message
+contained the full rendered HTML of the page — nav, sidebar with all dropdown
+options, table rows, footer — making it impossible to see what actually went
+wrong without scrolling through thousands of lines of markup.
 
 ---
 

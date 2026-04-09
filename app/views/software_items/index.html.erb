@@ -1,8 +1,14 @@
-<%# decor/app/views/software_items/index.html.erb - version 1.0 %>
+<%# decor/app/views/software_items/index.html.erb - version 1.1 %>
+<%# v1.1 (Session 50): Added filter sidebar. %>
+<%#   - Wrapped content in a grid grid-cols-4 layout: _filters partial takes %>
+<%#     col-span-1 (leftmost column); table takes col-span-3. %>
+<%#   - Mirrors the layout pattern used on the computers and components index pages. %>
+<%#   - No changes to the table structure, row partial, or load-more logic. %>
+<%# %>
 <%# v1.0 (Session 48): Software feature Session F — public software index page. %>
 <%# %>
 <%# Publicly accessible. Lists all software items across all owners, paginated. %>
-<%# Ordered by software name ASC, then owner user_name ASC (set in controller). %>
+<%# Ordered and filtered by the controller (software_items_controller.rb v1.3). %>
 <%# %>
 <%# Columns: Owner | Software | Version | Condition | Installed On | Barter (logged_in only) %>
 <%# Barter column visible to logged-in members only — consistent with computers index. %>
@@ -11,41 +17,49 @@
 <%# @page_title     — "Software" %>
 <%# @turbo_tbody_id — "software_items" (tbody id for turbo_stream append) %>
 <%# @load_more_id   — "load_more_software_items" (div id for turbo_stream replace) %>
-<%# @index_path     — software_items_path (path for refreshed load_more partial) %>
+<%# @index_path     — software_items_path with current filter params preserved %>
 
 <div class="px-4">
   <h1 class="text-2xl font-semibold mb-4 sticky top-0 bg-white z-10 py-2"><%= @page_title %></h1>
 
-  <% if @page.records.any? %>
-    <div class="bg-white border border-stone-200 rounded overflow-auto" style="max-height: calc(100vh - 8rem);">
-      <table class="min-w-full divide-y divide-stone-200">
-        <thead class="bg-stone-50 sticky top-0 z-10">
-          <tr>
-            <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Owner</th>
-            <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Software</th>
-            <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Version</th>
-            <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Condition</th>
-            <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Installed On</th>
-            <%# Barter header — visible to logged-in members only. %>
-            <%# Matching <td> in _software_item.html.erb uses the same guard. %>
-            <% if logged_in? %>
-              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Barter</th>
-            <% end %>
-          </tr>
-        </thead>
-        <%# tbody id is set from @turbo_tbody_id so index.turbo_stream.erb can append to it. %>
-        <tbody id="<%= @turbo_tbody_id %>" class="bg-white divide-y divide-stone-200 text-sm">
-          <% @page.records.each do |item| %>
-            <%= render "software_item", software_item: item %>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-  <% else %>
-    <%= empty_state("No software registered yet.") %>
-  <% end %>
+  <div class="grid grid-cols-4 gap-4 items-start">
+    <%# Filter sidebar — col-span-1 is set inside the partial's form class. %>
+    <%= render "filters" %>
 
-  <%# Load-more partial — renders a "Load more" button when more pages exist. %>
-  <%# Replaced via turbo_stream when the next page loads. %>
-  <%= render "shared/load_more", id: @load_more_id, page: @page, path: @index_path %>
+    <%# Table — takes the remaining 3 columns. %>
+    <div class="col-span-3">
+      <% if @page.records.any? %>
+        <div class="bg-white border border-stone-200 rounded overflow-auto" style="max-height: calc(100vh - 8rem);">
+          <table class="min-w-full divide-y divide-stone-200">
+            <thead class="bg-stone-50 sticky top-0 z-10">
+              <tr>
+                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Owner</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Software</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Version</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Condition</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Installed On</th>
+                <%# Barter header — visible to logged-in members only. %>
+                <%# Matching <td> in _software_item.html.erb uses the same guard. %>
+                <% if logged_in? %>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Barter</th>
+                <% end %>
+              </tr>
+            </thead>
+            <%# tbody id is set from @turbo_tbody_id so index.turbo_stream.erb can append to it. %>
+            <tbody id="<%= @turbo_tbody_id %>" class="bg-white divide-y divide-stone-200 text-sm">
+              <% @page.records.each do |item| %>
+                <%= render "software_item", software_item: item %>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <%= empty_state("No software registered yet.") %>
+      <% end %>
+
+      <%# Load-more partial — renders a "Load more" button when more pages exist. %>
+      <%# @index_path includes current filter/sort params so pagination preserves filters. %>
+      <%= render "shared/load_more", id: @load_more_id, page: @page, path: @index_path %>
+    </div>
+  </div>
 </div>
