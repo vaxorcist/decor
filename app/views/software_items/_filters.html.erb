@@ -1,0 +1,66 @@
+<%# decor/app/views/software_items/_filters.html.erb - version 1.0 %>
+<%# v1.0 (Session 50): New file — filter sidebar for the public /software_items index. %>
+<%# %>
+<%# Follows the pattern of components/_filters.html.erb (v1.1). %>
+<%# Helper methods are defined in SoftwareItemsHelper (v1.0). %>
+<%# %>
+<%# Fields: %>
+<%#   Search       — LIKE across software name, version, description. %>
+<%#   Sort         — 6 options; default: Software (A-Z) and Version (A-Z). %>
+<%#   Software     — filter by software name (distinct names with items, A-Z). %>
+<%#   Owner        — filter by owner (distinct owners with items, A-Z). %>
+<%#   Trade        — barter_status filter; visible to logged-in members only. %>
+<%#                  Default for logged-in users: "No Trade + Offered". %>
+<%# %>
+<%# The form class col-span-1 self-start positions this partial in the first %>
+<%# column of the parent grid grid-cols-4 in index.html.erb. %>
+
+<%= form_with url: software_items_path, method: :get, local: true, class: "col-span-1 self-start flex flex-col gap-4 mb-4 p-4 bg-stone-100" do |form| %>
+  <div class="-mb-2 font-medium">Filters</div>
+
+  <%# Search ---------------------------------------------------------------- %>
+  <div>
+    <%= form.label :query, "Search", class: "text-sm text-stone-600 font-medium" %>
+    <%= form.search_field :query, value: params[:query], placeholder: "Search...", class: field_classes %>
+    <p class="text-xs text-stone-500 mt-1">Use % for any characters, _ for single character. Case-insensitive.</p>
+  </div>
+
+  <%# Sort ------------------------------------------------------------------ %>
+  <div class="flex flex-col">
+    <%= form.label :sort, "Sort", class: "text-sm text-stone-600 font-medium" %>
+    <%= form.select :sort, software_item_sort_options, { selected: software_item_sort_selected }, { class: field_classes } %>
+  </div>
+
+  <%# Software name filter -------------------------------------------------- %>
+  <div class="flex flex-col">
+    <%= form.label :software_name_id, "Software", class: "text-sm text-stone-600 font-medium" %>
+    <%= form.select :software_name_id, software_item_filter_software_name_options,
+          { selected: software_item_filter_software_name_selected, include_blank: "Any" },
+          { class: field_classes } %>
+  </div>
+
+  <%# Owner filter ---------------------------------------------------------- %>
+  <div class="flex flex-col">
+    <%= form.label :owner_id, "Owner", class: "text-sm text-stone-600 font-medium" %>
+    <%= form.select :owner_id, software_item_filter_owner_options,
+          { selected: software_item_filter_owner_selected, include_blank: "Any" },
+          { class: field_classes } %>
+  </div>
+
+  <%# Trade (barter_status) filter — visible to logged-in members only. %>
+  <%# Non-logged-in visitors see no barter data anywhere; this block must be %>
+  <%# completely absent (not just greyed out) for unauthenticated requests. %>
+  <% if logged_in? %>
+    <div class="flex flex-col">
+      <%= form.label :barter_status, "Trade", class: "text-sm text-stone-600 font-medium" %>
+      <%= form.select :barter_status, software_item_filter_barter_status_options,
+            { selected: software_item_filter_barter_status_selected },
+            { class: field_classes } %>
+    </div>
+  <% end %>
+
+  <div class="flex justify-end gap-2">
+    <%= link_to "Reset", software_items_path, class: button_classes(style: :secondary) %>
+    <%= form.submit "Apply", class: button_classes(style: :secondary) %>
+  </div>
+<% end %>

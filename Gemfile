@@ -43,4 +43,5 @@ group :test do
   gem "capybara"
   gem "selenium-webdriver"
   gem "minitest", "~> 6.0"
+  gem "minitest-reporters"   # Compact progress bar output; replaces noisy per-test dots
 end
