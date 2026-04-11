@@ -1,4 +1,11 @@
-<%# decor/app/views/computers/_filters.html.erb - version 1.5 %>
+<%# decor/app/views/computers/_filters.html.erb - version 1.6 %>
+<%# v1.6 (Session 52): Removed "Type" filter (Computer / Peripheral selector). %>
+<%#   The Computers page always shows computers; the Peripherals page always %>
+<%#   shows peripherals. The filter was redundant after the Appliances → %>
+<%#   Peripherals merger (Session 41) left only one selectable type per page. %>
+<%#   Matching dead code removed: COMPUTER_DEVICE_TYPE_FILTER_OPTIONS, %>
+<%#   computer_filter_device_type_options/selected in computers_helper v1.7; %>
+<%#   params[:device_type] branch simplified in computers_controller v1.22. %>
 <%# v1.5 (Session 25): Fixed Type filter visibility condition. %>
 <%#   Was: unless @device_context == "appliance" %>
 <%#   Now: if @device_context == "computer" %>
@@ -26,17 +33,6 @@
     <%= form.label :sort, "Sort", class: "text-sm text-stone-600 font-medium" %>
     <%= form.select :sort, computer_sort_options, { selected: computer_sort_selected }, { class: field_classes } %>
   </div>
-
-  <%# Type filter — only meaningful on the Computers page, where the user can %>
-  <%# filter between Computer and Appliance types. On the Appliances and %>
-  <%# Peripherals pages device_type is locked by the controller; showing the %>
-  <%# selector would have no effect and would mislead the user. %>
-  <% if @device_context == "computer" %>
-    <div class="flex flex-col">
-      <%= form.label :device_type, "Type", class: "text-sm text-stone-600 font-medium" %>
-      <%= form.select :device_type, computer_filter_device_type_options, { selected: computer_filter_device_type_selected, include_blank: "Any" }, { class: field_classes } %>
-    </div>
-  <% end %>
 
   <div class="flex flex-col">
     <%= form.label :model, "Model", class: "text-sm text-stone-600 font-medium" %>
