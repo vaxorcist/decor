@@ -1,5 +1,10 @@
 # decor/app/controllers/components_controller.rb
-# version 1.7
+# version 1.8
+# v1.8 (Session 52): Removed :component_category from component_params.
+#   The Component Category field was removed from _form.html.erb v1.7.
+#   Keeping it in strong params would have silently permitted the value via
+#   crafted requests; removing it closes that gap.
+#
 # v1.7 (Session 21): Added barter_status filter to index.
 #   - Only applied when the user is logged in (logged_in? helper from authentication.rb).
 #   - Default for logged-in users: "0+1" (no_barter + offered).
@@ -139,7 +144,6 @@ class ComponentsController < ApplicationController
       :component_type_id,
       :computer_id,
       :component_condition_id,
-      :component_category, # enum — integral/peripheral; editable on form
       :serial_number,
       :order_number,
       :description,

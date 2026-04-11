@@ -2,6 +2,7 @@
 <%# Session 51: Added "Version 0.9" line below the h1 heading. %>
 <%# Added Statistics section (heading + 3 data lines) below the introductory paragraph. %>
 <%# Version / Statistics labels: clamp(1.1rem, 1.7vw, 1.3rem) — one step above intro text. %>
+<%# Statistics label: manually commented out %>
 <%# Stat data lines: same clamp(0.95rem, 1.4vw, 1.15rem) as intro paragraph. %>
 <%# Home page index view displaying welcome message and rotating daily image %>
 <%# Resolution-independent responsive design using fluid spacing and dynamic calculations %>
@@ -100,13 +101,13 @@
       <div>
         <%# "Statistics" heading: clamp(1.1rem, 1.7vw, 1.3rem) — matches Version line %>
         <p style="font-size: clamp(1.1rem, 1.7vw, 1.3rem); line-height: 1.6;">
-          Statistics
+          <%# Statistics %>
         </p>
         <%# Data lines: clamp(0.95rem, 1.4vw, 1.15rem) — matches introductory paragraph %>
         <p style="font-size: clamp(0.95rem, 1.4vw, 1.15rem); line-height: 1.6;">
-          Owners: <%= @stat_owners %><br>
-          Computers total: <%= @stat_computers_total %><br>
-          Computer models: <%= @stat_computer_models %>
+          - Owners: <%= @stat_owners %><br>
+          - Computers total: <%= @stat_computers_total %><br>
+          - Computer models: <%= @stat_computer_models %>
         </p>
       </div>
     </div>

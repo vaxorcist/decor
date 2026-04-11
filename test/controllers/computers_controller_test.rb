@@ -1,5 +1,14 @@
 # decor/test/controllers/computers_controller_test.rb
-# version 1.9
+# version 1.10
+# v1.10 (Session 52): Added two "Create and add another" redirect tests.
+#   Bug fix in computers_controller v1.21: new_computer_path was missing
+#   device_type:, so "Create and add another" always landed on /computers/new
+#   (Add computer) regardless of the original device_type.
+#   New tests:
+#     "create computer with add_another redirects to new_computer_path with device_type computer"
+#     "create peripheral with add_another redirects to new_computer_path with device_type peripheral"
+#   Both assert the exact redirect URL including the query param.
+#
 # v1.9 (Session 47): Software feature Session E.
 #   Added two show-action tests for the Software section:
 #     "show with software renders software name in software section"
@@ -107,6 +116,48 @@ class ComputersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "peripheral", created.device_type
     assert_redirected_to edit_computer_path(created)
     assert_equal "Peripheral was successfully created. You can now add components below.", flash[:notice]
+  end
+
+  test "create computer with add_another redirects to new_computer_path with device_type computer" do
+    # Regression test for the bug fixed in computers_controller v1.21.
+    # "Create and add another" must redirect to /computers/new?device_type=computer
+    # so the next form opens as "Add computer", not "Add peripheral".
+    # The add_another param is sent by the submit button in the new/edit form.
+    login_as owners(:one)
+    assert_difference "Computer.count", 1 do
+      post computers_path, params: {
+        add_another: "1",
+        computer: {
+          computer_model_id: computer_models(:pdp11_70).id,
+          serial_number:     "ADD-COMP-001",
+          device_type:       "computer"
+        }
+      }
+    end
+    # Must redirect to new_computer_path with device_type=computer — not bare new_computer_path.
+    assert_redirected_to new_computer_path(device_type: "computer")
+    assert_equal "Computer was successfully created. Add another!", flash[:notice]
+  end
+
+  test "create peripheral with add_another redirects to new_computer_path with device_type peripheral" do
+    # Regression test for the bug fixed in computers_controller v1.21.
+    # "Create and add another" on a peripheral must redirect to
+    # /computers/new?device_type=peripheral so the next form opens as
+    # "Add peripheral" — not "Add computer".
+    login_as owners(:one)
+    assert_difference "Computer.count", 1 do
+      post computers_path, params: {
+        add_another: "1",
+        computer: {
+          computer_model_id: computer_models(:pdp11_70).id,
+          serial_number:     "ADD-PERI-001",
+          device_type:       "peripheral"
+        }
+      }
+    end
+    # Must redirect to new_computer_path with device_type=peripheral.
+    assert_redirected_to new_computer_path(device_type: "peripheral")
+    assert_equal "Peripheral was successfully created. Add another!", flash[:notice]
   end
 
   # ---------------------------------------------------------------------------

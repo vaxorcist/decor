@@ -1,5 +1,13 @@
 # decor/app/helpers/computers_helper.rb
-# version 1.6
+# version 1.7
+# v1.7 (Session 52): Removed Type filter dead code.
+#   COMPUTER_DEVICE_TYPE_FILTER_OPTIONS — constant removed; no filter uses it.
+#   computer_filter_device_type_options  — method removed.
+#   computer_filter_device_type_selected — method removed.
+#   The Type filter (Computer / Peripheral selector) was removed from
+#   _filters.html.erb v1.6 because the Computers page always shows computers
+#   and the Peripherals page always shows peripherals — the selector became
+#   meaningless after the Appliances → Peripherals merger (Session 41).
 # v1.6 (Session 42): Replaced ["Appliance", "appliance"] with ["Peripheral", "peripheral"]
 #   in COMPUTER_DEVICE_TYPE_FILTER_OPTIONS. The appliance enum value (device_type=1)
 #   was removed in Session 41; the filter option was dead (would silently return
@@ -23,13 +31,6 @@ module ComputersHelper
     model_asc: "Model (A-Z)",
     model_desc: "Model (Z-A)"
   }.freeze
-
-  # Device type options used by the index filter sidebar.
-  # "Appliance" (device_type=1) was removed in Session 41 — peripheral replaces it.
-  COMPUTER_DEVICE_TYPE_FILTER_OPTIONS = [
-    ["Computer",   "computer"],
-    ["Peripheral", "peripheral"]
-  ].freeze
 
   # Barter status filter options for the index filter sidebar (members only).
   # Values are strings handled by a case/when in the controller:
@@ -78,16 +79,6 @@ module ComputersHelper
 
   def computer_filter_run_statuses_selected
     params[:run_status_id]
-  end
-
-  # Returns the options array for the device_type filter selector.
-  def computer_filter_device_type_options
-    COMPUTER_DEVICE_TYPE_FILTER_OPTIONS
-  end
-
-  # Returns the currently selected device_type from params, or nil (→ "Any").
-  def computer_filter_device_type_selected
-    params[:device_type]
   end
 
   # Returns the options array for the barter status filter selector.

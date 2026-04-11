@@ -1,10 +1,10 @@
 # decor/docs/claude/SESSION_HANDOVER.md
-# version 54.0
-# Session 50: Bug fixes, software index filters, test infrastructure improvements.
+# version 55.0
+# Session 51: Home page — Version 0.9 line + Statistics section.
 
 **Date:** April 9, 2026
-**Branch:** main (Sessions 49–50 ready to commit)
-**Status:** Session 50 complete.
+**Branch:** main (Sessions 49–51 committed, pushed, merged, deployed)
+**Status:** Session 51 complete.
 
 ---
 
@@ -33,7 +33,8 @@ After each: log "Read FILENAME — N lines, complete."
 
 ## !! TOKEN BUDGET WARNING !!
 
-Session 50 ended at ~90% of the context window. Start Session 51 fresh.
+Session 50 ended at ~90% of the context window. Session 51 was short.
+Start Session 52 fresh.
 
 ---
 
@@ -101,79 +102,32 @@ version strings, or other values that only appear in data rows.
 
 ---
 
-## Session 50 Summary
+## Session 51 Summary
 
-**Focus: Bug fixes + software index filters + test infrastructure.**
+**Focus: Home page cosmetic additions.**
 
-### Files delivered this session (12 files)
+### Files delivered this session (2 files)
 
-    decor/app/services/all_owners_export_service.rb                    v1.1
-    decor/test/controllers/data_transfers_controller_test.rb           v1.4
-    decor/test/controllers/admin/data_transfers_controller_test.rb     v1.3
-    decor/app/helpers/software_items_helper.rb                         v1.0  NEW
-    decor/app/controllers/software_items_controller.rb                 v1.3
-    decor/app/views/software_items/_filters.html.erb                   v1.0  NEW
-    decor/app/views/software_items/index.html.erb                      v1.1
-    decor/test/controllers/software_items_controller_test.rb           v1.5
-    decor/test/test_helper.rb                                          v1.2
-    decor/test/support/response_helpers.rb                             v1.0  NEW
-    decor/docs/claude/RAILS_SPECIFICS.md                               v2.7
-    decor/Gemfile                                                       (minitest-reporters added)
+    decor/app/controllers/home_controller.rb     v1.1
+    decor/app/views/home/index.html.erb          v4.4
 
-### Bug fixes
+### Changes
 
-**1. NameError: uninitialized constant OwnerExportService::CSV_HEADERS**
-   Root cause: OwnerExportService v1.7 removed the global CSV_HEADERS constant
-   (per-section format redesign, Session 48). Three files never updated:
-   - all_owners_export_service.rb crashed at class-load time (line 31).
-   - Both controller test files used CSV_HEADERS to build import CSV fixtures
-     and to assert export headers.
-   Fix: all_owners_export_service.rb rewrote to_csv to query DB directly,
-   defining its own CSV_HEADERS from COMPUTER_SECTION_HEADERS. Both test files
-   switched to per-section format (sentinel + COMPUTER_SECTION_HEADERS + 8-col rows)
-   and replaced header assertions with sentinel-presence checks.
+**Home page — Version line + Statistics section:**
 
-**2. Expected [] to include "PDP8-7891" (export test)**
-   Root cause: CSV.parse(response.body, headers: true) treated the comment row
-   ("# Owner: bob…") as the CSV header, so r["record_type"] returned nil for all
-   rows. Also used non-existent column "computer_serial_number".
-   Fix: replaced CSV parsing with plain assert_includes on response.body.
+- Controller v1.1: replaced the three unused vars (@computer_count,
+  @component_count, @owner_count) with three correctly-scoped stat vars:
+    @stat_owners          → Owner.count
+    @stat_computers_total → Computer.where(device_type: 0).count
+    @stat_computer_models → Computer.where(device_type: 0).distinct.count(:computer_model_id)
 
-**3. "1 connection(s)" vs "1 connection group" flash assertion**
-   Controller v1.6 uses "connection(s)" phrasing. Test updated to assert "1 connection".
-
-**4. Unknown model → row_error not flash[:alert]**
-   OwnerImportService v1.11 partial success: unknown model skips the row,
-   result[:success] stays true, controller sets flash[:row_errors] not flash[:alert].
-   Test updated accordingly.
-
-**5. 7 filter test failures (assert_match on response.body)**
-   Root cause: filter sidebar renders all software names as <option> elements;
-   refute_match "RSTS/E" always failed because it appeared in the sidebar dropdown
-   even when no matching data row was present.
-   Fix: switched to serial numbers and version strings (data-row-only values).
-   Also fixed inverted empty-state assertion (refute → assert).
-
-### New features
-
-**Software index filters (_filters.html.erb + software_items_helper.rb + controller v1.3):**
-- Search field (LIKE across software name, version, description)
-- Sort (6 options; default: Software A-Z + Version A-Z)
-- Software filter (distinct names with items)
-- Owner filter (distinct owners with items)
-- Trade/barter filter (logged-in only; default No Trade + Offered)
-- @index_path preserves filter params for load-more pagination
-
-### Test infrastructure
-
-**minitest-reporters (Gemfile + test_helper.rb v1.2):**
-  Compact ProgressReporter replaces per-test dot output.
-  Requires `bundle install` after placing the updated Gemfile.
-
-**ResponseHelpers (test/support/response_helpers.rb v1.0):**
-  assert_body_includes / refute_body_includes truncate response body to 300 chars
-  in failure messages. Included in ActionDispatch::IntegrationTest.
-  Rule added to RAILS_SPECIFICS.md v2.7.
+- View v4.4: two additions to the left-column flex stack:
+    "Version 0.9" — inserted after </h1>; font clamp(1.1rem, 1.7vw, 1.3rem)
+                     (one step larger than intro paragraph text)
+    Statistics block — inserted after the intro <p>:
+      "Statistics" heading at same larger font size
+      Three data lines (Owners / Computers total / Computer models)
+      at intro-paragraph font size clamp(0.95rem, 1.4vw, 1.15rem)
 
 ---
 

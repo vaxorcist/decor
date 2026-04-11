@@ -1,5 +1,20 @@
 # decor/app/controllers/computers_controller.rb
-# version 1.20
+# version 1.22
+# v1.22 (Session 52): Simplified index device_type branch.
+#   The Type filter (Computer / Peripheral selector) was removed from the
+#   _filters.html.erb sidebar. The else branch previously read
+#   params[:device_type].presence || "computer" to honour that filter param.
+#   Now that no UI can submit device_type on the Computers page, the branch
+#   unconditionally scopes to device_type: "computer".
+#   Dead param support removed; behaviour for normal requests is unchanged.
+#
+# v1.21 (Session 52): Bug fix — "Create and add another" now preserves device_type.
+#   The redirect to new_computer_path was missing device_type:, so creating a
+#   peripheral and clicking "Create and add another" landed on /computers/new
+#   (Add computer) instead of /computers/new?device_type=peripheral.
+#   Fix: pass device_type: @computer.device_type to new_computer_path so the
+#   new action can pre-set @computer.device_type correctly.
+#
 # v1.20 (Session 47): Software feature Session E.
 #   show action: added @software_items eager-load.
 #   Loads software installed on this computer/peripheral for the read-only
@@ -34,13 +49,14 @@ class ComputersController < ApplicationController
     end
 
     # Lock device_type to the route context on dedicated type pages.
-    # On the computers route, fall back to the Type filter param or "computer"
-    # so peripherals never bleed onto the Computers page.
+    # The Type filter was removed in Session 52 — no UI can submit device_type
+    # on the Computers page, so the else branch unconditionally scopes to
+    # device_type: "computer" rather than reading params[:device_type].
     case @device_context
     when "peripheral"
       computers = computers.where(device_type: "peripheral")
     else
-      computers = computers.where(device_type: params[:device_type].presence || "computer")
+      computers = computers.where(device_type: "computer")
     end
 
     if params[:model].present?
@@ -120,7 +136,10 @@ class ComputersController < ApplicationController
       device_label = @computer.device_type.capitalize
 
       if params[:add_another]
-        redirect_to new_computer_path, notice: "#{device_label} was successfully created. Add another!"
+        # Forward device_type so the next new-form opens as the same device kind
+        # (computer or peripheral) rather than always defaulting to /computers/new.
+        redirect_to new_computer_path(device_type: @computer.device_type),
+                    notice: "#{device_label} was successfully created. Add another!"
       else
         redirect_to edit_computer_path(@computer), notice: "#{device_label} was successfully created. You can now add components below."
       end

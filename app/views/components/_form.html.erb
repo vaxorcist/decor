@@ -1,4 +1,7 @@
-<%# decor/app/views/components/_form.html.erb - version 1.6 %>
+<%# decor/app/views/components/_form.html.erb - version 1.7 %>
+<%# v1.7 (Session 52): Removed Component Category field. %>
+<%#   Row 3 now contains only Trade Status (barter_status), single column. %>
+<%#   :component_category removed from strong params in components_controller v1.8. %>
 <%# v1.6 (Session 21): Added component_category and barter_status fields. %>
 <%#   New Row 3 (2-col): Component Category (integral/peripheral) | Trade Status (barter_status). %>
 <%#   Description shifts from Row 3 to Row 4 (full width, unchanged). %>
@@ -7,7 +10,7 @@
 <%# v1.5 (Session 10 rev 2): Computer Model dropdown collapses to model name after selection. %>
 <%#   Row 1 (3-col): Computer Model (select) | Computer Order Number (read-only) | Computer Serial Number (read-only) %>
 <%#   Row 2 (4-col): Component Type | Component Order Number | Component Serial Number | Component Condition %>
-<%#   Row 3 (2-col): Component Category | Trade Status                                    ← new in v1.6 %>
+<%#   Row 3 (1-col): Trade Status                                                          ← v1.7: category removed %>
 <%#   Row 4 (full):  Description                                                            ← was Row 3 %>
 
 <%# Capture owner's computers once — used for the dropdown options and the JSON map. %>
@@ -115,20 +118,10 @@
     </div>
   </div>
 
-  <%# ─── Row 3: Component Category | Trade Status ─── %>
-  <%# component_category: integral (default) or peripheral. %>
+  <%# ─── Row 3: Trade Status ─── %>
+  <%# component_category removed in v1.7 — field is no longer editable on this form. %>
   <%# barter_status: no_barter (default), offered, or wanted. %>
-  <%# Both are enum fields; string keys are used so labels are human-readable. %>
   <div class="grid grid-cols-2 gap-4">
-    <div>
-      <%= f.label :component_category, "Component Category", class: "block text-sm font-medium text-stone-700" %>
-      <%= f.select :component_category,
-            [["Integral", "integral"], ["Peripheral", "peripheral"]],
-            {},
-            class: field_classes %>
-      <p class="mt-1 text-xs text-stone-500">Integral: installed inside a device. Peripheral: connected externally.</p>
-    </div>
-
     <div>
       <%= f.label :barter_status, "Trade Status", class: "block text-sm font-medium text-stone-700" %>
       <%= f.select :barter_status,
