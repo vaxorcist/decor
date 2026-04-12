@@ -1,10 +1,10 @@
 # decor/docs/claude/SESSION_HANDOVER.md
-# version 55.0
-# Session 51: Home page — Version 0.9 line + Statistics section.
+# version 56.0
+# Session 52: Bug fixes + UI cleanup (computers & components).
 
-**Date:** April 9, 2026
+**Date:** April 12, 2026
 **Branch:** main (Sessions 49–51 committed, pushed, merged, deployed)
-**Status:** Session 51 complete.
+**Status:** Session 52 complete — ready to commit, push, merge, deploy.
 
 ---
 
@@ -33,8 +33,8 @@ After each: log "Read FILENAME — N lines, complete."
 
 ## !! TOKEN BUDGET WARNING !!
 
-Session 50 ended at ~90% of the context window. Session 51 was short.
-Start Session 52 fresh.
+Session 52 ended at ~73% of the context window.
+Start Session 53 fresh.
 
 ---
 
@@ -102,32 +102,61 @@ version strings, or other values that only appear in data rows.
 
 ---
 
-## Session 51 Summary
+## Session 52 Summary
 
-**Focus: Home page cosmetic additions.**
+**Focus: Bug fixes + UI cleanup (computers & components).**
 
-### Files delivered this session (2 files)
+### Files delivered this session (9 files)
 
-    decor/app/controllers/home_controller.rb     v1.1
-    decor/app/views/home/index.html.erb          v4.4
+    decor/app/controllers/computers_controller.rb              v1.22
+    decor/test/controllers/computers_controller_test.rb        v1.10
+    decor/app/views/components/_form.html.erb                  v1.7
+    decor/app/controllers/components_controller.rb             v1.9
+    decor/app/views/computers/_filters.html.erb                v1.6
+    decor/app/helpers/computers_helper.rb                      v1.8
+    decor/app/helpers/components_helper.rb                     v1.4
+    decor/app/views/components/_filters.html.erb               v1.2
+    decor/app/views/components/index.html.erb                  v1.6
 
 ### Changes
 
-**Home page — Version line + Statistics section:**
+**Bug: "Create and add another" on peripherals landed on /computers/new**
+- computers_controller v1.21: changed `redirect_to new_computer_path` →
+  `redirect_to new_computer_path(device_type: @computer.device_type)` so the
+  next form opens as the correct device type (computer or peripheral).
+- computers_controller_test v1.10: two new regression tests assert the full
+  redirect URL including the device_type query param.
+- Note: controller reached v1.22 in the same session (see Type filter removal below).
 
-- Controller v1.1: replaced the three unused vars (@computer_count,
-  @component_count, @owner_count) with three correctly-scoped stat vars:
-    @stat_owners          → Owner.count
-    @stat_computers_total → Computer.where(device_type: 0).count
-    @stat_computer_models → Computer.where(device_type: 0).distinct.count(:computer_model_id)
+**Removed "Component Category" field from component form**
+- components/_form.html.erb v1.7: Row 3 now contains only Trade Status.
+- components_controller v1.8: removed :component_category from component_params.
 
-- View v4.4: two additions to the left-column flex stack:
-    "Version 0.9" — inserted after </h1>; font clamp(1.1rem, 1.7vw, 1.3rem)
-                     (one step larger than intro paragraph text)
-    Statistics block — inserted after the intro <p>:
-      "Statistics" heading at same larger font size
-      Three data lines (Owners / Computers total / Computer models)
-      at intro-paragraph font size clamp(0.95rem, 1.4vw, 1.15rem)
+**Removed "Type" filter from Computers / Peripherals index sidebar**
+- computers/_filters.html.erb v1.6: Type filter block removed entirely.
+- computers_helper v1.7: COMPUTER_DEVICE_TYPE_FILTER_OPTIONS constant and
+  computer_filter_device_type_options/selected methods removed.
+- computers_controller v1.22: index else branch simplified from
+  `params[:device_type].presence || "computer"` to plain `"computer"`.
+
+**Bug: Computers page "Model" filter showed all models incl. peripherals**
+- computers_helper v1.8: `computer_filter_models_options` now scopes to
+  `where(device_type: @device_context)` so each page only offers models
+  matching its own device type.
+
+**Added "Peripheral Model" filter to Components index sidebar**
+- components_helper v1.4: split `component_filter_computer_model_options`
+  (now scoped to device_type: :computer) and added new
+  `component_filter_peripheral_model_options` (device_type: :peripheral) +
+  `component_filter_peripheral_model_selected`.
+- components/_filters.html.erb v1.2: new Peripheral Model selector added
+  after Computer Model; submits `peripheral_model` param.
+- components_controller v1.9: new `peripheral_model` filter branch, parallel
+  to the existing `computer_model` branch.
+
+**Renamed "Computer-Serial No." column header on Components index**
+- components/index.html.erb v1.6: header renamed to "Device – Serial No."
+  to reflect that components can be installed on computers or peripherals.
 
 ---
 

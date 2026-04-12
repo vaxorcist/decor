@@ -1,5 +1,12 @@
 # decor/docs/claude/DECOR_PROJECT.md
-# version 2.46
+# version 2.47
+# Session 52: Bug fixes + UI cleanup (computers & components).
+#   9 files: computers_controller v1.22, computers_controller_test v1.10,
+#   components/_form.html.erb v1.7, components_controller v1.9,
+#   computers/_filters.html.erb v1.6, computers_helper v1.8,
+#   components_helper v1.4, components/_filters.html.erb v1.2,
+#   components/index.html.erb v1.6.
+#
 # Session 51: Home page — Version 0.9 line + Statistics section.
 #   2 files: home_controller v1.1, home/index.html.erb v4.4.
 #
@@ -172,8 +179,17 @@ decor//
 
 **Key file versions** (updated each session):
 
-    decor/docs/claude/DECOR_PROJECT.md                                                  v2.46 ← Session 51
-    decor/docs/claude/SESSION_HANDOVER.md                                               v55.0 ← Session 51
+    decor/docs/claude/DECOR_PROJECT.md                                                  v2.47 ← Session 52
+    decor/docs/claude/SESSION_HANDOVER.md                                               v56.0 ← Session 52
+    decor/app/controllers/computers_controller.rb                                       v1.22 ← Session 52
+    decor/test/controllers/computers_controller_test.rb                                 v1.10 ← Session 52
+    decor/app/views/components/_form.html.erb                                           v1.7  ← Session 52
+    decor/app/controllers/components_controller.rb                                      v1.9  ← Session 52
+    decor/app/views/computers/_filters.html.erb                                         v1.6  ← Session 52
+    decor/app/helpers/computers_helper.rb                                               v1.8  ← Session 52
+    decor/app/helpers/components_helper.rb                                              v1.4  ← Session 52
+    decor/app/views/components/_filters.html.erb                                        v1.2  ← Session 52
+    decor/app/views/components/index.html.erb                                           v1.6  ← Session 52
     decor/app/controllers/home_controller.rb                                            v1.1  ← Session 51
     decor/app/views/home/index.html.erb                                                 v4.4  ← Session 51
     decor/app/helpers/software_items_helper.rb                                          v1.0  ← Session 50 NEW

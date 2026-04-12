@@ -1,5 +1,8 @@
-<%# decor/app/views/components/index.html.erb - version 1.5 %>
-<%# v1.5 (Session 22): Renamed column header "Trade" → "Barter" to match %>
+<%# decor/app/views/components/index.html.erb - version 1.6 %>
+<%# v1.6 (Session 52): Renamed column header "Computer-Serial No." → %>
+<%#   "Device – Serial No." to reflect that components can be installed on %>
+<%#   computers or peripherals. No structural change; the cell in %>
+<%#   _component.html.erb already renders correctly for both device types. %>
 <%#   product terminology. No structural changes. %>
 <%# v1.4 (Session 22): Added "Trade" <th> header after Owner, before the empty %>
 <%#   Actions column. Wrapped in - if logged_in? — the corresponding %>
@@ -23,8 +26,8 @@
           <table class="min-w-full divide-y divide-stone-200">
             <thead class="bg-stone-50 sticky top-0 z-10">
               <tr>
-                <%# Combined computer model name and computer serial number %>
-                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Computer-Serial No.</th>
+                <%# Combined device model name and serial number — covers both computers and peripherals %>
+                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Device – Serial No.</th>
                 <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Type</th>
                 <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Description</th>
                 <%# Component's own order number %>

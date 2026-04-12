@@ -1,5 +1,11 @@
 # decor/app/helpers/components_helper.rb
-# version 1.3
+# version 1.4
+# v1.4 (Session 52): Split computer model filter into computer + peripheral.
+#   component_filter_computer_model_options — now scoped to device_type: computer.
+#   component_filter_peripheral_model_options — new; scoped to device_type: peripheral.
+#   component_filter_peripheral_model_selected — new; reads params[:peripheral_model].
+#   Matching changes: _filters.html.erb v1.2 (new Peripheral Model selector),
+#   components_controller.rb v1.9 (new peripheral_model filter branch).
 # v1.3 (Session 21): Added barter_status filter support.
 #   COMPONENT_BARTER_STATUS_FILTER_OPTIONS — options for the barter status
 #   filter selector in _filters.html.erb (members only).
@@ -51,11 +57,23 @@ module ComponentsHelper
   end
 
   def component_filter_computer_model_options
-    [["Unassigned", "unassigned"]] + ComputerModel.order(:name).pluck(:name, :id)
+    # Scoped to device_type: computer so peripheral models don't appear here.
+    # "Unassigned" covers components not attached to any device (computer_id: nil).
+    [["Unassigned", "unassigned"]] + ComputerModel.where(device_type: :computer).order(:name).pluck(:name, :id)
   end
 
   def component_filter_computer_model_selected
     params[:computer_model]
+  end
+
+  # Options for the Peripheral Model filter — scoped to device_type: peripheral.
+  # No "Unassigned" entry here: the Computer Model filter already covers spares.
+  def component_filter_peripheral_model_options
+    ComputerModel.where(device_type: :peripheral).order(:name).pluck(:name, :id)
+  end
+
+  def component_filter_peripheral_model_selected
+    params[:peripheral_model]
   end
 
   # Returns the options array for the barter status filter selector.
