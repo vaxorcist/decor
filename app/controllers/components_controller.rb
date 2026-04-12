@@ -1,5 +1,12 @@
 # decor/app/controllers/components_controller.rb
-# version 1.8
+# version 1.9
+# v1.9 (Session 52): Added peripheral_model filter branch to index.
+#   Parallel to the existing computer_model branch: looks up a ComputerModel
+#   by the peripheral_model param and joins through computer: :computer_model
+#   to filter components installed on that peripheral model.
+#   Matching changes: components_helper v1.4 (new options/selected methods),
+#   components/_filters.html.erb v1.2 (new Peripheral Model selector).
+#
 # v1.8 (Session 52): Removed :component_category from component_params.
 #   The Component Category field was removed from _form.html.erb v1.7.
 #   Keeping it in strong params would have silently permitted the value via
@@ -35,6 +42,15 @@ class ComponentsController < ApplicationController
         computer_model = ComputerModel.find(params[:computer_model])
         components = components.joins(computer: :computer_model).where(computer_models: { id: computer_model.id })
       end
+    end
+
+    # Peripheral Model filter — scoped to peripheral device type.
+    # Uses the same join strategy as computer_model: joins through the computer
+    # association (which covers both computers and peripherals) to the
+    # computer_models table and filters by model id.
+    if params[:peripheral_model].present?
+      peripheral_model = ComputerModel.find(params[:peripheral_model])
+      components = components.joins(computer: :computer_model).where(computer_models: { id: peripheral_model.id })
     end
 
     # Barter status filter — members only.

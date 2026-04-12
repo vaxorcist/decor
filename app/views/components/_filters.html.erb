@@ -1,4 +1,7 @@
-<%# decor/app/views/components/_filters.html.erb - version 1.1 %>
+<%# decor/app/views/components/_filters.html.erb - version 1.2 %>
+<%# v1.2 (Session 52): Added "Peripheral Model" filter after "Computer Model". %>
+<%#   computer_model param — unchanged; now scoped to computer models only in helper. %>
+<%#   peripheral_model param — new; handled by components_controller v1.9. %>
 <%# v1.1 (Session 22): Added "Trade" barter_status filter at the bottom of the %>
 <%#   sidebar, after Computer Model, before the Reset/Apply buttons. The entire %>
 <%#   block is wrapped in - if logged_in? - so non-logged-in visitors never %>
@@ -28,6 +31,11 @@
   <div class="flex flex-col">
     <%= form.label :computer_model, "Computer Model", class: "text-sm text-stone-600 font-medium" %>
     <%= form.select :computer_model, component_filter_computer_model_options, { selected: component_filter_computer_model_selected, include_blank: "Any" }, { class: field_classes } %>
+  </div>
+
+  <div class="flex flex-col">
+    <%= form.label :peripheral_model, "Peripheral Model", class: "text-sm text-stone-600 font-medium" %>
+    <%= form.select :peripheral_model, component_filter_peripheral_model_options, { selected: component_filter_peripheral_model_selected, include_blank: "Any" }, { class: field_classes } %>
   </div>
 
   <%# Trade (barter_status) filter — visible to logged-in members only. %>

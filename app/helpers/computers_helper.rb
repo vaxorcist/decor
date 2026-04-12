@@ -1,5 +1,10 @@
 # decor/app/helpers/computers_helper.rb
-# version 1.7
+# version 1.8
+# v1.8 (Session 52): Scoped computer_filter_models_options to @device_context.
+#   Previously returned all ComputerModel records regardless of device_type,
+#   so the Peripherals page Model filter listed computer models alongside
+#   peripheral models. Fix: filter by device_type: @device_context so each
+#   page only offers models that match its own device type.
 # v1.7 (Session 52): Removed Type filter dead code.
 #   COMPUTER_DEVICE_TYPE_FILTER_OPTIONS — constant removed; no filter uses it.
 #   computer_filter_device_type_options  — method removed.
@@ -58,7 +63,9 @@ module ComputersHelper
   end
 
   def computer_filter_models_options
-    ComputerModel.order(:name).pluck(:name, :id)
+    # Scope to the current page's device type so the Computers page only lists
+    # computer models and the Peripherals page only lists peripheral models.
+    ComputerModel.where(device_type: @device_context).order(:name).pluck(:name, :id)
   end
 
   def computer_filter_models_selected
