@@ -1,4 +1,8 @@
-<%# decor/app/views/admin/owners/index.html.erb - version 1.1 %>
+<%# decor/app/views/admin/owners/index.html.erb - version 1.2 %>
+<%# v1.2 (Session 53): Fix computers count including peripherals. %>
+<%#   owner.computers.count → owner.computers.device_type_computer.count %>
+<%#   Peripherals share the computers table (device_type enum: computer=0, peripheral=2). %>
+<%#   Without the scope, peripherals were counted alongside computers. %>
 <%# v1.1 (Session 20): Added "Last Login" column immediately right of Username. %>
 <%#   Displays last_login_at formatted as "07 Mar 2026 14:35" (day month year, 24h). %>
 <%#   Shows "—" for owners who have never logged in since the column was added. %>
@@ -39,7 +43,9 @@
                 <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-stone-100 text-stone-700 border border-stone-300">Admin</span>
               <% end %>
             </td>
-            <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= owner.computers.count %></td>
+            <%# Scoped to device_type_computer — peripherals share the computers table %>
+            <%# and must be excluded from this count. %>
+            <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= owner.computers.device_type_computer.count %></td>
             <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= owner.components.count %></td>
             <td class="px-4 py-3 whitespace-nowrap text-right space-x-2 flex items-center justify-end">
               <% unless owner == Current.owner %>
