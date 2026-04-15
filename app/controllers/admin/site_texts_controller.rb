@@ -1,5 +1,9 @@
 # decor/app/controllers/admin/site_texts_controller.rb
-# version 1.1
+# version 1.2
+# v1.2 (Session 53): Added Download option.
+#   download_confirm: renders selector page — admin picks which text to download.
+#   download:         streams the stored content as a <key>.md file attachment.
+#                     Returns alert redirect if the text has not been uploaded yet.
 # v1.1 (Session 20): Generalised for all text pages via KNOWN_TEXTS constant on SiteText.
 #   new:            renders the upload form with a key selector (no key in URL needed).
 #   create:         unchanged logic; key now comes from form params selector.
@@ -62,6 +66,32 @@ class Admin::SiteTextsController < Admin::BaseController
       redirect_to admin_owners_path, notice: "#{title} was successfully deleted."
     else
       redirect_to admin_owners_path, alert: "#{title} not found."
+    end
+  end
+
+  def download_confirm
+    # Renders a selector page so the admin can choose which text to download.
+    # No key required in the URL — the admin picks it on the page.
+    @known_texts = SiteText.options_for_select_list
+    @default_key = SiteText::KNOWN_TEXTS.first[:key]
+  end
+
+  def download
+    key       = params[:key].to_s
+    site_text = SiteText.for(key)
+    title     = SiteText.title_for_key(key)
+
+    if site_text
+      # Send the stored Markdown content as a file download.
+      # disposition: "attachment" forces the browser to save rather than display.
+      send_data site_text.content,
+                filename:    "#{key}.md",
+                type:        "text/markdown; charset=utf-8",
+                disposition: "attachment"
+    else
+      # Text has never been uploaded — nothing to download.
+      redirect_to download_confirm_admin_site_texts_path,
+                  alert: "#{title} has not been uploaded yet — nothing to download."
     end
   end
 

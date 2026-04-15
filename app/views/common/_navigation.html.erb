@@ -1,11 +1,21 @@
-<%# decor/app/views/common/_navigation.html.erb - version 2.1 %>
+<%# decor/app/views/common/_navigation.html.erb - version 2.2 %>
+<%# v2.2 (Session 53): Fix Software button unclickable / only clickable at bottom edge. %>
+<%#   Root cause: grid-cols-3 divides the nav into three EQUAL 1fr columns. The left %>
+<%#   flex (6 items: Info + Owners + Computers + Peripherals + Components + Software) %>
+<%#   is wider than 1fr at any real viewport, so it overflows into the centre and right %>
+<%#   grid cells. CSS grid does NOT clip overflow, but grid items stack in source order, %>
+<%#   so the centre (logo) and right (auth) divs render on top of the overflowed left %>
+<%#   content — making Software partially or fully unclickable depending on how many %>
+<%#   items the right column contains (admin users have Admin + username dropdown). %>
+<%#   Fix: grid-cols-[auto_1fr_auto] — left and right columns shrink-wrap their content; %>
+<%#   centre column takes the remaining space. Added relative z-10 to left div as a %>
+<%#   safety net against future crowding. %>
 <%# v2.1 (Session 48): Software feature Session F. %>
 <%#   Added "Software" top-level navigation link (after Components). %>
 <%#   Added "My Software" to the owner dropdown (after My Connections, before divider). %>
 <%# v2.0 (Session 41): Appliances → Peripherals merger Phase 2. %>
 <%#   Removed "Appliances" top-level navigation link (appliances_path gone). %>
 <%#   Removed "My Appliances" from owner dropdown (appliances_owner_path gone). %>
-<%#   Peripherals now covers all peripheral records (formerly also appliances). %>
 <%# v1.9: Changed "owner_connection_groups_path(Current.owner)" to "connections_owner_path(Current.owner)" %>
 <%# v1.8 (Session 36): Added "My Connections" to the owner dropdown. %>
 <%# v1.7 (Session 25): Added "Peripherals" top-level navigation link. %>
@@ -16,8 +26,13 @@
 <%# v1.2 (Session 17): Added Appliances navigation link. %>
 <%# v1.1: Admin link only shows to users where admin? returns true. %>
 
-<nav class="grid grid-cols-3 items-center gap-2 px-6 py-4">
-  <div class="flex items-center justify-start gap-6">
+<%# grid-cols-[auto_1fr_auto]: left and right columns size to content; %>
+<%# centre column (logo) fills the remaining space. %>
+<nav class="grid grid-cols-[auto_1fr_auto] items-center gap-2 px-6 py-4">
+
+  <%# relative z-10: ensures left nav links are always above centre/right content %>
+  <%# even if any future addition causes them to approach the centre column boundary. %>
+  <div class="flex items-center justify-start gap-6 relative z-10">
 
     <%# Info dropdown — static text pages. %>
     <div class="relative" data-controller="dropdown">

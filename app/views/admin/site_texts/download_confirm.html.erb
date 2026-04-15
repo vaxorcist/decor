@@ -1,0 +1,62 @@
+<%# decor/app/views/admin/site_texts/download_confirm.html.erb - version 1.0 %>
+<%# v1.0 (Session 53): Download selector page for any named text page. %>
+<%#   Admin selects which text to download from a selector driven by SiteText::KNOWN_TEXTS. %>
+<%#   Clicking Download navigates to download_admin_site_text_path(key) — a plain GET %>
+<%#   that triggers send_data in the controller (browser saves the .md file). %>
+<%#   Inline JS keeps the Download link href in sync with the selector, same pattern %>
+<%#   as delete_confirm.html.erb. No Stimulus controller needed. %>
+
+<div class="max-w-2xl">
+  <h1 class="text-2xl font-semibold mb-6">Download Text</h1>
+
+  <div class="space-y-4">
+    <%# Key selector — driven by SiteText::KNOWN_TEXTS %>
+    <div>
+      <label class="block text-sm font-medium text-stone-700 mb-1">
+        Text page <span class="text-red-600">*</span>
+      </label>
+      <select id="download_key_selector"
+              class="<%= field_classes %>">
+        <% @known_texts.each do |title, key| %>
+          <option value="<%= key %>"
+                  data-download-url="<%= download_admin_site_text_path(key) %>"
+                  <%= "selected" if key == @default_key %>>
+            <%= title %>
+          </option>
+        <% end %>
+      </select>
+      <p class="mt-1 text-xs text-stone-500">
+        The current stored content will be downloaded as a .md file.
+        If a text has not been uploaded yet, you will see an alert.
+      </p>
+    </div>
+
+    <div class="flex gap-3 items-center">
+      <%# Plain GET link — browser follows it, controller responds with send_data. %>
+      <%# No turbo-method needed: downloading a file is a standard GET navigation. %>
+      <a id="download_btn"
+         href="<%= download_admin_site_text_path(@default_key) %>"
+         class="<%= button_classes(style: :primary) %>">
+        Download
+      </a>
+      <%= link_to "Cancel", admin_owners_path, class: button_classes(style: :secondary) %>
+    </div>
+  </div>
+</div>
+
+<%# Inline script — keeps the Download button href in sync with the selector. %>
+<%# Reads the pre-built URL from each option's data-download-url attribute so %>
+<%# no string manipulation is needed here. %>
+<script>
+  (function () {
+    const selector = document.getElementById("download_key_selector");
+    const btn      = document.getElementById("download_btn");
+
+    if (!selector || !btn) return;
+
+    selector.addEventListener("change", function () {
+      const selectedOption = selector.options[selector.selectedIndex];
+      btn.href = selectedOption.dataset.downloadUrl;
+    });
+  })();
+</script>
