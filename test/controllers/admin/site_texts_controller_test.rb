@@ -1,5 +1,9 @@
 # decor/test/controllers/admin/site_texts_controller_test.rb
-# version 1.0
+# version 1.1
+# v1.1 (Session 53): Added tests for download_confirm and download actions.
+#   Also documents why the delete_confirm Turbo bug wasn't caught by this file:
+#   controller tests call routes directly and cannot observe JS/Turbo link behaviour.
+#   That gap can only be closed by system tests (test/system/ — still empty).
 # v1.0 (Session 20): New file. Tests Admin::SiteTextsController actions:
 #   new:            renders upload form
 #   create:         success (saves content, redirects to public page),
@@ -86,6 +90,12 @@ class Admin::SiteTextsControllerTest < ActionDispatch::IntegrationTest
   end
 
   # ── delete_confirm ───────────────────────────────────────────────────────────
+  #
+  # NOTE: this test verifies the page renders. It cannot verify that the Delete
+  # link fires a DELETE request — that depends on Turbo JS and is only testable
+  # via system tests (test/system/ — currently empty). The v1.0 bug (Delete link
+  # inside a data-turbo="false" form causing a plain GET) was invisible here
+  # because controller tests call routes directly without rendering JS behaviour.
 
   test "GET delete_confirm renders confirmation page" do
     get delete_confirm_admin_site_texts_path
@@ -112,6 +122,40 @@ class Admin::SiteTextsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to admin_owners_path
+    assert flash[:alert].present?
+  end
+
+  # ── download_confirm ─────────────────────────────────────────────────────────
+
+  test "GET download_confirm renders selector page" do
+    get download_confirm_admin_site_texts_path
+    assert_response :success
+  end
+
+  # ── download ─────────────────────────────────────────────────────────────────
+
+  test "GET download sends stored content as a .md file attachment" do
+    SiteText.create!(key: "readme", content: "# Stored readme content")
+
+    get download_admin_site_text_path("readme")
+
+    assert_response :success
+    # Verify the response is sent as an attachment (browser saves, not displays).
+    assert_includes response.headers["Content-Disposition"], "attachment"
+    assert_includes response.headers["Content-Disposition"], "readme.md"
+    # Verify content type includes text/markdown.
+    assert_includes response.media_type, "text/markdown"
+    # Verify the actual stored content is in the body.
+    assert_equal "# Stored readme content", response.body
+  end
+
+  test "GET download on missing key redirects to download_confirm with alert" do
+    # Ensure the key has no record (teardown handles cleanup, but be explicit).
+    SiteText.where(key: "readme").destroy_all
+
+    get download_admin_site_text_path("readme")
+
+    assert_redirected_to download_confirm_admin_site_texts_path
     assert flash[:alert].present?
   end
 

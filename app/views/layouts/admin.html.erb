@@ -1,5 +1,6 @@
 <%# decor/app/views/layouts/admin.html.erb %>
-<%# version 2.1 %>
+<%# version 2.2 %>
+<%# v2.2 (Session 53): Texts dropdown — added "Download Text" between Upload and Delete. %>
 <%# v2.1 (Session 44): Software feature Session B. %>
 <%#   Added "Software" dropdown (Software Names, Software Conditions) after Connections. %>
 <%# v2.0 (Session 41): Appliances → Peripherals merger Phase 2. %>
@@ -190,7 +191,7 @@
             </div>
 
             <%# ── Texts ───────────────────────────────────────────────────── %>
-            <%# Two generic actions — key selected on the target page, not here. %>
+            <%# Three generic actions — key selected on the target page, not here. %>
             <div class="relative" data-controller="dropdown">
               <button data-action="click->dropdown#toggle"
                       class="flex items-center gap-1 px-3 py-2 font-medium text-stone-700
@@ -205,6 +206,9 @@
                    class="hidden absolute top-full left-0 mt-1 bg-white border border-stone-200
                           rounded shadow-md py-1 z-50 min-w-max">
                 <%= link_to "Upload Text", new_admin_site_text_path,
+                      class: "block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50 hover:text-stone-900" %>
+                <%# Download Text added Session 53 — positioned between Upload and Delete. %>
+                <%= link_to "Download Text", download_confirm_admin_site_texts_path,
                       class: "block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50 hover:text-stone-900" %>
                 <%= link_to "Delete Text", delete_confirm_admin_site_texts_path,
                       class: "block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50 hover:text-stone-900" %>

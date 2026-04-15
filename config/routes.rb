@@ -1,5 +1,8 @@
 # decor/config/routes.rb
-# version 2.9
+# version 3.0
+# v3.0 (Session 53): Admin Texts — added Download option.
+#   download_confirm: collection GET — selector page (matches delete_confirm pattern).
+#   download:         member GET    — sends the .md file as an attachment.
 # v2.9 (Session 46): Software feature Session D.
 #   Expanded resources :software_items from only: [:show] to full CRUD
 #   (show, new, create, edit, update, destroy).
@@ -90,6 +93,12 @@ Rails.application.routes.draw do
     resources :site_texts, only: %i[new create destroy], param: :key do
       collection do
         get :delete_confirm
+        # download_confirm: selector page — admin picks which text to download.
+        get :download_confirm
+      end
+      member do
+        # download: sends the stored .md content as a file attachment.
+        get :download
       end
     end
 
