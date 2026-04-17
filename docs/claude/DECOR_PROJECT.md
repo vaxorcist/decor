@@ -1,5 +1,19 @@
 # decor/docs/claude/DECOR_PROJECT.md
-# version 2.47
+# version 2.49
+# Session 54: Tom Select searchable combobox.
+#   7 files: tom_select_controller.js v1.0 NEW, importmap.rb v1.1,
+#   application.html.erb v1.4, computers/_form.html.erb v2.6,
+#   components/_form.html.erb v1.8, software_items/_form.html.erb v1.1,
+#   COMMON_BEHAVIOR.md v2.6.
+#
+# Session 53: Bug fixes + Download Text feature.
+#   8 files: admin/owners/index.html.erb v1.2, routes.rb v3.0,
+#   admin/site_texts_controller.rb v1.2,
+#   admin/site_texts/download_confirm.html.erb v1.0 NEW,
+#   admin/site_texts/delete_confirm.html.erb v1.1,
+#   admin.html.erb v2.2, _navigation.html.erb v2.2,
+#   admin/site_texts_controller_test.rb v1.1.
+#
 # Session 52: Bug fixes + UI cleanup (computers & components).
 #   9 files: computers_controller v1.22, computers_controller_test v1.10,
 #   components/_form.html.erb v1.7, components_controller v1.9,
@@ -34,8 +48,8 @@
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** April 9, 2026 (Session 51)
-**Current Status:** Sessions 1–51 committed, pushed, merged, deployed.
+**Last Updated:** April 17, 2026 (Session 54)
+**Current Status:** Sessions 1–52 committed, pushed, merged, deployed.
 
 ---
 
@@ -46,7 +60,7 @@
 tree decor/ -I "node_modules|.git|tmp|storage|log|.DS_Store|*.lock|assets|cache|pids|sockets" --dirsfirst -F --prune -L 6 > decor_tree.txt
 ```
 
-**Current tree** (as of Session 41 — Sessions 43–51 add new files; upload decor_tree.txt to refresh):
+**Current tree** (as of Session 41 — Sessions 43–53 add new files; upload decor_tree.txt to refresh):
 ```
 decor//
 ├── app/
@@ -63,7 +77,7 @@ decor//
 │   │   │   ├── invites_controller.rb
 │   │   │   ├── owners_controller.rb
 │   │   │   ├── run_statuses_controller.rb
-│   │   │   ├── site_texts_controller.rb
+│   │   │   ├── site_texts_controller.rb                ← Session 53 (v1.2)
 │   │   │   ├── software_conditions_controller.rb       ← Session 44 (v1.0) NEW
 │   │   │   └── software_names_controller.rb            ← Session 44 (v1.0) NEW
 │   │   ├── concerns/
@@ -71,7 +85,7 @@ decor//
 │   │   │   └── pagination.rb
 │   │   ├── application_controller.rb
 │   │   ├── components_controller.rb
-│   │   ├── computers_controller.rb                     ← Session 47 (v1.20)
+│   │   ├── computers_controller.rb                     ← Session 52 (v1.22)
 │   │   ├── connection_groups_controller.rb
 │   │   ├── data_transfers_controller.rb                ← Session 49 (v1.6)
 │   │   ├── home_controller.rb                         ← Session 51 (v1.1)
@@ -81,7 +95,8 @@ decor//
 │   │   ├── site_texts_controller.rb
 │   │   └── software_items_controller.rb                ← Session 50 (v1.3)
 │   ├── helpers/
-│   │   ├── computers_helper.rb                        ← Session 42 (v1.6)
+│   │   ├── computers_helper.rb                        ← Session 52 (v1.8)
+│   │   ├── components_helper.rb                       ← Session 52 (v1.4)
 │   │   └── software_items_helper.rb                   ← Session 50 (v1.0) NEW
 │   ├── models/
 │   │   ├── computer.rb                                 ← Session 43 (v2.1)
@@ -98,6 +113,12 @@ decor//
 │       ├── admin/
 │       │   ├── data_transfers/
 │       │   │   └── show.html.erb                      ← Session 48 (v1.3)
+│       │   ├── owners/
+│       │   │   └── index.html.erb                     ← Session 53 (v1.2)
+│       │   ├── site_texts/
+│       │   │   ├── delete_confirm.html.erb            ← Session 53 (v1.1)
+│       │   │   ├── download_confirm.html.erb          ← Session 53 (v1.0) NEW
+│       │   │   └── new.html.erb
 │       │   ├── software_conditions/
 │       │   │   ├── _form.html.erb                     ← Session 44 (v1.0) NEW
 │       │   │   ├── edit.html.erb                      ← Session 44 (v1.0) NEW
@@ -109,13 +130,13 @@ decor//
 │       │       ├── index.html.erb                     ← Session 44 (v1.0) NEW
 │       │       └── new.html.erb                       ← Session 44 (v1.0) NEW
 │       ├── common/
-│       │   └── _navigation.html.erb                   ← Session 48 (v2.1)
+│       │   └── _navigation.html.erb                   ← Session 53 (v2.2)
 │       ├── data_transfers/
 │       │   └── show.html.erb                          ← Session 49 (v1.9)
 │       ├── home/
 │       │   └── index.html.erb                         ← Session 51 (v4.4)
 │       ├── layouts/
-│       │   └── admin.html.erb                         ← Session 44 (v2.1)
+│       │   └── admin.html.erb                         ← Session 53 (v2.2)
 │       ├── computers/
 │       │   └── show.html.erb                          ← Session 47 (v2.2)
 │       ├── owners/
@@ -136,7 +157,7 @@ decor//
 │           ├── new.html.erb                           ← Session 46 (v1.0) NEW
 │           └── show.html.erb                          ← Session 46 (v1.1)
 ├── config/
-│   └── routes.rb                                      ← Session 46 (v2.9)
+│   └── routes.rb                                      ← Session 53 (v3.0)
 ├── db/
 │   └── migrate/
 │       ├── 20260401000000_create_software_names.rb    ← Session 43 (v1.0) NEW
@@ -147,9 +168,10 @@ decor//
     │   ├── admin/
     │   │   ├── computer_models_controller_test.rb      ← Session 41 (v1.3)
     │   │   ├── data_transfers_controller_test.rb       ← Session 50 (v1.3)
+    │   │   ├── site_texts_controller_test.rb           ← Session 53 (v1.1)
     │   │   ├── software_conditions_controller_test.rb  ← Session 44 (v1.0) NEW
     │   │   └── software_names_controller_test.rb       ← Session 44 (v1.0) NEW
-    │   ├── computers_controller_test.rb                ← Session 47 (v1.9)
+    │   ├── computers_controller_test.rb                ← Session 52 (v1.10)
     │   ├── data_transfers_controller_test.rb           ← Session 50 (v1.4)
     │   ├── owners_controller_test.rb                  ← Session 45 (v1.9)
     │   └── software_items_controller_test.rb          ← Session 50 (v1.5)
@@ -179,8 +201,24 @@ decor//
 
 **Key file versions** (updated each session):
 
-    decor/docs/claude/DECOR_PROJECT.md                                                  v2.47 ← Session 52
-    decor/docs/claude/SESSION_HANDOVER.md                                               v56.0 ← Session 52
+    decor/docs/claude/DECOR_PROJECT.md                                                  v2.49 ← Session 54
+    decor/docs/claude/SESSION_HANDOVER.md                                               v58.0 ← Session 54
+    decor/docs/claude/COMMON_BEHAVIOR.md                                                v2.6  ← Session 54
+    decor/app/javascript/controllers/tom_select_controller.js                           v1.0  ← Session 54 NEW
+    decor/config/importmap.rb                                                           v1.1  ← Session 54
+    decor/app/views/layouts/application.html.erb                                        v1.4  ← Session 54
+    decor/app/views/computers/_form.html.erb                                            v2.6  ← Session 54
+    decor/app/views/components/_form.html.erb                                           v1.8  ← Session 54
+    decor/app/views/software_items/_form.html.erb                                       v1.1  ← Session 54
+    decor/docs/claude/RAILS_SPECIFICS.md                                                v2.8  ← Session 53
+    decor/app/views/admin/owners/index.html.erb                                         v1.2  ← Session 53
+    decor/config/routes.rb                                                              v3.0  ← Session 53
+    decor/app/controllers/admin/site_texts_controller.rb                                v1.2  ← Session 53
+    decor/app/views/admin/site_texts/download_confirm.html.erb                         v1.0  ← Session 53 NEW
+    decor/app/views/admin/site_texts/delete_confirm.html.erb                           v1.1  ← Session 53
+    decor/app/views/layouts/admin.html.erb                                             v2.2  ← Session 53
+    decor/app/views/common/_navigation.html.erb                                        v2.2  ← Session 53
+    decor/test/controllers/admin/site_texts_controller_test.rb                         v1.1  ← Session 53
     decor/app/controllers/computers_controller.rb                                       v1.22 ← Session 52
     decor/test/controllers/computers_controller_test.rb                                 v1.10 ← Session 52
     decor/app/views/components/_form.html.erb                                           v1.7  ← Session 52
@@ -199,7 +237,6 @@ decor//
     decor/test/controllers/software_items_controller_test.rb                            v1.5  ← Session 50
     decor/test/test_helper.rb                                                           v1.2  ← Session 50
     decor/test/support/response_helpers.rb                                              v1.0  ← Session 50 NEW
-    decor/docs/claude/RAILS_SPECIFICS.md                                                v2.7  ← Session 50
     decor/app/services/all_owners_export_service.rb                                     v1.1  ← Session 50
     decor/test/controllers/data_transfers_controller_test.rb                            v1.4  ← Session 50
     decor/test/controllers/admin/data_transfers_controller_test.rb                      v1.3  ← Session 50
@@ -213,11 +250,6 @@ decor//
     decor/app/views/admin/data_transfers/show.html.erb                                  v1.3  ← Session 48
     decor/app/views/software_items/_software_item.html.erb                              v1.0  ← Session 48 NEW
     decor/app/views/software_items/index.turbo_stream.erb                               v1.0  ← Session 48 NEW
-    decor/app/views/common/_navigation.html.erb                                         v2.1  ← Session 48
-    decor/app/controllers/computers_controller.rb                                       v1.20 ← Session 47
-    decor/app/views/computers/show.html.erb                                             v2.2  ← Session 47
-    decor/test/controllers/computers_controller_test.rb                                 v1.9  ← Session 47
-    decor/config/routes.rb                                                              v2.9  ← Session 46
     decor/app/views/software_items/new.html.erb                                         v1.0  ← Session 46 NEW
     decor/app/views/software_items/edit.html.erb                                        v1.0  ← Session 46 NEW
     decor/app/views/software_items/_form.html.erb                                       v1.0  ← Session 46 NEW
@@ -232,7 +264,6 @@ decor//
     decor/test/controllers/owners_controller_test.rb                                    v1.9  ← Session 45
     decor/app/controllers/admin/software_names_controller.rb                            v1.0  ← Session 44 NEW
     decor/app/controllers/admin/software_conditions_controller.rb                       v1.0  ← Session 44 NEW
-    decor/app/views/layouts/admin.html.erb                                              v2.1  ← Session 44
     decor/test/controllers/admin/software_names_controller_test.rb                      v1.0  ← Session 44 NEW
     decor/test/controllers/admin/software_conditions_controller_test.rb                 v1.0  ← Session 44 NEW
     decor/db/migrate/20260401000000_create_software_names.rb                            v1.0  ← Session 43 NEW
@@ -422,6 +453,15 @@ Removing routes before views causes cascade test failures.
 ### SQLite ALTER TABLE Limitations
 Cannot add NOT NULL columns to existing tables — requires full table recreation.
 Use `disable_ddl_transaction!` + raw SQL. See RAILS_SPECIFICS.md.
+
+### data-turbo="false" disables Turbo on all descendants (Session 53)
+A Turbo-method link inside a data-turbo="false" ancestor silently falls back
+to a plain GET. See RAILS_SPECIFICS.md v2.8 for the full rule.
+
+### CSS grid grid-cols-N causes nav link overflow (Session 53)
+Equal-fraction grid columns cause overflowed left-nav links to be hidden behind
+later grid cells. Use grid-cols-[auto_1fr_auto] for left/logo/right navbars.
+See RAILS_SPECIFICS.md v2.8 for the full rule.
 
 ### safe_join for arrays of links — never .map.join.html_safe (Session 35)
 ### Connections show page — peer filtering uses reject not where.not (Session 34)

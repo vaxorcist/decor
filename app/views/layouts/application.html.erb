@@ -1,7 +1,17 @@
-<%# /home/ulli/gunkies.org/GitHub/case_001 Add the 11-780 picture/decor/app/views/layouts/application.html.erb - v1.1 %>
-<%# Main application layout template %>
-<%# Defines the overall page structure: head, navigation, main content, footer %>
-<%# Footer stays at bottom, main content uses flex-1 to fill available space %>
+<%# decor/app/views/layouts/application.html.erb - version 1.4 %>
+<%# v1.4 (Session 54): Fixed Tom Select CSS — root cause identified from DevTools. %>
+<%#   ROOT CAUSE: Tom Select copies ALL classes from the <select> to .ts-wrapper. %>
+<%#   So .ts-wrapper gets h-10, p-3, border, rounded, bg-white, etc. from field_classes. %>
+<%#   Without resetting those, two boxes compete: the wrapper (40px, 12px padding, border) %>
+<%#   AND .ts-control (also trying to be 40px) — .ts-control has ~14px of space to work in. %>
+<%# %>
+<%#   Fix: .ts-wrapper.single uses two-class specificity (0,2,0), beating each Tailwind %>
+<%#   utility's single-class specificity (0,1,0). This resets the visual field_classes off %>
+<%#   the wrapper so .ts-control is the sole visible element. %>
+<%# %>
+<%# v1.3 (Session 54): Fixed focus colour and height calculation (intermediate fix). %>
+<%# v1.2 (Session 54): Added Tom Select CSS (CDN link + first attempt at overrides). %>
+<%# v1.1: Main application layout template. %>
 
 <!DOCTYPE html>
 <html>
@@ -14,31 +24,135 @@
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
     <%= yield :head %>
-    
+
     <%# Favicon and app icons %>
     <link rel="icon" href="/icon.png" type="image/png">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/icon.png">
-    
+
     <%# Stylesheet and JavaScript imports %>
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
+
+    <%# Tom Select: base CSS from CDN + project-specific overrides. %>
+    <%# Both come AFTER stylesheet_link_tag so overrides win on equal specificity. %>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.css">
+    <style>
+      /* ── Tom Select overrides ──────────────────────────────────────────────── */
+      /*                                                                          */
+      /* ROOT CAUSE (found via Firefox DevTools):                                */
+      /*   Tom Select copies ALL classes from the <select> to .ts-wrapper.       */
+      /*   With field_classes on the <select>, .ts-wrapper inherits:             */
+      /*     h-10 → height:2.5rem   p-3 → padding:0.75rem                        */
+      /*     border border-stone-300   rounded   bg-white   text-sm             */
+      /*   .ts-control then tries to be another 40px inside a box that already   */
+      /*   has 12px top+bottom padding, leaving only ~14px — impossible.         */
+      /*                                                                          */
+      /* SOLUTION:                                                                */
+      /*   .ts-wrapper.single has specificity (0,2,0), beating each Tailwind     */
+      /*   utility's (0,1,0). Use it to strip all visual properties off the      */
+      /*   wrapper. Then style .ts-control exclusively.                           */
+
+      /* Step 1: Reset visual field_classes that Tom Select copied to .ts-wrapper */
+      .ts-wrapper.single {
+        height: auto;               /* override h-10 */
+        padding: 0;                 /* override p-3 */
+        border-width: 0;            /* override border */
+        background-color: transparent;   /* override bg-white */
+        border-radius: 0;           /* override rounded */
+        box-shadow: none;
+      }
+
+      /* Step 2: Style .ts-control as the sole visible field, matching field_classes */
+      /*   field_classes = block w-full h-10 p-3 rounded border border-stone-300  */
+      /*                   bg-white text-sm focus:border-stone-500 focus:outline-none */
+      /*   Vertical p-3 is replaced by align-items:center — same visual result as  */
+      /*   a native <select> which centres its text automatically.                 */
+      .ts-wrapper.single .ts-control {
+        box-sizing: border-box;
+        height: 2.5rem;             /* h-10 = 40px */
+        min-height: unset;          /* remove Tom Select's own min-height */
+        padding: 0 0.75rem;         /* p-3 horizontal; vertical via align-items */
+        align-items: center;        /* vertically centre text + search input */
+        border: 1px solid rgb(214 211 209);  /* border-stone-300 */
+        border-radius: 0.25rem;     /* rounded */
+        background-color: #ffffff;
+        font-size: 0.875rem;        /* text-sm */
+        line-height: 1.25rem;
+        color: rgb(28 25 23);       /* stone-900 */
+        box-shadow: none;
+        cursor: pointer;
+        gap: 0;
+      }
+
+      /* Step 3: Focus — match field_classes exactly: stone-500 border, no outline */
+      .ts-wrapper.focus .ts-control {
+        border-color: rgb(120 113 108);  /* border-stone-500 */
+        box-shadow: none;
+        outline: none;
+      }
+
+      /* Search input that appears while typing */
+      .ts-control input {
+        font-size: 0.875rem;
+        color: rgb(28 25 23);
+        padding: 0;
+        margin: 0;
+        height: auto;
+        line-height: 1.25rem;
+      }
+
+      /* Dropdown panel */
+      .ts-dropdown {
+        font-size: 0.875rem;
+        border: 1px solid rgb(214 211 209);
+        border-radius: 0.25rem;
+        margin-top: 2px;
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+      }
+
+      /* Option rows */
+      .ts-dropdown .option {
+        padding: 0.4rem 0.75rem;
+        color: rgb(28 25 23);
+      }
+
+      /* Hover / keyboard highlight */
+      .ts-dropdown .option.active {
+        background-color: rgb(238 242 255);  /* indigo-50 */
+        color: rgb(67 56 202);               /* indigo-700 */
+      }
+
+      /* Selected option (in open dropdown) */
+      .ts-dropdown .option.selected {
+        background-color: rgb(224 231 255);  /* indigo-100 */
+        color: rgb(49 46 129);               /* indigo-900 */
+      }
+
+      /* "No results" message */
+      .ts-dropdown .no-results {
+        padding: 0.4rem 0.75rem;
+        color: rgb(120 113 108);  /* stone-500 */
+        font-style: italic;
+      }
+      /* ── End Tom Select overrides ──────────────────────────────────────────── */
+    </style>
   </head>
-  
+
   <%# Body uses flexbox column layout with minimum full screen height %>
   <%# flex-1 on main makes it expand to push footer to bottom %>
   <body class="flex flex-col min-h-screen bg-white text-stone-900">
     <%# Navigation bar at top %>
     <%= render "common/navigation" %>
-    
+
     <%# Flash messages for notifications %>
     <%= render "common/flashes" %>
-    
-    <%# Main content area - flex-1 makes it expand to fill space, pushing footer to bottom %>
+
+    <%# Main content area — flex-1 makes it expand to fill space, pushing footer to bottom %>
     <%# Minimal padding (p-1) to maximize space for content %>
     <main class="flex-1 p-1"><%= yield %></main>
-    
-    <%# Footer at bottom - will be pushed to bottom by main's flex-1 %>
+
+    <%# Footer at bottom — pushed to bottom by main's flex-1 %>
     <%= render "common/footer" %>
   </body>
 </html>

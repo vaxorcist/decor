@@ -1,4 +1,9 @@
-<%# decor/app/views/computers/_form.html.erb - version 2.5 %>
+<%# decor/app/views/computers/_form.html.erb - version 2.6 %>
+<%# v2.6 (Session 54): Added data-controller="tom-select" to three collection_selects. %>
+<%#   computer_model_id — the primary motivation: 400+ entries (one per DEC model). %>
+<%#   computer_condition_id and run_status_id — smaller lists but same UX improvement. %>
+<%#   barter_status (3 options) left as a native select — no benefit at that size. %>
+<%#   Tom Select JS is auto-loaded by Stimulus; CSS is in application.html.erb. %>
 <%# v2.5 (Session 21): Added barter_status field and Trade column in component sub-table. %>
 <%#   Line 2 now grid-cols-3: Condition | Run Status | Trade Status. %>
 <%#   barter_status select uses Computer.barter_statuses keys to build options so the %>
@@ -25,9 +30,16 @@
       <%= f.label :computer_model_id, class: "block text-sm font-medium text-stone-700" do %>
         Model <span class="text-red-600">*</span>
       <% end %>
-      <%# Model list is scoped to the record's current device_type so appliance forms %>
-      <%# show only appliance models and computer forms show only computer models. %>
-      <%= f.collection_select :computer_model_id, ComputerModel.where(device_type: computer.device_type).order(:name), :id, :name, { prompt: "Select a model" }, class: field_classes %>
+      <%# Model list is scoped to the record's current device_type so peripheral forms %>
+      <%# show only peripheral models and computer forms show only computer models. %>
+      <%# data-controller="tom-select" activates the searchable combobox — essential %>
+      <%# when device_type=peripheral: all PDP models are listed (400+ entries). %>
+      <%= f.collection_select :computer_model_id,
+            ComputerModel.where(device_type: computer.device_type).order(:name),
+            :id, :name,
+            { prompt: "Select a model" },
+            class: field_classes,
+            data: { controller: "tom-select" } %>
       <p class="mt-1 text-xs text-stone-500">Select from list.</p>
     </div>
 
@@ -52,16 +64,29 @@
   <div class="grid grid-cols-3 gap-4">
     <div>
       <%= f.label :computer_condition_id, "Condition", class: "block text-sm font-medium text-stone-700" %>
-      <%= f.collection_select :computer_condition_id, ComputerCondition.order(:name), :id, :name, { prompt: "Select a condition" }, class: field_classes %>
+      <%# Tom Select applied: searchable, consistent UX with the model selector above. %>
+      <%= f.collection_select :computer_condition_id,
+            ComputerCondition.order(:name),
+            :id, :name,
+            { prompt: "Select a condition" },
+            class: field_classes,
+            data: { controller: "tom-select" } %>
     </div>
 
     <div>
       <%= f.label :run_status_id, "Run Status", class: "block text-sm font-medium text-stone-700" %>
-      <%= f.collection_select :run_status_id, RunStatus.order(:name), :id, :name, { prompt: "Select a run status" }, class: field_classes %>
+      <%# Tom Select applied: searchable, consistent UX with the model selector above. %>
+      <%= f.collection_select :run_status_id,
+            RunStatus.order(:name),
+            :id, :name,
+            { prompt: "Select a run status" },
+            class: field_classes,
+            data: { controller: "tom-select" } %>
     </div>
 
     <div>
       <%= f.label :barter_status, "Trade Status", class: "block text-sm font-medium text-stone-700" %>
+      <%# Native select kept: only 3 options — Tom Select adds no value at this size. %>
       <%# Build options from the enum hash so labels are human-readable. %>
       <%# Keys: no_barter → "No Trade", offered → "Offered", wanted → "Wanted". %>
       <%= f.select :barter_status,

@@ -1,5 +1,11 @@
-<%# decor/app/views/software_items/_form.html.erb - version 1.0 %>
-<%# Session 46: Software feature Session D — shared form partial for new and edit. %>
+<%# decor/app/views/software_items/_form.html.erb - version 1.1 %>
+<%# v1.1 (Session 54): Added data-controller="tom-select" to three selects. %>
+<%#   software_name_id  — admin-managed title list; searchable for fast selection. %>
+<%#   software_condition_id — small list but consistent UX. %>
+<%#   computer_id       — owner's computers/peripherals; no conflicting Stimulus controller %>
+<%#                        here (unlike components/_form.html.erb), so Tom Select is safe. %>
+<%#   barter_status (3 options) left as a native select — no benefit at that size. %>
+<%# v1.0 (Session 46): Software feature Session D — shared form partial for new and edit. %>
 <%# %>
 <%# Layout: %>
 <%#   Row 1 (3-col): Software Name (required) | Version | Condition (optional) %>
@@ -38,9 +44,13 @@
     <div>
       <%= f.label :software_name_id, "Software Name", class: "block text-sm font-medium text-stone-700" %>
       <%# Required field — prompt instead of include_blank to force a selection. %>
-      <%= f.collection_select :software_name_id, SoftwareName.order(:name), :id, :name,
+      <%# Tom Select applied: admin-managed title list can grow to many entries. %>
+      <%= f.collection_select :software_name_id,
+            SoftwareName.order(:name),
+            :id, :name,
             { prompt: "Select a title" },
-            class: field_classes %>
+            class: field_classes,
+            data: { controller: "tom-select" } %>
     </div>
 
     <div>
@@ -52,9 +62,13 @@
     <div>
       <%= f.label :software_condition_id, "Condition", class: "block text-sm font-medium text-stone-700" %>
       <%# Optional — include_blank shows "Unknown" when no condition has been recorded. %>
-      <%= f.collection_select :software_condition_id, SoftwareCondition.order(:name), :id, :name,
+      <%# Tom Select applied: consistent UX across all select fields in the project. %>
+      <%= f.collection_select :software_condition_id,
+            SoftwareCondition.order(:name),
+            :id, :name,
             { include_blank: "Unknown" },
-            class: field_classes %>
+            class: field_classes,
+            data: { controller: "tom-select" } %>
     </div>
   </div>
 
@@ -63,15 +77,19 @@
     <div>
       <%= f.label :computer_id, "Installed On", class: "block text-sm font-medium text-stone-700" %>
       <%# Optional — blank means "not currently installed on any hardware". %>
+      <%# Tom Select applied: no conflicting Stimulus controller on this select %>
+      <%# (unlike the computer_id select in components/_form.html.erb). %>
       <%= f.select :computer_id,
             computer_options,
             { include_blank: "Spare (not installed on any hardware)" },
-            class: field_classes %>
+            class: field_classes,
+            data: { controller: "tom-select" } %>
       <p class="mt-1 text-xs text-stone-500">Leave blank if this software is not currently installed.</p>
     </div>
 
     <div>
       <%= f.label :barter_status, "Trade Status", class: "block text-sm font-medium text-stone-700" %>
+      <%# Native select kept: only 3 options — Tom Select adds no value at this size. %>
       <%# String keys — Rails maps to the integer enum value automatically. %>
       <%= f.select :barter_status,
             [["No Trade", "no_barter"], ["Offered", "offered"], ["Wanted", "wanted"]],

@@ -1,5 +1,9 @@
 # COMMON_BEHAVIOR.md
-# version 2.5
+# version 2.6
+# Session 54: Output File Naming — added rule: never substitute underscores for dots in
+#   filenames created with create_file. Browser upload substitution is upload-only;
+#   Claude controls output filenames entirely and must use the correct dots.
+#   Real example: application.html.erb delivered as application_html.erb.
 # Session 36: Reading Rule Documents — clarified that bash cat applies to skill files too.
 #   Real example: decor-session-rules skill read with view tool at Session 36 start.
 # decor/docs/claude/COMMON_BEHAVIOR.md
@@ -238,6 +242,25 @@ All three rules already existed — they were simply not checked before naming.
 `admin/site_texts_controller.rb` was the only controller delivered in the response.
 It was named `admin_site_texts_controller.rb` in the download — unnecessary prefix,
 wrong separator. One controller, no collision, no prefix needed.
+
+### Output File Naming — Never Substitute Underscores for Dots
+
+- ✅ When creating a file for download with `create_file`, use the **exact filename
+  including all dots** (e.g. `application.html.erb`, not `application_html.erb`)
+- ❌ NEVER substitute underscores for dots in output filenames
+
+**Why this matters:**
+Browsers substitute underscores for dots when the user *uploads* a multi-dot file
+(e.g. `application.html.erb` arrives as `application_html.erb`). That constraint
+is a browser upload limitation — it applies to uploads only. When Claude *creates*
+a file with `create_file`, it controls the filename entirely and must use the
+correct name with dots.
+
+**Real example (Session 54, April 17, 2026):**
+`application.html.erb` was created as `application_html.erb` in the output. The
+user correctly flagged this: "You sent me a file named application_html.erb, but
+it had to be named application.html.erb — That should not have happened!"
+The upload/download constraint was confused and applied in the wrong direction.
 
 ### Upload File Naming
 

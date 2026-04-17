@@ -1,10 +1,10 @@
 # decor/docs/claude/SESSION_HANDOVER.md
-# version 56.0
-# Session 52: Bug fixes + UI cleanup (computers & components).
+# version 58.0
+# Session 54: Tom Select searchable combobox for long drop-down lists.
 
-**Date:** April 12, 2026
-**Branch:** main (Sessions 49–51 committed, pushed, merged, deployed)
-**Status:** Session 52 complete — ready to commit, push, merge, deploy.
+**Date:** April 17, 2026
+**Branch:** main (Sessions 49–53 committed, pushed, merged, deployed)
+**Status:** Session 54 complete — ready to commit, push, merge, deploy.
 
 ---
 
@@ -33,8 +33,17 @@ After each: log "Read FILENAME — N lines, complete."
 
 ## !! TOKEN BUDGET WARNING !!
 
-Session 52 ended at ~73% of the context window.
-Start Session 53 fresh.
+Session 54 ended at ~83% of the context window.
+Start Session 55 fresh.
+
+---
+
+## !! OUTPUT FILE NAMING — NEVER substitute underscores for dots (learned Session 54) !!
+
+When creating a file with create_file, use the exact filename including all dots
+(e.g. application.html.erb, not application_html.erb). Browser upload substitution
+is an upload-only constraint. Claude controls output filenames entirely.
+See COMMON_BEHAVIOR.md v2.6 for the full rule.
 
 ---
 
@@ -90,7 +99,7 @@ In integration tests, NEVER use `assert_match(text, response.body)` or
 `refute_match(text, response.body)`. Use `assert_body_includes` /
 `refute_body_includes` from ResponseHelpers instead. The default helpers dump
 the full HTML on failure; the project helpers truncate to 300 chars.
-See RAILS_SPECIFICS.md v2.7 for the full rule.
+See RAILS_SPECIFICS.md v2.8 for the full rule.
 
 ---
 
@@ -102,61 +111,135 @@ version strings, or other values that only appear in data rows.
 
 ---
 
-## Session 52 Summary
+## !! data-turbo="false" — NEVER wrap Turbo-method links inside it (learned Session 53) !!
 
-**Focus: Bug fixes + UI cleanup (computers & components).**
+`data-turbo="false"` on any ancestor disables Turbo for ALL descendants.
+A `data-turbo-method="delete"` link inside such a wrapper silently falls back
+to a plain GET → routing error. Fix: keep the link outside any Turbo-disabled element.
+See RAILS_SPECIFICS.md v2.8 for the full rule.
 
-### Files delivered this session (9 files)
+---
 
-    decor/app/controllers/computers_controller.rb              v1.22
-    decor/test/controllers/computers_controller_test.rb        v1.10
-    decor/app/views/components/_form.html.erb                  v1.7
-    decor/app/controllers/components_controller.rb             v1.9
-    decor/app/views/computers/_filters.html.erb                v1.6
-    decor/app/helpers/computers_helper.rb                      v1.8
-    decor/app/helpers/components_helper.rb                     v1.4
-    decor/app/views/components/_filters.html.erb               v1.2
-    decor/app/views/components/index.html.erb                  v1.6
+## !! CSS grid grid-cols-N — Equal columns hide overflowed links (learned Session 53) !!
+
+`grid-cols-3` (or any equal-fraction grid) on a navbar causes the left column
+to overflow when it has many items; later grid cells render on top, making
+overflowed links unclickable. Fix: `grid-cols-[auto_1fr_auto]` for
+left/logo/right navbar layouts. See RAILS_SPECIFICS.md v2.8 for the full rule.
+
+---
+
+## Session 54 Summary
+
+**Focus: Tom Select searchable combobox for long drop-down lists.**
+
+### Files delivered this session (7 files)
+
+    decor/app/javascript/controllers/tom_select_controller.js   v1.0  NEW
+    decor/config/importmap.rb                                   v1.1
+    decor/app/views/layouts/application.html.erb                v1.4
+    decor/app/views/computers/_form.html.erb                    v2.6
+    decor/app/views/components/_form.html.erb                   v1.8
+    decor/app/views/software_items/_form.html.erb               v1.1
+    decor/docs/claude/COMMON_BEHAVIOR.md                        v2.6
 
 ### Changes
 
-**Bug: "Create and add another" on peripherals landed on /computers/new**
-- computers_controller v1.21: changed `redirect_to new_computer_path` →
-  `redirect_to new_computer_path(device_type: @computer.device_type)` so the
-  next form opens as the correct device type (computer or peripheral).
-- computers_controller_test v1.10: two new regression tests assert the full
-  redirect URL including the device_type query param.
-- Note: controller reached v1.22 in the same session (see Type filter removal below).
+**Feature: Searchable combobox on all long drop-down selects**
+- Problem: Native `<select>` type-ahead only jumps to the first item starting with
+  a typed letter. With 400+ peripheral models this is essentially unusable.
+- Solution: Tom Select library — replaces native selects with a searchable combobox.
+  User types any substring; matching options are filtered in real time.
+- importmap.rb v1.1: pinned Tom Select ESM "complete" build from jsDelivr CDN.
+  No gem, no npm — CDN pin is correct approach for importmap-rails projects.
+  (bundle add tom-select-rails was tried by user and immediately removed — the gem
+  is not needed and its auto-injected assets would conflict with the CDN approach.)
+- tom_select_controller.js v1.0 (NEW): Stimulus controller. connect() inits Tom
+  Select on any `<select data-controller="tom-select">`; disconnect() calls
+  tomSelect.destroy() to restore the native element before Turbo caches the page.
+  Guard: returns early if element.tomselect already set (prevents double-init on
+  Turbo snapshot restore).
+- application.html.erb v1.4: CDN CSS link + project-matching style overrides.
+  Root cause of sizing bug (found via Firefox DevTools): Tom Select copies ALL
+  classes from the `<select>` to .ts-wrapper. field_classes (h-10 p-3 border...)
+  were being applied to the wrapper AND to .ts-control — two boxes competing.
+  Fix: .ts-wrapper.single (specificity 0,2,0) resets visual properties off the
+  wrapper; .ts-control is the sole styled element. Focus colour corrected to
+  border-stone-500 (not indigo — field_classes uses stone-500 + outline:none).
+- computers/_form.html.erb v2.6: Tom Select on computer_model_id (primary use
+  case: 400+ models), computer_condition_id, run_status_id. barter_status (3
+  options) left as native select.
+- components/_form.html.erb v1.8: Tom Select on component_type_id and
+  component_condition_id. computer_id intentionally excluded: it has
+  data-controller="computer-select" with focus/blur actions (openDropdown /
+  closeDropdown) that Tom Select would silence by hiding the native element.
+- software_items/_form.html.erb v1.1: Tom Select on software_name_id,
+  software_condition_id, computer_id. No conflicting controller on computer_id
+  here (unlike components form), so it is safe to apply.
 
-**Removed "Component Category" field from component form**
-- components/_form.html.erb v1.7: Row 3 now contains only Trade Status.
-- components_controller v1.8: removed :component_category from component_params.
+**Rule: Output file naming — never substitute underscores for dots**
+- COMMON_BEHAVIOR.md v2.6: new rule added. create_file output filenames must
+  use exact dots (application.html.erb not application_html.erb). Browser upload
+  substitution is upload-only; Claude controls output filenames entirely.
+- Real example: application.html.erb was delivered as application_html.erb.
 
-**Removed "Type" filter from Computers / Peripherals index sidebar**
-- computers/_filters.html.erb v1.6: Type filter block removed entirely.
-- computers_helper v1.7: COMPUTER_DEVICE_TYPE_FILTER_OPTIONS constant and
-  computer_filter_device_type_options/selected methods removed.
-- computers_controller v1.22: index else branch simplified from
-  `params[:device_type].presence || "computer"` to plain `"computer"`.
+---
 
-**Bug: Computers page "Model" filter showed all models incl. peripherals**
-- computers_helper v1.8: `computer_filter_models_options` now scopes to
-  `where(device_type: @device_context)` so each page only offers models
-  matching its own device type.
+## Session 53 Summary
 
-**Added "Peripheral Model" filter to Components index sidebar**
-- components_helper v1.4: split `component_filter_computer_model_options`
-  (now scoped to device_type: :computer) and added new
-  `component_filter_peripheral_model_options` (device_type: :peripheral) +
-  `component_filter_peripheral_model_selected`.
-- components/_filters.html.erb v1.2: new Peripheral Model selector added
-  after Computer Model; submits `peripheral_model` param.
-- components_controller v1.9: new `peripheral_model` filter branch, parallel
-  to the existing `computer_model` branch.
+**Focus: Bug fixes + Download Text feature.**
 
-**Renamed "Computer-Serial No." column header on Components index**
-- components/index.html.erb v1.6: header renamed to "Device – Serial No."
-  to reflect that components can be installed on computers or peripherals.
+### Files delivered this session (8 files)
+
+    decor/app/views/admin/owners/index.html.erb                        v1.2
+    decor/config/routes.rb                                             v3.0
+    decor/app/controllers/admin/site_texts_controller.rb               v1.2
+    decor/app/views/admin/site_texts/download_confirm.html.erb         v1.0  NEW
+    decor/app/views/admin/site_texts/delete_confirm.html.erb           v1.1
+    decor/app/views/layouts/admin.html.erb                             v2.2
+    decor/app/views/common/_navigation.html.erb                        v2.2
+    decor/test/controllers/admin/site_texts_controller_test.rb         v1.1
+
+### Changes
+
+**Bug: Admin Manage Owners showed wrong computers count (included peripherals)**
+- admin/owners/index.html.erb v1.2: `owner.computers.count` →
+  `owner.computers.device_type_computer.count`. Same scope already used in the
+  owner-facing `_owner.html.erb` (v3.5, Session 41) but missed in the admin view.
+
+**Feature: Download Text added to admin Texts menu**
+- routes.rb v3.0: added `get :download_confirm` (collection) and `get :download`
+  (member) inside `resources :site_texts`.
+- site_texts_controller.rb v1.2: `download_confirm` action (selector page) and
+  `download` action (`send_data` with `disposition: "attachment"`; redirects with
+  alert if text not yet uploaded).
+- download_confirm.html.erb v1.0 (NEW): selector + Download link; each `<option>`
+  carries its URL in `data-download-url`; inline JS reads that attribute on change.
+- admin.html.erb v2.2: "Download Text" added between Upload and Delete in Texts dropdown.
+
+**Bug: Delete Text routing error (No route matches [GET] "/admin/site_texts/:key")**
+- delete_confirm.html.erb v1.1: removed the dead `form_with` wrapper that had
+  `data: { turbo: false }`, which disabled Turbo on the `data-turbo-method="delete"`
+  link inside it, causing the browser to issue a plain GET instead of DELETE.
+- Root cause: `data-turbo="false"` propagates to all descendants; Turbo-method
+  links inside a Turbo-disabled ancestor are silently downgraded to GET.
+- Why no test caught it: controller tests call routes directly, bypassing the
+  view layer and JS behaviour entirely. Only catchable by system tests.
+
+**Bug: Software nav button unclickable / only clickable at bottom edge**
+- _navigation.html.erb v2.2: `grid-cols-3` → `grid-cols-[auto_1fr_auto]`.
+  Added `relative z-10` to left div as safety net.
+- Root cause: `grid-cols-3` creates three equal `1fr` columns. The left flex
+  (6 nav links) exceeded `1fr`, overflowing into centre and right cells. CSS
+  grid does not clip overflow but stacks later cells on top in source order,
+  making the overflowed Software link partially or fully unclickable.
+  Admins (Admin link + username dropdown in right column) were worst affected.
+
+**Test: site_texts_controller_test.rb updated**
+- v1.1: added `download_confirm` (renders page) and `download` (happy path:
+  content type + disposition + body; missing key: redirect with alert) tests.
+  Added comment documenting why the delete_confirm Turbo bug was invisible to
+  controller tests.
 
 ---
 
