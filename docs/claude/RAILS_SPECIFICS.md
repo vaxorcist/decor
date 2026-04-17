@@ -1,19 +1,17 @@
 # RAILS_SPECIFICS.md
-# version 2.7
+# version 2.8
+# Session 53: Two new rules from bugs found this session.
+#   1. data-turbo="false" — Never wrap Turbo-method links inside a Turbo-disabled element.
+#      Root cause: delete_confirm.html.erb wrapped the data-turbo-method="delete" link
+#      in a form_with with data: { turbo: false }. That disabled Turbo for all descendants,
+#      so the browser followed the link as a plain GET → routing error.
+#   2. CSS grid grid-cols-N — Equal columns cause overflow hidden behind later grid items.
+#      Root cause: _navigation.html.erb used grid-cols-3 (three equal 1fr columns).
+#      The left nav (6 items) overflowed its cell; the centre and right divs rendered
+#      on top in source order, making the Software link partially or fully unclickable.
+#      Fix: grid-cols-[auto_1fr_auto] for left/logo/right navbars.
 # Session 50: Added "Response Body Assertions — Use assert_body_includes" rule.
-#   Root cause: assert_match / refute_match print the entire response.body on
-#   failure, dumping 5,000–20,000 chars of HTML into the test output.
-#   Fix: ResponseHelpers (test/support/response_helpers.rb v1.0) provides
-#   assert_body_includes / refute_body_includes which truncate to 300 chars.
-#   Rule: always use the project helpers in integration tests; never the default
-#   assert_match(text, response.body) form.
 # Session 46: Added "before_action :set_resource — Always Scope with only:" section.
-#   Root cause: software_items_controller v1.0 (Session 45, read-only) shipped with
-#   an unscoped before_action :set_software_item. Harmless when only :show existed,
-#   but would have crashed new/create (no :id param) the moment those actions were
-#   added. Caught at pre-implementation review in Session 46 before any code was written.
-#   Rule: whenever a controller has new/create alongside set_resource callbacks, the
-#   callback must be scoped with only: %i[show edit update destroy].
 # Session 42: Fixed stale enum assertion example in "Enum Assertions in Tests" section.
 # Session 37: Added "CSV::Table — Never Use #to_a When You Need Row Indexing" section.
 # decor/docs/claude/RAILS_SPECIFICS.md
@@ -23,7 +21,7 @@
 
 **Ruby on Rails Specific Patterns and Best Practices**
 
-**Last Updated:** April 3, 2026 (v2.6: before_action only: scope rule added; Session 46)
+**Last Updated:** April 16, 2026 (v2.8: two new rules; Session 53)
 
 ---
 
@@ -160,6 +158,95 @@ a `show` action. The `before_action :set_software_item` had no `only:` restricti
 Session 46, when `new` and `create` were about to be added, the pre-implementation
 review caught the gap. The v1.0 code would have crashed `new` and `create` as
 soon as they were wired up. Rule added so this is caught at write time, not at test time.
+
+---
+
+## data-turbo="false" — NEVER wrap Turbo-method links inside a Turbo-disabled element
+
+**RULE: Never place a `data-turbo-method` link inside any ancestor element that
+carries `data-turbo="false"` or `data: { turbo: false }`.**
+
+`data-turbo="false"` disables Turbo for the element AND all of its descendants.
+A `data-turbo-method="delete"` (or any other method) link inside such a wrapper
+is silently treated as a plain GET by the browser — Turbo never processes it.
+
+**Result:** a routing error such as `No route matches [GET] "/admin/site_texts/privacy"`
+when the route only exists as DELETE.
+
+**Wrong — Turbo disabled on the link by its ancestor:**
+```erb
+<%= form_with url: "#", data: { turbo: false } do |f| %>
+  <a href="<%= admin_site_text_path(key) %>"
+     data-turbo-method="delete"
+     data-turbo-confirm="Are you sure?">Delete</a>
+<% end %>
+```
+
+**Correct — link lives outside any Turbo-disabled wrapper:**
+```erb
+<a href="<%= admin_site_text_path(key) %>"
+   data-turbo-method="delete"
+   data-turbo-confirm="Are you sure?">Delete</a>
+```
+
+**Why this rule exists (Session 53, April 16, 2026):**
+`delete_confirm.html.erb` v1.0 wrapped the Delete link in a `form_with` with
+`data: { turbo: false }` (originally added to allow multipart form submission
+on the upload page — copy-pasted unnecessarily). The link was visible and
+rendered correctly; it simply fired a GET instead of DELETE, producing a
+routing error. The bug was invisible to controller tests, which call routes
+directly without rendering JS behaviour.
+
+**Detection gap:** this class of bug requires a system test (real browser) to
+catch. Controller integration tests bypass the view layer entirely.
+
+---
+
+## CSS grid grid-cols-N — Equal columns cause overflow hidden behind later items
+
+**RULE: Never use `grid-cols-N` (equal `1fr` columns) for a left/logo/right
+navbar layout. Use `grid-cols-[auto_1fr_auto]` instead.**
+
+`grid-cols-3` divides the nav into three equal `1fr` columns. If the left
+column's flex content (nav links) is wider than `1fr`, it overflows its cell.
+CSS grid does NOT clip overflow — but grid items stack in source order, so the
+centre and right grid cells render ON TOP of the overflowed left content.
+The overflowed links are visible but unclickable (or only partially clickable
+where no overlapping element covers them).
+
+**Symptoms that point to this bug:**
+- A nav link is visible but cannot be clicked (fully covered by a later column).
+- A link is only clickable at its very bottom edge (partially covered by the
+  centre logo image).
+- The bug is worse for users with more items in the right column (e.g. admins).
+
+**Wrong:**
+```erb
+<nav class="grid grid-cols-3 items-center gap-2 px-6 py-4">
+  <div class="flex gap-6">   <%# left: nav links — may overflow 1fr %> </div>
+  <div class="flex justify-center"> <%# centre: logo %> </div>
+  <div class="flex justify-end">   <%# right: auth %> </div>
+</nav>
+```
+
+**Correct:**
+```erb
+<nav class="grid grid-cols-[auto_1fr_auto] items-center gap-2 px-6 py-4">
+  <div class="flex gap-6 relative z-10"> <%# left: sizes to content %> </div>
+  <div class="flex justify-center">      <%# centre: takes remaining space %> </div>
+  <div class="flex justify-end">         <%# right: sizes to content %> </div>
+</nav>
+```
+
+`relative z-10` on the left div is a safety net: if future crowding causes any
+visual overlap, the left column's links remain above the centre column.
+
+**Why this rule exists (Session 53, April 16, 2026):**
+`_navigation.html.erb` used `grid-cols-3` since its creation. Adding the
+Software link as the 6th item in the left nav pushed it past the `1fr`
+boundary. Logged-out users saw the bug mildly; admins (with Admin link +
+username dropdown in the right column, widening the right cell's visual
+footprint) saw Software completely unclickable.
 
 ---
 

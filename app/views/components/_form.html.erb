@@ -1,17 +1,15 @@
-<%# decor/app/views/components/_form.html.erb - version 1.7 %>
+<%# decor/app/views/components/_form.html.erb - version 1.8 %>
+<%# v1.8 (Session 54): Added data-controller="tom-select" to component_type_id and %>
+<%#   component_condition_id. %>
+<%#   computer_id is intentionally excluded: it already carries data-controller="computer-select" %>
+<%#   with focus/blur actions (openDropdown / closeDropdown). Tom Select hides the native %>
+<%#   <select>, so those focus/blur events would never fire, breaking the collapse-to- %>
+<%#   model-name behaviour managed by the computer-select controller. %>
 <%# v1.7 (Session 52): Removed Component Category field. %>
 <%#   Row 3 now contains only Trade Status (barter_status), single column. %>
 <%#   :component_category removed from strong params in components_controller v1.8. %>
 <%# v1.6 (Session 21): Added component_category and barter_status fields. %>
-<%#   New Row 3 (2-col): Component Category (integral/peripheral) | Trade Status (barter_status). %>
-<%#   Description shifts from Row 3 to Row 4 (full width, unchanged). %>
-<%#   The form is only accessible to logged-in owners so no logged_in? guard is needed %>
-<%#   for the Trade Status field. %>
 <%# v1.5 (Session 10 rev 2): Computer Model dropdown collapses to model name after selection. %>
-<%#   Row 1 (3-col): Computer Model (select) | Computer Order Number (read-only) | Computer Serial Number (read-only) %>
-<%#   Row 2 (4-col): Component Type | Component Order Number | Component Serial Number | Component Condition %>
-<%#   Row 3 (1-col): Trade Status                                                          ← v1.7: category removed %>
-<%#   Row 4 (full):  Description                                                            ← was Row 3 %>
 
 <%# Capture owner's computers once — used for the dropdown options and the JSON map. %>
 <% owner_computers = Current.owner.computers.includes(:computer_model).to_a %>
@@ -43,6 +41,11 @@
   <%# %>
   <%# Stimulus controller wraps all three columns so it can reach all three targets. %>
   <%# data-computer-select-computers-value carries the JSON map for order/serial lookup. %>
+  <%# %>
+  <%# NOTE: Tom Select is NOT applied to the computer_id select here. That select %>
+  <%# carries data-controller="computer-select" with focus/blur actions that manage %>
+  <%# the collapse-to-model-name display. Tom Select hides the native element, which %>
+  <%# would silence those focus/blur events and break the collapse behaviour. %>
   <div class="grid grid-cols-3 gap-4"
        data-controller="computer-select"
        data-computer-select-computers-value="<%= computers_json %>">
@@ -97,7 +100,13 @@
   <div class="grid grid-cols-4 gap-4">
     <div>
       <%= f.label :component_type_id, "Component Type", class: "block text-sm font-medium text-stone-700" %>
-      <%= f.collection_select :component_type_id, ComponentType.order(:name), :id, :name, { prompt: "Select a type" }, class: field_classes %>
+      <%# Tom Select applied: searchable, consistent UX with model selects elsewhere. %>
+      <%= f.collection_select :component_type_id,
+            ComponentType.order(:name),
+            :id, :name,
+            { prompt: "Select a type" },
+            class: field_classes,
+            data: { controller: "tom-select" } %>
     </div>
 
     <div>
@@ -114,13 +123,20 @@
 
     <div>
       <%= f.label :component_condition_id, "Component Condition", class: "block text-sm font-medium text-stone-700" %>
-      <%= f.collection_select :component_condition_id, ComponentCondition.order(:condition), :id, :condition, { include_blank: "Unknown" }, class: field_classes %>
+      <%# Tom Select applied: searchable, consistent UX. %>
+      <%= f.collection_select :component_condition_id,
+            ComponentCondition.order(:condition),
+            :id, :condition,
+            { include_blank: "Unknown" },
+            class: field_classes,
+            data: { controller: "tom-select" } %>
     </div>
   </div>
 
   <%# ─── Row 3: Trade Status ─── %>
   <%# component_category removed in v1.7 — field is no longer editable on this form. %>
   <%# barter_status: no_barter (default), offered, or wanted. %>
+  <%# Native select kept: only 3 options — Tom Select adds no value at this size. %>
   <div class="grid grid-cols-2 gap-4">
     <div>
       <%= f.label :barter_status, "Trade Status", class: "block text-sm font-medium text-stone-700" %>
