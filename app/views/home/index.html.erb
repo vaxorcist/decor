@@ -1,4 +1,9 @@
-<%# decor/app/views/home/index.html.erb - v4.4 %>
+<%# decor/app/views/home/index.html.erb - v4.5 %>
+<%# Session 55: Added image caption support. %>
+<%#   If a text file exists with the same numeric prefix as the current image %>
+<%#   (e.g. 7.txt alongside 7.gif) its content is displayed centred directly %>
+<%#   below the image inside the grey border box. If no .txt file exists, no %>
+<%#   caption is shown — behaviour is identical to v4.4 in that case. %>
 <%# Session 51: Added "Version 0.9" line below the h1 heading. %>
 <%# Added Statistics section (heading + 3 data lines) below the introductory paragraph. %>
 <%# Version / Statistics labels: clamp(1.1rem, 1.7vw, 1.3rem) — one step above intro text. %>
@@ -48,6 +53,15 @@
   
   # Build the image filename
   current_image_filename = "#{current_image_number}.gif"
+
+  # Check whether a caption text file exists for the current image.
+  # Convention: caption for N.gif lives in N.txt in the same images directory.
+  # File.read strips nothing by default; .strip removes leading/trailing whitespace
+  # and any trailing newline that a text editor may have added.
+  # current_image_caption is nil when no .txt file is present — the caption block
+  # below is skipped entirely in that case.
+  caption_file = images_path.join("#{current_image_number}.txt")
+  current_image_caption = File.exist?(caption_file) ? File.read(caption_file).strip : nil
 %>
 
 <div class="mx-auto max-w-7xl h-full flex flex-col justify-center px-4">
@@ -121,6 +135,10 @@
       <%# min-w-0 allows shrinking below content width %>
       <%# overflow-hidden clips any content that exceeds container bounds %>
       <%# items-center keeps image centered within its container %>
+
+      <%# Grey border box — wraps the image and (when present) the caption. %>
+      <%# inline-block collapses the box to the image width so the caption %>
+      <%# stretches only as wide as the image, not the full right column. %>
       <div class="bg-stone-200 inline-block max-w-full" style="padding: clamp(0.25rem, 0.5vw, 0.5rem);">
         <%# padding: clamp(0.25rem, 0.5vw, 0.5rem) - fluid border padding: min 4px, scales, max 8px %>
         <%= image_tag current_image_filename, 
@@ -130,6 +148,18 @@
         <%# Image filename is calculated above based on current date %>
         <%# Changes daily: today might show 1.gif, tomorrow 2.gif, etc. %>
         <%# Automatically cycles through all available images %>
+
+        <%# Caption — rendered only when a matching N.txt file exists. %>
+        <%# Sits inside the grey border box, directly below the image. %>
+        <%# text-center centres the text within the image width. %>
+        <%# mt-1 adds a small gap between the image bottom and the caption. %>
+        <%# text-stone-600 matches the project's non-clickable data colour. %>
+        <% if current_image_caption.present? %>
+          <p class="text-center text-stone-600"
+             style="font-size: clamp(0.75rem, 1.1vw, 0.9rem); line-height: 1.4; margin-top: clamp(0.2rem, 0.4vw, 0.35rem);">
+            <%= current_image_caption %>
+          </p>
+        <% end %>
       </div>
     </div>
     <%# Image selection logic: %>
@@ -142,5 +172,8 @@
     <%# - Maximum 100 images supported %>
     <%# max-height: 78vh - prevents scrolling on all tested resolutions %>
     <%# object-fit: contain preserves aspect ratio %>
+    <%# Caption convention: N.txt in the same assets/images/ directory as N.gif %>
+    <%# - If N.txt exists: its content is displayed centred below the image %>
+    <%# - If N.txt is absent: no caption is shown (no empty space) %>
   </div>
 </div>
