@@ -1,9 +1,13 @@
-<%# decor/app/views/home/index.html.erb - v4.5 %>
+<%# decor/app/views/home/index.html.erb - v4.6 %>
 <%# Session 55: Added image caption support. %>
 <%#   If a text file exists with the same numeric prefix as the current image %>
 <%#   (e.g. 7.txt alongside 7.gif) its content is displayed centred directly %>
 <%#   below the image inside the grey border box. If no .txt file exists, no %>
 <%#   caption is shown — behaviour is identical to v4.4 in that case. %>
+<%# Session 55 v4.6: Caption wrapping fix. %>
+<%#   The grey border box uses display:table so it sizes to the image width. %>
+<%#   The caption <p> uses display:table-caption; caption-side:bottom, which %>
+<%#   constrains the caption to that same width and wraps long text there. %>
 <%# Session 51: Added "Version 0.9" line below the h1 heading. %>
 <%# Added Statistics section (heading + 3 data lines) below the introductory paragraph. %>
 <%# Version / Statistics labels: clamp(1.1rem, 1.7vw, 1.3rem) — one step above intro text. %>
@@ -137,9 +141,10 @@
       <%# items-center keeps image centered within its container %>
 
       <%# Grey border box — wraps the image and (when present) the caption. %>
-      <%# inline-block collapses the box to the image width so the caption %>
-      <%# stretches only as wide as the image, not the full right column. %>
-      <div class="bg-stone-200 inline-block max-w-full" style="padding: clamp(0.25rem, 0.5vw, 0.5rem);">
+      <%# display:table makes the box shrink to the image's rendered width. %>
+      <%# The caption uses display:table-caption so it is constrained to that %>
+      <%# same width and wraps there — never wider than the image. %>
+      <div class="bg-stone-200 max-w-full" style="display: table; padding: clamp(0.25rem, 0.5vw, 0.5rem);">
         <%# padding: clamp(0.25rem, 0.5vw, 0.5rem) - fluid border padding: min 4px, scales, max 8px %>
         <%= image_tag current_image_filename, 
                       alt: "Digital Equipment Corporation computer - Image #{current_image_number} of #{image_count}", 
@@ -150,13 +155,13 @@
         <%# Automatically cycles through all available images %>
 
         <%# Caption — rendered only when a matching N.txt file exists. %>
-        <%# Sits inside the grey border box, directly below the image. %>
-        <%# text-center centres the text within the image width. %>
-        <%# mt-1 adds a small gap between the image bottom and the caption. %>
+        <%# display:table-caption + caption-side:bottom places it below the %>
+        <%# image and constrains its width to the table (= image) width, so %>
+        <%# long text wraps at the image edge rather than expanding the box. %>
         <%# text-stone-600 matches the project's non-clickable data colour. %>
         <% if current_image_caption.present? %>
           <p class="text-center text-stone-600"
-             style="font-size: clamp(0.75rem, 1.1vw, 0.9rem); line-height: 1.4; margin-top: clamp(0.2rem, 0.4vw, 0.35rem);">
+             style="display: table-caption; caption-side: bottom; font-size: clamp(0.75rem, 1.1vw, 0.9rem); line-height: 1.4; padding-top: clamp(0.2rem, 0.4vw, 0.35rem);">
             <%= current_image_caption %>
           </p>
         <% end %>
