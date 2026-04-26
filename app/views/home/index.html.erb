@@ -1,5 +1,7 @@
-<%# decor/app/views/home/index.html.erb - v4.6 %>
-<%# Session 55: Added image caption support. %>
+<%# decor/app/views/home/index.html.erb - v4.7 %>
+<%# Session 55: Added @stat_barter_offers line below Computer models. %>
+<%#   Counts computers table records with barter_status=offered only. %>
+<%# Session 55: Added image caption support (v4.5) and caption width fix (v4.6). %>
 <%#   If a text file exists with the same numeric prefix as the current image %>
 <%#   (e.g. 7.txt alongside 7.gif) its content is displayed centred directly %>
 <%#   below the image inside the grey border box. If no .txt file exists, no %>
@@ -125,7 +127,8 @@
         <p style="font-size: clamp(0.95rem, 1.4vw, 1.15rem); line-height: 1.6;">
           - Owners: <%= @stat_owners %><br>
           - Computers total: <%= @stat_computers_total %><br>
-          - Computer models: <%= @stat_computer_models %>
+          - Computer models: <%= @stat_computer_models %><br>
+          - Barter offers: <%= @stat_barter_offers %>
         </p>
       </div>
     </div>

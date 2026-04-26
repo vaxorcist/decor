@@ -1,10 +1,10 @@
 # decor/docs/claude/SESSION_HANDOVER.md
-# version 58.0
-# Session 54: Tom Select searchable combobox for long drop-down lists.
+# version 59.0
+# Session 55: Image captions, home page stats, admin owners peripherals column.
 
-**Date:** April 17, 2026
-**Branch:** main (Sessions 49–53 committed, pushed, merged, deployed)
-**Status:** Session 54 complete — ready to commit, push, merge, deploy.
+**Date:** April 26, 2026
+**Branch:** main (Sessions 49–54 committed, pushed, merged, deployed)
+**Status:** Session 55 complete — ready to commit, push, merge, deploy.
 
 ---
 
@@ -33,8 +33,22 @@ After each: log "Read FILENAME — N lines, complete."
 
 ## !! TOKEN BUDGET WARNING !!
 
-Session 54 ended at ~83% of the context window.
-Start Session 55 fresh.
+Session 55 ended with the user calling for a wrap-up mid-session due to token
+pressure. Estimates were consistently too optimistic. The floor in COMMON_BEHAVIOR.md
+has been raised from 40% to 50% for sessions with 5+ large documents.
+Start Session 56 fresh.
+
+---
+
+## !! OUTPUT PATH COLLISION — NEVER write two files to the same output path (learned Session 55) !!
+
+When two or more files in the same session share the same base filename
+(e.g. multiple `index.html.erb` files), write each to a DISTINCT path in
+`/mnt/user-data/outputs/` using a short prefix + underscore
+(e.g. `home_index.html.erb`, `admin_owners_index.html.erb`).
+The second write silently overwrites the first — no warning, file just gone.
+Download display name still uses `#` separator per existing rule.
+See COMMON_BEHAVIOR.md v2.7 for the full rule.
 
 ---
 
@@ -43,7 +57,7 @@ Start Session 55 fresh.
 When creating a file with create_file, use the exact filename including all dots
 (e.g. application.html.erb, not application_html.erb). Browser upload substitution
 is an upload-only constraint. Claude controls output filenames entirely.
-See COMMON_BEHAVIOR.md v2.6 for the full rule.
+See COMMON_BEHAVIOR.md v2.7 for the full rule.
 
 ---
 
@@ -129,6 +143,62 @@ left/logo/right navbar layouts. See RAILS_SPECIFICS.md v2.8 for the full rule.
 
 ---
 
+## Session 55 Summary
+
+**Focus: Image captions on home page, barter offers stat, admin owners peripherals column.**
+
+### Files delivered this session (5 files)
+
+    decor/app/views/home/index.html.erb                         v4.7
+    decor/app/controllers/home_controller.rb                    v1.3
+    decor/app/views/admin/owners/index.html.erb                 v1.3
+    decor/docs/claude/COMMON_BEHAVIOR.md                        v2.7
+    decor/docs/claude/SESSION_HANDOVER.md                       v59.0
+
+### Changes
+
+**Feature: Image captions on home page (v4.5 → v4.6 → v4.7)**
+- Convention: place `N.txt` alongside `N.gif` in `decor/app/assets/images/`.
+  The view reads the file at render time; if absent, no caption is shown.
+- v4.5: caption rendered below the image inside the grey border box.
+  `File.exist?` / `File.read(...).strip` in the ERB ruby block.
+  Styled with `text-center text-stone-600`, font-size clamp.
+- v4.6: caption width fix. Problem: a long caption expanded the grey border
+  box wider than the image. Fix: `display: table` on the border box +
+  `display: table-caption; caption-side: bottom` on the `<p>`. CSS table
+  captions are constrained to the table's width — long text wraps at the
+  image edge with no JavaScript or known-width required.
+- v4.7: added `@stat_barter_offers` line to the statistics section (see below).
+
+**Feature: Barter offers stat on home page**
+- home_controller.rb v1.3: `@stat_barter_offers` counts
+  `Computer.barter_status_offered.count + Component.barter_status_offered.count`.
+  Covers hardware, peripherals (both in the computers table), and components.
+  `wanted` status is intentionally excluded — "barter offers" = offered only
+  (user clarification mid-session).
+- home/index.html.erb v4.7: added `- Barter offers: <%= @stat_barter_offers %>`
+  as a fourth data line in the Statistics section, below Computer models.
+
+**Feature: Peripherals column in Admin Manage Owners**
+- admin/owners/index.html.erb v1.3: added `<th>Peripherals</th>` and
+  `<td><%= owner.computers.device_type_peripheral.count %></td>` immediately
+  after the Computers column. Uses the `device_type_peripheral` enum scope —
+  the exact mirror of `device_type_computer` already used for the Computers column.
+
+**Rule: Output Path Collision (new — COMMON_BEHAVIOR.md v2.7)**
+- Real example this session: home/index.html.erb (v4.6) was written to
+  `outputs/index.html.erb`; later admin/owners/index.html.erb (v1.3) was
+  written to the same path, silently destroying the home view. User had to
+  re-upload for the follow-up barter offers edit.
+- Fix: use prefixed output filenames when base names collide
+  (e.g. `home_index.html.erb`, `admin_owners_index.html.erb`).
+
+**Rule: Token estimation floor raised 40% → 50% (COMMON_BEHAVIOR.md v2.7)**
+- User confirmed estimates were consistently too optimistic throughout Session 55.
+  Floor raised from 40% to 50% for sessions with 5+ large documents loaded.
+
+---
+
 ## Session 54 Summary
 
 **Focus: Tom Select searchable combobox for long drop-down lists.**
@@ -182,64 +252,6 @@ left/logo/right navbar layouts. See RAILS_SPECIFICS.md v2.8 for the full rule.
   use exact dots (application.html.erb not application_html.erb). Browser upload
   substitution is upload-only; Claude controls output filenames entirely.
 - Real example: application.html.erb was delivered as application_html.erb.
-
----
-
-## Session 53 Summary
-
-**Focus: Bug fixes + Download Text feature.**
-
-### Files delivered this session (8 files)
-
-    decor/app/views/admin/owners/index.html.erb                        v1.2
-    decor/config/routes.rb                                             v3.0
-    decor/app/controllers/admin/site_texts_controller.rb               v1.2
-    decor/app/views/admin/site_texts/download_confirm.html.erb         v1.0  NEW
-    decor/app/views/admin/site_texts/delete_confirm.html.erb           v1.1
-    decor/app/views/layouts/admin.html.erb                             v2.2
-    decor/app/views/common/_navigation.html.erb                        v2.2
-    decor/test/controllers/admin/site_texts_controller_test.rb         v1.1
-
-### Changes
-
-**Bug: Admin Manage Owners showed wrong computers count (included peripherals)**
-- admin/owners/index.html.erb v1.2: `owner.computers.count` →
-  `owner.computers.device_type_computer.count`. Same scope already used in the
-  owner-facing `_owner.html.erb` (v3.5, Session 41) but missed in the admin view.
-
-**Feature: Download Text added to admin Texts menu**
-- routes.rb v3.0: added `get :download_confirm` (collection) and `get :download`
-  (member) inside `resources :site_texts`.
-- site_texts_controller.rb v1.2: `download_confirm` action (selector page) and
-  `download` action (`send_data` with `disposition: "attachment"`; redirects with
-  alert if text not yet uploaded).
-- download_confirm.html.erb v1.0 (NEW): selector + Download link; each `<option>`
-  carries its URL in `data-download-url`; inline JS reads that attribute on change.
-- admin.html.erb v2.2: "Download Text" added between Upload and Delete in Texts dropdown.
-
-**Bug: Delete Text routing error (No route matches [GET] "/admin/site_texts/:key")**
-- delete_confirm.html.erb v1.1: removed the dead `form_with` wrapper that had
-  `data: { turbo: false }`, which disabled Turbo on the `data-turbo-method="delete"`
-  link inside it, causing the browser to issue a plain GET instead of DELETE.
-- Root cause: `data-turbo="false"` propagates to all descendants; Turbo-method
-  links inside a Turbo-disabled ancestor are silently downgraded to GET.
-- Why no test caught it: controller tests call routes directly, bypassing the
-  view layer and JS behaviour entirely. Only catchable by system tests.
-
-**Bug: Software nav button unclickable / only clickable at bottom edge**
-- _navigation.html.erb v2.2: `grid-cols-3` → `grid-cols-[auto_1fr_auto]`.
-  Added `relative z-10` to left div as safety net.
-- Root cause: `grid-cols-3` creates three equal `1fr` columns. The left flex
-  (6 nav links) exceeded `1fr`, overflowing into centre and right cells. CSS
-  grid does not clip overflow but stacks later cells on top in source order,
-  making the overflowed Software link partially or fully unclickable.
-  Admins (Admin link + username dropdown in right column) were worst affected.
-
-**Test: site_texts_controller_test.rb updated**
-- v1.1: added `download_confirm` (renders page) and `download` (happy path:
-  content type + disposition + body; missing key: redirect with alert) tests.
-  Added comment documenting why the delete_confirm Turbo bug was invisible to
-  controller tests.
 
 ---
 

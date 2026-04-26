@@ -1,4 +1,7 @@
-<%# decor/app/views/admin/owners/index.html.erb - version 1.2 %>
+<%# decor/app/views/admin/owners/index.html.erb - version 1.3 %>
+<%# v1.3 (Session 55): Added Peripherals column after Computers. %>
+<%#   Uses owner.computers.device_type_peripheral.count — the same scoping %>
+<%#   pattern as the Computers column (device_type_computer). %>
 <%# v1.2 (Session 53): Fix computers count including peripherals. %>
 <%#   owner.computers.count → owner.computers.device_type_computer.count %>
 <%#   Peripherals share the computers table (device_type enum: computer=0, peripheral=2). %>
@@ -23,6 +26,7 @@
           <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Email</th>
           <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Admin</th>
           <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Computers</th>
+          <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Peripherals</th>
           <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Components</th>
           <th class="px-4 py-2"></th>
         </tr>
@@ -46,6 +50,8 @@
             <%# Scoped to device_type_computer — peripherals share the computers table %>
             <%# and must be excluded from this count. %>
             <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= owner.computers.device_type_computer.count %></td>
+            <%# Scoped to device_type_peripheral — mirrors the computers scope above. %>
+            <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= owner.computers.device_type_peripheral.count %></td>
             <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= owner.components.count %></td>
             <td class="px-4 py-3 whitespace-nowrap text-right space-x-2 flex items-center justify-end">
               <% unless owner == Current.owner %>
