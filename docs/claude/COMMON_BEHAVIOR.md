@@ -1,5 +1,10 @@
 # COMMON_BEHAVIOR.md
-# version 2.6
+# version 2.7
+# Session 55: Output Path Collision — added rule: when two or more files in the
+#   same session share the same base filename, write them to /mnt/user-data/outputs/
+#   using a short prefix + underscore to prevent silent overwriting.
+#   Real example: home index.html.erb overwrote admin owners index.html.erb
+#   (or vice versa) because both were written to outputs/index.html.erb.
 # Session 54: Output File Naming — added rule: never substitute underscores for dots in
 #   filenames created with create_file. Browser upload substitution is upload-only;
 #   Claude controls output filenames entirely and must use the correct dots.
@@ -27,7 +32,7 @@
 
 **Universal Rules for All Interactions with This User**
 
-**Last Updated:** March 6, 2026 (v2.3: Response Formatting rules reinforced; Session 18)
+**Last Updated:** April 26, 2026 (v2.7: Output Path Collision rule added; Session 55)
 
 ---
 
@@ -262,6 +267,29 @@ user correctly flagged this: "You sent me a file named application_html.erb, but
 it had to be named application.html.erb — That should not have happened!"
 The upload/download constraint was confused and applied in the wrong direction.
 
+### Output Path Collision — Use Prefixed Names for Same-Filename Files
+
+- ✅ When two or more files delivered in the same session share the same base
+  filename (e.g. multiple `index.html.erb` files), write each to a **distinct**
+  path in `/mnt/user-data/outputs/` using a short prefix + underscore
+  (e.g. `home_index.html.erb`, `admin_owners_index.html.erb`)
+- ✅ The download display name shown to the user still follows the `#` separator
+  rule (e.g. `home#index.html.erb`, `admin_owners#index.html.erb`)
+- ❌ NEVER write two different files to the same output path — the second `cp` or
+  `create_file` silently overwrites the first and the earlier file is lost
+
+**Why this matters:**
+The `/mnt/user-data/outputs/` directory is a flat namespace shared across the
+entire session. If two views are both written to `outputs/index.html.erb`, the
+second destroys the first with no warning. The user only ever sees the second file.
+
+**Real example (Session 55, April 26, 2026):**
+`decor/app/views/home/index.html.erb` (v4.6) was written to `outputs/index.html.erb`
+early in the session. Later, `decor/app/views/admin/owners/index.html.erb` (v1.3)
+was also written to `outputs/index.html.erb`, silently overwriting the home view.
+When the home view was needed again for a follow-up edit, it had to be re-uploaded
+by the user — wasting tokens and time.
+
 ### Upload File Naming
 
 The browser uses the bare filename as the upload key. If two files with the
@@ -321,8 +349,10 @@ poor planning decisions.
 
 **Session-start floor rule:**
 When 5 or more large rule/project documents are uploaded at session start,
-the token estimate must NEVER be below 40% — the fixed base cost alone
+the token estimate must NEVER be below 50% — the fixed base cost alone
 justifies this floor before any conversation content is counted.
+(Floor was 40% through Session 54; raised to 50% in Session 55 after the user
+confirmed estimates were consistently too optimistic.)
 
 **Rules:**
 
@@ -335,7 +365,7 @@ justifies this floor before any conversation content is counted.
 ✅ When NO system warning is visible:
 - Provide an estimate, but label it explicitly as rough and likely an undercount
 - Apply a correction factor: multiply naive visible-content estimate by ~2
-- Apply session-start floor: never below 40% when 5+ large documents are loaded
+- Apply session-start floor: never below 50% when 5+ large documents are loaded
 - Format: `**Token Usage (estimate):** ~X / 200,000 (~Y% used) — rough estimate only; trust your UI`
 - Err HIGH rather than falsely reassuring
 - Remind the user that the UI is the only reliable source
@@ -361,7 +391,7 @@ System warning present:
   WRONG:          **Token Usage:** ~18,600 / 190,000 (9.8% used) ← contradicts warning
 
 No system warning, 5 large docs loaded:
-  Correct: **Token Usage (estimate):** ~80,000 / 200,000 (~40% used) — rough estimate
+  Correct: **Token Usage (estimate):** ~80,000 / 200,000 (~50% used) — rough estimate
            only; trust your UI over this number
   WRONG:   **Token Usage (estimate):** ~8,000 / 200,000 (~4% used) ← ignores base cost
 ```
@@ -468,7 +498,7 @@ bundle exec rubocop              Verify clean           Locally
 **Bad:**
 ```
 | Command                | When          | Where   |
-|------------------------|---------------|---------|
+|------------------------|---------------|---------| 
 | bundle exec rubocop -A | Fix offenses  | Locally |
 ```
 

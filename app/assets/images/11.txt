@@ -1,1 +1,1 @@
-VAX-11/725, VAXstation 125 Unibus Color Graphics Option, VR290 19" Color Monitor, VSXXX-DA 8 Dial Array, VS10X Tablet
+VAXstation 8000 with Unibus Color Graphics Option, VR290 19" Color Monitor, VSXXX-DA 8 Dial Array, VS10X Tablet
