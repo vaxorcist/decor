@@ -1,6 +1,11 @@
-<%# decor/app/views/owners/new.html.erb - version 1.2 %>
-<%# Added password strength indicator display %>
-<%# Password generator uses Stimulus controller to create secure 16-character password %>
+<%# decor/app/views/owners/new.html.erb - version 1.3 %>
+<%# v1.3 (Session 56): Newsletter feature. %>
+<%#   Added newsletter checkbox in the Optional Profile Information section, %>
+<%#   below the website field and above the submit button. %>
+<%#   Checked by default (newsletter=1) matching the DB column default. %>
+<%#   checked_value: 1 / unchecked_value: 0 maps to the integer column. %>
+<%# v1.2: Added password strength indicator display. %>
+<%# v1.1: Password generator uses Stimulus controller. %>
 
 <div class="max-w-2xl mx-auto">
   <h1 class="text-2xl font-semibold mb-4">Create Your Account</h1>
@@ -67,6 +72,25 @@
     <div>
       <%= f.label :website, class: "block text-sm font-medium text-stone-700" %>
       <%= f.url_field :website, placeholder: "https://example.com", class: field_classes %>
+    </div>
+
+    <%# Newsletter preference ─────────────────────────────────────────────── %>
+    <%# Checked by default (newsletter=1) matching the DB column default. %>
+    <%# checked_value: 1 / unchecked_value: 0 maps to the integer column. %>
+    <%# Rails generates a hidden input for unchecked_value so that unchecking %>
+    <%# the box submits 0 rather than omitting the param entirely. %>
+    <div class="flex items-start gap-3 pt-1">
+      <%= f.check_box :newsletter,
+            { checked_value: 1, unchecked_value: 0,
+              checked: true,
+              class: "mt-0.5 h-4 w-4 text-stone-900 focus:ring-0 border-stone-300 rounded" } %>
+      <div>
+        <%= f.label :newsletter, "Subscribe to newsletter", class: "block text-sm font-medium text-stone-700" %>
+        <p class="text-xs text-stone-500 mt-0.5">
+          Receive occasional newsletters from the DEC Owner's Registry.
+          You can change this preference from your profile at any time.
+        </p>
+      </div>
     </div>
 
     <div class="flex gap-3">

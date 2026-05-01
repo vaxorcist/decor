@@ -1,9 +1,15 @@
-<%# app/views/owners/_form.html.erb - version 1.8 %>
-<%# Added password strength indicator %>
-<%# Delete form uses plain HTML for reliability - no Rails/Turbo magic %>
-<%# Danger zone is OUTSIDE main form to prevent nested forms %>
-<%# Password generator uses Stimulus controller to create secure 16-character password %>
-<%# Password fields are optional - leave blank to skip password change %>
+<%# decor/app/views/owners/_form.html.erb - version 1.9 %>
+<%# v1.9 (Session 56): Newsletter feature. %>
+<%#   Added newsletter checkbox below the website field and above the %>
+<%#   "Change Password" section separator. %>
+<%#   checked_value: 1 / unchecked_value: 0 maps to the integer column. %>
+<%#   Rails generates a hidden input for unchecked_value so unchecking the box %>
+<%#   submits 0 rather than omitting the param entirely. %>
+<%# v1.8: Added password strength indicator. %>
+<%# Delete form uses plain HTML for reliability - no Rails/Turbo magic. %>
+<%# Danger zone is OUTSIDE main form to prevent nested forms. %>
+<%# Password generator uses Stimulus controller to create secure 16-character password. %>
+<%# Password fields are optional - leave blank to skip password change. %>
 
 <%= form_with model: owner, class: "space-y-4" do |f| %>
   <%= render "common/record_errors", record: owner %>
@@ -49,6 +55,22 @@
   <div>
     <%= f.label :website, class: "block text-sm font-medium text-stone-700" %>
     <%= f.url_field :website, placeholder: "https://example.com", class: field_classes %>
+  </div>
+
+  <%# Newsletter preference ──────────────────────────────────────────────── %>
+  <%# checked_value: 1 / unchecked_value: 0 maps to the integer column. %>
+  <%# Rails renders a hidden input for unchecked_value so that unchecking the %>
+  <%# box submits 0 rather than omitting the param entirely. %>
+  <div class="flex items-start gap-3">
+    <%= f.check_box :newsletter,
+          { checked_value: 1, unchecked_value: 0,
+            class: "mt-0.5 h-4 w-4 text-stone-900 focus:ring-0 border-stone-300 rounded" } %>
+    <div>
+      <%= f.label :newsletter, "Subscribe to newsletter", class: "block text-sm font-medium text-stone-700" %>
+      <p class="text-xs text-stone-500 mt-0.5">
+        Receive occasional newsletters from the DEC Owner's Registry.
+      </p>
+    </div>
   </div>
 
   <%# Password Change Section - Optional %>

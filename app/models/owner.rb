@@ -1,19 +1,16 @@
-# decor/app/models/owner.rb - version 1.5
+# decor/app/models/owner.rb
+# version 1.6
+# v1.6 (Session 56): Newsletter feature.
+#   - Added newsletter integer column support (0 = no newsletter, 1 = newsletter).
+#   - Added validates :newsletter inclusion [0, 1].
+#   - Added scope :newsletter_subscribed — returns all owners with newsletter = 1.
+#     Used by Admin::NewslettersController to find send targets for "send to all".
+#   - Added newsletter_subscribed? predicate — returns true when newsletter == 1.
+#     Used by mailer and views to read preference as a boolean without repeating
+#     the integer comparison throughout the codebase.
 # v1.5 (Session 43): Added has_many :software_items, dependent: :destroy.
-#   Positioned after has_many :components and before has_many :connection_groups.
-#   No ordering constraint with :computers (unlike :connection_groups which must
-#   come after :computers to ensure ConnectionMember after_destroy callbacks fire
-#   before the group destroy — see v1.4 comment).
 # v1.4 (Session 31): Added has_many :connection_groups, dependent: :destroy.
-#   Declared AFTER has_many :computers so Rails destroys computers first during
-#   owner deletion. Computer destruction triggers the ConnectionMember after_destroy
-#   callbacks, which auto-destroy undersized groups. The has_many :connection_groups
-#   dependent: :destroy then cleans up any groups that weren't already destroyed
-#   via the computer-deletion cascade (edge case: groups whose members were all
-#   deleted at DB level, leaving the group record but no members pointing to it).
-# v1.3: Added password strength validation using zxcvbn (minimum score 3)
-# Password validation: minimum 12 characters + strength check
-# Password validation only applies when password is being set (create or update with password change)
+# v1.3: Added password strength validation using zxcvbn (minimum score 3).
 
 class Owner < ApplicationRecord
   has_secure_password
@@ -26,12 +23,9 @@ class Owner < ApplicationRecord
   has_many :components, dependent: :destroy
 
   # Software items owned by this owner. Destroyed when the owner is deleted.
-  # No ordering constraint relative to :computers — software_item destruction
-  # has no cross-dependency callbacks.
   has_many :software_items, dependent: :destroy
 
   # Connection groups owned by this owner. Destroyed after computers (see note above).
-  # All member devices in these groups must belong to this owner (model validation).
   has_many :connection_groups, dependent: :destroy
 
   PASSWORD_RESET_EXPIRY = 2.hours
@@ -49,14 +43,19 @@ class Owner < ApplicationRecord
   validates :country, inclusion: { in: ISO3166::Country.codes }, allow_blank: true
   validates :website, format: { with: URI::DEFAULT_PARSER.make_regexp(%w[http https]) }, allow_blank: true
 
-  # Password length validation
-  # Minimum 12 characters for security (length-based approach per NIST/OWASP guidance)
+  # newsletter column: 0 = opted out, 1 = subscribed (default).
+  # Validated at application level; database enforces NOT NULL DEFAULT 1.
+  validates :newsletter, inclusion: { in: [0, 1] }
+
+  # Password length validation (minimum 12 characters per NIST/OWASP guidance).
   validates :password, length: { minimum: 12 }, if: :password_digest_changed?
 
-  # Password strength validation using zxcvbn
-  # Requires score >= 3 (0=very weak, 4=very strong)
-  # zxcvbn checks against dictionary words, common patterns, keyboard patterns, etc.
+  # Password strength validation using zxcvbn (requires score >= 3).
   validate :password_strength, if: :password_digest_changed?
+
+  # Returns all owners who have opted in to the newsletter (newsletter = 1).
+  # Used by Admin::NewslettersController#send_newsletter for "send to all".
+  scope :newsletter_subscribed, -> { where(newsletter: 1) }
 
   scope :search, ->(query) do
     return all if query.blank?
@@ -68,6 +67,13 @@ class Owner < ApplicationRecord
     email_query = where("email_visibility IN (?) AND LOWER(email) LIKE LOWER(?)", visibility_values, pattern)
 
     user_name_query.or(real_name_query).or(email_query)
+  end
+
+  # Returns true when this owner is subscribed to the newsletter.
+  # Convenience predicate: keeps integer-comparison logic in one place.
+  # Example usage: owner.newsletter_subscribed? → true / false
+  def newsletter_subscribed?
+    newsletter == 1
   end
 
   def country_name
@@ -99,17 +105,16 @@ class Owner < ApplicationRecord
 
   private
 
-  # Validate password strength using zxcvbn
-  # Score 0-2: weak/very weak - rejected
-  # Score 3-4: strong/very strong - accepted
+  # Validate password strength using zxcvbn.
+  # Score 0-2: weak/very weak — rejected.
+  # Score 3-4: strong/very strong — accepted.
   def password_strength
-    return if password.blank? # presence is validated by has_secure_password
+    return if password.blank?
 
     require "zxcvbn"
     result = Zxcvbn.test(password)
 
     if result.score < 3
-      # Provide helpful feedback from zxcvbn
       message = "is too weak"
       message += ": #{result.feedback.warning}" if result.feedback.warning.present?
       message += ". #{result.feedback.suggestions.first}" if result.feedback.suggestions.any?

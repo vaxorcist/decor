@@ -1,0 +1,100 @@
+<%# decor/app/views/admin/newsletters/send_newsletter.html.erb %>
+<%# version 1.0 %>
+<%# Session 56: Newsletter feature — recipient selection form. %>
+<%# %>
+<%# POST target: send_newsletter_admin_newsletter_path(@newsletter) %>
+<%# -->  Admin::NewslettersController#send_newsletter (POST branch) %>
+<%# %>
+<%# Two radio options: %>
+<%#   "all"      — send to every owner with newsletter = 1 (subscribed). %>
+<%#   "specific" — send to one owner chosen via a Tom Select searchable dropdown. %>
+<%# %>
+<%# The "specific owner" select uses data-controller="tom-select" (installed in %>
+<%# Session 54) so the admin can type-search through all owners by username. %>
+<%# The select is shown/hidden via a small inline Stimulus-free JS toggle tied to %>
+<%# the radio buttons to keep the form clean without adding a new controller. %>
+
+<div class="max-w-xl mx-auto">
+  <div class="mb-4 flex items-center gap-3">
+    <h1 class="text-2xl font-semibold">Send Newsletter</h1>
+    <%= link_to "← Preview", admin_newsletter_path(@newsletter),
+          class: "text-sm text-stone-600 hover:text-stone-900 ml-auto" %>
+  </div>
+
+  <%# Newsletter metadata ───────────────────────────────────────────────── %>
+  <div class="mb-5 bg-stone-50 border border-stone-200 rounded px-4 py-3 text-sm text-stone-700">
+    <p><span class="font-medium">Subject:</span> <%= @newsletter.subject %></p>
+    <p class="text-stone-500 text-xs mt-1">
+      Uploaded <%= @newsletter.created_at.strftime("%d %b %Y") %>.
+      Subscribed owners: <%= Owner.newsletter_subscribed.count %>.
+    </p>
+  </div>
+
+  <%# Recipient selection form ─────────────────────────────────────────── %>
+  <%# form_with without a model — manual URL + method. %>
+  <%= form_with url: send_newsletter_admin_newsletter_path(@newsletter),
+        method: :post, class: "space-y-5" do |f| %>
+
+    <%# Radio: All subscribed owners %>
+    <div class="space-y-3">
+      <label class="block text-sm font-medium text-stone-700">Send to</label>
+
+      <div class="flex items-start gap-3">
+        <input type="radio" id="recipient_all" name="recipient" value="all"
+               class="mt-0.5 h-4 w-4 border-stone-300 text-stone-900 focus:ring-0"
+               checked
+               onchange="document.getElementById('owner_select_row').classList.add('hidden')">
+        <label for="recipient_all" class="text-sm text-stone-700 cursor-pointer">
+          <span class="font-medium">All subscribed owners</span>
+          <span class="block text-stone-500">Sends to every owner with newsletter = Yes
+            (<%= Owner.newsletter_subscribed.count %> owner(s)).</span>
+        </label>
+      </div>
+
+      <div class="flex items-start gap-3">
+        <input type="radio" id="recipient_specific" name="recipient" value="specific"
+               class="mt-0.5 h-4 w-4 border-stone-300 text-stone-900 focus:ring-0"
+               onchange="document.getElementById('owner_select_row').classList.remove('hidden')">
+        <label for="recipient_specific" class="text-sm text-stone-700 cursor-pointer">
+          <span class="font-medium">Specific owner</span>
+          <span class="block text-stone-500">Send a test or targeted copy to one owner.</span>
+        </label>
+      </div>
+    </div>
+
+    <%# Owner selector — hidden until "Specific owner" radio is chosen. %>
+    <%# Tom Select (data-controller="tom-select") gives searchable type-ahead. %>
+    <div id="owner_select_row" class="hidden">
+      <label for="owner_id" class="block text-sm font-medium text-stone-700 mb-1">
+        Select owner
+      </label>
+      <select name="owner_id" id="owner_id"
+              class="<%= field_classes %>"
+              style="width: 100%;">
+        <option value="">— choose an owner —</option>
+        <% @owners.each do |owner| %>
+          <option value="<%= owner.id %>">
+            <%= owner.user_name %>
+            <% if owner.newsletter_subscribed? %>
+              ✓
+            <% else %>
+              (unsubscribed)
+            <% end %>
+          </option>
+        <% end %>
+      </select>
+      <p class="mt-1 text-xs text-stone-500">
+        ✓ = subscribed. You can send to unsubscribed owners individually
+        (useful for testing).
+      </p>
+    </div>
+
+    <%# Confirmation and submit ──────────────────────────────────────────── %>
+    <div class="flex gap-3 pt-2">
+      <%= f.submit "Send Newsletter",
+            class: button_classes(style: :primary),
+            data: { turbo_confirm: "Send \"#{@newsletter.subject}\"? This will dispatch real emails." } %>
+      <%= link_to "Cancel", admin_newsletters_path, class: button_classes(style: :secondary) %>
+    </div>
+  <% end %>
+</div>

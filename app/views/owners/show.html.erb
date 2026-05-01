@@ -1,17 +1,54 @@
-<%# decor/app/views/owners/show.html.erb - version 2.4 %>
-<%# v2.4 (Session 46): Software feature Session D. %>
-<%#   Added "+ Add" link to the Software card (create action now available). %>
-<%# v2.3 (Session 45): Software feature Session C. %>
-<%#   Added Software summary card (fifth card). Grid changed to grid-cols-5. %>
-<%#   No "+ Add" link on Software card — create was not yet available. %>
-<%# v2.2 (Session 41): Appliances → Peripherals merger Phase 2. %>
-<%#   Removed Appliances card. Grid changed to grid-cols-4. %>
+<%# decor/app/views/owners/show.html.erb - version 2.5 %>
+<%# v2.5 (Session 56): Newsletter feature. %>
+<%#   Added newsletter preference widget below the profile partial and above the %>
+<%#   summary cards. Shown only when Current.owner == @owner (private preference). %>
+<%#   Renders as an inline patch form so the owner can toggle their preference %>
+<%#   without leaving the page. Uses PATCH to owners/:id. %>
+<%# v2.4 (Session 46): Added "+ Add" link to the Software card. %>
+<%# v2.3 (Session 45): Added Software summary card. Grid changed to grid-cols-5. %>
+<%# v2.2 (Session 41): Removed Appliances card. Grid changed to grid-cols-4. %>
 <%# v2.1 (Session 38): Added Connections summary card. %>
 <%# v2.0 (Session 25): Added Peripherals summary card. %>
 <%# v1.9 (Session 23): Replaced inline tables with summary card view. %>
 
 <div class="max-w-5xl mx-auto">
   <%= render "profile" %>
+
+  <%# ── Newsletter preference ────────────────────────────────────────────── %>
+  <%# Shown only to the owner themselves — newsletter subscription is a private %>
+  <%# preference and should not be visible to other members or the public. %>
+  <% if Current.owner == @owner %>
+    <div class="mb-4 bg-white border border-stone-200 rounded px-5 py-4
+                flex items-center justify-between gap-4">
+      <div>
+        <p class="text-sm font-medium text-stone-700">Newsletter</p>
+        <p class="text-xs text-stone-500 mt-0.5">
+          Receive occasional newsletters from the DEC Owner's Registry.
+        </p>
+      </div>
+      <%# Inline PATCH form — toggles newsletter between 1 (subscribed) and 0. %>
+      <%# button_to generates its own form; data-turbo="true" is default. %>
+      <% if @owner.newsletter_subscribed? %>
+        <%# Currently subscribed — button submits newsletter=0 to unsubscribe. %>
+        <%= button_to "Subscribed ✓",
+              owner_path(@owner),
+              method: :patch,
+              params: { owner: { newsletter: 0 } },
+              class: "text-sm px-3 py-1.5 rounded border border-stone-300
+                      bg-stone-100 text-stone-700 hover:bg-stone-200 whitespace-nowrap",
+              title: "Click to unsubscribe" %>
+      <% else %>
+        <%# Currently unsubscribed — button submits newsletter=1 to subscribe. %>
+        <%= button_to "Not subscribed",
+              owner_path(@owner),
+              method: :patch,
+              params: { owner: { newsletter: 1 } },
+              class: "text-sm px-3 py-1.5 rounded border border-stone-300
+                      bg-white text-stone-500 hover:bg-stone-50 whitespace-nowrap",
+              title: "Click to subscribe" %>
+      <% end %>
+    </div>
+  <% end %>
 
   <div class="grid grid-cols-5 gap-4">
 
@@ -31,7 +68,7 @@
       </div>
     </div>
 
-    <%# Peripherals card — covers all device_type_peripheral? records. %>
+    <%# Peripherals card %>
     <div class="bg-white border border-stone-200 rounded p-5">
       <div class="flex justify-between items-start mb-3">
         <h2 class="font-semibold text-stone-700">Peripherals</h2>
@@ -79,7 +116,7 @@
       </div>
     </div>
 
-    <%# Software card — "+ Add" link added in Session 46 (create action now available). %>
+    <%# Software card %>
     <div class="bg-white border border-stone-200 rounded p-5">
       <div class="flex justify-between items-start mb-3">
         <h2 class="font-semibold text-stone-700">Software</h2>

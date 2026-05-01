@@ -1,0 +1,107 @@
+<%# decor/app/views/shared/_newsletter_email_chrome.html.erb %>
+<%# version 1.0 %>
+<%# Session 56: Newsletter feature — shared email chrome partial. %>
+<%# %>
+<%# Single source of truth for the newsletter email layout. %>
+<%# Rendered by: %>
+<%#   - app/views/mailers/newsletter_mailer/send_newsletter.html.erb (actual email) %>
+<%#   - app/views/admin/newsletters/show.html.erb (admin preview) %>
+<%# %>
+<%# Locals: %>
+<%#   html_body  [String]  — rendered HTML content, {{user_name}} already substituted %>
+<%#                          (mailer) or shown as-is (preview). %>
+<%# %>
+<%# Logo: read directly from app/assets/images/logo.png and embedded as a base64 %>
+<%# data URI so the image is self-contained. Works in letter_opener (file:// pages), %>
+<%# all real email clients, and the admin preview — no URL resolution needed. %>
+<%# %>
+<%# Layout: table-based for maximum email client compatibility. Using tables in the %>
+<%# browser preview is harmless and ensures the preview matches the real email exactly. %>
+
+<%# Read logo once and encode as base64 data URI. %>
+<% logo_path = Rails.root.join("app/assets/images/logo.png") %>
+<% logo_src  = "data:image/png;base64,#{Base64.strict_encode64(File.binread(logo_path))}" %>
+
+<%# ── Styles ──────────────────────────────────────────────────────────────── %>
+<%# Placed here (not in <head>) so the styles travel with the partial in both   %>
+<%# the mailer and the preview. In the mailer, Rails may move <style> to <head> %>
+<%# via premailer; in the browser preview, inline <style> is valid HTML5.       %>
+<%# Gmail strips <head> styles — these class-based rules are for other clients; %>
+<%# critical layout properties are also set as inline styles on each element.   %>
+<style type="text/css">
+  .newsletter-body { font-family: Arial, Helvetica, sans-serif; font-size: 16px; line-height: 1.7; }
+  .newsletter-body h1 { font-size: 24px; font-weight: bold; margin: 20px 0 8px; }
+  .newsletter-body h2 { font-size: 20px; font-weight: bold; margin: 20px 0 8px; }
+  .newsletter-body h3 { font-size: 17px; font-weight: bold; margin: 16px 0 6px; }
+  .newsletter-body p  { margin: 10px 0; }
+  .newsletter-body ul { padding-left: 24px; margin: 10px 0; list-style: disc; }
+  .newsletter-body ol { padding-left: 24px; margin: 10px 0; list-style: decimal; }
+  .newsletter-body table  { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14px; }
+  .newsletter-body th     { background-color: #f5f5f4; border: 1px solid #d6d3d1; padding: 6px 12px; text-align: left; font-weight: 600; }
+  .newsletter-body td     { border: 1px solid #d6d3d1; padding: 6px 12px; }
+  .newsletter-body tr:nth-child(even) td { background-color: #fafaf9; }
+  .newsletter-body code   { background-color: #f5f5f4; padding: 2px 5px; border-radius: 3px; font-size: 13px; font-family: monospace; }
+  .newsletter-body pre    { background-color: #f5f5f4; padding: 12px 16px; border-radius: 4px; }
+  .newsletter-body a      { color: #44403c; }
+  .newsletter-body hr     { border: none; border-top: 1px solid #e7e5e4; margin: 16px 0; }
+</style>
+
+<%# ── Outer wrapper ───────────────────────────────────────────────────────── %>
+<table width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="background-color: #f5f5f4; padding: 32px 0;">
+  <tr>
+    <td align="center">
+      <table width="900" cellpadding="0" cellspacing="0" border="0"
+             style="background-color: #ffffff; border: 1px solid #e7e5e4;
+                    border-radius: 4px; overflow: hidden;">
+
+        <%# ── Header ─────────────────────────────────────────────────────── %>
+        <tr>
+          <td style="background-color: #f5f5f4; border-bottom: 1px solid #e7e5e4;
+                     padding: 16px 32px;">
+            <table cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="vertical-align: middle; padding-right: 10px;">
+                  <img src="<%= logo_src %>"
+                       alt="DECOR"
+                       style="display: block; border: 0; height: 30px; width: auto;">
+                </td>
+                <td style="vertical-align: middle;">
+                  <span style="font-family: Arial, Helvetica, sans-serif;
+                               font-size: 24px; color: #1c1917; line-height: 1.4;">
+                    — DEC Owner's Registry
+                  </span>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <%# ── Body ───────────────────────────────────────────────────────── %>
+        <%# html_body is trusted admin-supplied content rendered by Redcarpet.  %>
+        <%# html_safe is correct here.                                          %>
+        <tr>
+          <td class="newsletter-body"
+              style="padding: 32px; color: #1c1917; font-size: 16px; line-height: 1.7;
+                     font-family: Arial, Helvetica, sans-serif;">
+            <%= html_body.html_safe %>
+          </td>
+        </tr>
+
+        <%# ── Footer ─────────────────────────────────────────────────────── %>
+        <tr>
+          <td style="background-color: #fafaf9; border-top: 1px solid #e7e5e4;
+                     padding: 20px 32px;">
+            <p style="margin: 0; font-size: 12px; color: #78716c;
+                       font-family: Arial, Helvetica, sans-serif;">
+              You are receiving this email because you are a member of the
+              DEC Owner's Registry. To unsubscribe, log in to your account
+              and update your newsletter preference.
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
