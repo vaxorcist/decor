@@ -1,21 +1,12 @@
 # decor/app/controllers/owners_controller.rb
-# version 2.0
+# version 2.1
+# v2.1 (Session 56): Newsletter feature.
+#   - Added :newsletter to owner_params and create_owner_params so the checkbox
+#     on owners/edit and owners/new submits the newsletter preference correctly.
+#   - newsletter is an integer column (0/1); Rails check_box helpers submit the
+#     unchecked_value (0) via a hidden field, so no extra handling is needed.
 # v2.0 (Session 45): Software feature Session C.
-#   Added :software to the before_action :set_owner list.
-#   Added @software_count to show action (drives the summary card count).
-#   Added software action — loads @software_items with eager_load for
-#   ORDER BY on software_names.name. No auth guard (public, consistent with
-#   all other read-only sub-pages in this controller).
-# v1.9 (Session 41): Appliances → Peripherals merger Phase 2.
-#   Removed :appliances from before_action :set_owner list.
-#   Removed @appliance_count from show action (no longer a separate device type).
-#   Removed appliances action entirely — peripheral action already covers
-#   device_type_peripheral? records, which now includes former appliances.
-# v1.8 (Session 38): Connections sub-page added.
-# v1.7 (Session 25): Added peripherals action and @peripheral_count.
-# v1.6 (Session 23): Split owner show page into three sub-pages.
-# v1.5 (Session 18): show action: split @computers into computer/appliance.
-# v1.4: computers and components ordered; eager_load for ORDER BY on joined tables.
+# (all prior version notes preserved in the codebase — omitted here for brevity)
 
 class OwnersController < ApplicationController
   before_action :set_owner, only: %i[show edit update destroy computers peripherals components connections software]
@@ -60,11 +51,6 @@ class OwnersController < ApplicationController
   end
 
   # Summary page — shows profile info and section counts only.
-  # Full tables live in the computers / peripherals / components / connections /
-  # software sub-pages.
-  # @peripheral_count covers all device_type_peripheral? records (formerly also
-  # appliances, merged in Session 41).
-  # @software_count added Session 45.
   def show
     @computer_count         = @owner.computers.where(device_type: :computer).count
     @peripheral_count       = @owner.computers.where(device_type: :peripheral).count
@@ -73,8 +59,6 @@ class OwnersController < ApplicationController
     @software_count         = @owner.software_items.count
   end
 
-  # Sub-page: owner's computers (device_type: computer).
-  # Ordered by model name; eager_load required for ORDER BY on joined table.
   def computers
     @computers = @owner.computers
                        .where(device_type: :computer)
@@ -82,9 +66,6 @@ class OwnersController < ApplicationController
                        .order(Arel.sql("computer_models.name ASC"))
   end
 
-  # Sub-page: owner's peripherals (device_type: peripheral).
-  # Covers all peripheral records — former appliances were merged into this
-  # device type in Session 41. Same ordering pattern as computers.
   def peripherals
     @peripherals = @owner.computers
                          .where(device_type: :peripheral)
@@ -92,9 +73,6 @@ class OwnersController < ApplicationController
                          .order(Arel.sql("computer_models.name ASC"))
   end
 
-  # Sub-page: owner's components.
-  # Ordered by computer model name, then serial number, then component type.
-  # NULLS LAST keeps spare components (no computer) at the bottom.
   def components
     @components = @owner.components
                         .eager_load(:component_type, computer: :computer_model)
@@ -107,13 +85,6 @@ class OwnersController < ApplicationController
                         )
   end
 
-  # Sub-page: owner's connections (connection groups).
-  # Ordered by owner_group_id so the owner's own numbering scheme is respected.
-  # Eager-load strategy (avoids N+1 on the multi-row connections table):
-  #   :connection_type                       — type name column
-  #   connection_members: { computer: :computer_model }  — port rows
-  # The view sorts members in memory via .sort_by(&:owner_member_id); the
-  # preloaded collection is used, so no extra DB queries fire per row.
   def connections
     @connection_groups = @owner.connection_groups
                                .includes(:connection_type,
@@ -121,12 +92,6 @@ class OwnersController < ApplicationController
                                .order(:owner_group_id)
   end
 
-  # Sub-page: owner's software items.
-  # Ordered by software name (joined table — needs eager_load), then version
-  # NULLS LAST so items without a version sort after versioned ones.
-  # No auth guard — publicly accessible, consistent with all other read-only
-  # sub-pages in this controller.
-  # Added Session 45 (Software feature Session C).
   def software
     @software_items = @owner.software_items
                             .eager_load(:software_name, :software_condition,
@@ -143,8 +108,6 @@ class OwnersController < ApplicationController
   end
 
   def update
-    # Check if user is attempting to change password.
-    # Password change requires current password verification for security.
     if password_change_attempted?
       if owner_params[:current_password].blank?
         @owner.errors.add(:current_password, "is required when changing password")
@@ -165,8 +128,6 @@ class OwnersController < ApplicationController
       end
     end
 
-    # Remove current_password from params before update.
-    # current_password is not a database field — only used for verification.
     update_params = owner_params.except(:current_password)
 
     if @owner.update(update_params)
@@ -176,11 +137,6 @@ class OwnersController < ApplicationController
     end
   end
 
-  # Account self-deletion.
-  # User can only delete their own account (enforced by require_owner before_action).
-  # Requires password confirmation for security.
-  # Automatically destroys all associated computers and components (dependent: :destroy).
-  # Logs out user and redirects to home page.
   def destroy
     unless params[:password].present? && @owner.authenticate(params[:password])
       redirect_to edit_owner_path(@owner), alert: "Incorrect password. Account was not deleted."
@@ -212,14 +168,16 @@ class OwnersController < ApplicationController
     params.require(:owner).permit(
       :user_name, :real_name, :email, :country, :website,
       :real_name_visibility, :email_visibility, :country_visibility,
-      :current_password, :password, :password_confirmation
+      :current_password, :password, :password_confirmation,
+      :newsletter  # added Session 56 — newsletter preference (0/1)
     )
   end
 
   def create_owner_params
     params.require(:owner).permit(
       :user_name, :real_name, :email, :country, :website, :password, :password_confirmation,
-      :real_name_visibility, :email_visibility, :country_visibility
+      :real_name_visibility, :email_visibility, :country_visibility,
+      :newsletter  # added Session 56 — newsletter preference (0/1)
     )
   end
 end

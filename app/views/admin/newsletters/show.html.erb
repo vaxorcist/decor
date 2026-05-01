@@ -1,0 +1,42 @@
+<%# decor/app/views/admin/newsletters/show.html.erb %>
+<%# version 2.0 %>
+<%# v2.0 (Session 56): Refactored to render shared/_newsletter_email_chrome partial. %>
+<%#   All chrome (styles, header, body, footer) now live in one place. %>
+<%#   This file retains only the admin page furniture (title, buttons, metadata). %>
+<%# v1.x: Inline chrome — replaced by shared partial (DRY fix). %>
+<%#
+<%# {{user_name}} placeholders in html_body are shown as-is in the preview so the
+<%# admin can verify placement before sending. %>
+
+<div class="max-w-3xl mx-auto">
+  <div class="mb-4 flex items-center gap-4">
+    <h1 class="text-2xl font-semibold">Newsletter Preview</h1>
+    <div class="ml-auto flex items-center gap-3">
+      <%= link_to "Send", send_newsletter_admin_newsletter_path(@newsletter),
+            class: "inline-flex items-center px-4 py-2 text-sm font-medium
+                    bg-stone-800 text-white rounded hover:bg-stone-900" %>
+      <%= button_to "Delete", admin_newsletter_path(@newsletter),
+            method: :delete,
+            data: { turbo_confirm: "Delete \"#{@newsletter.subject}\"? This cannot be undone." },
+            class: "text-sm text-stone-700 hover:text-stone-900" %>
+      <%= link_to "← All Newsletters", admin_newsletters_path,
+            class: "text-sm text-stone-600 hover:text-stone-900" %>
+    </div>
+  </div>
+
+  <%# Metadata row %>
+  <div class="mb-4 bg-stone-50 border border-stone-200 rounded px-4 py-3 text-sm text-stone-700 space-y-1">
+    <p><span class="font-medium">Subject:</span> <%= @newsletter.subject %></p>
+    <p><span class="font-medium">Uploaded:</span> <%= @newsletter.created_at.strftime("%d %b %Y %H:%M") %></p>
+    <p class="text-stone-500 text-xs">
+      Note: <code>{{user_name}}</code> placeholders below are shown as-is.
+      Each recipient will see their own username in the sent email.
+    </p>
+  </div>
+
+  <%# Email preview — rendered via the same shared partial used by the mailer. %>
+  <%# What the admin sees here is pixel-identical to what recipients receive. %>
+  <div class="bg-stone-100 border border-stone-200 rounded p-6">
+    <%= render "shared/newsletter_email_chrome", html_body: @newsletter.html_body %>
+  </div>
+</div>

@@ -1,15 +1,37 @@
+<%# decor/app/views/admin/owners/edit.html.erb %>
+<%# version 1.1 %>
+<%# v1.1 (Session 56): Newsletter feature. %>
+<%#   Added newsletter checkbox below the admin privileges checkbox. %>
+<%#   Uses check_box with checked_value: 1, unchecked_value: 0 to map correctly %>
+<%#   to the integer column. Rails generates a hidden input for unchecked_value %>
+<%#   so unchecking the box correctly submits 0 rather than omitting the param. %>
+<%# v1.0: Initial admin edit-owner form (admin privileges checkbox only). %>
+
 <div class="max-w-md w-full mx-auto">
   <h1 class="text-2xl font-semibold mb-4">Edit Owner: <%= @owner.user_name %></h1>
 
   <%= form_with model: @owner, url: admin_owner_path(@owner), class: "space-y-4" do |f| %>
     <%= render "common/record_errors", record: @owner %>
 
+    <%# Admin privileges ──────────────────────────────────────────────────── %>
     <div class="flex items-center">
       <%= f.check_box :admin, class: "h-4 w-4 text-stone-900 focus:ring-0 border-stone-300 rounded", disabled: @owner == Current.owner %>
       <%= f.label :admin, "Admin privileges", class: "ml-2 block text-sm text-stone-700" %>
       <% if @owner == Current.owner %>
         <span class="ml-2 text-sm text-stone-500">(You cannot change your own admin status)</span>
       <% end %>
+    </div>
+
+    <%# Newsletter preference ─────────────────────────────────────────────── %>
+    <%# checked_value: 1 / unchecked_value: 0 maps the boolean checkbox to the %>
+    <%# integer column. Rails renders a hidden input for unchecked_value so that %>
+    <%# unchecking the box submits 0 rather than omitting the param entirely. %>
+    <div class="flex items-center">
+      <%= f.check_box :newsletter,
+            { checked_value: 1, unchecked_value: 0,
+              class: "h-4 w-4 text-stone-900 focus:ring-0 border-stone-300 rounded" } %>
+      <%= f.label :newsletter, "Newsletter", class: "ml-2 block text-sm text-stone-700" %>
+      <span class="ml-2 text-xs text-stone-500">Owner receives newsletter emails</span>
     </div>
 
     <div class="flex gap-3">

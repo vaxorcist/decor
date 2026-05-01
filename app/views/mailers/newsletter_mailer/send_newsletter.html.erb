@@ -1,0 +1,19 @@
+<%# decor/app/views/mailers/newsletter_mailer/send_newsletter.html.erb %>
+<%# version 2.0 %>
+<%# v2.0 (Session 56): Refactored to render shared/_newsletter_email_chrome partial. %>
+<%#   All chrome (styles, header, body, footer) now live in one place. %>
+<%#   This file is just the HTML document wrapper + the render call. %>
+<%# v1.x: Inline chrome — replaced by shared partial (DRY fix). %>
+<%#
+<%# @html_body has {{user_name}} already substituted by NewsletterMailer#send_newsletter. %>
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= @subject %></title>
+  </head>
+  <body style="margin: 0; padding: 0; background-color: #f5f5f4;">
+    <%= render "shared/newsletter_email_chrome", html_body: @html_body %>
+  </body>
+</html>

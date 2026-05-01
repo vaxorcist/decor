@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_01_000200) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_30_000100) do
   create_table "component_conditions", force: :cascade do |t|
     t.string "condition", limit: 40, null: false
     t.datetime "created_at", precision: nil, null: false
@@ -128,6 +128,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_01_000200) do
     t.index ["token"], name: "index_invites_on_token", unique: true
   end
 
+  create_table "newsletters", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.text "html_body", null: false
+    t.text "markdown_body", null: false
+    t.string "subject", limit: 200, null: false
+    t.datetime "updated_at", null: false
+  end
+
   create_table "owners", force: :cascade do |t|
     t.boolean "admin", default: false, null: false
     t.string "country"
@@ -136,6 +144,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_01_000200) do
     t.string "email"
     t.string "email_visibility", limit: 20
     t.datetime "last_login_at"
+    t.integer "newsletter", default: 1, null: false
     t.string "password_digest"
     t.string "real_name", limit: 40
     t.string "real_name_visibility", limit: 20

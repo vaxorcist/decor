@@ -1,15 +1,11 @@
-<%# decor/app/views/admin/owners/index.html.erb - version 1.3 %>
+<%# decor/app/views/admin/owners/index.html.erb - version 1.4 %>
+<%# v1.4 (Session 56): Added Newsletter column after Peripherals. %>
+<%#   Shows "Yes" (subscribed, newsletter=1) or "No" (opted out, newsletter=0). %>
+<%#   Uses owner.newsletter_subscribed? predicate from Owner model v1.6. %>
 <%# v1.3 (Session 55): Added Peripherals column after Computers. %>
-<%#   Uses owner.computers.device_type_peripheral.count — the same scoping %>
-<%#   pattern as the Computers column (device_type_computer). %>
-<%# v1.2 (Session 53): Fix computers count including peripherals. %>
-<%#   owner.computers.count → owner.computers.device_type_computer.count %>
-<%#   Peripherals share the computers table (device_type enum: computer=0, peripheral=2). %>
-<%#   Without the scope, peripherals were counted alongside computers. %>
-<%# v1.1 (Session 20): Added "Last Login" column immediately right of Username. %>
-<%#   Displays last_login_at formatted as "07 Mar 2026 14:35" (day month year, 24h). %>
-<%#   Shows "—" for owners who have never logged in since the column was added. %>
-<%# v1.0: Initial admin owners table (Username, Email, Admin, Computers, Components). %>
+<%# v1.2 (Session 53): Fixed computers count to exclude peripherals. %>
+<%# v1.1 (Session 20): Added "Last Login" column. %>
+<%# v1.0: Initial admin owners table. %>
 
 <div class="max-w-7xl mx-auto">
   <div class="mb-4">
@@ -21,13 +17,15 @@
       <thead class="bg-stone-50">
         <tr>
           <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Username</th>
-          <%# Last Login added (Session 20) — stamped by SessionsController#create %>
           <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Last Login</th>
           <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Email</th>
           <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Admin</th>
           <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Computers</th>
           <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Peripherals</th>
           <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Components</th>
+          <%# Newsletter column: shows subscription status — Yes / No. %>
+          <%# Allows the admin to quickly see who will receive the next newsletter. %>
+          <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Newsletter</th>
           <th class="px-4 py-2"></th>
         </tr>
       </thead>
@@ -37,7 +35,6 @@
             <td class="px-4 py-3 whitespace-nowrap font-medium">
               <%= link_to owner.user_name, owner, class: "text-stone-700 hover:text-stone-900" %>
             </td>
-            <%# NULL (never logged in) renders as "—"; otherwise formatted datetime %>
             <td class="px-4 py-3 whitespace-nowrap text-stone-600">
               <%= owner.last_login_at ? owner.last_login_at.strftime("%d %b %Y %H:%M") : "—" %>
             </td>
@@ -47,12 +44,18 @@
                 <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-stone-100 text-stone-700 border border-stone-300">Admin</span>
               <% end %>
             </td>
-            <%# Scoped to device_type_computer — peripherals share the computers table %>
-            <%# and must be excluded from this count. %>
             <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= owner.computers.device_type_computer.count %></td>
-            <%# Scoped to device_type_peripheral — mirrors the computers scope above. %>
             <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= owner.computers.device_type_peripheral.count %></td>
             <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= owner.components.count %></td>
+            <%# newsletter_subscribed? is true when newsletter = 1. %>
+            <%# "Yes" is rendered with a subtle badge; "No" is plain text. %>
+            <td class="px-4 py-3 whitespace-nowrap">
+              <% if owner.newsletter_subscribed? %>
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-stone-100 text-stone-700 border border-stone-300">Yes</span>
+              <% else %>
+                <span class="text-stone-400 text-xs">No</span>
+              <% end %>
+            </td>
             <td class="px-4 py-3 whitespace-nowrap text-right space-x-2 flex items-center justify-end">
               <% unless owner == Current.owner %>
                 <%= link_to "Edit", edit_admin_owner_path(owner), class: "text-stone-700 hover:text-stone-900 text-sm" %>

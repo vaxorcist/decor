@@ -1,10 +1,10 @@
 # decor/docs/claude/SESSION_HANDOVER.md
-# version 59.0
-# Session 55: Image captions, home page stats, admin owners peripherals column.
+# version 60.0
+# Session 56: Newsletter feature — complete implementation.
 
-**Date:** April 26, 2026
-**Branch:** main (Sessions 49–54 committed, pushed, merged, deployed)
-**Status:** Session 55 complete — ready to commit, push, merge, deploy.
+**Date:** May 1, 2026
+**Branch:** main (Sessions 49–55 committed, pushed, merged, deployed)
+**Status:** Session 56 complete — ready to commit, push, merge, deploy.
 
 ---
 
@@ -34,29 +34,21 @@ After each: log "Read FILENAME — N lines, complete."
 ## !! TOKEN BUDGET WARNING !!
 
 Session 55 ended with the user calling for a wrap-up mid-session due to token
-pressure. Estimates were consistently too optimistic. The floor in COMMON_BEHAVIOR.md
+pressure. Session 56 also ended with the user calling for a wrap-up.
+Estimates were consistently too optimistic. The floor in COMMON_BEHAVIOR.md
 has been raised from 40% to 50% for sessions with 5+ large documents.
-Start Session 56 fresh.
+Start Session 57 fresh.
 
 ---
 
-## !! OUTPUT PATH COLLISION — NEVER write two files to the same output path (learned Session 55) !!
+## !! OUTPUT PATH COLLISION — NEVER write two files to the same output path !!
 
-When two or more files in the same session share the same base filename
-(e.g. multiple `index.html.erb` files), write each to a DISTINCT path in
-`/mnt/user-data/outputs/` using a short prefix + underscore
-(e.g. `home_index.html.erb`, `admin_owners_index.html.erb`).
-The second write silently overwrites the first — no warning, file just gone.
-Download display name still uses `#` separator per existing rule.
 See COMMON_BEHAVIOR.md v2.7 for the full rule.
 
 ---
 
-## !! OUTPUT FILE NAMING — NEVER substitute underscores for dots (learned Session 54) !!
+## !! OUTPUT FILE NAMING — NEVER substitute underscores for dots !!
 
-When creating a file with create_file, use the exact filename including all dots
-(e.g. application.html.erb, not application_html.erb). Browser upload substitution
-is an upload-only constraint. Claude controls output filenames entirely.
 See COMMON_BEHAVIOR.md v2.7 for the full rule.
 
 ---
@@ -111,35 +103,158 @@ See PROGRAMMING_GENERAL.md v2.0 for the full rule.
 
 In integration tests, NEVER use `assert_match(text, response.body)` or
 `refute_match(text, response.body)`. Use `assert_body_includes` /
-`refute_body_includes` from ResponseHelpers instead. The default helpers dump
-the full HTML on failure; the project helpers truncate to 300 chars.
-See RAILS_SPECIFICS.md v2.8 for the full rule.
+`refute_body_includes` from ResponseHelpers instead.
+See RAILS_SPECIFICS.md v2.9 for the full rule.
 
 ---
 
 ## !! FILTER TESTS — assert/refute on data-row values only (learned Session 50) !!
 
 When testing that a filter excludes an item, never refute_match on a name that
-also appears in the filter sidebar's <option> elements. Use serial numbers,
-version strings, or other values that only appear in data rows.
+also appears in the filter sidebar's <option> elements.
 
 ---
 
 ## !! data-turbo="false" — NEVER wrap Turbo-method links inside it (learned Session 53) !!
 
-`data-turbo="false"` on any ancestor disables Turbo for ALL descendants.
-A `data-turbo-method="delete"` link inside such a wrapper silently falls back
-to a plain GET → routing error. Fix: keep the link outside any Turbo-disabled element.
-See RAILS_SPECIFICS.md v2.8 for the full rule.
+See RAILS_SPECIFICS.md v2.9 for the full rule.
 
 ---
 
 ## !! CSS grid grid-cols-N — Equal columns hide overflowed links (learned Session 53) !!
 
-`grid-cols-3` (or any equal-fraction grid) on a navbar causes the left column
-to overflow when it has many items; later grid cells render on top, making
-overflowed links unclickable. Fix: `grid-cols-[auto_1fr_auto]` for
-left/logo/right navbar layouts. See RAILS_SPECIFICS.md v2.8 for the full rule.
+See RAILS_SPECIFICS.md v2.9 for the full rule.
+
+---
+
+## !! before_validation vs before_save — Generated fields that are also validated (learned Session 56) !!
+
+If a model generates a field via callback AND validates it for presence, the
+callback MUST be `before_validation` — NOT `before_save`. Validations run
+before before_save; the presence check fires first and rejects the record.
+See RAILS_SPECIFICS.md v2.9 for the full rule.
+
+---
+
+## !! Mailer views directory — Check existing structure first (learned Session 56) !!
+
+This project stores mailer views under `app/views/mailers/<mailer_name>/`,
+NOT the Rails default `app/views/<mailer_name>/`.
+Always grep for existing mailer views before creating a new directory.
+See RAILS_SPECIFICS.md v2.9 for the full rule.
+
+---
+
+## !! deliver_later vs deliver_now — Admin tools use deliver_now (learned Session 56) !!
+
+`deliver_later` hands off to ActiveJob — letter_opener never intercepts it.
+For admin-initiated sends, use `deliver_now` for immediate delivery and
+letter_opener preview.
+See RAILS_SPECIFICS.md v2.9 for the full rule.
+
+---
+
+## Session 56 Summary
+
+**Focus: Newsletter feature — full implementation.**
+
+### Files delivered this session (21 files)
+
+    decor/db/migrate/20260430000000_add_newsletter_to_owners.rb    v1.0  NEW
+    decor/db/migrate/20260430000100_create_newsletters.rb          v1.0  NEW
+    decor/app/models/owner.rb                                      v1.6
+    decor/app/models/newsletter.rb                                 v1.0  NEW
+    decor/app/mailers/newsletter_mailer.rb                         v1.0  NEW
+    decor/app/views/mailers/newsletter_mailer/send_newsletter.html.erb  v2.0
+    decor/app/views/shared/_newsletter_email_chrome.html.erb       v1.0  NEW
+    decor/app/controllers/admin/newsletters_controller.rb          v1.0  NEW
+    decor/app/views/admin/newsletters/index.html.erb               v1.0  NEW
+    decor/app/views/admin/newsletters/new.html.erb                 v1.0  NEW
+    decor/app/views/admin/newsletters/show.html.erb                v2.0
+    decor/app/views/admin/newsletters/send_newsletter.html.erb     v1.0  NEW
+    decor/app/views/layouts/admin.html.erb                         v2.3
+    decor/config/routes.rb                                         v3.1
+    decor/app/controllers/owners_controller.rb                     v2.1
+    decor/app/controllers/admin/owners_controller.rb               v1.1
+    decor/app/views/owners/show.html.erb                           v2.5
+    decor/app/views/admin/owners/index.html.erb                    v1.4
+    decor/app/views/admin/owners/edit.html.erb                     v1.1
+    decor/app/views/owners/new.html.erb                            v1.3
+    decor/app/views/owners/_form.html.erb                          v1.9
+    decor/docs/claude/RAILS_SPECIFICS.md                           v2.9
+    decor/docs/claude/SESSION_HANDOVER.md                          v60.0
+
+### Changes
+
+**Feature: Newsletter column on owners table**
+- Migration adds `newsletter INTEGER NOT NULL DEFAULT 1`.
+- SQLite back-fills all existing rows with 1 (subscribed) automatically.
+- No data migration needed.
+
+**Feature: Newsletter model**
+- `newsletters` table: subject VARCHAR(200), markdown_body TEXT, html_body TEXT.
+- TEXT approved by user (Session 56).
+- `before_validation :generate_html_body` — converts markdown_body to HTML using
+  identical Redcarpet config as ApplicationHelper#render_markdown.
+- Lesson: `before_save` was used initially — produced "Html body can't be blank"
+  because validations run before before_save. Fixed to `before_validation`.
+
+**Feature: Newsletter mailer**
+- `NewsletterMailer#send_newsletter(owner, newsletter)` — substitutes
+  `{{user_name}}` in html_body and markdown_body, sends via deliver_now.
+- Lesson: `deliver_later` was used initially — letter_opener never intercepted it.
+  Fixed to `deliver_now` so the browser tab opens immediately.
+
+**Feature: Shared email chrome partial**
+- `app/views/shared/_newsletter_email_chrome.html.erb` — single source of truth
+  for email layout (styles, header with base64-embedded logo, body, footer).
+- Rendered by both the mailer template and the admin preview show view.
+- Logo embedded as base64 data URI — works in letter_opener (file:// pages)
+  and all email clients without any URL resolution.
+- Email width: 900px (widened 50% from initial 600px at user request).
+- Font: Arial, Helvetica, sans-serif (matches admin preview body font).
+
+**Feature: Admin Newsletters dropdown**
+- admin.html.erb v2.3: "Newsletters" dropdown added between Software and
+  Imports/Exports. Two items: "Upload Newsletter" and "Send Newsletter".
+
+**Feature: Admin newsletters controller and views**
+- `Admin::NewslettersController`: index, new, create, show, destroy,
+  send_newsletter (GET + POST).
+- Upload: admin provides subject + .md file; controller reads file, model
+  generates html_body via Redcarpet before_validation.
+- Send: two options — "All subscribed owners" (Owner.newsletter_subscribed scope)
+  or "Specific owner" (searchable select, Tom Select removed — caused stray box).
+- Preview: show.html.erb renders shared chrome partial; {{user_name}} shown as-is.
+
+**Feature: Newsletter preference on owner-facing pages**
+- owners/show.html.erb v2.5: inline PATCH toggle widget (Subscribed ✓ / Not subscribed),
+  visible only to the owner themselves.
+- owners/_form.html.erb v1.9: newsletter checkbox in edit profile form.
+- owners/new.html.erb v1.3: newsletter checkbox in registration form (checked by default).
+- admin/owners/index.html.erb v1.4: Newsletter column (Yes / No badge).
+- admin/owners/edit.html.erb v1.1: newsletter checkbox.
+- Both controllers permit :newsletter param.
+
+**Rule: before_validation vs before_save (new — RAILS_SPECIFICS.md v2.9)**
+- Real example: Newsletter#generate_html_body as before_save produced
+  "Html body can't be blank" because presence validation fires first.
+  Fixed to before_validation.
+
+**Rule: Mailer views directory (new — RAILS_SPECIFICS.md v2.9)**
+- Real example: send_newsletter.html.erb placed at app/views/newsletter_mailer/
+  produced ActionView::MissingTemplate. This project uses
+  app/views/mailers/newsletter_mailer/ — verified by checking existing
+  PasswordResetMailer view location.
+
+**Rule: deliver_later vs deliver_now for admin tools (new — RAILS_SPECIFICS.md v2.9)**
+- Real example: deliver_later produced no letter_opener tab. Fixed to deliver_now.
+
+**Deployment checklist for Session 56:**
+```bash
+bin/rails db:migrate
+```
+Runs both migrations: adds newsletter to owners, creates newsletters table.
 
 ---
 
@@ -155,113 +270,23 @@ left/logo/right navbar layouts. See RAILS_SPECIFICS.md v2.8 for the full rule.
     decor/docs/claude/COMMON_BEHAVIOR.md                        v2.7
     decor/docs/claude/SESSION_HANDOVER.md                       v59.0
 
-### Changes
-
-**Feature: Image captions on home page (v4.5 → v4.6 → v4.7)**
-- Convention: place `N.txt` alongside `N.gif` in `decor/app/assets/images/`.
-  The view reads the file at render time; if absent, no caption is shown.
-- v4.5: caption rendered below the image inside the grey border box.
-  `File.exist?` / `File.read(...).strip` in the ERB ruby block.
-  Styled with `text-center text-stone-600`, font-size clamp.
-- v4.6: caption width fix. Problem: a long caption expanded the grey border
-  box wider than the image. Fix: `display: table` on the border box +
-  `display: table-caption; caption-side: bottom` on the `<p>`. CSS table
-  captions are constrained to the table's width — long text wraps at the
-  image edge with no JavaScript or known-width required.
-- v4.7: added `@stat_barter_offers` line to the statistics section (see below).
-
-**Feature: Barter offers stat on home page**
-- home_controller.rb v1.3: `@stat_barter_offers` counts
-  `Computer.barter_status_offered.count + Component.barter_status_offered.count`.
-  Covers hardware, peripherals (both in the computers table), and components.
-  `wanted` status is intentionally excluded — "barter offers" = offered only
-  (user clarification mid-session).
-- home/index.html.erb v4.7: added `- Barter offers: <%= @stat_barter_offers %>`
-  as a fourth data line in the Statistics section, below Computer models.
-
-**Feature: Peripherals column in Admin Manage Owners**
-- admin/owners/index.html.erb v1.3: added `<th>Peripherals</th>` and
-  `<td><%= owner.computers.device_type_peripheral.count %></td>` immediately
-  after the Computers column. Uses the `device_type_peripheral` enum scope —
-  the exact mirror of `device_type_computer` already used for the Computers column.
-
-**Rule: Output Path Collision (new — COMMON_BEHAVIOR.md v2.7)**
-- Real example this session: home/index.html.erb (v4.6) was written to
-  `outputs/index.html.erb`; later admin/owners/index.html.erb (v1.3) was
-  written to the same path, silently destroying the home view. User had to
-  re-upload for the follow-up barter offers edit.
-- Fix: use prefixed output filenames when base names collide
-  (e.g. `home_index.html.erb`, `admin_owners_index.html.erb`).
-
-**Rule: Token estimation floor raised 40% → 50% (COMMON_BEHAVIOR.md v2.7)**
-- User confirmed estimates were consistently too optimistic throughout Session 55.
-  Floor raised from 40% to 50% for sessions with 5+ large documents loaded.
-
----
-
-## Session 54 Summary
-
-**Focus: Tom Select searchable combobox for long drop-down lists.**
-
-### Files delivered this session (7 files)
-
-    decor/app/javascript/controllers/tom_select_controller.js   v1.0  NEW
-    decor/config/importmap.rb                                   v1.1
-    decor/app/views/layouts/application.html.erb                v1.4
-    decor/app/views/computers/_form.html.erb                    v2.6
-    decor/app/views/components/_form.html.erb                   v1.8
-    decor/app/views/software_items/_form.html.erb               v1.1
-    decor/docs/claude/COMMON_BEHAVIOR.md                        v2.6
-
-### Changes
-
-**Feature: Searchable combobox on all long drop-down selects**
-- Problem: Native `<select>` type-ahead only jumps to the first item starting with
-  a typed letter. With 400+ peripheral models this is essentially unusable.
-- Solution: Tom Select library — replaces native selects with a searchable combobox.
-  User types any substring; matching options are filtered in real time.
-- importmap.rb v1.1: pinned Tom Select ESM "complete" build from jsDelivr CDN.
-  No gem, no npm — CDN pin is correct approach for importmap-rails projects.
-  (bundle add tom-select-rails was tried by user and immediately removed — the gem
-  is not needed and its auto-injected assets would conflict with the CDN approach.)
-- tom_select_controller.js v1.0 (NEW): Stimulus controller. connect() inits Tom
-  Select on any `<select data-controller="tom-select">`; disconnect() calls
-  tomSelect.destroy() to restore the native element before Turbo caches the page.
-  Guard: returns early if element.tomselect already set (prevents double-init on
-  Turbo snapshot restore).
-- application.html.erb v1.4: CDN CSS link + project-matching style overrides.
-  Root cause of sizing bug (found via Firefox DevTools): Tom Select copies ALL
-  classes from the `<select>` to .ts-wrapper. field_classes (h-10 p-3 border...)
-  were being applied to the wrapper AND to .ts-control — two boxes competing.
-  Fix: .ts-wrapper.single (specificity 0,2,0) resets visual properties off the
-  wrapper; .ts-control is the sole styled element. Focus colour corrected to
-  border-stone-500 (not indigo — field_classes uses stone-500 + outline:none).
-- computers/_form.html.erb v2.6: Tom Select on computer_model_id (primary use
-  case: 400+ models), computer_condition_id, run_status_id. barter_status (3
-  options) left as native select.
-- components/_form.html.erb v1.8: Tom Select on component_type_id and
-  component_condition_id. computer_id intentionally excluded: it has
-  data-controller="computer-select" with focus/blur actions (openDropdown /
-  closeDropdown) that Tom Select would silence by hiding the native element.
-- software_items/_form.html.erb v1.1: Tom Select on software_name_id,
-  software_condition_id, computer_id. No conflicting controller on computer_id
-  here (unlike components form), so it is safe to apply.
-
-**Rule: Output file naming — never substitute underscores for dots**
-- COMMON_BEHAVIOR.md v2.6: new rule added. create_file output filenames must
-  use exact dots (application.html.erb not application_html.erb). Browser upload
-  substitution is upload-only; Claude controls output filenames entirely.
-- Real example: application.html.erb was delivered as application_html.erb.
-
 ---
 
 ## Priority 1 — Future Sessions
 
-1. **Legal/Compliance** — Impressum, Privacy Policy, GDPR, Cookie Consent, TOS.
-2. **System tests** — decor/test/system/ still empty.
-3. **Account deletion + data export** (GDPR).
-4. **Spam / Postmark DNS fix** — awaiting Rob's dashboard findings.
-5. **BulkUploadService stale model references** — low priority.
+1. **Tests for Newsletter feature** — see Session 56 wrap-up for the full
+   list of ~35 test cases across 5 files. Fixtures and existing test files
+   needed at session start:
+     test/fixtures/owners.yml
+     test/fixtures/newsletters.yml  (new — will need creating)
+     test/models/owner_test.rb      (update)
+     test/integration/admin_owners_test.rb  (update, if it exists)
+     test/integration/owners_test.rb        (update, if it exists)
+2. **Legal/Compliance** — Impressum, Privacy Policy, GDPR, Cookie Consent, TOS.
+3. **System tests** — decor/test/system/ still empty.
+4. **Account deletion + data export** (GDPR).
+5. **Spam / Postmark DNS fix** — awaiting Rob's dashboard findings.
+6. **BulkUploadService stale model references** — low priority.
 
 ---
 

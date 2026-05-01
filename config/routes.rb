@@ -1,16 +1,15 @@
 # decor/config/routes.rb
-# version 3.0
+# version 3.1
+# v3.1 (Session 56): Newsletter feature.
+#   Added resources :newsletters inside namespace :admin.
+#   Actions: index, new, create, show, destroy.
+#   Plus member routes for send_newsletter (GET + POST).
+#   GET  /admin/newsletters/:id/send_newsletter — recipient-selection form.
+#   POST /admin/newsletters/:id/send_newsletter — enqueue delivery.
 # v3.0 (Session 53): Admin Texts — added Download option.
-#   download_confirm: collection GET — selector page (matches delete_confirm pattern).
-#   download:         member GET    — sends the .md file as an attachment.
-# v2.9 (Session 46): Software feature Session D.
-#   Expanded resources :software_items from only: [:show] to full CRUD
-#   (show, new, create, edit, update, destroy).
-# v2.8 (Session 45): Software feature Session C.
-#   Added get :software to owners member block.
-#   Added resources :software_items, only: [:show].
-# v2.7 (Session 44): Software feature Session B.
-#   Added resources :software_names and :software_conditions in admin namespace.
+# v2.9 (Session 46): Expanded resources :software_items to full CRUD.
+# v2.8 (Session 45): Added get :software to owners member block.
+# v2.7 (Session 44): Added resources :software_names and :software_conditions.
 # v2.6 (Session 41): Appliances → Peripherals merger Phase 2.
 # v2.5: connections sub-page.
 # v2.4 (Session 36): Added resources :connection_groups nested under :owners.
@@ -55,8 +54,6 @@ Rails.application.routes.draw do
   resources :components
 
   # Software items — full CRUD added in Session D.
-  # show is publicly accessible; new/create/edit/update/destroy require login
-  # and ownership (enforced in the controller, not the routes).
   resources :software_items
 
   # Owner data export / import.
@@ -90,14 +87,26 @@ Rails.application.routes.draw do
     resources :software_names,      only: %i[index new create edit update destroy]
     resources :software_conditions, only: %i[index new create edit update destroy]
 
+    # Newsletters — added Session 56.
+    # index:    list stored newsletters.
+    # new/create: upload an .md file + subject, render HTML, save.
+    # show:     preview rendered HTML body.
+    # destroy:  delete a newsletter record.
+    # send_newsletter (GET):  recipient-selection form.
+    # send_newsletter (POST): enqueue delivery via NewsletterMailer.
+    resources :newsletters, only: %i[index new create show destroy] do
+      member do
+        get  :send_newsletter
+        post :send_newsletter
+      end
+    end
+
     resources :site_texts, only: %i[new create destroy], param: :key do
       collection do
         get :delete_confirm
-        # download_confirm: selector page — admin picks which text to download.
         get :download_confirm
       end
       member do
-        # download: sends the stored .md content as a file attachment.
         get :download
       end
     end

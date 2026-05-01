@@ -1,15 +1,16 @@
 # RAILS_SPECIFICS.md
-# version 2.8
+# version 2.9
+# Session 56: Three new rules from the Newsletter feature.
+#   1. before_validation vs before_save — if a field is generated for a presence
+#      validation, use before_validation, not before_save. Validations run before
+#      before_save; the presence check sees a blank field and rejects the record.
+#   2. Mailer views directory — this project stores mailer views under
+#      app/views/mailers/<mailer_name>/, NOT app/views/<mailer_name>/.
+#      Always check the existing mailer structure before creating new view directories.
+#   3. deliver_later vs deliver_now for admin tools — deliver_later hands off to
+#      ActiveJob; letter_opener never intercepts it and no browser tab opens.
+#      For admin-initiated sends where synchronous delivery is fine, use deliver_now.
 # Session 53: Two new rules from bugs found this session.
-#   1. data-turbo="false" — Never wrap Turbo-method links inside a Turbo-disabled element.
-#      Root cause: delete_confirm.html.erb wrapped the data-turbo-method="delete" link
-#      in a form_with with data: { turbo: false }. That disabled Turbo for all descendants,
-#      so the browser followed the link as a plain GET → routing error.
-#   2. CSS grid grid-cols-N — Equal columns cause overflow hidden behind later grid items.
-#      Root cause: _navigation.html.erb used grid-cols-3 (three equal 1fr columns).
-#      The left nav (6 items) overflowed its cell; the centre and right divs rendered
-#      on top in source order, making the Software link partially or fully unclickable.
-#      Fix: grid-cols-[auto_1fr_auto] for left/logo/right navbars.
 # Session 50: Added "Response Body Assertions — Use assert_body_includes" rule.
 # Session 46: Added "before_action :set_resource — Always Scope with only:" section.
 # Session 42: Fixed stale enum assertion example in "Enum Assertions in Tests" section.
@@ -21,7 +22,7 @@
 
 **Ruby on Rails Specific Patterns and Best Practices**
 
-**Last Updated:** April 16, 2026 (v2.8: two new rules; Session 53)
+**Last Updated:** May 1, 2026 (v2.9: three new rules; Session 56)
 
 ---
 
@@ -122,6 +123,118 @@ Rails-specific requirements. Follow these BEFORE writing any code.
   and `conditions_controller_test.rb` existed
 - ❌ Caused 24 test errors that were 100% preventable
 - ✅ Fix: always ask "Are there test files for this model/controller?"
+
+---
+
+## before_validation vs before_save — Generated Fields That Are Also Validated (MANDATORY)
+
+**RULE: If a model generates a field via a callback AND validates that field for
+presence, use `before_validation` — NOT `before_save`.**
+
+Rails callback order is:
+  `before_validation` → `validate` → `before_save` → save
+
+If the callback is `before_save`, the presence validation runs BEFORE the field
+is generated. The validator sees a blank value and rejects the record — even
+though the field would have been filled correctly moments later.
+
+**Wrong — presence check fires before generate_html_body runs:**
+```ruby
+validates :html_body, presence: true
+before_save :generate_html_body   # too late — validates runs first
+```
+
+**Correct:**
+```ruby
+validates :html_body, presence: true
+before_validation :generate_html_body   # runs before validates
+```
+
+**When to use each:**
+- `before_validation` — any callback that fills a field which is then validated.
+- `before_save`       — callbacks that do NOT affect validated fields
+                        (e.g. normalising a field that is not presence-validated,
+                        setting a computed cache value).
+
+**Why this rule exists (Session 56, May 1, 2026):**
+`Newsletter#generate_html_body` was declared as `before_save`. On first create,
+`validates :html_body, presence: true` fired before `generate_html_body` ran,
+producing "Html body can't be blank" even though the markdown_body was valid and
+the Redcarpet conversion would have produced correct HTML. Changing to
+`before_validation` fixed it immediately.
+
+---
+
+## Mailer Views Directory — Check Existing Structure Before Creating (MANDATORY)
+
+**RULE: Before creating a new mailer view directory, check where existing mailer
+views live in this project. Do NOT assume `app/views/<mailer_name>/`.**
+
+Rails defaults to `app/views/<mailer_name>/` for mailer templates. However,
+some projects (including DECOR) configure or organise mailer views differently.
+
+**DECOR's actual mailer views path:**
+```
+decor/app/views/mailers/<mailer_name>/<action>.html.erb
+```
+
+**NOT:**
+```
+decor/app/views/<mailer_name>/<action>.html.erb   ← wrong for this project
+```
+
+**Check command (run once per project):**
+```bash
+find decor/app/views -name "*.html.erb" | grep -i mail
+```
+
+The result immediately shows the convention this project uses.
+
+**Why this rule exists (Session 56, May 1, 2026):**
+`send_newsletter.html.erb` was placed at `app/views/newsletter_mailer/` which
+produced `ActionView::MissingTemplate`. Moving it to
+`app/views/mailers/newsletter_mailer/` resolved the error. The `PasswordResetMailer`
+view was already in `app/views/mailers/` — checking that first would have
+revealed the convention immediately.
+
+---
+
+## deliver_later vs deliver_now — Admin Tools and letter_opener (MANDATORY)
+
+**RULE: For admin-initiated email actions, use `deliver_now` — not `deliver_later`.**
+
+`deliver_later` hands the email to ActiveJob's background queue. letter_opener
+(the development email interceptor) never sees it, so no browser tab opens and
+the email appears to vanish. The only feedback is the flash notice.
+
+`deliver_now` delivers synchronously on the current request. letter_opener
+intercepts it immediately and opens the rendered email in a browser tab —
+exactly the same behaviour as other emails in the project (invites, password resets).
+
+**Wrong — letter_opener never fires, no tab opens:**
+```ruby
+NewsletterMailer.send_newsletter(owner, newsletter).deliver_later
+```
+
+**Correct:**
+```ruby
+NewsletterMailer.send_newsletter(owner, newsletter).deliver_now
+```
+
+**When `deliver_later` IS appropriate:**
+- High-volume sends triggered by user actions (e.g. "notify all followers")
+  where blocking the HTTP request would cause a timeout.
+- Background jobs that are explicitly tested with `assert_enqueued_emails`.
+
+**When `deliver_now` is appropriate:**
+- Admin-triggered sends of any size where the admin can wait a moment.
+- Any context where letter_opener preview during development is desired.
+- Small transactional emails (invites, password resets, single newsletter sends).
+
+**Why this rule exists (Session 56, May 1, 2026):**
+The newsletter send action used `deliver_later`. The admin clicked "Send Newsletter",
+got the flash "Newsletter queued for VAXorcist" — but no letter_opener tab appeared.
+Switching to `deliver_now` produced the expected browser tab immediately.
 
 ---
 
@@ -778,6 +891,16 @@ Always need:
   [ ] The controller file
   [ ] app/views/layouts/application.html.erb  (public nav)
         OR app/views/layouts/admin.html.erb   (admin nav)
+```
+
+### New Mailer
+
+```
+Always need:
+  [ ] app/mailers/<mailer_name>_mailer.rb
+  [ ] app/views/mailers/<mailer_name>/<action>.html.erb   ← check existing path first!
+  [ ] test/mailers/<mailer_name>_mailer_test.rb
+  Use deliver_now for admin tools; deliver_later only for high-volume background sends.
 ```
 
 ---
