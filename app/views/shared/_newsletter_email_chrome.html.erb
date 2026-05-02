@@ -1,5 +1,5 @@
 <%# decor/app/views/shared/_newsletter_email_chrome.html.erb %>
-<%# version 2.1 %>
+<%# version 2.2 %>
 <%# Session 57: Four fixes to the newsletter email chrome. %>
 <%#   1. Logo: base64-encoded PNG hardcoded directly in the partial as a constant. %>
 <%#      Zero runtime file I/O, no path dependency, no conditional — the image is %>
@@ -121,9 +121,17 @@
             <table cellpadding="0" cellspacing="0" border="0">
               <tr>
                 <td style="vertical-align: middle; padding-right: 10px;">
+                  <%# height= and width= HTML attributes are honoured by old email clients %>
+                  <%# (Thunderbird, Firebird, Outlook) that ignore CSS style attributes. %>
+                  <%# The font-size/family/color/font-weight on the img tag are applied by %>
+                  <%# Gmail to its alt text when the data: URI is stripped — this makes the %>
+                  <%# "DECOR" fallback text visually match "— DEC Owner's Registry" beside it. %>
                   <img src="<%= NEWSLETTER_LOGO_SRC %>"
                        alt="DECOR"
-                       style="display: block; border: 0; height: 40px; width: auto;">
+                       height="40" width="96"
+                       style="display: block; border: 0; height: 40px; width: 96px;
+                              font-size: 24px; font-family: Arial, Helvetica, sans-serif;
+                              color: #1c1917; font-weight: normal;">
                 </td>
                 <td style="vertical-align: middle;">
                   <span style="font-family: Arial, Helvetica, sans-serif;
