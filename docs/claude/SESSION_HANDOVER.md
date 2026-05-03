@@ -1,6 +1,6 @@
 # decor/docs/claude/SESSION_HANDOVER.md
-# version 62.0
-# Session 58: Newsletter feature — tests.
+# version 63.0
+# Session 58: Newsletter tests + component_conditions UI rename fixes.
 
 **Date:** May 3, 2026
 **Branch:** main (Sessions 49–57 committed, pushed, merged, deployed)
@@ -40,6 +40,18 @@ Session 58 ended at ~70% token use.
 Estimates were consistently too optimistic. The floor in COMMON_BEHAVIOR.md
 has been raised from 40% to 50% for sessions with 5+ large documents.
 Start Session 59 fresh.
+
+---
+
+## !! UI Renames — Rails auto-generates strings from model/column names (learned Session 58) !!
+
+When renaming a concept in the UI, `<h1>` headings alone are not enough.
+Also check and override explicitly:
+  1. `f.submit`        — derives label from model class name
+  2. `f.label :col`   — derives text from column name
+  3. Index column headers, show labels, titles, breadcrumbs
+  4. Flash notices that reference the field or model name
+See RAILS_SPECIFICS.md v3.2 "UI Renames" section for full checklist with examples.
 
 ---
 
@@ -213,19 +225,67 @@ omit admin: (or pass admin: "false") to trigger the guard.
 
 ## Session 58 Summary
 
-**Focus: Newsletter feature — full test suite.**
+**Focus: Newsletter tests + component_conditions UI rename fixes.**
 
-### Files delivered this session (8 files)
+### Files delivered this session (12 files)
 
     decor/test/fixtures/newsletters.yml                                    v1.0  NEW
     decor/test/fixtures/owners.yml                                         v2.2
     decor/test/models/owner_test.rb                                        v1.5
-    decor/test/models/newsletter_test.rb                                   v1.0  NEW
+    decor/test/models/newsletter_test.rb                                   v1.1  NEW
     decor/test/controllers/admin/newsletters_controller_test.rb            v1.0  NEW
-    decor/test/controllers/admin/owners_controller_test.rb                 v1.0  NEW
+    decor/test/controllers/admin/owners_controller_test.rb                 v1.3  NEW (replaces wrongly-named admin_owners_controller_test.rb)
     decor/test/mailers/newsletter_mailer_test.rb                           v1.0  NEW
     decor/test/controllers/owners_controller_test.rb                       v2.0
-    decor/docs/claude/SESSION_HANDOVER.md                                  v62.0
+    decor/app/controllers/admin/newsletters_controller.rb                  v1.1
+    decor/app/views/admin/component_conditions/_form.html.erb              v1.2
+    decor/docs/claude/RAILS_SPECIFICS.md                                   v3.2
+    decor/docs/claude/SESSION_HANDOVER.md                                  v63.0
+
+### Test failures fixed during this session
+
+Five failures on first `bin/rails test` run:
+1. `@owners nil on POST failure` — moved `@owners = Owner.order(:user_name)` to
+   top of `send_newsletter` action in newsletters_controller.rb (v1.0 → v1.1).
+   This is also a production bug fix — deploy is required.
+2. `html_body presence independently` — removed untestable test from newsletter_test.rb.
+   `before_validation` re-runs on every `validate` call, making the nil state
+   unreachable. (newsletter_test.rb v1.0 → v1.1)
+3. `NOT NULL on owners.admin` (×3) — added `admin: "false"` to three PATCH
+   params hashes in admin owners controller test. (v1.2 → v1.3)
+4. `non-admin gets 200 instead of redirect` — added `delete session_path` before
+   `login_as non_admin` in admin owners controller test. (v1.2 → v1.3)
+
+### Pre-existing file corrected
+
+`decor/test/controllers/admin/admin_owners_controller_test.rb` — wrong filename
+(was silently skipped by the test runner). Merged with Session 58 v1.0 into
+`decor/test/controllers/admin/owners_controller_test.rb` v1.3.
+**Delete the old wrongly-named file from the repo.**
+
+### UI rename fix (component_conditions)
+
+`_form.html.erb` v1.0 → v1.2:
+- v1.1: `f.submit "Save Run Status"` — was "Create/Update Component condition"
+- v1.2: `f.label :condition, "Status"` — was "Condition"
+
+### Rules added: RAILS_SPECIFICS.md v3.2
+
+Six rules added this session (v3.1 → v3.2):
+1. `render` is synchronous — set all iVars before any `render` call
+2. NOT NULL boolean columns must be explicit in PATCH test params
+3. `ActionMailer::TestHelper` — expanded with `deliveries.clear` in setup
+4. `deliver_later` in tests requires `perform_enqueued_jobs` (addendum)
+5. Switching users in tests — `delete session_path` before `login_as`
+6. UI Renames — full checklist of Rails auto-generated strings to override
+
+### Deployment checklist for Session 58
+
+One production file changed:
+  decor/app/controllers/admin/newsletters_controller.rb  v1.1
+  (fixes @owners nil crash on POST failure paths — live bug, deploy required)
+
+No migrations. Deploy as normal after committing all files.
 
 ### Test case inventory (~50 tests across 6 files)
 

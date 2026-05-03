@@ -5,8 +5,8 @@
 <%# mirror the pattern used in admin/conditions for computer conditions. %>
 <div class="max-w-7xl mx-auto">
   <div class="flex justify-between items-center mb-4">
-    <h1 class="text-2xl font-semibold">Component Conditions</h1>
-    <%= link_to "Add Component Condition", new_admin_component_condition_path, class: button_classes(style: :primary) %>
+    <h1 class="text-2xl font-semibold">Run Statuses</h1>
+    <%= link_to "Add Run Status", new_admin_component_condition_path, class: button_classes(style: :primary) %>
   </div>
 
   <% if @component_conditions.any? %>
@@ -14,7 +14,7 @@
       <table class="min-w-full divide-y divide-stone-200">
         <thead class="bg-stone-50">
           <tr>
-            <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Condition</th>
+            <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Run Status</th>
             <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Components</th>
             <th class="px-4 py-2"></th>
           </tr>
@@ -27,7 +27,7 @@
               <td class="px-4 py-3 whitespace-nowrap text-right space-x-2">
                 <%= link_to "Edit", edit_admin_component_condition_path(component_condition), class: "text-stone-700 hover:text-stone-900 text-sm" %>
                 <% if component_condition.components.empty? %>
-                  <%= button_to "Delete", admin_component_condition_path(component_condition), method: :delete, data: { turbo_confirm: "Delete this component condition?" }, class: "text-stone-700 hover:text-stone-900 text-sm" %>
+                  <%= button_to "Delete", admin_component_condition_path(component_condition), method: :delete, data: { turbo_confirm: "Delete this Run Status?" }, class: "text-stone-700 hover:text-stone-900 text-sm" %>
                 <% end %>
               </td>
             </tr>
@@ -37,7 +37,7 @@
     </div>
   <% else %>
     <div class="bg-white border border-stone-200 rounded p-4 text-center text-sm text-stone-500">
-      No component conditions yet.
+      No Run Statuses yet.
     </div>
   <% end %>
 </div>

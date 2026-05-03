@@ -27,7 +27,7 @@ module Admin
       @component_condition = ComponentCondition.new(component_condition_params)
 
       if @component_condition.save
-        redirect_to admin_component_conditions_path, notice: "Component condition was successfully created."
+        redirect_to admin_component_conditions_path, notice: "Run Status was successfully created."
       else
         render :new, status: :unprocessable_entity
       end
@@ -38,7 +38,7 @@ module Admin
 
     def update
       if @component_condition.update(component_condition_params)
-        redirect_to admin_component_conditions_path, notice: "Component condition was successfully updated."
+        redirect_to admin_component_conditions_path, notice: "Run Status was successfully updated."
       else
         render :edit, status: :unprocessable_entity
       end
@@ -49,7 +49,7 @@ module Admin
       # fail (return false) when components still reference this record.
       # We redirect with an alert in that case rather than raising an exception.
       if @component_condition.destroy
-        redirect_to admin_component_conditions_path, notice: "Component condition was successfully deleted."
+        redirect_to admin_component_conditions_path, notice: "Run Status was successfully deleted."
       else
         redirect_to admin_component_conditions_path, alert: @component_condition.errors.full_messages.to_sentence
       end

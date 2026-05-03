@@ -122,7 +122,7 @@
     </div>
 
     <div>
-      <%= f.label :component_condition_id, "Component Condition", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.label :component_condition_id, "Run Status", class: "block text-sm font-medium text-stone-700" %>
       <%# Tom Select applied: searchable, consistent UX. %>
       <%= f.collection_select :component_condition_id,
             ComponentCondition.order(:condition),
