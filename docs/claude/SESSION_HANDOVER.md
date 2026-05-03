@@ -1,10 +1,10 @@
 # decor/docs/claude/SESSION_HANDOVER.md
-# version 60.0
-# Session 56: Newsletter feature — complete implementation.
+# version 62.0
+# Session 58: Newsletter feature — tests.
 
-**Date:** May 1, 2026
-**Branch:** main (Sessions 49–55 committed, pushed, merged, deployed)
-**Status:** Session 56 complete — ready to commit, push, merge, deploy.
+**Date:** May 3, 2026
+**Branch:** main (Sessions 49–57 committed, pushed, merged, deployed)
+**Status:** Session 58 complete — ready to commit, push, merge, deploy.
 
 ---
 
@@ -35,9 +35,11 @@ After each: log "Read FILENAME — N lines, complete."
 
 Session 55 ended with the user calling for a wrap-up mid-session due to token
 pressure. Session 56 also ended with the user calling for a wrap-up.
+Session 57 ended at ~85% token use.
+Session 58 ended at ~70% token use.
 Estimates were consistently too optimistic. The floor in COMMON_BEHAVIOR.md
 has been raised from 40% to 50% for sessions with 5+ large documents.
-Start Session 57 fresh.
+Start Session 59 fresh.
 
 ---
 
@@ -104,7 +106,7 @@ See PROGRAMMING_GENERAL.md v2.0 for the full rule.
 In integration tests, NEVER use `assert_match(text, response.body)` or
 `refute_match(text, response.body)`. Use `assert_body_includes` /
 `refute_body_includes` from ResponseHelpers instead.
-See RAILS_SPECIFICS.md v2.9 for the full rule.
+See RAILS_SPECIFICS.md v3.0 for the full rule.
 
 ---
 
@@ -117,13 +119,13 @@ also appears in the filter sidebar's <option> elements.
 
 ## !! data-turbo="false" — NEVER wrap Turbo-method links inside it (learned Session 53) !!
 
-See RAILS_SPECIFICS.md v2.9 for the full rule.
+See RAILS_SPECIFICS.md v3.0 for the full rule.
 
 ---
 
 ## !! CSS grid grid-cols-N — Equal columns hide overflowed links (learned Session 53) !!
 
-See RAILS_SPECIFICS.md v2.9 for the full rule.
+See RAILS_SPECIFICS.md v3.0 for the full rule.
 
 ---
 
@@ -132,7 +134,7 @@ See RAILS_SPECIFICS.md v2.9 for the full rule.
 If a model generates a field via callback AND validates it for presence, the
 callback MUST be `before_validation` — NOT `before_save`. Validations run
 before before_save; the presence check fires first and rejects the record.
-See RAILS_SPECIFICS.md v2.9 for the full rule.
+See RAILS_SPECIFICS.md v3.0 for the full rule.
 
 ---
 
@@ -141,7 +143,7 @@ See RAILS_SPECIFICS.md v2.9 for the full rule.
 This project stores mailer views under `app/views/mailers/<mailer_name>/`,
 NOT the Rails default `app/views/<mailer_name>/`.
 Always grep for existing mailer views before creating a new directory.
-See RAILS_SPECIFICS.md v2.9 for the full rule.
+See RAILS_SPECIFICS.md v3.0 for the full rule.
 
 ---
 
@@ -150,143 +152,188 @@ See RAILS_SPECIFICS.md v2.9 for the full rule.
 `deliver_later` hands off to ActiveJob — letter_opener never intercepts it.
 For admin-initiated sends, use `deliver_now` for immediate delivery and
 letter_opener preview.
-See RAILS_SPECIFICS.md v2.9 for the full rule.
+See RAILS_SPECIFICS.md v3.0 for the full rule.
 
 ---
 
-## Session 56 Summary
+## !! Email HTML — Gmail strips data: URIs; old clients ignore CSS sizing (learned Session 57) !!
 
-**Focus: Newsletter feature — full implementation.**
+Three rules added to RAILS_SPECIFICS.md v3.0:
+1. Gmail strips data: URIs from img src — no image workaround; style the <img>
+   for readable alt text using font-size/family/color on the element itself.
+2. img display:block misaligns alt text beside inline text — use
+   display:inline-block + vertical-align:middle.
+3. Old email clients (Firebird, Thunderbird, Outlook) ignore CSS height/width on
+   <img> — always add HTML height= and width= attributes alongside CSS.
+See RAILS_SPECIFICS.md v3.0 "Email HTML" section for full rules with examples.
 
-### Files delivered this session (21 files)
+---
 
-    decor/db/migrate/20260430000000_add_newsletter_to_owners.rb    v1.0  NEW
-    decor/db/migrate/20260430000100_create_newsletters.rb          v1.0  NEW
-    decor/app/models/owner.rb                                      v1.6
-    decor/app/models/newsletter.rb                                 v1.0  NEW
-    decor/app/mailers/newsletter_mailer.rb                         v1.0  NEW
-    decor/app/views/mailers/newsletter_mailer/send_newsletter.html.erb  v2.0
-    decor/app/views/shared/_newsletter_email_chrome.html.erb       v1.0  NEW
-    decor/app/controllers/admin/newsletters_controller.rb          v1.0  NEW
-    decor/app/views/admin/newsletters/index.html.erb               v1.0  NEW
-    decor/app/views/admin/newsletters/new.html.erb                 v1.0  NEW
-    decor/app/views/admin/newsletters/show.html.erb                v2.0
-    decor/app/views/admin/newsletters/send_newsletter.html.erb     v1.0  NEW
-    decor/app/views/layouts/admin.html.erb                         v2.3
-    decor/config/routes.rb                                         v3.1
-    decor/app/controllers/owners_controller.rb                     v2.1
-    decor/app/controllers/admin/owners_controller.rb               v1.1
-    decor/app/views/owners/show.html.erb                           v2.5
-    decor/app/views/admin/owners/index.html.erb                    v1.4
-    decor/app/views/admin/owners/edit.html.erb                     v1.1
-    decor/app/views/owners/new.html.erb                            v1.3
-    decor/app/views/owners/_form.html.erb                          v1.9
-    decor/docs/claude/RAILS_SPECIFICS.md                           v2.9
-    decor/docs/claude/SESSION_HANDOVER.md                          v60.0
+## !! ActionMailer::TestHelper in integration tests — include explicitly (learned Session 58) !!
+
+ActionDispatch::IntegrationTest does NOT include ActionMailer::TestHelper
+automatically. Any integration test file that needs assert_emails /
+assert_no_emails / assert_enqueued_emails must include it explicitly:
+
+    class Admin::NewslettersControllerTest < ActionDispatch::IntegrationTest
+      include ActionMailer::TestHelper
+      ...
+    end
+
+ActionMailer::TestCase DOES include it automatically — no explicit include
+needed in files that inherit ActionMailer::TestCase.
+
+---
+
+## !! Newsletter fixture html_body — Set explicitly (learned Session 58) !!
+
+Rails fixture loading uses direct SQL INSERT and bypasses all model callbacks,
+including Newsletter#generate_html_body (before_validation). Without an explicit
+html_body value in the fixture, the column is NULL. The presence validation
+does NOT fire during fixture loading, but any test that accesses newsletter.html_body
+and expects a non-blank value will fail. Always set html_body explicitly in
+newsletters.yml, using plausible Redcarpet output for the markdown_body value.
+
+---
+
+## !! Admin update tests — include admin: "true" when updating self (learned Session 58) !!
+
+In Admin::OwnersController#update, :admin is NOT in owner_params (Brakeman fix).
+It is read directly from params[:owner][:admin] and cast with
+ActiveModel::Type::Boolean. When a param is absent, cast(nil) → false.
+The self-demotion guard fires when:
+  @owner == Current.owner && !requested_admin
+Consequence: any PATCH to update the currently-logged-in admin's own record
+MUST include `admin: "true"` in the params hash — otherwise the guard triggers
+and the test gets an unexpected redirect to edit_admin_owner_path.
+Exception: tests that intentionally test the self-demotion guard should
+omit admin: (or pass admin: "false") to trigger the guard.
+
+---
+
+## Session 58 Summary
+
+**Focus: Newsletter feature — full test suite.**
+
+### Files delivered this session (8 files)
+
+    decor/test/fixtures/newsletters.yml                                    v1.0  NEW
+    decor/test/fixtures/owners.yml                                         v2.2
+    decor/test/models/owner_test.rb                                        v1.5
+    decor/test/models/newsletter_test.rb                                   v1.0  NEW
+    decor/test/controllers/admin/newsletters_controller_test.rb            v1.0  NEW
+    decor/test/controllers/admin/owners_controller_test.rb                 v1.0  NEW
+    decor/test/mailers/newsletter_mailer_test.rb                           v1.0  NEW
+    decor/test/controllers/owners_controller_test.rb                       v2.0
+    decor/docs/claude/SESSION_HANDOVER.md                                  v62.0
+
+### Test case inventory (~50 tests across 6 files)
+
+**decor/test/fixtures/newsletters.yml (v1.0 NEW)**
+- Fixture `one`: subject with placeholder body ({{user_name}} present)
+- Fixture `two`: subject with plain body (no placeholder)
+- html_body set explicitly for both (bypasses before_validation — see notice above)
+
+**decor/test/fixtures/owners.yml (v2.2)**
+- Added newsletter column to all three fixtures
+- alice (one): newsletter: 1  charlie (three): newsletter: 1  bob (two): newsletter: 0
+- Design intent: alice+charlie subscribed, bob unsubscribed — enables
+  assert_includes/refute_includes scope tests without hardcoded counts
+
+**decor/test/models/owner_test.rb (v1.5) — 7 new tests**
+1. newsletter defaults to 1 (reflects DB column DEFAULT)
+2. newsletter_subscribed? returns true when newsletter == 1
+3. newsletter_subscribed? returns false when newsletter == 0
+4. newsletter validates inclusion — rejects value 2
+5. newsletter validates inclusion — rejects nil
+6. newsletter_subscribed scope includes subscribed owners (alice, charlie)
+7. newsletter_subscribed scope excludes unsubscribed owner (bob)
+
+**decor/test/models/newsletter_test.rb (v1.0 NEW) — 17 tests**
+- Validity: valid newsletter saves; invalid records rejected
+- subject: presence, max 200 chars, accepts 200 chars, accepts typical subject
+- markdown_body: presence (nil and blank string)
+- before_validation callback: html_body generated before validation fires;
+  rendered HTML contains expected Redcarpet output; early return when blank;
+  html_body presence validated independently
+- {{user_name}} placeholder preserved in html_body and markdown_body
+- html_body regenerated on update
+- Fixture smoke tests (x4): present, non-blank, placeholder present/absent
+
+**decor/test/controllers/admin/newsletters_controller_test.rb (v1.0 NEW) — 16 tests**
+- Auth guard: unauthenticated redirect
+- index: 200, lists subjects
+- new: 200
+- create: valid upload saves + redirects to show; missing file → 422;
+  blank subject → 422
+- show: 200, displays subject
+- destroy: removes record, redirects, notice includes subject
+- send_newsletter GET: 200
+- send_newsletter POST recipient=all: delivers one email per subscribed owner;
+  to addresses correct (alice+charlie in, bob out)
+- send_newsletter POST recipient=specific: delivers 1 email, correct address;
+  blank owner_id → 422
+- send_newsletter POST no recipient: → 422
+
+**decor/test/controllers/admin/owners_controller_test.rb (v1.0 NEW) — 12 tests**
+- Auth guard: unauthenticated redirect
+- index: 200, lists all owner usernames
+- edit: 200
+- update newsletter: sets to 0 (alice own record, admin:"true" supplied);
+  sets to 1 (bob, no self-demotion concern); notice includes username
+- update user_name: changes username; rejects blank username
+- Self-demotion guard: redirect + alert + admin unchanged
+- destroy: removes non-self owner; blocks self-delete
+- send_password_reset: delivers 1 email, generates token
+
+**decor/test/mailers/newsletter_mailer_test.rb (v1.0 NEW) — 7 tests**
+- Correct to: address
+- Correct subject:
+- {{user_name}} replaced with recipient's user_name (alice)
+- Raw {{user_name}} not present in rendered body (alice)
+- Substitution works for a different recipient (charlie)
+- Newsletter without placeholder renders without error
+- deliver_now stores mail in ActionMailer deliveries
+
+**decor/test/controllers/owners_controller_test.rb (v2.0) — 2 new tests**
+- PATCH update saves newsletter: 0 (alice opts out)
+- PATCH update saves newsletter: 1 (bob opts in)
+
+### Deployment checklist for Session 58:
+No migrations. No schema changes. Test files only. Deploy as normal.
+
+---
+
+## Session 57 Summary
+
+**Focus: Newsletter email chrome — four rendering fixes.**
+
+### Files delivered this session (2 files)
+
+    decor/app/views/shared/_newsletter_email_chrome.html.erb    v2.3
+    decor/docs/claude/RAILS_SPECIFICS.md                        v3.0
+    decor/docs/claude/SESSION_HANDOVER.md                       v61.0
 
 ### Changes
 
-**Feature: Newsletter column on owners table**
-- Migration adds `newsletter INTEGER NOT NULL DEFAULT 1`.
-- SQLite back-fills all existing rows with 1 (subscribed) automatically.
-- No data migration needed.
-
-**Feature: Newsletter model**
-- `newsletters` table: subject VARCHAR(200), markdown_body TEXT, html_body TEXT.
-- TEXT approved by user (Session 56).
-- `before_validation :generate_html_body` — converts markdown_body to HTML using
-  identical Redcarpet config as ApplicationHelper#render_markdown.
-- Lesson: `before_save` was used initially — produced "Html body can't be blank"
-  because validations run before before_save. Fixed to `before_validation`.
-
-**Feature: Newsletter mailer**
-- `NewsletterMailer#send_newsletter(owner, newsletter)` — substitutes
-  `{{user_name}}` in html_body and markdown_body, sends via deliver_now.
-- Lesson: `deliver_later` was used initially — letter_opener never intercepted it.
-  Fixed to `deliver_now` so the browser tab opens immediately.
-
-**Feature: Shared email chrome partial**
-- `app/views/shared/_newsletter_email_chrome.html.erb` — single source of truth
-  for email layout (styles, header with base64-embedded logo, body, footer).
-- Rendered by both the mailer template and the admin preview show view.
-- Logo embedded as base64 data URI — works in letter_opener (file:// pages)
-  and all email clients without any URL resolution.
-- Email width: 900px (widened 50% from initial 600px at user request).
-- Font: Arial, Helvetica, sans-serif (matches admin preview body font).
-
-**Feature: Admin Newsletters dropdown**
-- admin.html.erb v2.3: "Newsletters" dropdown added between Software and
-  Imports/Exports. Two items: "Upload Newsletter" and "Send Newsletter".
-
-**Feature: Admin newsletters controller and views**
-- `Admin::NewslettersController`: index, new, create, show, destroy,
-  send_newsletter (GET + POST).
-- Upload: admin provides subject + .md file; controller reads file, model
-  generates html_body via Redcarpet before_validation.
-- Send: two options — "All subscribed owners" (Owner.newsletter_subscribed scope)
-  or "Specific owner" (searchable select, Tom Select removed — caused stray box).
-- Preview: show.html.erb renders shared chrome partial; {{user_name}} shown as-is.
-
-**Feature: Newsletter preference on owner-facing pages**
-- owners/show.html.erb v2.5: inline PATCH toggle widget (Subscribed ✓ / Not subscribed),
-  visible only to the owner themselves.
-- owners/_form.html.erb v1.9: newsletter checkbox in edit profile form.
-- owners/new.html.erb v1.3: newsletter checkbox in registration form (checked by default).
-- admin/owners/index.html.erb v1.4: Newsletter column (Yes / No badge).
-- admin/owners/edit.html.erb v1.1: newsletter checkbox.
-- Both controllers permit :newsletter param.
-
-**Rule: before_validation vs before_save (new — RAILS_SPECIFICS.md v2.9)**
-- Real example: Newsletter#generate_html_body as before_save produced
-  "Html body can't be blank" because presence validation fires first.
-  Fixed to before_validation.
-
-**Rule: Mailer views directory (new — RAILS_SPECIFICS.md v2.9)**
-- Real example: send_newsletter.html.erb placed at app/views/newsletter_mailer/
-  produced ActionView::MissingTemplate. This project uses
-  app/views/mailers/newsletter_mailer/ — verified by checking existing
-  PasswordResetMailer view location.
-
-**Rule: deliver_later vs deliver_now for admin tools (new — RAILS_SPECIFICS.md v2.9)**
-- Real example: deliver_later produced no letter_opener tab. Fixed to deliver_now.
-
-**Deployment checklist for Session 56:**
-```bash
-bin/rails db:migrate
-```
-Runs both migrations: adds newsletter to owners, creates newsletters table.
-
----
-
-## Session 55 Summary
-
-**Focus: Image captions on home page, barter offers stat, admin owners peripherals column.**
-
-### Files delivered this session (5 files)
-
-    decor/app/views/home/index.html.erb                         v4.7
-    decor/app/controllers/home_controller.rb                    v1.3
-    decor/app/views/admin/owners/index.html.erb                 v1.3
-    decor/docs/claude/COMMON_BEHAVIOR.md                        v2.7
-    decor/docs/claude/SESSION_HANDOVER.md                       v59.0
+**Fix 1: Table borders, header colour, column padding (v2.0)**
+**Fix 2: Logo embedded as hardcoded base64 constant (v2.1)**
+**Fix 3: Firebird renders logo at full 680×282px (v2.2)**
+**Fix 4: Gmail shows alt text "DECOR" at wrong size and alignment (v2.2 → v2.3)**
 
 ---
 
 ## Priority 1 — Future Sessions
 
-1. **Tests for Newsletter feature** — see Session 56 wrap-up for the full
-   list of ~35 test cases across 5 files. Fixtures and existing test files
-   needed at session start:
-     test/fixtures/owners.yml
-     test/fixtures/newsletters.yml  (new — will need creating)
-     test/models/owner_test.rb      (update)
-     test/integration/admin_owners_test.rb  (update, if it exists)
-     test/integration/owners_test.rb        (update, if it exists)
-2. **Legal/Compliance** — Impressum, Privacy Policy, GDPR, Cookie Consent, TOS.
-3. **System tests** — decor/test/system/ still empty.
-4. **Account deletion + data export** (GDPR).
-5. **Spam / Postmark DNS fix** — awaiting Rob's dashboard findings.
-6. **BulkUploadService stale model references** — low priority.
+1. **Legal/Compliance** — Impressum, Privacy Policy, GDPR, Cookie Consent, TOS.
+2. **System tests** — decor/test/system/ still empty.
+3. **Account deletion + data export** (GDPR).
+4. **Spam / Postmark DNS fix** — awaiting Rob's dashboard findings.
+5. **BulkUploadService stale model references** — low priority.
+6. **Gmail logo fix (long-term)** — set `config.action_mailer.asset_host` in
+   `production.rb` to the app's public hostname, and use `asset_url('logo.png')`
+   in the partial instead of the data: URI. Gmail will then load the real image.
+   The data: URI fallback can remain for letter_opener (development).
 
 ---
 

@@ -1,0 +1,27 @@
+# decor/test/fixtures/newsletters.yml
+# version 1.0
+# Session 58: Newsletter feature — initial fixture file.
+#
+# Two newsletter records:
+#   one — "Spring 2026" — body contains the {{user_name}} placeholder.
+#         Used in newsletter_mailer_test.rb substitution tests and in
+#         newsletters_controller_test.rb send_newsletter tests.
+#   two — "Summer 2026" — plain body without placeholder.
+#         Used in index / destroy / scope tests where body content is not asserted.
+#
+# IMPORTANT: html_body is set explicitly here because Rails fixture loading
+# uses direct SQL INSERT and bypasses all model callbacks, including
+# Newsletter#generate_html_body (declared as before_validation). Without an
+# explicit value, html_body would be NULL and the record would fail the
+# `validates :html_body, presence: true` check if accessed via the model.
+# The values below are plausible Redcarpet output for the given markdown.
+
+one:
+  subject: "VAXorcist Newsletter Spring 2026"
+  markdown_body: "Hello {{user_name}},\n\nWelcome to the DEC Owner Registry spring newsletter."
+  html_body: "<p>Hello {{user_name}},</p>\n\n<p>Welcome to the DEC Owner Registry spring newsletter.</p>\n"
+
+two:
+  subject: "VAXorcist Newsletter Summer 2026"
+  markdown_body: "Summer update for all registry members.\n\nMore details to follow."
+  html_body: "<p>Summer update for all registry members.</p>\n\n<p>More details to follow.</p>\n"

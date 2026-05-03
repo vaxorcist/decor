@@ -1,41 +1,41 @@
 # decor/app/controllers/admin/newsletters_controller.rb
-# version 1.0
-# Session 56: Newsletter feature — initial implementation.
+# version 1.1
+# v1.1 (Session 58): Fixed @owners nil on POST failure in send_newsletter.
 #
-# Manages newsletters: upload from an MD file, preview, send to subscribers.
+#   Root cause: `render` in a Rails controller action renders the view
+#   synchronously and immediately — instance variables assigned AFTER the
+#   `render` call are not visible to the already-rendered template.
+#   The original code placed `@owners = Owner.order(:user_name)` at the bottom
+#   of the action, after the `if request.post?` block. Two POST failure paths
+#   fired `render :send_newsletter` before that line was reached:
+#     1. `when "specific"` + blank owner_id — calls `render` then `return`,
+#        so `@owners` was never assigned at all.
+#     2. `else` (no recipient selected) — calls `render` (view rendered with
+#        nil @owners), then falls through to the assignment (too late).
+#   The view's `@owners.each` on line 75 raised `undefined method 'each' for nil`.
 #
-# Actions:
-#   index          — list all stored newsletters (subject, created_at, row actions)
-#   new            — form to upload a .md file + enter subject
-#   create         — reads the uploaded file, saves Newsletter (before_save renders HTML)
-#   show           — preview the rendered HTML body; links to Send
-#   destroy        — delete a newsletter record
-#   send_newsletter (GET)  — form: choose "all subscribed" or "specific owner"
-#   send_newsletter (POST) — send via NewsletterMailer#deliver_now
+#   Fix: move `@owners = Owner.order(:user_name)` to the very top of the action.
+#   It runs on every code path — GET form render, POST success (harmless
+#   extra query before the redirect), and all POST failure re-renders.
+#   The query is a single indexed scan on user_name; the cost is negligible.
 #
-# before_action scoping:
-#   set_newsletter is scoped to only: actions that need @newsletter.
-#   index and new do NOT need it — following the project rule (learned Session 46).
+# v1.0 (Session 56): Initial implementation.
 
 module Admin
   class NewslettersController < BaseController
     before_action :set_newsletter, only: %i[show destroy send_newsletter]
 
     # GET /admin/newsletters
-    # Lists all newsletters ordered newest first.
     def index
       @newsletters = Newsletter.order(created_at: :desc)
     end
 
     # GET /admin/newsletters/new
-    # Renders the upload form (subject field + file picker).
     def new
       @newsletter = Newsletter.new
     end
 
     # POST /admin/newsletters
-    # Reads the uploaded .md file, builds a Newsletter, saves it.
-    # Newsletter#before_save generates html_body from markdown_body via Redcarpet.
     def create
       uploaded_file = params.dig(:newsletter, :md_file)
 
@@ -46,13 +46,11 @@ module Admin
         return
       end
 
-      # Read raw markdown from the uploaded file.
       markdown_body = uploaded_file.read.force_encoding("UTF-8")
 
       @newsletter = Newsletter.new(
         subject:       params.dig(:newsletter, :subject).to_s.strip,
         markdown_body: markdown_body
-        # html_body is NOT set here — Newsletter#before_save generates it.
       )
 
       if @newsletter.save
@@ -64,7 +62,6 @@ module Admin
     end
 
     # GET /admin/newsletters/:id
-    # Shows a preview of the rendered HTML body.
     def show
     end
 
@@ -79,10 +76,16 @@ module Admin
     # GET  /admin/newsletters/:id/send_newsletter — recipient selection form
     # POST /admin/newsletters/:id/send_newsletter — deliver immediately via deliver_now
     def send_newsletter
+      # Preload @owners unconditionally so the Tom Select dropdown is always
+      # available — on the initial GET, on POST success (harmless before redirect),
+      # and critically on POST validation failures that re-render this form.
+      # Previously placed at the bottom of the action, which caused
+      # `undefined method 'each' for nil` when render fired before that line.
+      @owners = Owner.order(:user_name)
+
       if request.post?
         case params[:recipient]
         when "all"
-          # Send to every owner with newsletter = 1 (subscribed).
           owners = Owner.newsletter_subscribed
           count  = owners.count
 
@@ -92,7 +95,6 @@ module Admin
             return
           end
 
-          # Enqueue one job per recipient so a single failure does not block others.
           owners.each do |owner|
             NewsletterMailer.send_newsletter(owner, @newsletter).deliver_now
           end
@@ -114,14 +116,10 @@ module Admin
                       notice: "Newsletter \"#{@newsletter.subject}\" sent to #{owner.user_name}."
 
         else
-          # No recipient radio selected.
           flash.now[:alert] = "Please select a recipient."
           render :send_newsletter, status: :unprocessable_entity
         end
       end
-      # GET: render send_newsletter.html.erb (recipient selection form).
-      # @owners is preloaded for the "specific owner" Tom Select dropdown.
-      @owners = Owner.order(:user_name)
     end
 
     private
