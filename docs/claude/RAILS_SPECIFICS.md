@@ -1,12 +1,24 @@
 # RAILS_SPECIFICS.md
-# version 2.9
+# version 3.1
+# Session 58: Five new rules from newsletter test failures.
+#   1. render is synchronous — set all iVars before calling render.
+#   2. NOT NULL columns must be explicit in PATCH test params (cast(nil) → nil).
+#   3. ActionMailer::TestHelper — include explicitly in integration tests (expanded).
+#   4. deliver_later in tests requires perform_enqueued_jobs (addendum).
+#   5. Switching users in tests — delete session_path before login_as.
+# Session 57: Three new rules from newsletter email rendering fixes.
+#   1. Gmail strips data: URIs from img src — no workaround for the actual image;
+#      style the <img> element for readable alt text instead.
+#   2. img display:block misaligns alt text — use inline-block + vertical-align:middle
+#      when the <img> sits beside inline text.
+#   3. Old email clients (Firebird, Thunderbird, Outlook) ignore CSS height/width on
+#      <img> — always add HTML height= and width= attributes alongside CSS.
 # Session 56: Three new rules from the Newsletter feature.
 #   1. before_validation vs before_save — if a field is generated for a presence
 #      validation, use before_validation, not before_save. Validations run before
 #      before_save; the presence check sees a blank field and rejects the record.
 #   2. Mailer views directory — this project stores mailer views under
-#      app/views/mailers/<mailer_name>/, NOT app/views/<mailer_name>/.
-#      Always check the existing mailer structure before creating new view directories.
+#      app/views/mailers/<mailer_name>/, NOT app/views/<mailer_name>/.\n#      Always check the existing mailer structure before creating new view directories.
 #   3. deliver_later vs deliver_now for admin tools — deliver_later hands off to
 #      ActiveJob; letter_opener never intercepts it and no browser tab opens.
 #      For admin-initiated sends where synchronous delivery is fine, use deliver_now.
@@ -22,7 +34,7 @@
 
 **Ruby on Rails Specific Patterns and Best Practices**
 
-**Last Updated:** May 1, 2026 (v2.9: three new rules; Session 56)
+**Last Updated:** May 3, 2026 (v3.1: five new rules from Session 58 test failures)
 
 ---
 
@@ -123,6 +135,105 @@ Rails-specific requirements. Follow these BEFORE writing any code.
   and `conditions_controller_test.rb` existed
 - ❌ Caused 24 test errors that were 100% preventable
 - ✅ Fix: always ask "Are there test files for this model/controller?"
+
+---
+
+## Email HTML — Gmail, Old Clients, and img Elements (MANDATORY)
+
+### Rule 1 — Gmail strips data: URIs from img src
+
+**Gmail unconditionally strips `data:` URIs from `<img src="...">`. This is a
+hardcoded Gmail security policy. There is no workaround that makes the actual
+image appear in Gmail.**
+
+The permanent fix is to serve the image from a real HTTPS URL:
+- Set `config.action_mailer.asset_host` in `production.rb` to the app's
+  public hostname.
+- Use `asset_url('logo.png')` in the mailer/partial — it returns an absolute
+  URL in production (e.g. `https://decor.example.com/assets/logo-abc.png`)
+  which Gmail DOES load.
+- In development, `asset_url` returns a relative path; use a `data:` URI
+  fallback for letter_opener preview.
+
+**Interim workaround — style the alt text for readability:**
+Gmail applies the `style=` attribute of an `<img>` to its alt text when the
+`src` is stripped. Font properties on the `<img>` element itself are therefore
+the only way to size and style the fallback text:
+
+```erb
+<img src="<%= LOGO_SRC %>"
+     alt="DECOR"
+     height="40" width="96"
+     style="display: inline-block; vertical-align: middle; border: 0;
+            height: 40px; width: 96px;
+            font-size: 24px; font-family: Arial, Helvetica, sans-serif;
+            color: #1c1917; font-weight: normal;">
+```
+
+**Why this rule exists (Session 57, May 2, 2026):**
+The newsletter chrome partial embedded the logo as a `data:image/png;base64,...`
+URI. Gmail stripped it silently. The `alt="DECOR"` text appeared at browser
+default font size (~12px) while the adjacent "— DEC Owner's Registry" text was
+24px. Adding font styles to the `<img>` matched both.
+
+---
+
+### Rule 2 — img display:block misaligns alt text beside inline text
+
+**Never use `display: block` on an `<img>` that sits beside inline text in an
+email header (or anywhere alt text must align vertically with adjacent text).**
+
+`display: block` removes the element from the inline flow. When the `src` is
+stripped by Gmail (or any client), the alt text renders as a block-level element,
+which pushes it above or below the adjacent inline text instead of aligning with it.
+
+**Wrong — alt text floats above adjacent text:**
+```html
+<img ... style="display: block; ...">
+```
+
+**Correct — alt text aligns with adjacent text:**
+```html
+<img ... style="display: inline-block; vertical-align: middle; ...">
+```
+
+`vertical-align: middle` centres the element (and its alt text) on the
+line-height midpoint, matching the visual centre of any adjacent text node.
+
+**Why this rule exists (Session 57, May 2, 2026):**
+After adding font styles (Rule 1 above), "DECOR" was now 24px but sat noticeably
+higher than "— DEC Owner's Registry". Changing `display: block` to
+`display: inline-block; vertical-align: middle` aligned them correctly.
+
+---
+
+### Rule 3 — Old email clients ignore CSS height/width on img
+
+**Old email clients (Firebird, Thunderbird, Outlook with Word renderer) read
+the HTML `height=` and `width=` attributes for image sizing. They may ignore
+CSS `style="height: Npx; width: Npx"` entirely.**
+
+Always provide BOTH the CSS size AND the HTML attributes:
+
+```html
+<!-- CSS alone — ignored by old clients; image renders at full 680×282px -->
+<img src="..." style="height: 40px; width: 96px;">
+
+<!-- Correct — HTML attributes ensure old clients use the right size -->
+<img src="..."
+     height="40" width="96"
+     style="height: 40px; width: 96px;">
+```
+
+Calculate the proportional width from the source image dimensions:
+`width = round(target_height × (image_width / image_height))`
+
+The DECOR logo is 680×282px. At height=40: width = round(40 × 680/282) = 96px.
+
+**Why this rule exists (Session 57, May 2, 2026):**
+Firebird rendered the logo at its native 680×282px — the entire email header
+was dominated by an enormous logo. The CSS `style="height: 40px"` was present
+but ignored. Adding `height="40" width="96"` as HTML attributes fixed it.
 
 ---
 
@@ -231,10 +342,87 @@ NewsletterMailer.send_newsletter(owner, newsletter).deliver_now
 - Any context where letter_opener preview during development is desired.
 - Small transactional emails (invites, password resets, single newsletter sends).
 
+**Addendum — testing `deliver_later` requires `perform_enqueued_jobs` (Session 58):**
+`ActionMailer::Base.deliveries` is populated only when the job actually runs.
+With `deliver_later`, the job is queued but not executed until you ask for it.
+Wrap the controller call in `perform_enqueued_jobs` so the job runs synchronously
+during the test and `deliveries` is populated by the time assertions run:
+
+```ruby
+# Wrong — deliveries is still empty, assertions fail
+post send_password_reset_admin_owner_url(owner)
+assert ActionMailer::Base.deliveries.size > 0   # fails: 0
+
+# Correct
+perform_enqueued_jobs do
+  post send_password_reset_admin_owner_url(owner)
+end
+assert ActionMailer::Base.deliveries.size > 0   # passes
+```
+
+Note: `deliver_now` does NOT need `perform_enqueued_jobs` — it populates
+`deliveries` directly during the request. Only `deliver_later` needs the wrapper.
+
 **Why this rule exists (Session 56, May 1, 2026):**
 The newsletter send action used `deliver_later`. The admin clicked "Send Newsletter",
 got the flash "Newsletter queued for VAXorcist" — but no letter_opener tab appeared.
 Switching to `deliver_now` produced the expected browser tab immediately.
+The `perform_enqueued_jobs` addendum was discovered in Session 58 when the
+`send_password_reset` test (which correctly uses `deliver_later`) failed with
+`deliveries.size == 0` until wrapped in the jobs runner.
+
+---
+
+## Controller Actions — render Is Synchronous (MANDATORY)
+
+**RULE: `render` in a Rails controller action renders the view immediately and
+synchronously. Any instance variable assigned AFTER the `render` call is NOT
+visible to the template.**
+
+This means: every iVar the template needs must be set BEFORE any `render` call,
+on every code path that leads to that render.
+
+**Common mistake — @owners set at the bottom, render fires first:**
+```ruby
+def send_newsletter
+  if request.post?
+    case params[:recipient]
+    when "specific"
+      if params[:owner_id].blank?
+        render :send_newsletter, status: :unprocessable_entity
+        return                            # @owners never assigned
+      end
+    else
+      render :send_newsletter, status: :unprocessable_entity
+                                          # falls through to @owners = ...
+                                          # but too late — view already rendered
+    end
+  end
+  @owners = Owner.order(:user_name)       # not visible to the renders above
+end
+```
+
+**Correct — set iVars unconditionally at the top:**
+```ruby
+def send_newsletter
+  @owners = Owner.order(:user_name)       # set first, always available
+
+  if request.post?
+    # ... all render/redirect paths below can rely on @owners
+  end
+end
+```
+
+**Pattern to follow:**
+Place all iVar assignments that are needed by any render path at the very top
+of the action, before any branching. On redirect paths the iVars are assigned
+but unused — that is harmless.
+
+**Why this rule exists (Session 58, May 3, 2026):**
+`Admin::NewslettersController#send_newsletter` placed `@owners = Owner.order(:user_name)`
+after the `if request.post?` block. Two POST failure paths called
+`render :send_newsletter` before that line was reached. The view raised
+`undefined method 'each' for nil` at the `@owners.each` call on line 75.
 
 ---
 
@@ -632,6 +820,118 @@ Use backup-in-migration pattern for safety.
 - ✅ Included automatically in: `ActionMailer::TestCase`
 - ❌ NOT included in: `ActiveJob::TestCase`, `ActiveSupport::TestCase`, `ActionDispatch::IntegrationTest`
 - Fix: `include ActionMailer::TestHelper` at the top of the test class
+
+```ruby
+# Integration test that checks email delivery — must include explicitly:
+class Admin::NewslettersControllerTest < ActionDispatch::IntegrationTest
+  include ActionMailer::TestHelper
+  ...
+end
+
+# Mailer test — no include needed, ActionMailer::TestCase has it already:
+class NewsletterMailerTest < ActionMailer::TestCase
+  ...
+end
+```
+
+Also clear `ActionMailer::Base.deliveries` in `setup` so email counts are
+independent across tests:
+
+```ruby
+setup do
+  ActionMailer::Base.deliveries.clear
+end
+```
+
+---
+
+## NOT NULL Boolean Columns — Always Explicit in PATCH Test Params (MANDATORY)
+
+**RULE: Every PATCH test must supply an explicit value for every NOT NULL column
+the controller writes — even columns the test doesn't care about.**
+
+**Root cause:** `ActiveModel::Type::Boolean.cast(nil)` returns `nil`, not `false`.
+When a param key is absent from the request, `params.dig(:owner, :admin)` returns
+`nil`. If the controller assigns `@owner.admin = nil`, the DB raises
+`ActiveRecord::NotNullViolation`.
+
+**Wrong — admin: absent, cast(nil) → nil → NOT NULL violation:**
+```ruby
+patch admin_owner_url(bob), params: {
+  owner: { user_name: "bobby", email: bob.email, newsletter: 1 }
+  # admin: not supplied — params.dig returns nil → @owner.admin = nil → crash
+}
+```
+
+**Correct — explicit value for every NOT NULL column the controller touches:**
+```ruby
+patch admin_owner_url(bob), params: {
+  owner: { user_name: "bobby", email: bob.email, newsletter: 1, admin: "false" }
+}
+```
+
+**Special case — updating the currently-logged-in admin's own record:**
+The self-demotion guard fires when `@owner == Current.owner && !requested_admin`.
+`cast(nil)` → nil → `!nil` → true → guard fires even when the test has nothing
+to do with admin status. Pass `admin: "true"` to bypass the guard:
+
+```ruby
+patch admin_owner_url(alice), params: {
+  owner: { ..., newsletter: 0, admin: "true" }  # prevents guard redirect
+}
+```
+
+**Why this rule exists (Session 58, May 3, 2026):**
+Three PATCH tests for `Admin::OwnersController` omitted `admin:` from params
+for bob's record. All three raised `NOT NULL constraint failed: owners.admin`.
+The fix was adding `admin: "false"` to each params hash.
+
+---
+
+## Switching Users in Tests With a Setup Login (MANDATORY)
+
+**RULE: When `setup` logs in as one owner and a test needs to switch to a
+different owner, always call `delete session_path` before `login_as other_owner`.**
+
+If `login_as(other_owner)` fails silently (wrong password constant, session
+conflict, any error in the session controller), the first owner's session
+remains active. The test then runs as the wrong user with no error raised —
+producing a misleading assertion failure (e.g. 200 instead of redirect).
+
+**Wrong — alice's session may persist if login_as(bob) fails:**
+```ruby
+setup do
+  login_as owners(:one)   # alice (admin)
+end
+
+test "non-admin cannot access admin area" do
+  login_as owners(:two)   # bob — may fail silently; alice still logged in
+  get admin_owners_url
+  assert_redirected_to root_path  # fails: gets 200 because alice is still active
+end
+```
+
+**Correct — explicit logout guarantees a clean session:**
+```ruby
+test "non-admin cannot access admin area" do
+  delete session_path      # clear alice's session unconditionally
+  login_as owners(:two)    # bob — now definitely the active user
+  get admin_owners_url
+  assert_redirected_to root_path
+end
+```
+
+**When this applies:**
+- Any test in a class whose `setup` calls `login_as` where the test itself
+  needs a different user (different owner, non-admin, unauthenticated).
+- Also applies to unauthenticated tests in the same class: use `delete session_path`
+  without a subsequent `login_as` to test the logged-out state.
+
+**Why this rule exists (Session 58, May 3, 2026):**
+`Admin::OwnersControllerTest` setup logged in as alice. The "non-admin cannot
+access" test called `login_as(bob)` directly. The test got 200 (admin access
+granted) instead of a redirect — alice's session was still active. Adding
+`delete session_path` first fixed it immediately.
 
 ---
 

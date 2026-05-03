@@ -1,8 +1,16 @@
 # decor/test/fixtures/owners.yml
-# version 2.1
-# Added: three (charlie) — a neutral owner used exclusively for test-support
-# fixtures (e.g. enum test records) that must not disturb alice's or bob's
-# hardcoded record counts in existing tests.
+# version 2.2
+# v2.2 (Session 58): Newsletter feature tests.
+#   Added newsletter column to all three fixtures with explicit values.
+#   alice (one):   newsletter: 1 — subscribed (also admin, used in admin tests)
+#   bob (two):     newsletter: 0 — explicitly NOT subscribed
+#   charlie (three): newsletter: 1 — subscribed (neutral owner for new fixtures)
+#
+#   Having alice and charlie subscribed and bob unsubscribed lets
+#   newsletter_subscribed scope tests assert with assert_includes /
+#   refute_includes rather than a brittle hardcoded count.
+#
+# v2.1 (prior): Added charlie — neutral owner for test-support fixtures.
 
 # IMPORTANT: Before running tests, generate new BCrypt digests:
 # Run: ruby script/generate_fixture_passwords.rb
@@ -18,6 +26,7 @@ one:
   real_name_visibility: public
   country_visibility: public
   email_visibility: members_only
+  newsletter: 1
 
 two:
   user_name: bob
@@ -29,6 +38,7 @@ two:
   real_name_visibility: members_only
   country_visibility: public
   email_visibility: private
+  newsletter: 0
 
 # Neutral owner for test-support fixtures only.
 # No existing test queries charlie's record counts — safe to add records here
@@ -44,3 +54,4 @@ three:
   real_name_visibility: public
   country_visibility: public
   email_visibility: public
+  newsletter: 1

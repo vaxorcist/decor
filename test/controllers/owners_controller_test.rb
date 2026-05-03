@@ -1,14 +1,16 @@
 # decor/test/controllers/owners_controller_test.rb
-# version 1.9
+# version 2.0
+# v2.0 (Session 58): Newsletter feature tests.
+#   Added two tests covering newsletter preference updates via PATCH /owners/:id:
+#     - Owner can opt out (newsletter: 0) via their own profile update
+#     - Owner can opt in (newsletter: 1) via their own profile update
+#   The update action in OwnersController permits :newsletter via owner_params.
+#   Rails check_box helpers submit unchecked_value 0 via hidden field, so no
+#   special handling is needed — the controller receives an integer directly.
+#
 # v1.9 (Session 45): Software feature Session C.
-#   Added three smoke tests for the software sub-page:
-#     - Returns 200 when logged in as own page (alice, non-empty table path)
-#     - Returns 200 when a different logged-in owner views it (public access)
-#     - Returns 200 when not authenticated (no require_login guard)
-#   Pattern matches the connections sub-page tests added in Session 39.
+#   Added three smoke tests for the software sub-page.
 # v1.8 (Session 41): Appliances → Peripherals merger Phase 2.
-#   Removed "appliances sub-page returns 200 when logged in" test — the
-#   appliances action and its route have been removed from OwnersController.
 # v1.7 (Session 39): Corrected the unauthenticated connections test.
 # v1.6 (Session 39): Corrected two connections sub-page tests.
 # v1.5 (Session 39): Added three smoke tests for the connections sub-page.
@@ -275,5 +277,53 @@ class OwnersControllerTest < ActionDispatch::IntegrationTest
     get software_owner_url(owner)
 
     assert_response :success
+  end
+
+  # ── Newsletter preference via profile update ───────────────────────────────
+  # PATCH /owners/:id — requires being logged in as that owner (require_owner).
+  # newsletter is permitted by owner_params in OwnersController v2.1.
+  # No password change params are sent so password_change_attempted? is false
+  # and the current_password check is skipped.
+
+  test "PATCH update saves newsletter preference as 0 (opt out)" do
+    # alice starts at newsletter: 1 (subscribed per owners.yml v2.2).
+    alice = owners(:one)
+    assert_equal 1, alice.newsletter, "Precondition: alice starts subscribed"
+
+    login_as alice
+
+    patch owner_path(alice), params: {
+      owner: {
+        user_name:  alice.user_name,
+        email:      alice.email,
+        newsletter: 0
+      }
+    }
+
+    alice.reload
+    assert_equal 0, alice.newsletter,
+      "newsletter should be 0 after owner opts out via profile update"
+    assert_redirected_to owner_path(alice)
+  end
+
+  test "PATCH update saves newsletter preference as 1 (opt in)" do
+    # bob starts at newsletter: 0 (not subscribed per owners.yml v2.2).
+    bob = owners(:two)
+    assert_equal 0, bob.newsletter, "Precondition: bob starts unsubscribed"
+
+    login_as bob
+
+    patch owner_path(bob), params: {
+      owner: {
+        user_name:  bob.user_name,
+        email:      bob.email,
+        newsletter: 1
+      }
+    }
+
+    bob.reload
+    assert_equal 1, bob.newsletter,
+      "newsletter should be 1 after owner opts in via profile update"
+    assert_redirected_to owner_path(bob)
   end
 end

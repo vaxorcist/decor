@@ -1,7 +1,14 @@
-# decor/test/models/owner_test.rb - version 1.4
-# Updated to use strong test passwords that pass zxcvbn validation
-# Added password strength validation tests
-# All password references use TEST_PASSWORD_VALID constant from AuthenticationHelper
+# decor/test/models/owner_test.rb
+# version 1.5
+# v1.5 (Session 58): Newsletter feature tests.
+#   Added seven tests covering:
+#     - newsletter column defaults to 1 on new records (Rails reflects DB default)
+#     - newsletter_subscribed? predicate returns correct boolean
+#     - newsletter validates inclusion in [0, 1] (rejects nil and out-of-range)
+#     - newsletter_subscribed scope includes/excludes correct fixtures
+# v1.4: Updated to use strong test passwords that pass zxcvbn validation.
+#       Added password strength validation tests.
+#       All password references use TEST_PASSWORD_VALID constant from AuthenticationHelper.
 
 require "test_helper"
 
@@ -276,5 +283,63 @@ class OwnerTest < ActiveSupport::TestCase
   test "fixtures are valid" do
     assert owners(:one).valid?, owners(:one).errors.full_messages.join(", ")
     assert owners(:two).valid?, owners(:two).errors.full_messages.join(", ")
+  end
+
+  # ── Newsletter column, predicate, and scope ───────────────────────────────
+  # Tests for the newsletter integer column (0 = opted out, 1 = subscribed),
+  # the newsletter_subscribed? convenience predicate, and the
+  # newsletter_subscribed scope used by Admin::NewslettersController.
+
+  test "newsletter defaults to 1 (subscribed) for new owner records" do
+    # Rails reflects the DB column DEFAULT 1 so Owner.new has newsletter = 1
+    # without the caller having to supply it explicitly.
+    owner = Owner.new(valid_attributes)
+    assert_equal 1, owner.newsletter,
+      "newsletter should default to 1 (Rails reflects DB column default)"
+  end
+
+  test "newsletter_subscribed? returns true when newsletter is 1" do
+    owner = Owner.new(valid_attributes.merge(newsletter: 1))
+    assert owner.newsletter_subscribed?,
+      "newsletter_subscribed? should be true when newsletter == 1"
+  end
+
+  test "newsletter_subscribed? returns false when newsletter is 0" do
+    owner = Owner.new(valid_attributes.merge(newsletter: 0))
+    assert_not owner.newsletter_subscribed?,
+      "newsletter_subscribed? should be false when newsletter == 0"
+  end
+
+  test "newsletter validates inclusion — rejects value 2" do
+    # Only 0 (opted out) and 1 (subscribed) are valid.
+    owner = Owner.new(valid_attributes.merge(newsletter: 2))
+    assert_not owner.valid?
+    assert_includes owner.errors[:newsletter], "is not included in the list"
+  end
+
+  test "newsletter validates inclusion — rejects nil" do
+    # nil is not in [0, 1]. The DB default prevents nil in normal usage,
+    # but explicit nil should fail at the model level too.
+    owner = Owner.new(valid_attributes.merge(newsletter: nil))
+    assert_not owner.valid?
+    assert_includes owner.errors[:newsletter], "is not included in the list"
+  end
+
+  test "newsletter_subscribed scope includes owners with newsletter = 1" do
+    # alice (one) and charlie (three) are subscribed per owners.yml v2.2.
+    # Using assert_includes / refute_includes instead of a hardcoded count
+    # so that adding new fixtures never breaks this test.
+    subscribed_ids = Owner.newsletter_subscribed.pluck(:id)
+    assert_includes subscribed_ids, owners(:one).id,
+      "alice (newsletter: 1) should appear in newsletter_subscribed scope"
+    assert_includes subscribed_ids, owners(:three).id,
+      "charlie (newsletter: 1) should appear in newsletter_subscribed scope"
+  end
+
+  test "newsletter_subscribed scope excludes owners with newsletter = 0" do
+    # bob (two) has newsletter: 0 per owners.yml v2.2.
+    subscribed_ids = Owner.newsletter_subscribed.pluck(:id)
+    refute_includes subscribed_ids, owners(:two).id,
+      "bob (newsletter: 0) must not appear in newsletter_subscribed scope"
   end
 end
