@@ -656,7 +656,7 @@ class OwnerImportService
 
     record = ComponentCondition.find_by(condition: value)
     if record.nil?
-      add_row_error(row_num, "Component condition '#{value}' not found — ask an admin to create it first.")
+      add_row_error(row_num, "Run Status '#{value}' not found — ask an admin to create it first.")
     end
     record
   end

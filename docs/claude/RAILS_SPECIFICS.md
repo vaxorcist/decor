@@ -1,5 +1,8 @@
 # RAILS_SPECIFICS.md
-# version 3.1
+# version 3.2
+# Session 58: One new rule from component_conditions UI rename fix.
+#   6. UI Renames — Rails auto-generates strings from model/column names that
+#      won't update when you rename a concept in the UI. Full checklist added.
 # Session 58: Five new rules from newsletter test failures.
 #   1. render is synchronous — set all iVars before calling render.
 #   2. NOT NULL columns must be explicit in PATCH test params (cast(nil) → nil).
@@ -34,7 +37,7 @@
 
 **Ruby on Rails Specific Patterns and Best Practices**
 
-**Last Updated:** May 3, 2026 (v3.1: five new rules from Session 58 test failures)
+**Last Updated:** May 3, 2026 (v3.2: UI renames checklist added; Session 58)
 
 ---
 
@@ -613,6 +616,69 @@ grep -rn "old_name_id" decor/app/
 ```
 
 Fix ALL occurrences found before running the test suite.
+
+---
+
+## UI Renames — Rails Auto-Generated Strings (MANDATORY)
+
+**When renaming a concept in the UI, changing the `<h1>` heading is not enough.**
+Rails auto-generates display strings from model class names and column names in
+several places. These do not update automatically when you rename a concept —
+each must be overridden explicitly.
+
+### Full checklist — check every item on every UI rename
+
+**In form partials (`_form.html.erb`):**
+
+1. **`f.submit`** — derives its label from the model class name.
+   `ComponentCondition` → "Create Component condition" / "Update Component condition".
+   Fix: pass an explicit string.
+   ```erb
+   <%# Wrong — shows model class name %>
+   <%= f.submit class: button_classes(style: :primary) %>
+
+   <%# Correct %>
+   <%= f.submit "Save Run Status", class: button_classes(style: :primary) %>
+   ```
+
+2. **`f.label :column`** — derives its text from the column name.
+   `:condition` → "Condition".
+   Fix: pass an explicit string as the second argument.
+   ```erb
+   <%# Wrong — shows column name %>
+   <%= f.label :condition, class: "..." %>
+
+   <%# Correct %>
+   <%= f.label :condition, "Status", class: "..." %>
+   ```
+
+**In view files:**
+
+3. **`new.html.erb` / `edit.html.erb` `<h1>`** — manual text; update directly.
+
+4. **`index.html.erb` column header** for the renamed field — manual text; update directly.
+
+5. **`show.html.erb` field label** if the field is displayed there — manual text.
+
+6. **`<title>` tags and breadcrumbs** that reference the model or field name.
+
+**In controllers:**
+
+7. **Flash notices** that interpolate the field value directly, e.g.:
+   `notice: "#{@component_condition.condition} has been saved."` — the value
+   itself is fine (it's data), but surrounding words like "condition" should
+   reflect the new name: `notice: "Run status saved."`.
+
+### Why this rule exists (Session 58, May 3, 2026)
+
+`ComponentCondition#condition` was renamed to "Run Status" in the UI. The `<h1>`
+headings in `new.html.erb` and `edit.html.erb` were updated, but two auto-generated
+strings were missed:
+- `f.submit` still showed "Create Component condition" / "Update Component condition".
+- `f.label :condition` still showed "Condition" above the input field.
+Both required separate fixes after deployment because there is no Rails mechanism
+that maps a model/column name to a human display name automatically — the
+override must be explicit.
 
 ---
 

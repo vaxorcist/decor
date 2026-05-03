@@ -1,6 +1,12 @@
 <%# decor/app/views/admin/component_conditions/_form.html.erb %>
-<%# version 1.0 %>
-<%# Form partial for both new and edit actions. %>
+<%# version 1.2 %>
+<%# v1.2 (Session 58): Explicit label "Status" on the condition field. %>
+<%#   f.label :condition with no text argument renders "Condition" (the column name). %>
+<%#   Passing "Status" as the label text matches the "Run Status" rename in the UI. %>
+<%#   Rails derives the default submit text from the model class name: %>
+<%#   ComponentCondition → "Create Component condition" / "Update Component condition". %>
+<%#   Passing an explicit string overrides this so the button reads "Save Run Status" %>
+<%#   on both new and edit, consistent with the h1 headings in new.html.erb / edit.html.erb. %>
 <%# ComponentCondition class name matches the :component_conditions route, so %>
 <%# form_with model: [:admin, component_condition] resolves correctly without %>
 <%# any explicit url: or scope: override (unlike the computer conditions form). %>
@@ -9,12 +15,12 @@
   <%= render "common/record_errors", record: component_condition %>
 
   <div>
-    <%= f.label :condition, class: "block text-sm font-medium text-stone-700" %>
+    <%= f.label :condition, "Status", class: "block text-sm font-medium text-stone-700" %>
     <%= f.text_field :condition, required: true, autofocus: true, class: field_classes %>
   </div>
 
   <div class="flex gap-3">
-    <%= f.submit class: button_classes(style: :primary) %>
+    <%= f.submit "Save Run Status", class: button_classes(style: :primary) %>
     <%= link_to "Cancel", admin_component_conditions_path, class: button_classes(style: :secondary) %>
   </div>
 <% end %>

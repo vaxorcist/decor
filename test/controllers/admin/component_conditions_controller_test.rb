@@ -27,7 +27,7 @@ module Admin
       get admin_component_conditions_url
 
       assert_response :success
-      assert_select "h1", "Component Conditions"
+      assert_select "h1", "Run Statuses"
       assert_select "td", @component_condition.condition
     end
 
@@ -38,7 +38,7 @@ module Admin
       get new_admin_component_condition_url
 
       assert_response :success
-      assert_select "h1", "New Component Condition"
+      assert_select "h1", "New Run Status"
       assert_select "input[name='component_condition[condition]']"
     end
 
@@ -87,7 +87,7 @@ module Admin
       get edit_admin_component_condition_url(@component_condition)
 
       assert_response :success
-      assert_select "h1", "Edit Component Condition"
+      assert_select "h1", "Edit Run Status"
       assert_select "input[value='#{@component_condition.condition}']"
     end
 

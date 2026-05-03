@@ -1,7 +1,7 @@
 # decor/app/controllers/admin/conditions_controller.rb
 # version 1.2
 # Updated flash messages to say "Computer condition" (was "Condition") to
-# distinguish from the new component conditions managed by
+# distinguish from the new Run Statuses managed by
 # Admin::ComponentConditionsController.
 
 module Admin
