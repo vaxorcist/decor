@@ -1,5 +1,9 @@
 # decor/config/routes.rb
-# version 3.1
+# version 3.2
+# v3.2 (Session 61): Added computer_statistics route.
+#   GET /computer_statistics → computer_statistics#index
+#   Displays a table of computer models with their registered-computer counts.
+#   Supports sort param: most_common (default), least_common, model_asc, model_desc.
 # v3.1 (Session 56): Newsletter feature.
 #   Added resources :newsletters inside namespace :admin.
 #   Actions: index, new, create, show, destroy.
@@ -31,6 +35,10 @@ Rails.application.routes.draw do
   get "news",         to: "site_texts#show", defaults: { key: "news" },         as: :news
   get "barter_trade", to: "site_texts#show", defaults: { key: "barter_trade" }, as: :barter_trade
   get "privacy",      to: "site_texts#show", defaults: { key: "privacy" },      as: :privacy
+
+  # Statistics pages — public, no login required.
+  # computer_statistics: counts of registered computers per computer model.
+  get "computer_statistics", to: "computer_statistics#index", as: :computer_statistics
 
   # Owner sub-pages: each shows one section of the owner's profile.
   # show remains the summary/profile card view.

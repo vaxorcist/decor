@@ -1,4 +1,9 @@
-<%# decor/app/views/common/_navigation.html.erb - version 2.3 %>
+<%# decor/app/views/common/_navigation.html.erb - version 2.4 %>
+<%# v2.4 (Session 61): Added "Statistics" dropdown after "Software". %>
+<%#   First entry: "Computers" → computer_statistics_path (Computers Statistics page). %>
+<%#   The dropdown follows the same data-controller="dropdown" pattern as "Info". %>
+<%#   Width set to w-52 (208px) — wider than "Info" dropdown to accommodate the %>
+<%#   "Computers" label without wrapping. %>
 <%# v2.3 (Session 60): Added "Sign out" link to the logged-in nav section. %>
 <%#   The sign_out system-test helper clicks this link. It must be a visible %>
 <%#   anchor with data-turbo-method="delete" so Turbo issues DELETE /session. %>
@@ -38,6 +43,28 @@
     <%= navigation_link_to "Peripherals", peripherals_path %>
     <%= navigation_link_to "Components",  components_path %>
     <%= navigation_link_to "Software",    software_items_path %>
+
+    <%# Statistics dropdown — aggregated statistics pages. %>
+    <%# Currently contains one entry: Computers Statistics. %>
+    <%# New statistics pages (Peripherals, Components, Software) can be added %>
+    <%# here as additional link_to entries when needed. %>
+    <div class="relative" data-controller="dropdown">
+      <button data-action="click->dropdown#toggle click@window->dropdown#hide"
+              class="font-medium text-stone-700 hover:text-stone-900 flex items-center gap-1">
+        Statistics
+        <svg class="w-3 h-3 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      <%# w-52 = 208px — wider than "Info" dropdown to avoid label wrapping. %>
+      <div data-dropdown-target="menu"
+           class="hidden absolute left-0 mt-1 w-52 bg-white border border-stone-200 rounded shadow-lg z-50">
+        <%= link_to "Computers", computer_statistics_path,
+              class: "block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50" %>
+      </div>
+    </div>
+
   </div>
 
   <div class="flex-1 flex justify-center">
