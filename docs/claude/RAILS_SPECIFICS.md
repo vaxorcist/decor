@@ -1,5 +1,6 @@
 # RAILS_SPECIFICS.md
-# version 3.2
+# version 3.3
+# Session 60: System test Capybara rules added (see bottom).
 # Session 58: One new rule from component_conditions UI rename fix.
 #   6. UI Renames — Rails auto-generates strings from model/column names that
 #      won't update when you rename a concept in the UI. Full checklist added.
@@ -37,7 +38,7 @@
 
 **Ruby on Rails Specific Patterns and Best Practices**
 
-**Last Updated:** May 3, 2026 (v3.2: UI renames checklist added; Session 58)
+**Last Updated:** May 7, 2026 (v3.3: System test Capybara patterns added; Session 60)
 
 ---
 
@@ -1287,6 +1288,147 @@ sentinel_idx = rows.index { |r| r["record_type"]&.start_with?("!") }
 rows = @csv.map { |r| r }
 sentinel_idx = rows.index { |r| r["record_type"]&.start_with?("!") }
 ```
+
+---
+
+**End of RAILS_SPECIFICS.md**
+
+## System Tests — Capybara Assertion Patterns (MANDATORY, learned Session 60)
+
+### assert_selector with a message string raises ArgumentError
+
+Capybara's `assert_selector` does NOT accept a plain string as its second
+positional argument. Passing one raises:
+```
+ArgumentError: Unused parameters passed to Capybara::Queries::SelectorQuery
+```
+The same applies to `refute_selector` and `assert_text`.
+
+**Wrong:**
+```ruby
+assert_selector "input[name='user_name']", "Login form must have this field"
+refute_selector "select[name='barter_status']", "Must not be rendered"
+assert_text "+ Add port", "Button must be visible"
+```
+
+**Correct — route the message through Minitest's assert:**
+```ruby
+assert page.has_css?("input[name='user_name']"),     "Login form must have this field"
+assert page.has_no_css?("select[name='barter_status']"), "Must not be rendered"
+assert page.has_text?("+ Add port"),                 "Button must be visible"
+```
+
+`has_css?` / `has_no_css?` / `has_text?` still use Capybara's smart waiting
+(retry until condition met or timeout). The message is handled by Minitest.
+
+---
+
+## System Tests — Capybara select() Matches by TEXT, Not value= (MANDATORY, learned Session 60)
+
+`Capybara.select(string, from: field)` searches for an `<option>` whose
+**visible text** equals the string. It does NOT search by the HTML `value=`
+attribute. Passing a fixture integer ID (e.g. `"994812667"`) always raises
+`Capybara::ElementNotFound`.
+
+**Wrong:**
+```ruby
+first_option_value = select_el.all("option").reject { |o| o.value.empty? }.first&.value
+select first_option_value, from: "software_name_id"  # looks for TEXT "994812667"
+```
+
+**Correct — keep a reference to the option element, use select_option:**
+```ruby
+first_option = select_el.all("option").reject { |o| o.value.empty? }.first
+skip "No options in fixture data" unless first_option
+first_option.select_option   # selects the element directly, no text/value lookup
+```
+
+To assert the selection persists after form submission, compare option text:
+```ruby
+assert page.has_select?("software_name_id", selected: first_option.text, wait: 5)
+```
+
+---
+
+## System Tests — Filter Forms in Turbo Frames Don't Update URL (learned Session 60)
+
+The software_items, components, and computers filter forms are rendered inside
+Turbo Frames. After form submission, the frame content updates but the browser's
+top-level URL stays at the bare path. `assert_includes current_url, "param="` will
+always fail.
+
+**Wrong:**
+```ruby
+within("form[method='get']") { find("[type=submit]").click }
+assert_includes current_url, "query=vms"
+```
+
+**Correct — click the named Apply button; assert form field state instead of URL:**
+```ruby
+fill_in "query", with: "vms"
+click_button "Apply"
+assert page.has_field?("query", with: "vms", wait: 5),
+  "Query field must reflect submitted value after filter applies"
+```
+
+For select filters, `has_select?` with the option's visible text:
+```ruby
+first_option.select_option
+click_button "Apply"
+assert page.has_select?("sort", selected: first_option.text, wait: 5)
+```
+
+Both `has_field?` and `has_select?` use Capybara's smart waiting and work
+correctly for both full-page navigation and Turbo Frame navigation.
+
+---
+
+## System Tests — <template> Elements Require evaluate_script (learned Session 60)
+
+HTML `<template>` elements are not part of the live rendering tree. Their content
+lives in a DocumentFragment, not as rendered DOM children. Capybara's
+`assert_selector` and `has_css?` cannot find them even with `visible: :all`.
+
+**Wrong:**
+```ruby
+assert_selector "[data-connection-members-target='template']", visible: :all
+```
+
+**Correct — use evaluate_script with document.querySelector:**
+```ruby
+template_present = evaluate_script(
+  "document.querySelector(\"[data-connection-members-target='template']\") !== null"
+)
+assert template_present, "Form must render the template Stimulus target"
+```
+
+`document.querySelector` operates on the full element tree and CAN locate
+`<template>` nodes as DOM elements (even though their content is in a fragment).
+
+---
+
+## System Tests — Turbo Navigation Race in sign_in / sign_out (learned Session 60)
+
+`form_with` without `local: true` submits via Turbo (an async `fetch()` call).
+`find("[type=submit]").click` returns immediately after the click fires, before
+Turbo's redirect/navigation completes. Reading `current_path` right after the
+click races the navigation and sees the old path.
+
+**Fix in sign_in:** wait for the login form to disappear before returning:
+```ruby
+find("[type=submit]").click
+has_no_field?("user_name", wait: 5)  # retries until login page is gone
+```
+
+**Fix in sign_out:** use `click_on "Sign out"` (matches both `<a>` and `<button>`)
+and wait for the sign-out element to disappear:
+```ruby
+click_on "Sign out"
+has_no_text?("Sign out", wait: 5)
+```
+
+**Prerequisite:** the nav partial must render a "Sign out" link/button when
+`logged_in?` is true. See `_navigation.html.erb` v2.3.
 
 ---
 

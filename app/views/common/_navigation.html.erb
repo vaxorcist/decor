@@ -1,37 +1,17 @@
-<%# decor/app/views/common/_navigation.html.erb - version 2.2 %>
+<%# decor/app/views/common/_navigation.html.erb - version 2.3 %>
+<%# v2.3 (Session 60): Added "Sign out" link to the logged-in nav section. %>
+<%#   The sign_out system-test helper clicks this link. It must be a visible %>
+<%#   anchor with data-turbo-method="delete" so Turbo issues DELETE /session. %>
+<%#   Placed after the owner dropdown, matching the common nav pattern. %>
 <%# v2.2 (Session 53): Fix Software button unclickable / only clickable at bottom edge. %>
-<%#   Root cause: grid-cols-3 divides the nav into three EQUAL 1fr columns. The left %>
-<%#   flex (6 items: Info + Owners + Computers + Peripherals + Components + Software) %>
-<%#   is wider than 1fr at any real viewport, so it overflows into the centre and right %>
-<%#   grid cells. CSS grid does NOT clip overflow, but grid items stack in source order, %>
-<%#   so the centre (logo) and right (auth) divs render on top of the overflowed left %>
-<%#   content — making Software partially or fully unclickable depending on how many %>
-<%#   items the right column contains (admin users have Admin + username dropdown). %>
-<%#   Fix: grid-cols-[auto_1fr_auto] — left and right columns shrink-wrap their content; %>
-<%#   centre column takes the remaining space. Added relative z-10 to left div as a %>
-<%#   safety net against future crowding. %>
-<%# v2.1 (Session 48): Software feature Session F. %>
-<%#   Added "Software" top-level navigation link (after Components). %>
-<%#   Added "My Software" to the owner dropdown (after My Connections, before divider). %>
+<%# v2.1 (Session 48): Added "Software" nav link and "My Software" dropdown item. %>
 <%# v2.0 (Session 41): Appliances → Peripherals merger Phase 2. %>
-<%#   Removed "Appliances" top-level navigation link (appliances_path gone). %>
-<%#   Removed "My Appliances" from owner dropdown (appliances_owner_path gone). %>
-<%# v1.9: Changed "owner_connection_groups_path(Current.owner)" to "connections_owner_path(Current.owner)" %>
-<%# v1.8 (Session 36): Added "My Connections" to the owner dropdown. %>
-<%# v1.7 (Session 25): Added "Peripherals" top-level navigation link. %>
-<%# v1.6 (Session 25): Added "My Peripherals" to the owner dropdown menu. %>
-<%# v1.5 (Session 23): Font size fix on Info button; username replaced with owner dropdown. %>
-<%# v1.4 (Session 20): Replaced standalone "Read Me" link with "Info" dropdown. %>
-<%# v1.3 (Session 18): Added "Read Me" as leftmost navigation link. %>
-<%# v1.2 (Session 17): Added Appliances navigation link. %>
-<%# v1.1: Admin link only shows to users where admin? returns true. %>
 
 <%# grid-cols-[auto_1fr_auto]: left and right columns size to content; %>
 <%# centre column (logo) fills the remaining space. %>
 <nav class="grid grid-cols-[auto_1fr_auto] items-center gap-2 px-6 py-4">
 
   <%# relative z-10: ensures left nav links are always above centre/right content %>
-  <%# even if any future addition causes them to approach the centre column boundary. %>
   <div class="flex items-center justify-start gap-6 relative z-10">
 
     <%# Info dropdown — static text pages. %>
@@ -57,7 +37,6 @@
     <%= navigation_link_to "Computers",   computers_path %>
     <%= navigation_link_to "Peripherals", peripherals_path %>
     <%= navigation_link_to "Components",  components_path %>
-    <%# Software — public index of all software items across all owners. %>
     <%= navigation_link_to "Software",    software_items_path %>
   </div>
 
@@ -69,15 +48,10 @@
 
   <div class="flex items-center justify-end gap-6">
     <% if logged_in? %>
-      <%# Admin link — only for users with admin privileges %>
       <% if admin? %>
         <%= navigation_link_to "Admin", admin_owners_path %>
       <% end %>
 
-      <%# Owner dropdown — sub-page links plus Profile. %>
-      <%# Order mirrors the tab strip on the owner sub-pages: %>
-      <%#   Computers | Peripherals | Components | Connections | Software | (divider) | Profile %>
-      <%# Menu right-aligned (right-0) to stay within viewport. %>
       <div class="relative" data-controller="dropdown">
         <button data-action="click->dropdown#toggle click@window->dropdown#hide"
                 class="font-medium text-stone-700 hover:text-stone-900 flex items-center gap-1">
@@ -95,10 +69,8 @@
                 class: "block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50" %>
           <%= link_to "My Components",  components_owner_path(Current.owner),
                 class: "block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50" %>
-          <%# My Connections — links to the connection groups index for this owner. %>
           <%= link_to "My Connections", connections_owner_path(Current.owner),
                 class: "block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50" %>
-          <%# My Software — links to the owner's software sub-page. Added Session 48. %>
           <%= link_to "My Software",    software_owner_path(Current.owner),
                 class: "block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50" %>
           <div class="border-t border-stone-200 my-1"></div>
@@ -106,6 +78,12 @@
                 class: "block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50" %>
         </div>
       </div>
+
+      <%# Sign out — Turbo issues DELETE /session; the system-test sign_out %>
+      <%# helper clicks this link by its text ("Sign out"). %>
+      <%= link_to "Sign out", session_path,
+            data: { turbo_method: :delete },
+            class: "font-medium text-stone-700 hover:text-stone-900" %>
     <% else %>
       <%= navigation_link_to "Log In", new_session_path %>
     <% end %>
