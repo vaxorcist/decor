@@ -1,0 +1,31 @@
+<%# decor/app/views/computer_statistics/_filters.html.erb - version 1.0 %>
+<%# v1.0 (Session 61): New filters partial for the Computers Statistics page. %>
+<%#   Provides Search (by model name) and Sort controls. %>
+<%#   Follows the exact same structure as computers/_filters.html.erb: %>
+<%#     - form_with url: @index_path, method: :get, local: true %>
+<%#     - col-span-1 self-start for grid column sizing %>
+<%#     - field_classes / button_classes helpers for consistent styling %>
+<%#   The barter_status, model, condition, and run_status filters are intentionally %>
+<%#   absent — this is a model-level statistics page, not a per-computer list. %>
+
+<%= form_with url: @index_path, method: :get, local: true, class: "col-span-1 self-start flex flex-col gap-4 mb-4 p-4 bg-stone-100" do |form| %>
+  <div class="-mb-2 font-medium">Filters</div>
+
+  <%# Search — filters the displayed models by name (LIKE query in controller). %>
+  <div>
+    <%= form.label :query, "Search", class: "text-sm text-stone-600 font-medium" %>
+    <%= form.search_field :query, value: params[:query], placeholder: "Search models...", class: field_classes %>
+    <p class="text-xs text-stone-500 mt-1">Use % for any characters, _ for single character. Case-insensitive.</p>
+  </div>
+
+  <%# Sort — controls ordering of the statistics table. %>
+  <div class="flex flex-col">
+    <%= form.label :sort, "Sort", class: "text-sm text-stone-600 font-medium" %>
+    <%= form.select :sort, computer_statistics_sort_options, { selected: computer_statistics_sort_selected }, { class: field_classes } %>
+  </div>
+
+  <div class="flex justify-end gap-2">
+    <%= link_to "Reset", @index_path, class: button_classes(style: :secondary) %>
+    <%= form.submit "Apply", class: button_classes(style: :secondary) %>
+  </div>
+<% end %>

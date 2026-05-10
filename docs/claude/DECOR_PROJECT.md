@@ -1,5 +1,11 @@
 # decor/docs/claude/DECOR_PROJECT.md
-# version 2.50
+# version 2.51
+# Session 61: Computers Statistics page + Statistics nav dropdown.
+#   7 files: routes.rb v3.2, computer_statistics_controller.rb v1.1 NEW,
+#   computer_statistics_helper.rb v1.0 NEW, computer_statistics/_filters.html.erb v1.0 NEW,
+#   computer_statistics/index.html.erb v1.1 NEW, _navigation.html.erb v2.4,
+#   computer_statistics_controller_test.rb v1.1 NEW.
+#
 # Session 59: System tests Track 1 + DRY fix.
 #   8 files: application_system_test_case v1.1, authentication_helper v2.1,
 #   computers_controller_test v1.11, authentication_test v1.0 NEW,
@@ -21,8 +27,8 @@
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** May 5, 2026 (Session 59)
-**Current Status:** Sessions 1–58 committed, pushed, merged, deployed.
+**Last Updated:** May 10, 2026 (Session 61)
+**Current Status:** Sessions 1–60 committed, pushed, merged, deployed.
 
 ---
 
@@ -189,8 +195,16 @@ decor//
 
 **Key file versions** (updated each session):
 
-    decor/docs/claude/DECOR_PROJECT.md                                                  v2.50 ← Session 59
-    decor/docs/claude/SESSION_HANDOVER.md                                               v64.0 ← Session 59
+    decor/docs/claude/DECOR_PROJECT.md                                                  v2.51 ← Session 61
+    decor/docs/claude/SESSION_HANDOVER.md                                               v65.0 ← Session 60
+    decor/config/routes.rb                                                              v3.2  ← Session 61
+    decor/app/controllers/computer_statistics_controller.rb                             v1.1  ← Session 61 NEW
+    decor/app/helpers/computer_statistics_helper.rb                                     v1.0  ← Session 61 NEW
+    decor/app/views/computer_statistics/_filters.html.erb                               v1.0  ← Session 61 NEW
+    decor/app/views/computer_statistics/index.html.erb                                  v1.1  ← Session 61 NEW
+    decor/app/views/common/_navigation.html.erb                                        v2.4  ← Session 61
+    decor/test/controllers/computer_statistics_controller_test.rb                       v1.0  ← Session 61 NEW
+    decor/docs/claude/RAILS_SPECIFICS.md                                                v3.3  ← Session 60
     decor/test/application_system_test_case.rb                                          v1.1  ← Session 59
     decor/test/support/authentication_helper.rb                                         v2.1  ← Session 59
     decor/test/controllers/computers_controller_test.rb                                 v1.11 ← Session 59
@@ -218,12 +232,12 @@ decor//
     decor/app/controllers/admin/newsletters_controller.rb                               v1.1  ← Session 58
     decor/app/views/admin/component_conditions/_form.html.erb                          v1.2  ← Session 58
     decor/app/views/admin/owners/index.html.erb                                         v1.2  ← Session 53
-    decor/config/routes.rb                                                              v3.0  ← Session 53
+    decor/config/routes.rb                                                              v3.2  ← Session 61
     decor/app/controllers/admin/site_texts_controller.rb                                v1.2  ← Session 53
     decor/app/views/admin/site_texts/download_confirm.html.erb                         v1.0  ← Session 53 NEW
     decor/app/views/admin/site_texts/delete_confirm.html.erb                           v1.1  ← Session 53
     decor/app/views/layouts/admin.html.erb                                             v2.2  ← Session 53
-    decor/app/views/common/_navigation.html.erb                                        v2.2  ← Session 53
+    decor/app/views/common/_navigation.html.erb                                        v2.4  ← Session 61
     decor/test/controllers/admin/site_texts_controller_test.rb                         v1.1  ← Session 53
     decor/app/controllers/computers_controller.rb                                       v1.22 ← Session 52
     decor/app/views/components/_form.html.erb                                           v1.7  ← Session 52

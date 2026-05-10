@@ -1,10 +1,10 @@
 # decor/docs/claude/SESSION_HANDOVER.md
-# version 65.0
-# Session 60: System tests — fixed all failures from Session 59 test:system run.
+# version 66.0
+# Session 61: Computers Statistics page + Statistics nav dropdown.
 
-**Date:** May 7, 2026
-**Branch:** main (Sessions 49–59 committed, pushed, merged, deployed)
-**Status:** Session 60 complete — all 49 system tests pass (0 failures, 0 errors, 0 skips).
+**Date:** May 10, 2026
+**Branch:** main (Sessions 49–60 committed, pushed, merged, deployed)
+**Status:** Session 61 complete — Computers Statistics page live, all tests pass.
 
 ---
 
@@ -313,6 +313,61 @@ Rails fixture loading bypasses model callbacks. Always set html_body explicitly.
 ## !! Admin update tests — include admin: "true" when updating self (learned Session 58) !!
 
 See SESSION_HANDOVER v64.0 for the full rule.
+
+---
+
+## Session 61 Summary
+
+**Focus: Computers Statistics page + Statistics dropdown in the top nav.**
+
+Local testing passed. All existing tests continue to pass.
+
+### Files delivered this session (7 files)
+
+    decor/config/routes.rb                                                v3.1 → v3.2
+    decor/app/controllers/computer_statistics_controller.rb               v1.0 → v1.1  NEW
+    decor/app/helpers/computer_statistics_helper.rb                       v1.0         NEW
+    decor/app/views/computer_statistics/_filters.html.erb                 v1.0         NEW
+    decor/app/views/computer_statistics/index.html.erb                    v1.0 → v1.1  NEW
+    decor/app/views/common/_navigation.html.erb                           v2.3 → v2.4
+    decor/test/controllers/computer_statistics_controller_test.rb         v1.0 → v1.1  NEW
+
+### Feature: Computers Statistics page (`/computer_statistics`)
+
+**Route:** `GET /computer_statistics` → `ComputerStatisticsController#index`
+Named helper: `computer_statistics_path`.
+
+**Controller strategy (two queries, Ruby-side sort):**
+- Query 1: `Computer.where(device_type: "computer").group(:computer_model_id).count`
+  Returns a Hash `{ computer_model_id => Integer }` scoped to actual computers only.
+  Peripheral Computer records that reference a computer ComputerModel are excluded.
+  (Confirmed in fixtures: `dec_unibus_router` has `computer_model: pdp11_70`.)
+- Query 2: `ComputerModel.where(device_type: "computer")` — all computer models.
+- Map to `[{ model:, count: }]`, reject count == 0, then sort in Ruby.
+
+**Sort options** (param: `sort`):
+- `most_common` (default) — `sort_by { [-count, name] }`
+- `least_common`           — `sort_by { [count, name] }`
+- `model_asc`              — `sort_by { name }`
+- `model_desc`             — `sort_by { name }.reverse`
+
+**Zero-count exclusion:** models with no registered computers are rejected before
+the sort step. They do not appear in the table.
+
+**Filter partial** — Search (LIKE by model name) + Sort only. No condition/run-status/
+barter filters (those are per-computer attributes, not per-model attributes).
+
+**Table layout:** `w-auto` (not `min-w-full`) so the table shrinks to content width.
+Count column is `text-left pl-10` — sits close to the model name column.
+Model names link to `computers_path(model: stat[:model].id)` (pre-filters computers
+index to that model).
+
+### Feature: Statistics dropdown in the top nav
+
+`_navigation.html.erb` v2.4 — new "Statistics ▾" dropdown appended after "Software"
+in the left nav group. Uses the same `data-controller="dropdown"` pattern as "Info".
+First (and currently only) entry: "Computers" → `computer_statistics_path`.
+Future statistics pages can be added as additional `link_to` entries in this dropdown.
 
 ---
 
