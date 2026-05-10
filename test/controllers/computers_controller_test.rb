@@ -1,5 +1,11 @@
 # decor/test/controllers/computers_controller_test.rb
-# version 1.10
+# version 1.11
+# v1.11 (Session 59): Replaced two literal "DecorTest2026!" password strings with
+#   TEST_PASSWORD_CHARLIE from AuthenticationHelper (v2.1).
+#   DRY violation: the literal appeared in two charlie login_as calls and was
+#   not in sync with the constant added to AuthenticationHelper in this session.
+#   No logic changed — only the password argument source.
+#
 # v1.10 (Session 52): Added two "Create and add another" redirect tests.
 #   Bug fix in computers_controller v1.21: new_computer_path was missing
 #   device_type:, so "Create and add another" always landed on /computers/new
@@ -177,9 +183,9 @@ class ComputersControllerTest < ActionDispatch::IntegrationTest
 
   test "update peripheral record to device_type=computer shows computer flash" do
     # dec_unibus_router is a peripheral owned by charlie (owners(:three)).
-    # Charlie's password is not in detect_password — must be passed explicitly.
-    # Flash must reflect the new type ("computer") after the update.
-    login_as owners(:three), password: "DecorTest2026!"
+    # TEST_PASSWORD_CHARLIE is defined in AuthenticationHelper v2.1 — single
+    # source of truth shared with login_as auto-detection and sign_in (system tests).
+    login_as owners(:three), password: TEST_PASSWORD_CHARLIE
     patch computer_path(computers(:dec_unibus_router)), params: {
       computer: { device_type: "computer" }
     }
@@ -215,10 +221,11 @@ class ComputersControllerTest < ActionDispatch::IntegrationTest
 
   test "destroy peripheral shows peripheral flash" do
     # dec_unibus_router is a peripheral (formerly appliance) owned by charlie.
-    # Charlie's password is not in detect_password — must be passed explicitly.
+    # TEST_PASSWORD_CHARLIE is defined in AuthenticationHelper v2.1 — single
+    # source of truth shared with login_as auto-detection and sign_in (system tests).
     # device_label is captured before destroy in v1.10, so the flash is
     # available even after the record is gone.
-    login_as owners(:three), password: "DecorTest2026!"
+    login_as owners(:three), password: TEST_PASSWORD_CHARLIE
     assert_difference "Computer.count", -1 do
       delete computer_url(computers(:dec_unibus_router))
     end

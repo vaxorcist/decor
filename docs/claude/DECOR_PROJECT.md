@@ -1,55 +1,28 @@
 # decor/docs/claude/DECOR_PROJECT.md
-# version 2.49
+# version 2.50
+# Session 59: System tests Track 1 + DRY fix.
+#   8 files: application_system_test_case v1.1, authentication_helper v2.1,
+#   computers_controller_test v1.11, authentication_test v1.0 NEW,
+#   computers_filters_test v1.0 NEW, components_filters_test v1.0 NEW,
+#   software_items_filters_test v1.0 NEW, connection_groups_test (system) v1.0 NEW.
+#
+# Session 58: Newsletter tests + component_conditions UI rename fixes.
+#   12 files: newsletters.yml v1.0 NEW, owners.yml v2.2, owner_test v1.5,
+#   newsletter_test v1.1 NEW, newsletters_controller_test v1.0 NEW,
+#   owners_controller_test (admin) v1.3, newsletter_mailer_test v1.0 NEW,
+#   owners_controller_test v2.0, newsletters_controller v1.1,
+#   component_conditions/_form v1.2, RAILS_SPECIFICS v3.2.
+#
 # Session 54: Tom Select searchable combobox.
 #   7 files: tom_select_controller.js v1.0 NEW, importmap.rb v1.1,
 #   application.html.erb v1.4, computers/_form.html.erb v2.6,
 #   components/_form.html.erb v1.8, software_items/_form.html.erb v1.1,
 #   COMMON_BEHAVIOR.md v2.6.
-#
-# Session 53: Bug fixes + Download Text feature.
-#   8 files: admin/owners/index.html.erb v1.2, routes.rb v3.0,
-#   admin/site_texts_controller.rb v1.2,
-#   admin/site_texts/download_confirm.html.erb v1.0 NEW,
-#   admin/site_texts/delete_confirm.html.erb v1.1,
-#   admin.html.erb v2.2, _navigation.html.erb v2.2,
-#   admin/site_texts_controller_test.rb v1.1.
-#
-# Session 52: Bug fixes + UI cleanup (computers & components).
-#   9 files: computers_controller v1.22, computers_controller_test v1.10,
-#   components/_form.html.erb v1.7, components_controller v1.9,
-#   computers/_filters.html.erb v1.6, computers_helper v1.8,
-#   components_helper v1.4, components/_filters.html.erb v1.2,
-#   components/index.html.erb v1.6.
-#
-# Session 51: Home page — Version 0.9 line + Statistics section.
-#   2 files: home_controller v1.1, home/index.html.erb v4.4.
-#
-# Session 50: Bug fixes, software index filters, test infrastructure improvements.
-#   12 files: all_owners_export_service v1.1, data_transfers_controller_test v1.4,
-#   admin/data_transfers_controller_test v1.3, software_items_helper v1.0 (NEW),
-#   software_items_controller v1.3, software_items/_filters.html.erb v1.0 (NEW),
-#   software_items/index.html.erb v1.1, software_items_controller_test v1.5,
-#   test_helper v1.2, response_helpers v1.0 (NEW), RAILS_SPECIFICS.md v2.7,
-#   Gemfile (minitest-reporters added).
-#
-# Session 49: Session G — owner export/import fixes + service test rewrites.
-#   8 files: data_transfers_controller v1.6, data_transfers/show.html.erb v1.9,
-#   owner_export_service v1.10, owner_import_service v1.11,
-#   owner_export_service_test v2.0, owner_import_service_test v1.7,
-#   PROGRAMMING_GENERAL.md v2.0.
-#
-# Session 48: Software feature Session F — public index + nav + export/import.
-#   10 files: software_items_controller v1.2, software_items/index.html.erb v1.0 (NEW),
-#   software_items/index.turbo_stream.erb v1.0 (NEW),
-#   software_items/_software_item.html.erb v1.0 (NEW),
-#   _navigation.html.erb v2.1, software_items_controller_test v1.2,
-#   owner_export_service v1.8, owner_import_service v1.8,
-#   admin/data_transfers_controller v1.3, admin/data_transfers/show.html.erb v1.3.
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** April 17, 2026 (Session 54)
-**Current Status:** Sessions 1–52 committed, pushed, merged, deployed.
+**Last Updated:** May 5, 2026 (Session 59)
+**Current Status:** Sessions 1–58 committed, pushed, merged, deployed.
 
 ---
 
@@ -60,7 +33,7 @@
 tree decor/ -I "node_modules|.git|tmp|storage|log|.DS_Store|*.lock|assets|cache|pids|sockets" --dirsfirst -F --prune -L 6 > decor_tree.txt
 ```
 
-**Current tree** (as of Session 41 — Sessions 43–53 add new files; upload decor_tree.txt to refresh):
+**Current tree** (as of Session 41 — Sessions 43–59 add new files; upload decor_tree.txt to refresh):
 ```
 decor//
 ├── app/
@@ -75,6 +48,7 @@ decor//
 │   │   │   ├── connection_types_controller.rb
 │   │   │   ├── data_transfers_controller.rb            ← Session 41 (v1.2)
 │   │   │   ├── invites_controller.rb
+│   │   │   ├── newsletters_controller.rb               ← Session 58 (v1.1)
 │   │   │   ├── owners_controller.rb
 │   │   │   ├── run_statuses_controller.rb
 │   │   │   ├── site_texts_controller.rb                ← Session 53 (v1.2)
@@ -101,6 +75,7 @@ decor//
 │   ├── models/
 │   │   ├── computer.rb                                 ← Session 43 (v2.1)
 │   │   ├── computer_model.rb                          ← Session 41 (v1.3)
+│   │   ├── newsletter.rb
 │   │   ├── owner.rb                                   ← Session 43 (v1.5)
 │   │   ├── software_condition.rb                      ← Session 43 (v1.0) NEW
 │   │   ├── software_item.rb                           ← Session 43 (v1.0) NEW
@@ -111,8 +86,12 @@ decor//
 │   │   └── owner_import_service.rb                     ← Session 49 (v1.11)
 │   └── views/
 │       ├── admin/
+│       │   ├── component_conditions/
+│       │   │   └── _form.html.erb                     ← Session 58 (v1.2)
 │       │   ├── data_transfers/
 │       │   │   └── show.html.erb                      ← Session 48 (v1.3)
+│       │   ├── newsletters/
+│       │   │   └── (views)
 │       │   ├── owners/
 │       │   │   └── index.html.erb                     ← Session 53 (v1.2)
 │       │   ├── site_texts/
@@ -120,15 +99,7 @@ decor//
 │       │   │   ├── download_confirm.html.erb          ← Session 53 (v1.0) NEW
 │       │   │   └── new.html.erb
 │       │   ├── software_conditions/
-│       │   │   ├── _form.html.erb                     ← Session 44 (v1.0) NEW
-│       │   │   ├── edit.html.erb                      ← Session 44 (v1.0) NEW
-│       │   │   ├── index.html.erb                     ← Session 44 (v1.0) NEW
-│       │   │   └── new.html.erb                       ← Session 44 (v1.0) NEW
 │       │   └── software_names/
-│       │       ├── _form.html.erb                     ← Session 44 (v1.0) NEW
-│       │       ├── edit.html.erb                      ← Session 44 (v1.0) NEW
-│       │       ├── index.html.erb                     ← Session 44 (v1.0) NEW
-│       │       └── new.html.erb                       ← Session 44 (v1.0) NEW
 │       ├── common/
 │       │   └── _navigation.html.erb                   ← Session 53 (v2.2)
 │       ├── data_transfers/
@@ -168,22 +139,31 @@ decor//
     │   ├── admin/
     │   │   ├── computer_models_controller_test.rb      ← Session 41 (v1.3)
     │   │   ├── data_transfers_controller_test.rb       ← Session 50 (v1.3)
+    │   │   ├── newsletters_controller_test.rb          ← Session 58 (v1.0) NEW
+    │   │   ├── owners_controller_test.rb               ← Session 58 (v1.3)
     │   │   ├── site_texts_controller_test.rb           ← Session 53 (v1.1)
     │   │   ├── software_conditions_controller_test.rb  ← Session 44 (v1.0) NEW
     │   │   └── software_names_controller_test.rb       ← Session 44 (v1.0) NEW
-    │   ├── computers_controller_test.rb                ← Session 52 (v1.10)
+    │   ├── computers_controller_test.rb                ← Session 59 (v1.11)
+    │   ├── connection_groups_controller_test.rb        ← Session 38 (v1.1)
     │   ├── data_transfers_controller_test.rb           ← Session 50 (v1.4)
-    │   ├── owners_controller_test.rb                  ← Session 45 (v1.9)
+    │   ├── owners_controller_test.rb                  ← Session 58 (v2.0)
     │   └── software_items_controller_test.rb          ← Session 50 (v1.5)
     ├── fixtures/
     │   ├── computer_models.yml                         ← Session 41 (v1.3)
     │   ├── computers.yml                              ← Session 41 (v1.9)
+    │   ├── newsletters.yml                            ← Session 58 (v1.0) NEW
+    │   ├── owners.yml                                 ← Session 58 (v2.2)
     │   ├── software_conditions.yml                    ← Session 43 (v1.0) NEW
     │   ├── software_items.yml                         ← Session 43 (v1.0) NEW
     │   └── software_names.yml                         ← Session 43 (v1.0) NEW
+    ├── mailers/
+    │   └── newsletter_mailer_test.rb                  ← Session 58 (v1.0) NEW
     ├── models/
     │   ├── computer_model_test.rb                     ← Session 41 (v1.3)
     │   ├── computer_test.rb                           ← Session 41 (v1.7)
+    │   ├── newsletter_test.rb                         ← Session 58 (v1.1) NEW
+    │   ├── owner_test.rb                              ← Session 58 (v1.5)
     │   ├── software_condition_test.rb                 ← Session 43 (v1.0) NEW
     │   ├── software_item_test.rb                      ← Session 43 (v1.0) NEW
     │   └── software_name_test.rb                      ← Session 43 (v1.0) NEW
@@ -193,7 +173,15 @@ decor//
     │   ├── owner_export_service_test.rb               ← Session 49 (v2.0)
     │   └── owner_import_service_test.rb               ← Session 49 (v1.7)
     ├── support/
+    │   ├── authentication_helper.rb                   ← Session 59 (v2.1)
     │   └── response_helpers.rb                        ← Session 50 (v1.0) NEW
+    ├── system/
+    │   ├── authentication_test.rb                     ← Session 59 (v1.0) NEW
+    │   ├── components_filters_test.rb                 ← Session 59 (v1.0) NEW
+    │   ├── computers_filters_test.rb                  ← Session 59 (v1.0) NEW
+    │   ├── connection_groups_test.rb                  ← Session 59 (v1.0) NEW
+    │   └── software_items_filters_test.rb             ← Session 59 (v1.0) NEW
+    ├── application_system_test_case.rb                ← Session 59 (v1.1)
     └── test_helper.rb                                 ← Session 50 (v1.2)
 ```
 
@@ -201,8 +189,16 @@ decor//
 
 **Key file versions** (updated each session):
 
-    decor/docs/claude/DECOR_PROJECT.md                                                  v2.49 ← Session 54
-    decor/docs/claude/SESSION_HANDOVER.md                                               v58.0 ← Session 54
+    decor/docs/claude/DECOR_PROJECT.md                                                  v2.50 ← Session 59
+    decor/docs/claude/SESSION_HANDOVER.md                                               v64.0 ← Session 59
+    decor/test/application_system_test_case.rb                                          v1.1  ← Session 59
+    decor/test/support/authentication_helper.rb                                         v2.1  ← Session 59
+    decor/test/controllers/computers_controller_test.rb                                 v1.11 ← Session 59
+    decor/test/system/authentication_test.rb                                            v1.0  ← Session 59 NEW
+    decor/test/system/computers_filters_test.rb                                         v1.0  ← Session 59 NEW
+    decor/test/system/components_filters_test.rb                                        v1.0  ← Session 59 NEW
+    decor/test/system/software_items_filters_test.rb                                    v1.0  ← Session 59 NEW
+    decor/test/system/connection_groups_test.rb                                         v1.0  ← Session 59 NEW
     decor/docs/claude/COMMON_BEHAVIOR.md                                                v2.6  ← Session 54
     decor/app/javascript/controllers/tom_select_controller.js                           v1.0  ← Session 54 NEW
     decor/config/importmap.rb                                                           v1.1  ← Session 54
@@ -210,7 +206,17 @@ decor//
     decor/app/views/computers/_form.html.erb                                            v2.6  ← Session 54
     decor/app/views/components/_form.html.erb                                           v1.8  ← Session 54
     decor/app/views/software_items/_form.html.erb                                       v1.1  ← Session 54
-    decor/docs/claude/RAILS_SPECIFICS.md                                                v2.8  ← Session 53
+    decor/docs/claude/RAILS_SPECIFICS.md                                                v3.2  ← Session 58
+    decor/test/fixtures/newsletters.yml                                                 v1.0  ← Session 58 NEW
+    decor/test/fixtures/owners.yml                                                      v2.2  ← Session 58
+    decor/test/models/owner_test.rb                                                     v1.5  ← Session 58
+    decor/test/models/newsletter_test.rb                                                v1.1  ← Session 58 NEW
+    decor/test/controllers/admin/newsletters_controller_test.rb                         v1.0  ← Session 58 NEW
+    decor/test/controllers/admin/owners_controller_test.rb                              v1.3  ← Session 58
+    decor/test/mailers/newsletter_mailer_test.rb                                        v1.0  ← Session 58 NEW
+    decor/test/controllers/owners_controller_test.rb                                    v2.0  ← Session 58
+    decor/app/controllers/admin/newsletters_controller.rb                               v1.1  ← Session 58
+    decor/app/views/admin/component_conditions/_form.html.erb                          v1.2  ← Session 58
     decor/app/views/admin/owners/index.html.erb                                         v1.2  ← Session 53
     decor/config/routes.rb                                                              v3.0  ← Session 53
     decor/app/controllers/admin/site_texts_controller.rb                                v1.2  ← Session 53
@@ -220,7 +226,6 @@ decor//
     decor/app/views/common/_navigation.html.erb                                        v2.2  ← Session 53
     decor/test/controllers/admin/site_texts_controller_test.rb                         v1.1  ← Session 53
     decor/app/controllers/computers_controller.rb                                       v1.22 ← Session 52
-    decor/test/controllers/computers_controller_test.rb                                 v1.10 ← Session 52
     decor/app/views/components/_form.html.erb                                           v1.7  ← Session 52
     decor/app/controllers/components_controller.rb                                      v1.9  ← Session 52
     decor/app/views/computers/_filters.html.erb                                         v1.6  ← Session 52
@@ -351,20 +356,13 @@ decor//
 
 ### SoftwareItem  ← Session 43
 - belongs_to :owner
-- belongs_to :computer, optional: true    ← "installed on"; covers peripherals too
+- belongs_to :computer, optional: true
 - belongs_to :software_name
 - belongs_to :software_condition, optional: true
 - barter_status enum: 0=no_barter, 1=offered, 2=wanted (prefix: true)
 - version VARCHAR(20), optional
 - description VARCHAR(100), optional
 - history VARCHAR(200), optional
-- Deleting a computer DESTROYS all software installed on it.
-- Deleting an owner destroys all their software items.
-- computer_id nullable → software not installed on any hardware is valid.
-
-### ConnectionType
-- has_many :connection_groups, dependent: :restrict_with_error
-- Admin-managed
 
 ### ConnectionGroup
 - belongs_to :owner
@@ -372,20 +370,13 @@ decor//
 - has_many :connection_members, dependent: :delete_all
 - has_many :computers, through: :connection_members
 - accepts_nested_attributes_for :connection_members, allow_destroy: true, reject_if: :all_blank
-- owner_group_id: integer NOT NULL — owner's own numbering; auto-assigned (max+1) on create
-  UNIQUE INDEX (owner_id, owner_group_id)
-- Validations: owner_group_id presence/numericality/uniqueness; label max 100;
-  minimum 2 active members; all members belong to owner;
-  no duplicate computers in same group
+- owner_group_id: integer NOT NULL — auto-assigned (max+1) on create
 
 ### ConnectionMember
 - belongs_to :connection_group
 - belongs_to :computer
 - owner_member_id: integer NOT NULL — per-group port numbering; auto-assigned on create
-  UNIQUE INDEX (connection_group_id, owner_member_id)
 - label: VARCHAR(100) nullable
-- Validations: computer_id uniqueness scoped to group; owner_member_id > 0; label max 100
-- after_destroy: destroys parent group if member count falls below 2
 
 ---
 
@@ -404,18 +395,9 @@ Option C (full separation) chosen. Software is NOT a variant of Components.
 
 ## Appliances → Peripherals Merger — FULLY COMPLETE (Sessions 41–42)
 
-### What changed
 - `appliance` (device_type=1) removed from enum on `Computer` and `ComputerModel`.
 - Both enums now use hash form `{ computer: 0, peripheral: 2 }`.
-- DB data migration (device_type=1 → 2) run on `computers` in Session 41 and on
-  `computer_models` in Session 42 (the table was missed in Session 41).
-- All fixtures, views, routes, controllers, helpers, services, and tests updated.
-- Import backward compat: CSV record_type `"appliance"` → mapped to `:peripheral`.
-
-### Intentional remaining references
-- `OwnerImportService` — legacy alias mapping (`"appliance"` → `:peripheral`). Keep.
-- `record_type` column in owner-facing data_transfers view. Keep.
-- Test names and comments documenting migration history. Keep.
+- Import backward compat: CSV record_type `"appliance"` → mapped to `:peripheral`. Keep.
 
 ---
 
@@ -432,42 +414,28 @@ Option C (full separation) chosen. Software is NOT a variant of Components.
 
 ## Known Issues & Solutions
 
+### System tests — browser-layer login (Session 59)
+`login_as` uses the Rack adapter. System tests require `sign_in` (browser form).
+Never call `login_as` from a system test file.
+
 ### Manual data migrations — check ALL tables (Session 42)
-When running a manual data migration for an enum column, verify every table
-that uses that column. Grep `db/schema.rb` for the column name to find all affected tables.
+Grep `db/schema.rb` for the column name to find all affected tables.
 
 ### Never Guess — Read the File or Ask (Session 39)
 Claude must never invent a path helper, method name, or behaviour without reading
-the actual file. See decor-session-rules skill v1.3 for full detail.
+the actual file.
 
 ### enum hash form required after non-contiguous gap (Session 41)
 `enum :device_type, { computer: 0, peripheral: 2 }, prefix: true`
-Do NOT renumber peripheral to 1.
 
 ### owner_group_id / owner_member_id — 0.present? is true (Session 38)
 Guard must be `return if field.to_i > 0` not `return if field.present?`.
 
-### Remove routes AFTER updating views (Session 41)
-Removing routes before views causes cascade test failures.
-
-### SQLite ALTER TABLE Limitations
-Cannot add NOT NULL columns to existing tables — requires full table recreation.
-Use `disable_ddl_transaction!` + raw SQL. See RAILS_SPECIFICS.md.
-
 ### data-turbo="false" disables Turbo on all descendants (Session 53)
-A Turbo-method link inside a data-turbo="false" ancestor silently falls back
-to a plain GET. See RAILS_SPECIFICS.md v2.8 for the full rule.
+A Turbo-method link inside a data-turbo="false" ancestor silently falls back to GET.
 
 ### CSS grid grid-cols-N causes nav link overflow (Session 53)
-Equal-fraction grid columns cause overflowed left-nav links to be hidden behind
-later grid cells. Use grid-cols-[auto_1fr_auto] for left/logo/right navbars.
-See RAILS_SPECIFICS.md v2.8 for the full rule.
-
-### safe_join for arrays of links — never .map.join.html_safe (Session 35)
-### Connections show page — peer filtering uses reject not where.not (Session 34)
-### reject_if: :all_blank required on connection_members nested attributes (Session 36)
-### CSV::Table#to_a returns plain arrays, not CSV::Row objects (Session 37)
-(Full details in RAILS_SPECIFICS.md and earlier Known Issues entries)
+Use grid-cols-[auto_1fr_auto] for left/logo/right navbars.
 
 ---
 
@@ -497,6 +465,7 @@ See RAILS_SPECIFICS.md v2.8 for the full rule.
 ```bash
 bin/rails server
 bin/rails test
+bin/rails test:system
 bin/rails db:migrate
 kamal app exec --reuse "bin/rails db:migrate"
 kamal deploy

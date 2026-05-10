@@ -1,10 +1,10 @@
 # decor/docs/claude/SESSION_HANDOVER.md
-# version 63.0
-# Session 58: Newsletter tests + component_conditions UI rename fixes.
+# version 65.0
+# Session 60: System tests — fixed all failures from Session 59 test:system run.
 
-**Date:** May 3, 2026
-**Branch:** main (Sessions 49–57 committed, pushed, merged, deployed)
-**Status:** Session 58 complete — ready to commit, push, merge, deploy.
+**Date:** May 7, 2026
+**Branch:** main (Sessions 49–59 committed, pushed, merged, deployed)
+**Status:** Session 60 complete — all 49 system tests pass (0 failures, 0 errors, 0 skips).
 
 ---
 
@@ -31,15 +31,143 @@ After each: log "Read FILENAME — N lines, complete."
 
 ---
 
-## !! TOKEN BUDGET WARNING !!
+## !! SYSTEM TESTS — BROWSER-LAYER LOGIN (learned Session 59) !!
 
-Session 55 ended with the user calling for a wrap-up mid-session due to token
-pressure. Session 56 also ended with the user calling for a wrap-up.
-Session 57 ended at ~85% token use.
-Session 58 ended at ~70% token use.
-Estimates were consistently too optimistic. The floor in COMMON_BEHAVIOR.md
-has been raised from 40% to 50% for sessions with 5+ large documents.
-Start Session 59 fresh.
+`login_as` (AuthenticationHelper) posts to the Rails Rack adapter. It sets a
+session cookie on the Rack test adapter — NOT on the Selenium browser process.
+System tests run a real Chrome instance; its cookie jar is completely separate.
+
+**Rule:** Never call `login_as` from a system test file.
+Use `sign_in` (defined in ApplicationSystemTestCase v1.3) instead.
+`sign_in` drives the real login form through the browser.
+
+See `decor/test/application_system_test_case.rb` v1.3 for implementation.
+
+---
+
+## !! SYSTEM TESTS — CAPYBARA ASSERTION PATTERNS (learned Session 60) !!
+
+### assert_selector with a message string raises ArgumentError
+
+Capybara's `assert_selector` does NOT accept a plain string as its second
+positional argument. It raises:
+```
+ArgumentError: Unused parameters passed to Capybara::Queries::SelectorQuery
+```
+
+**Wrong:**
+```ruby
+assert_selector "input[name='user_name']", "Login form must have this field"
+refute_selector "select[name='barter_status']", "Must not be rendered"
+```
+
+**Correct — route the message through Minitest's assert:**
+```ruby
+assert page.has_css?("input[name='user_name']"),    "Login form must have this field"
+assert page.has_no_css?("select[name='barter_status']"), "Must not be rendered"
+```
+
+Same rule applies to `assert_text "text", "message"` → `assert page.has_text?("text"), "message"`.
+
+### Capybara select(value) matches by TEXT, not by value= attribute
+
+`select "994812667", from: "software_name_id"` raises ElementNotFound because
+Capybara looks for an `<option>` whose visible text is "994812667", not one
+whose value attribute is "994812667".
+
+**Wrong:**
+```ruby
+first_option_value = select_el.all("option").first&.value
+select first_option_value, from: "field_name"
+```
+
+**Correct — select by element, not by text or value string:**
+```ruby
+first_option = select_el.all("option").reject { |o| o.value.empty? }.first
+first_option.select_option
+```
+
+To assert the selection persists after form submit, use has_select? with text:
+```ruby
+assert page.has_select?("field_name", selected: first_option.text, wait: 5)
+```
+
+### Filter forms in Turbo Frames — URL does not update
+
+The software_items, components, and computers filter forms are inside Turbo
+Frames. After submitting a filter, the frame content updates but the top-level
+URL stays at the bare path (e.g. `/software_items`). URL-based assertions fail.
+
+**Wrong:**
+```ruby
+within("form[method='get']") { find("[type=submit]").click }
+assert_includes current_url, "query=vms"
+```
+
+**Correct — assert form field value instead of URL:**
+```ruby
+click_button "Apply"
+assert page.has_field?("query", with: "vms", wait: 5),
+  "Query field must reflect submitted value after filter applies"
+```
+
+For select filters, use has_select? with option text:
+```ruby
+click_button "Apply"
+assert page.has_select?("sort", selected: first_option.text, wait: 5)
+```
+
+### Turbo navigation race in sign_in / sign_out
+
+`form_with` without `local: true` submits via Turbo (async fetch). Calling
+`current_path` immediately after `find("[type=submit]").click` races the redirect.
+
+Fix: wait for the login form to disappear before returning from sign_in.
+Fix: wait for the sign-out button to disappear before returning from sign_out.
+
+See `application_system_test_case.rb` v1.3.
+
+### <template> elements not findable via assert_selector
+
+HTML `<template>` elements are not part of the live rendering tree. Even with
+`visible: :all`, Capybara/Selenium cannot find them via CSS selectors.
+
+**Correct — use evaluate_script:**
+```ruby
+template_present = evaluate_script(
+  "document.querySelector(\"[data-connection-members-target='template']\") !== null"
+)
+assert template_present, "Form must render the template Stimulus target"
+```
+
+---
+
+## !! SYSTEM TESTS — SIGN-OUT LINK MUST BE IN THE NAV (learned Session 60) !!
+
+The `sign_out` helper in ApplicationSystemTestCase clicks a "Sign out" link.
+The nav partial (`decor/app/views/common/_navigation.html.erb`) must include
+this link inside the `<% if logged_in? %>` block:
+
+```erb
+<%= link_to "Sign out", session_path,
+      data: { turbo_method: :delete },
+      class: "font-medium text-stone-700 hover:text-stone-900" %>
+```
+
+Without this link, every system test that calls `sign_out` raises ElementNotFound.
+The link was added in v2.3 of the navigation partial.
+
+---
+
+## !! DRY RULE — ALL passwords must use AuthenticationHelper constants !!
+
+`TEST_PASSWORD_CHARLIE = "DecorTest2026!"` added to AuthenticationHelper v2.1.
+**No literal password strings are permitted anywhere in the test suite.**
+All test files must use:
+  TEST_PASSWORD_ALICE   — owners(:one)
+  TEST_PASSWORD_BOB     — owners(:two)
+  TEST_PASSWORD_CHARLIE — owners(:three)
+  TEST_PASSWORD_VALID   — dynamically created owners
 
 ---
 
@@ -51,7 +179,7 @@ Also check and override explicitly:
   2. `f.label :col`   — derives text from column name
   3. Index column headers, show labels, titles, breadcrumbs
   4. Flash notices that reference the field or model name
-See RAILS_SPECIFICS.md v3.2 "UI Renames" section for full checklist with examples.
+See RAILS_SPECIFICS.md v3.3 "UI Renames" section for full checklist with examples.
 
 ---
 
@@ -118,7 +246,7 @@ See PROGRAMMING_GENERAL.md v2.0 for the full rule.
 In integration tests, NEVER use `assert_match(text, response.body)` or
 `refute_match(text, response.body)`. Use `assert_body_includes` /
 `refute_body_includes` from ResponseHelpers instead.
-See RAILS_SPECIFICS.md v3.0 for the full rule.
+See RAILS_SPECIFICS.md v3.3 for the full rule.
 
 ---
 
@@ -131,269 +259,140 @@ also appears in the filter sidebar's <option> elements.
 
 ## !! data-turbo="false" — NEVER wrap Turbo-method links inside it (learned Session 53) !!
 
-See RAILS_SPECIFICS.md v3.0 for the full rule.
+See RAILS_SPECIFICS.md v3.3 for the full rule.
 
 ---
 
 ## !! CSS grid grid-cols-N — Equal columns hide overflowed links (learned Session 53) !!
 
-See RAILS_SPECIFICS.md v3.0 for the full rule.
+See RAILS_SPECIFICS.md v3.3 for the full rule.
 
 ---
 
-## !! before_validation vs before_save — Generated fields that are also validated (learned Session 56) !!
+## !! before_validation vs before_save (learned Session 56) !!
 
 If a model generates a field via callback AND validates it for presence, the
-callback MUST be `before_validation` — NOT `before_save`. Validations run
-before before_save; the presence check fires first and rejects the record.
-See RAILS_SPECIFICS.md v3.0 for the full rule.
+callback MUST be `before_validation` — NOT `before_save`.
+See RAILS_SPECIFICS.md v3.3 for the full rule.
 
 ---
 
 ## !! Mailer views directory — Check existing structure first (learned Session 56) !!
 
-This project stores mailer views under `app/views/mailers/<mailer_name>/`,
-NOT the Rails default `app/views/<mailer_name>/`.
+This project stores mailer views under `app/views/mailers/<mailer_name>/`.
 Always grep for existing mailer views before creating a new directory.
-See RAILS_SPECIFICS.md v3.0 for the full rule.
 
 ---
 
 ## !! deliver_later vs deliver_now — Admin tools use deliver_now (learned Session 56) !!
 
 `deliver_later` hands off to ActiveJob — letter_opener never intercepts it.
-For admin-initiated sends, use `deliver_now` for immediate delivery and
-letter_opener preview.
-See RAILS_SPECIFICS.md v3.0 for the full rule.
+For admin-initiated sends, use `deliver_now`.
 
 ---
 
-## !! Email HTML — Gmail strips data: URIs; old clients ignore CSS sizing (learned Session 57) !!
+## !! Email HTML — Gmail strips data: URIs (learned Session 57) !!
 
-Three rules added to RAILS_SPECIFICS.md v3.0:
-1. Gmail strips data: URIs from img src — no image workaround; style the <img>
-   for readable alt text using font-size/family/color on the element itself.
-2. img display:block misaligns alt text beside inline text — use
-   display:inline-block + vertical-align:middle.
-3. Old email clients (Firebird, Thunderbird, Outlook) ignore CSS height/width on
-   <img> — always add HTML height= and width= attributes alongside CSS.
-See RAILS_SPECIFICS.md v3.0 "Email HTML" section for full rules with examples.
+See RAILS_SPECIFICS.md v3.3 "Email HTML" section for full rules.
 
 ---
 
 ## !! ActionMailer::TestHelper in integration tests — include explicitly (learned Session 58) !!
 
 ActionDispatch::IntegrationTest does NOT include ActionMailer::TestHelper
-automatically. Any integration test file that needs assert_emails /
-assert_no_emails / assert_enqueued_emails must include it explicitly:
-
-    class Admin::NewslettersControllerTest < ActionDispatch::IntegrationTest
-      include ActionMailer::TestHelper
-      ...
-    end
-
-ActionMailer::TestCase DOES include it automatically — no explicit include
-needed in files that inherit ActionMailer::TestCase.
+automatically. Include it explicitly in any test file using assert_emails.
 
 ---
 
 ## !! Newsletter fixture html_body — Set explicitly (learned Session 58) !!
 
-Rails fixture loading uses direct SQL INSERT and bypasses all model callbacks,
-including Newsletter#generate_html_body (before_validation). Without an explicit
-html_body value in the fixture, the column is NULL. The presence validation
-does NOT fire during fixture loading, but any test that accesses newsletter.html_body
-and expects a non-blank value will fail. Always set html_body explicitly in
-newsletters.yml, using plausible Redcarpet output for the markdown_body value.
+Rails fixture loading bypasses model callbacks. Always set html_body explicitly.
 
 ---
 
 ## !! Admin update tests — include admin: "true" when updating self (learned Session 58) !!
 
-In Admin::OwnersController#update, :admin is NOT in owner_params (Brakeman fix).
-It is read directly from params[:owner][:admin] and cast with
-ActiveModel::Type::Boolean. When a param is absent, cast(nil) → false.
-The self-demotion guard fires when:
-  @owner == Current.owner && !requested_admin
-Consequence: any PATCH to update the currently-logged-in admin's own record
-MUST include `admin: "true"` in the params hash — otherwise the guard triggers
-and the test gets an unexpected redirect to edit_admin_owner_path.
-Exception: tests that intentionally test the self-demotion guard should
-omit admin: (or pass admin: "false") to trigger the guard.
+See SESSION_HANDOVER v64.0 for the full rule.
 
 ---
 
-## Session 58 Summary
+## Session 60 Summary
 
-**Focus: Newsletter tests + component_conditions UI rename fixes.**
+**Focus: System tests — fixed all 48 failures/errors from Session 59 test:system run.**
 
-### Files delivered this session (12 files)
+Final result: **49 tests, 0 failures, 0 errors, 0 skips.**
 
-    decor/test/fixtures/newsletters.yml                                    v1.0  NEW
-    decor/test/fixtures/owners.yml                                         v2.2
-    decor/test/models/owner_test.rb                                        v1.5
-    decor/test/models/newsletter_test.rb                                   v1.1  NEW
-    decor/test/controllers/admin/newsletters_controller_test.rb            v1.0  NEW
-    decor/test/controllers/admin/owners_controller_test.rb                 v1.3  NEW (replaces wrongly-named admin_owners_controller_test.rb)
-    decor/test/mailers/newsletter_mailer_test.rb                           v1.0  NEW
-    decor/test/controllers/owners_controller_test.rb                       v2.0
-    decor/app/controllers/admin/newsletters_controller.rb                  v1.1
-    decor/app/views/admin/component_conditions/_form.html.erb              v1.2
-    decor/docs/claude/RAILS_SPECIFICS.md                                   v3.2
-    decor/docs/claude/SESSION_HANDOVER.md                                  v63.0
+### Files delivered this session (8 files)
 
-### Test failures fixed during this session
+    decor/test/application_system_test_case.rb             v1.1 → v1.3
+    decor/app/views/common/_navigation.html.erb            v2.2 → v2.3
+    decor/test/system/authentication_test.rb               v1.0 → v1.1
+    decor/test/system/computers_filters_test.rb            v1.0 → v1.2
+    decor/test/system/software_items_filters_test.rb       v1.0 → v1.2
+    decor/test/system/components_filters_test.rb           v1.0 → v1.2
+    decor/test/system/connection_groups_test.rb            v1.0 → v1.3
+    decor/docs/claude/RAILS_SPECIFICS.md                   v3.2 → v3.3
 
-Five failures on first `bin/rails test` run:
-1. `@owners nil on POST failure` — moved `@owners = Owner.order(:user_name)` to
-   top of `send_newsletter` action in newsletters_controller.rb (v1.0 → v1.1).
-   This is also a production bug fix — deploy is required.
-2. `html_body presence independently` — removed untestable test from newsletter_test.rb.
-   `before_validation` re-runs on every `validate` call, making the nil state
-   unreachable. (newsletter_test.rb v1.0 → v1.1)
-3. `NOT NULL on owners.admin` (×3) — added `admin: "false"` to three PATCH
-   params hashes in admin owners controller test. (v1.2 → v1.3)
-4. `non-admin gets 200 instead of redirect` — added `delete session_path` before
-   `login_as non_admin` in admin owners controller test. (v1.2 → v1.3)
+### Root causes fixed (6 categories)
 
-### Pre-existing file corrected
+1. **ArgumentError on Capybara assert_selector** — 17 occurrences across 5 test files.
+   `assert_selector "css", "message"` → `assert page.has_css?("css"), "message"`.
+   Same for refute_selector → `has_no_css?`, assert_text → `has_text?`.
 
-`decor/test/controllers/admin/admin_owners_controller_test.rb` — wrong filename
-(was silently skipped by the test runner). Merged with Session 58 v1.0 into
-`decor/test/controllers/admin/owners_controller_test.rb` v1.3.
-**Delete the old wrongly-named file from the repo.**
+2. **Turbo navigation race in sign_in** — form_with without local: true submits
+   asynchronously. Added `has_no_field?("user_name", wait: 5)` after submit click
+   in application_system_test_case.rb.
 
-### UI rename fix (component_conditions)
+3. **sign_out had no target link** — the nav partial had no "Sign out" link.
+   Added `link_to "Sign out", session_path, data: { turbo_method: :delete }` to
+   `_navigation.html.erb` v2.3. Changed sign_out helper to `click_on "Sign out"`.
 
-`_form.html.erb` v1.0 → v1.2:
-- v1.1: `f.submit "Save Run Status"` — was "Create/Update Component condition"
-- v1.2: `f.label :condition, "Status"` — was "Condition"
+4. **Capybara select(value) matches by TEXT** — fixture IDs passed as value strings
+   never matched. Fixed by using `first_option.select_option` throughout and
+   asserting with `has_select?("name", selected: first_option.text, wait: 5)`.
 
-### Rules added: RAILS_SPECIFICS.md v3.2
+5. **Filter forms in Turbo Frames — URL doesn't update** — replaced all
+   `assert_includes current_url, "param="` assertions with `has_field?` /
+   `has_select?` assertions that check form state rather than URL.
 
-Six rules added this session (v3.1 → v3.2):
-1. `render` is synchronous — set all iVars before any `render` call
-2. NOT NULL boolean columns must be explicit in PATCH test params
-3. `ActionMailer::TestHelper` — expanded with `deliveries.clear` in setup
-4. `deliver_later` in tests requires `perform_enqueued_jobs` (addendum)
-5. Switching users in tests — `delete session_path` before `login_as`
-6. UI Renames — full checklist of Rails auto-generated strings to override
+6. **<template> element not findable via Capybara** — replaced
+   `assert_selector "...", visible: :all` with
+   `evaluate_script("document.querySelector(...) !== null")`.
 
-### Deployment checklist for Session 58
+### Production change: navigation partial v2.3
 
-One production file changed:
-  decor/app/controllers/admin/newsletters_controller.rb  v1.1
-  (fixes @owners nil crash on POST failure paths — live bug, deploy required)
-
-No migrations. Deploy as normal after committing all files.
-
-### Test case inventory (~50 tests across 6 files)
-
-**decor/test/fixtures/newsletters.yml (v1.0 NEW)**
-- Fixture `one`: subject with placeholder body ({{user_name}} present)
-- Fixture `two`: subject with plain body (no placeholder)
-- html_body set explicitly for both (bypasses before_validation — see notice above)
-
-**decor/test/fixtures/owners.yml (v2.2)**
-- Added newsletter column to all three fixtures
-- alice (one): newsletter: 1  charlie (three): newsletter: 1  bob (two): newsletter: 0
-- Design intent: alice+charlie subscribed, bob unsubscribed — enables
-  assert_includes/refute_includes scope tests without hardcoded counts
-
-**decor/test/models/owner_test.rb (v1.5) — 7 new tests**
-1. newsletter defaults to 1 (reflects DB column DEFAULT)
-2. newsletter_subscribed? returns true when newsletter == 1
-3. newsletter_subscribed? returns false when newsletter == 0
-4. newsletter validates inclusion — rejects value 2
-5. newsletter validates inclusion — rejects nil
-6. newsletter_subscribed scope includes subscribed owners (alice, charlie)
-7. newsletter_subscribed scope excludes unsubscribed owner (bob)
-
-**decor/test/models/newsletter_test.rb (v1.0 NEW) — 17 tests**
-- Validity: valid newsletter saves; invalid records rejected
-- subject: presence, max 200 chars, accepts 200 chars, accepts typical subject
-- markdown_body: presence (nil and blank string)
-- before_validation callback: html_body generated before validation fires;
-  rendered HTML contains expected Redcarpet output; early return when blank;
-  html_body presence validated independently
-- {{user_name}} placeholder preserved in html_body and markdown_body
-- html_body regenerated on update
-- Fixture smoke tests (x4): present, non-blank, placeholder present/absent
-
-**decor/test/controllers/admin/newsletters_controller_test.rb (v1.0 NEW) — 16 tests**
-- Auth guard: unauthenticated redirect
-- index: 200, lists subjects
-- new: 200
-- create: valid upload saves + redirects to show; missing file → 422;
-  blank subject → 422
-- show: 200, displays subject
-- destroy: removes record, redirects, notice includes subject
-- send_newsletter GET: 200
-- send_newsletter POST recipient=all: delivers one email per subscribed owner;
-  to addresses correct (alice+charlie in, bob out)
-- send_newsletter POST recipient=specific: delivers 1 email, correct address;
-  blank owner_id → 422
-- send_newsletter POST no recipient: → 422
-
-**decor/test/controllers/admin/owners_controller_test.rb (v1.0 NEW) — 12 tests**
-- Auth guard: unauthenticated redirect
-- index: 200, lists all owner usernames
-- edit: 200
-- update newsletter: sets to 0 (alice own record, admin:"true" supplied);
-  sets to 1 (bob, no self-demotion concern); notice includes username
-- update user_name: changes username; rejects blank username
-- Self-demotion guard: redirect + alert + admin unchanged
-- destroy: removes non-self owner; blocks self-delete
-- send_password_reset: delivers 1 email, generates token
-
-**decor/test/mailers/newsletter_mailer_test.rb (v1.0 NEW) — 7 tests**
-- Correct to: address
-- Correct subject:
-- {{user_name}} replaced with recipient's user_name (alice)
-- Raw {{user_name}} not present in rendered body (alice)
-- Substitution works for a different recipient (charlie)
-- Newsletter without placeholder renders without error
-- deliver_now stores mail in ActionMailer deliveries
-
-**decor/test/controllers/owners_controller_test.rb (v2.0) — 2 new tests**
-- PATCH update saves newsletter: 0 (alice opts out)
-- PATCH update saves newsletter: 1 (bob opts in)
-
-### Deployment checklist for Session 58:
-No migrations. No schema changes. Test files only. Deploy as normal.
+Added "Sign out" link to `_navigation.html.erb`. This is visible to all
+logged-in users in the top-right nav. Required for system tests but also
+correct UX — users previously had no way to sign out from the nav.
 
 ---
 
-## Session 57 Summary
+## Session 59 Summary
 
-**Focus: Newsletter email chrome — four rendering fixes.**
+**Focus: System tests — Track 1 (JS-dependent interactions) + DRY fix.**
 
-### Files delivered this session (2 files)
+### Files delivered (7 files)
 
-    decor/app/views/shared/_newsletter_email_chrome.html.erb    v2.3
-    decor/docs/claude/RAILS_SPECIFICS.md                        v3.0
-    decor/docs/claude/SESSION_HANDOVER.md                       v61.0
-
-### Changes
-
-**Fix 1: Table borders, header colour, column padding (v2.0)**
-**Fix 2: Logo embedded as hardcoded base64 constant (v2.1)**
-**Fix 3: Firebird renders logo at full 680×282px (v2.2)**
-**Fix 4: Gmail shows alt text "DECOR" at wrong size and alignment (v2.2 → v2.3)**
+    decor/test/application_system_test_case.rb             v1.0 → v1.1
+    decor/test/support/authentication_helper.rb            v2.0 → v2.1
+    decor/test/controllers/computers_controller_test.rb    v1.10 → v1.11
+    decor/test/system/authentication_test.rb               v1.0  NEW
+    decor/test/system/computers_filters_test.rb            v1.0  NEW
+    decor/test/system/components_filters_test.rb           v1.0  NEW
+    decor/test/system/software_items_filters_test.rb       v1.0  NEW
+    decor/test/system/connection_groups_test.rb            v1.0  NEW
 
 ---
 
 ## Priority 1 — Future Sessions
 
-1. **Legal/Compliance** — Impressum, Privacy Policy, GDPR, Cookie Consent, TOS.
-2. **System tests** — decor/test/system/ still empty.
+1. **System tests Track 2** — Tom Select combobox, admin CRUD flows, full auth flow.
+2. **Legal/Compliance** — Impressum, Privacy Policy, GDPR, Cookie Consent, TOS.
 3. **Account deletion + data export** (GDPR).
 4. **Spam / Postmark DNS fix** — awaiting Rob's dashboard findings.
 5. **BulkUploadService stale model references** — low priority.
 6. **Gmail logo fix (long-term)** — set `config.action_mailer.asset_host` in
-   `production.rb` to the app's public hostname, and use `asset_url('logo.png')`
-   in the partial instead of the data: URI. Gmail will then load the real image.
-   The data: URI fallback can remain for letter_opener (development).
+   `production.rb` to the app's public hostname.
 
 ---
 
