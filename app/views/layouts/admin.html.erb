@@ -1,5 +1,9 @@
 <%# decor/app/views/layouts/admin.html.erb %>
-<%# version 2.3 %>
+<%# version 2.4 %>
+<%# v2.4 (Session 64): Added "Component Suggestions" to the Components dropdown, %>
+<%#   linking to admin_component_suggestions_path. This was a gap left over from %>
+<%#   Session 63 Phase 1 — the admin CRUD controller/views were shipped but this %>
+<%#   layout was never updated to link to them, so the feature had no menu entry. %>
 <%# v2.3 (Session 56): Added "Newsletters" dropdown between Software and Imports/Exports. %>
 <%#   Two items: "Upload Newsletter" (new_admin_newsletter_path) and %>
 <%#   "Send Newsletter" (admin_newsletters_path — opens the index, each row has Send). %>
@@ -118,6 +122,11 @@
                 <%= link_to "Component Types", admin_component_types_path,
                       class: "block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50 hover:text-stone-900" %>
                 <%= link_to "Run Statuses", admin_component_conditions_path,
+                      class: "block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50 hover:text-stone-900" %>
+                <%# Component Suggestions — admin-managed order_number autocomplete lookup table. %>
+                <%# Added Session 64 (was missing from this menu since the Session 63 Phase 1 %>
+                <%# admin CRUD was shipped without a corresponding navigation update). %>
+                <%= link_to "Component Suggestions", admin_component_suggestions_path,
                       class: "block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50 hover:text-stone-900" %>
               </div>
             </div>

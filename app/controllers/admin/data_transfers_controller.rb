@@ -1,5 +1,10 @@
 # decor/app/controllers/admin/data_transfers_controller.rb
-# version 1.3
+# version 1.4
+# v1.4 (Session 63): Component Suggestions Phase 1.
+#   Added component_suggestions data_type to build_export, process_import,
+#   and build_success_message. No owner selection required (it is reference data,
+#   not owner-scoped). Pattern: same as component_types.
+#
 # v1.3 (Session 48): Updated build_success_message and import action for partial success.
 #   Added connection_group_count and software_item_count to the owner_collection
 #   success message — both were silently omitted in v1.2.
@@ -97,6 +102,10 @@ module Admin
         csv      = ComponentTypeExportService.export
         filename = "component_types_#{Date.today}.csv"
 
+      when "component_suggestions"
+        csv      = ComponentSuggestionExportService.export
+        filename = "component_suggestions_#{Date.today}.csv"
+
       when "owner_collection"
         if owner_id == "all"
           csv      = AllOwnersExportService.export
@@ -139,6 +148,9 @@ module Admin
       when "component_types"
         ComponentTypeImportService.process(file)
 
+      when "component_suggestions"
+        ComponentSuggestionImportService.process(file)
+
       when "owner_collection"
         unless owner_id.present?
           return { success: false, error: "Please select an owner to import into." }
@@ -168,6 +180,8 @@ module Admin
         "Successfully imported #{result[:count]} peripheral model(s)."
       when "component_types"
         "Successfully imported #{result[:count]} component type(s)."
+      when "component_suggestions"
+        "Successfully imported #{result[:count]} component suggestion(s)."
       when "owner_collection"
         parts = []
         parts << "#{result[:computer_count]} computer(s)"           if result[:computer_count].to_i         > 0

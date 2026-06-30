@@ -1,23 +1,22 @@
 <%# decor/app/views/admin/data_transfers/show.html.erb %>
-<%# version 1.3 %>
+<%# version 1.4 %>
+<%# v1.4 (Session 63): Component Suggestions Phase 1. %>
+<%#   Added "Component Suggestions" option to both export and import selects. %>
+<%#   Added Component Suggestions CSV format reference block. %>
+<%#   Added component_suggestions bullet to the import notes. %>
 <%# v1.3 (Session 48): Import notes and flash display updated for partial success. %>
-<%#   Removed "The entire file is imported atomically" bullet — OwnerImportService %>
-<%#   v1.8 saves each row independently; partial success is now possible. %>
-<%#   Added flash[:row_errors] display block — rows that were skipped. %>
-<%#   Added flash[:row_warnings] display block — rows saved with a caveat. %>
-<%#   Updated Owner Collection format note to describe the v1.7 per-section format. %>
-<%#   Added software items to the list of supported Owner Collection record types. %>
 <%# v1.2 (Session 42): Removed "Appliance Models" data type. %>
 <%# v1.1 (Session 29): Added "Peripheral Models" option. %>
 <%# Session 24: New view. %>
 <%# %>
 <%# Supported data types: %>
-<%#   computer_models   — ComputerModel records (device_type: computer) %>
-<%#   peripheral_models — ComputerModel records (device_type: peripheral) %>
-<%#   component_types   — ComponentType records %>
-<%#   owner_collection  — one owner's full collection (computers, peripherals, %>
-<%#                       components, connections, software items) %>
-<%#                       export also supports "all" = all owners, one CSV %>
+<%#   computer_models      — ComputerModel records (device_type: computer) %>
+<%#   peripheral_models    — ComputerModel records (device_type: peripheral) %>
+<%#   component_types      — ComponentType records %>
+<%#   component_suggestions — ComponentSuggestion records (order number typeahead data) %>
+<%#   owner_collection     — one owner's full collection (computers, peripherals, %>
+<%#                          components, connections, software items) %>
+<%#                          export also supports "all" = all owners, one CSV %>
 
 <div class="max-w-3xl mx-auto">
   <h1 class="text-2xl font-semibold mb-6">Imports / Exports</h1>
@@ -83,6 +82,7 @@
                 ["Computer Models",        "computer_models"],
                 ["Peripheral Models",      "peripheral_models"],
                 ["Component Types",        "component_types"],
+                ["Component Suggestions",  "component_suggestions"],
                 ["Owner Collection Data",  "owner_collection"]
               ]),
               required: true,
@@ -124,6 +124,7 @@
     <ul class="text-sm text-stone-600 mb-4 list-disc list-inside space-y-1">
       <li>Computer / Peripheral Models: CSV must have a <code class="font-mono bg-stone-100 px-1 rounded">name</code> column.</li>
       <li>Component Types: CSV must have a <code class="font-mono bg-stone-100 px-1 rounded">name</code> column.</li>
+      <li>Component Suggestions: CSV must have <code class="font-mono bg-stone-100 px-1 rounded">order_number</code>, <code class="font-mono bg-stone-100 px-1 rounded">description</code>, and <code class="font-mono bg-stone-100 px-1 rounded">category</code> columns. Duplicates (matched by order_number) are silently skipped.</li>
       <li>Owner Collection Data: use the CSV exported from the owner's Export / Import page.
           Select the target owner below. "All Owners" is not available for import.</li>
       <li>Each row is imported independently — rows that succeed are saved even if other rows fail.</li>
@@ -141,6 +142,7 @@
                 ["Computer Models",        "computer_models"],
                 ["Peripheral Models",      "peripheral_models"],
                 ["Component Types",        "component_types"],
+                ["Component Suggestions",  "component_suggestions"],
                 ["Owner Collection Data",  "owner_collection"]
               ]),
               class: "block w-full rounded border border-stone-300 bg-white
@@ -201,6 +203,19 @@ VAX-11/780</pre>
     <pre class="text-xs bg-stone-50 border border-stone-200 rounded p-3 mb-4 overflow-x-auto text-stone-700">name
 Memory Board
 CPU Board</pre>
+
+    <%# Component Suggestions %>
+    <h3 class="text-sm font-semibold text-stone-700 mb-1">Component Suggestions</h3>
+    <p class="text-sm text-stone-600 mb-2">
+      One record per row. <code class="font-mono bg-stone-100 px-1 rounded">order_number</code> is required and must be unique.
+      <code class="font-mono bg-stone-100 px-1 rounded">description</code> and
+      <code class="font-mono bg-stone-100 px-1 rounded">category</code> are optional and may be blank.
+    </p>
+    <pre class="text-xs bg-stone-50 border border-stone-200 rounded p-3 mb-4 overflow-x-auto text-stone-700">"order_number","description","category"
+"DELQA","DELQA Ethernet Controller","Option"
+"M7516","DELQA Module","Module"
+"54-17647","DELQA PCB ASSEMBLY","Assembly"
+"23-304E5","DELQA REV A3 ROM","Part"</pre>
 
     <%# Owner Collection Data %>
     <h3 class="text-sm font-semibold text-stone-700 mb-1">Owner Collection Data</h3>
