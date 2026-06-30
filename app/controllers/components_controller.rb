@@ -1,5 +1,11 @@
 # decor/app/controllers/components_controller.rb
-# version 1.9
+# version 2.0
+# v2.0 (Session 64): Component Suggestions Phase 2.
+#   Added :order_number_verified to component_params. This boolean is set by
+#   the component_suggestion Stimulus controller's hidden field when the user
+#   accepts a suggestion (or clears it when the field is emptied / manually
+#   edited away from a verified value). Without this permit, the flag would
+#   never be persisted and the column would always read its default (false).
 # v1.9 (Session 52): Added peripheral_model filter branch to index.
 #   Parallel to the existing computer_model branch: looks up a ComputerModel
 #   by the peripheral_model param and joins through computer: :computer_model
@@ -162,6 +168,7 @@ class ComponentsController < ApplicationController
       :component_condition_id,
       :serial_number,
       :order_number,
+      :order_number_verified,  # set via hidden field by component_suggestion Stimulus controller
       :description,
       :barter_status       # select on new/edit forms; members only
     )

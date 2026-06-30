@@ -10,12 +10,21 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_30_000100) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_11_000200) do
   create_table "component_conditions", force: :cascade do |t|
     t.string "condition", limit: 40, null: false
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
     t.index ["condition"], name: "index_component_conditions_on_condition", unique: true
+  end
+
+  create_table "component_suggestions", force: :cascade do |t|
+    t.string "category", limit: 40
+    t.datetime "created_at", precision: nil, null: false
+    t.string "description", limit: 100
+    t.string "order_number", limit: 20, null: false
+    t.datetime "updated_at", precision: nil, null: false
+    t.index ["order_number"], name: "index_component_suggestions_on_order_number", unique: true
   end
 
   create_table "component_types", force: :cascade do |t|
@@ -35,6 +44,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_30_000100) do
     t.text "description"
     t.text "history"
     t.string "order_number", limit: 20
+    t.boolean "order_number_verified", default: false, null: false
     t.integer "owner_id", null: false
     t.string "serial_number", limit: 20
     t.datetime "updated_at", precision: nil, null: false

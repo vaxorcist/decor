@@ -1,5 +1,12 @@
 # decor/config/routes.rb
-# version 3.2
+# version 3.4
+# v3.4 (Session 64): Component Suggestions Phase 2.
+#   Added owner-facing GET /component_suggestions route for typeahead JSON endpoint.
+#   Handled by ComponentSuggestionsController#index (NOT under admin namespace).
+#   Requires login (require_login in controller). Returns JSON only.
+# v3.3 (Session 63): Component Suggestions Phase 1.
+#   Added resources :component_suggestions under namespace :admin.
+#   Actions: index, new, create, edit, update, destroy.
 # v3.2 (Session 61): Added computer_statistics route.
 #   GET /computer_statistics → computer_statistics#index
 #   Displays a table of computer models with their registered-computer counts.
@@ -39,6 +46,11 @@ Rails.application.routes.draw do
   # Statistics pages — public, no login required.
   # computer_statistics: counts of registered computers per computer model.
   get "computer_statistics", to: "computer_statistics#index", as: :computer_statistics
+
+  # Component Suggestions typeahead endpoint — members only (require_login in controller).
+  # Returns JSON array of { order_number, description, category } matching ?query=...
+  # Used by the component_suggestion Stimulus controller on the components form.
+  get "component_suggestions", to: "component_suggestions#index", as: :component_suggestions
 
   # Owner sub-pages: each shows one section of the owner's profile.
   # show remains the summary/profile card view.
@@ -94,6 +106,10 @@ Rails.application.routes.draw do
     # Software lookup tables — admin-managed. Added Session 44.
     resources :software_names,      only: %i[index new create edit update destroy]
     resources :software_conditions, only: %i[index new create edit update destroy]
+
+    # Component Suggestions — admin-managed typeahead lookup table. Added Session 63.
+    # Powers the order_number autocomplete on the components form (Phase 2).
+    resources :component_suggestions, only: %i[index new create edit update destroy]
 
     # Newsletters — added Session 56.
     # index:    list stored newsletters.

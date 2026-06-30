@@ -1,0 +1,37 @@
+# decor/test/fixtures/component_suggestions.yml
+# version 1.0
+# Session 63: Phase 1 of Component Suggestions feature.
+#
+# Four fixtures based on the sample data provided (DELQA-related DEC parts).
+# These cover all three nullable fields (description + category) as well as
+# different order_number formats:
+#   - Plain alphanumeric:        DELQA
+#   - Module designator:         M7516
+#   - Hyphenated part number:    54-17647
+#   - Alphanumeric with letter:  23-304E5
+#
+# Used by:
+#   - ComponentSuggestionModelTest (uniqueness, validations, :matching scope)
+#   - Admin::ComponentSuggestionsControllerTest (CRUD, destroy-blocked guard)
+#   - ComponentSuggestionExportServiceTest (row count, content, sort order)
+#   - ComponentSuggestionImportServiceTest (duplicate skip)
+
+delqa:
+  order_number: "DELQA"
+  description:  "DELQA Ethernet Controller"
+  category:     "Option"
+
+m7516:
+  order_number: "M7516"
+  description:  "DELQA Module"
+  category:     "Module"
+
+pcb_assembly:
+  order_number: "54-17647"
+  description:  "DELQA PCB ASSEMBLY"
+  category:     "Assembly"
+
+rev_a3_rom:
+  order_number: "23-304E5"
+  description:  "DELQA REV A3 ROM"
+  category:     "Part"

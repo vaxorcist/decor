@@ -1,4 +1,13 @@
-<%# decor/app/views/components/_form.html.erb - version 1.8 %>
+<%# decor/app/views/components/_form.html.erb - version 1.9 %>
+<%# v1.9 (Session 64): Component Suggestions Phase 2. %>
+<%#   Wired the component-suggestion Stimulus controller onto the form_with tag, %>
+<%#   with data-component-suggestion-url-value pointing at component_suggestions_path. %>
+<%#   order_number field: added orderNumberInput target + input/keydown actions; %>
+<%#   wrapped in a relative div so the absolutely-positioned dropdown <ul> overlays correctly. %>
+<%#   Added hidden order_number_verified field (verifiedFlag target) — set true by the %>
+<%#   controller when a suggestion is accepted, defaults to the persisted model value otherwise. %>
+<%#   serial_number field: added serialNumberInput target (focus destination on accept). %>
+<%#   description field: added descriptionInput target (pre-filled on accept if currently blank). %>
 <%# v1.8 (Session 54): Added data-controller="tom-select" to component_type_id and %>
 <%#   component_condition_id. %>
 <%#   computer_id is intentionally excluded: it already carries data-controller="computer-select" %>
@@ -34,7 +43,11 @@
      }
    }.to_json %>
 
-<%= form_with model: component, class: "space-y-4" do |f| %>
+<%= form_with model: component, class: "space-y-4",
+      data: {
+        controller: "component-suggestion",
+        "component-suggestion-url-value": component_suggestions_path
+      } do |f| %>
   <%= render "common/record_errors", record: component %>
 
   <%# ─── Row 1: Computer Model | Computer Order Number | Computer Serial Number ─── %>
@@ -109,15 +122,33 @@
             data: { controller: "tom-select" } %>
     </div>
 
-    <div>
+    <div class="relative">
       <%= f.label :order_number, "Component Order Number", class: "block text-sm font-medium text-stone-700" %>
-      <%= f.text_field :order_number, maxlength: 20, class: field_classes %>
+      <%# Hidden field tracks whether the current order_number came from an %>
+      <%# accepted suggestion. Defaults to the persisted value so editing an %>
+      <%# existing verified component doesn't silently reset the flag unless %>
+      <%# the user actually changes the order_number field. %>
+      <%= f.hidden_field :order_number_verified, data: { "component-suggestion-target": "verifiedFlag" } %>
+      <%= f.text_field :order_number, maxlength: 20, class: field_classes,
+            autocomplete: "off",
+            data: {
+              "component-suggestion-target": "orderNumberInput",
+              action: [
+                "input->component-suggestion#onInput",
+                "keydown->component-suggestion#onKeydown"
+              ].join(" ")
+            } %>
+      <%# Dropdown list rendered by the Stimulus controller. Starts hidden; %>
+      <%# absolutely positioned so it overlays content below without shifting layout. %>
+      <ul data-component-suggestion-target="dropdown"
+          class="hidden absolute z-10 w-full mt-1 bg-white border border-stone-300 rounded shadow-lg max-h-60 overflow-auto"></ul>
       <p class="mt-1 text-xs text-stone-500">Maximum 20 characters.</p>
     </div>
 
     <div>
       <%= f.label :serial_number, "Component Serial Number", class: "block text-sm font-medium text-stone-700" %>
-      <%= f.text_field :serial_number, maxlength: 20, class: field_classes %>
+      <%= f.text_field :serial_number, maxlength: 20, class: field_classes,
+            data: { "component-suggestion-target": "serialNumberInput" } %>
       <p class="mt-1 text-xs text-stone-500">Maximum 20 characters.</p>
     </div>
 
@@ -151,7 +182,8 @@
   <%# ─── Row 4: Description — full width ─── %>
   <div>
     <%= f.label :description, "Component Description", class: "block text-sm font-medium text-stone-700" %>
-    <%= f.text_area :description, rows: 4, style: "min-height: 4.5rem;", class: field_classes %>
+    <%= f.text_area :description, rows: 4, style: "min-height: 4.5rem;", class: field_classes,
+          data: { "component-suggestion-target": "descriptionInput" } %>
   </div>
 
   <div class="flex gap-3">
