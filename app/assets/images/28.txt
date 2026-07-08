@@ -1,1 +1,1 @@
-PDP-11/44, dual RL02 Disk Drives, LA36 Printer Terminal, VT100 Terminal
+SX-40MMA-CL - PDP-11/44 System with dual RL02 Disk Drives, LA120 Printer Terminal, H9614-AD Work Station, VT100 Terminal

@@ -1,10 +1,23 @@
 # decor/docs/claude/SESSION_HANDOVER.md
-# version 66.0
-# Session 61: Computers Statistics page + Statistics nav dropdown.
+# version 68.0
+# Session 66: Order number / variant — design pivot, no implementation. Full
+#   multi-column variant-split design worked out in detail, then set aside
+#   before implementation began (risk of "self-indulgent featuritis"). Saved
+#   for reference at decor/docs/claude/ORDER_NUMBER_VARIANT_DESIGN.md. Adopted
+#   a simpler concatenated-field approach instead. See "Session 66 Summary"
+#   below for confirmed requirements going into next session.
+# Session 65: Component order_number bulk maintenance (admin Components dropdown).
 
-**Date:** May 10, 2026
-**Branch:** main (Sessions 49–60 committed, pushed, merged, deployed)
-**Status:** Session 61 complete — Computers Statistics page live, all tests pass.
+**Date:** July 7, 2026
+**Branch:** main (Sessions 49–65 committed, pushed, merged, deployed — Session 65
+  confirmed committed/deployed/tested on the server during Session 66)
+**Status:** Session 66 complete — design consultation only, NO CODE PRODUCED.
+  Session 65 confirmed fully committed and deployed. Session 66 pivoted away from
+  a detailed variant-split design (saved for reference, not adopted) toward a
+  simpler concatenated-field approach already being tested externally. Four
+  concrete requirements were confirmed for next session's implementation — see
+  "Session 66 Summary" below. No pre-commit checklist applies to this session
+  since no files were changed.
 
 ---
 
@@ -313,6 +326,197 @@ Rails fixture loading bypasses model callbacks. Always set html_body explicitly.
 ## !! Admin update tests — include admin: "true" when updating self (learned Session 58) !!
 
 See SESSION_HANDOVER v64.0 for the full rule.
+
+---
+
+## Session 66 Summary — Order Number / Variant: design pivot, no implementation
+
+**Design consultation only. No files were created, modified, or committed
+this session.**
+
+A full multi-column variant-split design (splitting `order_number` into
+main + variant columns on `component_suggestions`, a three-state
+`order_number_match_status` on `components`, two-file CSV import/export,
+Stimulus typeahead rework, a match-status badge on the component form) was
+worked out in complete detail across this session — schema, matching logic,
+import/export rules, deletion guards, form behavior — but was set aside
+**before implementation began**. Reason: recognized risk of "self-indulgent
+featuritis" — added complexity on both the implementation/maintenance side
+and the user-facing side, without confirmed need at the scale involved
+(~13,000 components / ~46,000 suggestion combinations at the time).
+
+That full design is saved for reference at
+`decor/docs/claude/ORDER_NUMBER_VARIANT_DESIGN.md` — **NOT implemented, NOT
+the current direction.** Copy this file into the project docs folder if it
+isn't already there. Revisit only if the adopted simpler approach (below)
+proves insufficient.
+
+### Adopted approach instead (closer to original "Option A" from the design doc)
+
+Main order number + variant are concatenated into **one** `order_number`
+string at the DEC-database export stage (e.g. `"DELQA-00"`) — **no bare/
+undashed part numbers**; every record has an explicit variant suffix,
+`"-00"` for base models. Both descriptions (main + variant) are
+concatenated into **one** `description` field using `" | "` as a delimiter
+(tested — confirmed not to conflict with any existing data). **No schema
+split of `order_number` or `description`** — this is the key simplification
+versus the shelved design. Data scope: ~55,000 `component_suggestions`
+records after filtering (expanded from ~46,000, tested up from ~85,000
+before filtering).
+
+### Confirmed requirements for next session
+
+**1. Migration on `component_suggestions`:**
+   a. New nullable `manual` field, two possible values:
+      - `"a"` = record added manually (via admin form, not from bulk import)
+      - `"m"` = record modified manually (originated from bulk import,
+        later hand-edited via admin form)
+      - `null` = untouched bulk-import record (the default/normal case)
+      Once a row is flagged `"a"`, it **stays `"a"` permanently** — further
+      edits never change it to `"m"` (confirmed). Likely implementation:
+      `VARCHAR(1)` nullable column + Rails `enum` mapping raw values
+      (e.g. `added: "a", modified: "m"`) — confirm exact column type and
+      enum declaration syntax against this project's conventions (see
+      `device_type`/`barter_status` hash-enum precedent in `computer.rb`)
+      when writing the actual migration/model code.
+   b. Enlarge `description` column from `VARCHAR(100)` to `VARCHAR(510)` —
+      concatenated dual descriptions need more room than the original
+      single-description field was sized for.
+
+**2. Admin "Components" dropdown — new download option:**
+   CSV export of all `component_suggestions` rows where `manual IS NOT
+   NULL` (both `"a"` and `"m"` together, one download). This is the
+   **required backup mechanism** for manual work: the import (below)
+   deletes these rows unconditionally along with everything else, so an
+   admin must download this list **before** running a re-import if they
+   want to reapply manual changes afterward. Exact CSV columns and the
+   menu label were not finalized this session — decide at implementation
+   time (likely: `order_number, description, category, manual`, following
+   the pattern of the existing "Download Unvalidated Order Numbers"
+   feature from Session 65).
+
+**3. Import service — full rewrite (root cause of production timeout):**
+   Confirmed root cause: the current import checks every incoming row for
+   a conflict against existing records — an O(n) lookup per row against a
+   table that only grows, which is exactly why it times out in production
+   and takes minutes locally even before scaling further.
+   a. **Delete ALL existing `component_suggestions` records
+      unconditionally** — including `"a"`/`"m"` manual rows. **No
+      preservation logic of any kind** (confirmed — the download in
+      item 2 is the intended backup step, to be run by the admin *before*
+      triggering a re-import, not automated by the import itself).
+   b. **Bulk-insert all new records.** The only constraint is
+      `order_number` uniqueness, already enforced by SQLite's existing
+      unique index — **no app-level duplicate pre-check is needed at all**.
+      Replace whatever per-record `find_or_create_by`/conflict-check loop
+      exists with a batched `insert_all` (or equivalent bulk-insert
+      approach) to eliminate the O(n²) behavior entirely. This is the
+      single highest-value fix from this session's findings.
+   This is the right design **because the data's source of truth is the
+   external DEC database** — Rails' `component_suggestions` table is a
+   disposable, fully-regenerated mirror of it on every import, not a
+   record that needs reconciliation against prior state.
+
+**4. Admin suggestions index/listing page is slow to LOAD** (once loaded,
+   performance is fine — this is a load-time issue only, not a rendering
+   or interaction issue). Root cause **not yet diagnosed** — needs the
+   actual controller and view files to investigate. Candidates to check
+   first: missing pagination (geared_pagination gem is used elsewhere in
+   this project — confirm it's actually applied here), a missing DB index
+   backing a sort/filter/search column at ~55,000 rows, or an N+1
+   association load in the index action.
+
+### Files needed at start of next session (not yet reviewed this session)
+
+```
+decor/db/migrate/20260511000100_create_component_suggestions.rb
+decor/app/models/component_suggestion.rb
+decor/app/services/component_suggestion_import_service.rb
+decor/app/services/component_suggestion_export_service.rb
+decor/app/controllers/admin/component_suggestions_controller.rb
+decor/app/views/admin/component_suggestions/index.html.erb
+decor/app/views/layouts/admin.html.erb
+decor/config/routes.rb
+decor/test/fixtures/component_suggestions.yml
+```
+
+(Upload one at a time if any share a filename with something else already
+uploaded in that session, per the Upload File Naming rule in
+COMMON_BEHAVIOR.md.)
+
+---
+
+## Session 65 Summary
+
+**Focus: Component order_number bulk maintenance — two new items in the admin
+Components dropdown.**
+
+### Confirmed design decisions (from Ulli, before implementation)
+
+    Re-validate applies immediately — no preview step (bulk data-integrity sync).
+    Download list — one row per component, NOT deduplicated by order_number.
+    Menu placement — existing Components dropdown, not a new dropdown.
+
+### Files delivered this session (8 files)
+
+    decor/config/routes.rb                                                v3.4 → v3.5
+    decor/app/controllers/admin/component_order_numbers_controller.rb     v1.0  NEW
+    decor/app/services/component_order_number_revalidation_service.rb     v1.0  NEW
+    decor/app/services/unvalidated_order_numbers_export_service.rb        v1.0  NEW
+    decor/app/views/layouts/admin.html.erb                                v2.4 → v2.6
+    decor/test/services/component_order_number_revalidation_service_test.rb  v1.0 NEW
+    decor/test/services/unvalidated_order_numbers_export_service_test.rb     v1.0 NEW
+    decor/test/controllers/admin/component_order_numbers_controller_test.rb  v1.0 NEW
+
+Also updated (rule documents, this session):
+    decor/docs/claude/RAILS_SPECIFICS.md   v3.4 → v3.5
+    decor/docs/claude/DECOR_PROJECT.md     v2.56 → v2.57
+
+### Feature: "Re-validate Order Numbers" (POST /admin/component_order_numbers/revalidate)
+
+Re-syncs `order_number_verified` for every `Component` against the current
+`component_suggestions` table: `true` iff `order_number` is present AND
+matches a `component_suggestions.order_number`; else `false`. Symmetric — can
+flip a component in either direction (e.g. un-verifies a component if its
+matching `ComponentSuggestion` was later deleted). Uses `update_column`
+(skips validations — this is a data-integrity sync, not a form edit).
+Redirects to `admin_component_suggestions_path` with a flash summarising
+verified/unverified/unchanged counts.
+
+### Feature: "Download Unvalidated Order Numbers" (GET /admin/component_order_numbers/unvalidated)
+
+CSV export, one row per component (not deduplicated), ordered by component
+id, limited to components with a non-blank `order_number` and
+`order_number_verified: false`. Columns: `order_number, component_type,
+owner, serial_number, description`.
+
+### Bug found and fixed mid-session: NameError in admin.html.erb v2.5
+
+Both new dropdown links used `revalidate_component_order_numbers_path` /
+`unvalidated_component_order_numbers_path` — missing the `admin_` prefix that
+Rails still applies to `as:` routes declared inside `namespace :admin do ... end`.
+Fixed in v2.6. New MANDATORY rule added to RAILS_SPECIFICS.md v3.5: **"Named
+Routes (as:) Inside namespace — Still Prefixed."** See that document for the
+full rule, including the `bin/rails routes | grep <name>` verification tip.
+
+### Test design notes
+
+All three new test files create `Component` records fresh in-test, assigned
+to `owners(:three)` (the project's neutral owner — see RAILS_SPECIFICS.md
+"Fixture Ownership"), rather than adding new fixtures. Both new services scan
+**every** `Component` row project-wide, so a hardcoded count assertion would
+be fragile against the existing `components.yml` fixture set (all of which
+have a blank `order_number`). Assertions target either the specific records
+each test creates, or `Component.count` derived at call time.
+
+### NOT YET DONE — required before this feature can be committed
+
+    [ ] bin/rails test                              — tests were written but never run
+    [ ] bundle exec rubocop -A / bundle exec rubocop — lint fix + verify
+    [ ] bin/brakeman --no-pager                      — static code security scan
+    [ ] bundle exec bundle-audit check --update      — dependency CVE scan (separate tool — see RAILS_SPECIFICS.md v3.5 "CI Security Checks")
+    [ ] Manual browser check of both new Components dropdown links
+    [ ] git workflow: branch → commit → push → PR → CI → merge → deploy
 
 ---
 

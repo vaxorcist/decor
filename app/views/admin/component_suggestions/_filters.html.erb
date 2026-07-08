@@ -1,0 +1,49 @@
+<%# decor/app/views/admin/component_suggestions/_filters.html.erb %>
+<%# version 1.0 %>
+<%# Session 67: Phase 4 item 4 — filter sidebar for the admin %>
+<%# Component Suggestions index, added alongside pagination to fix the %>
+<%# slow-load issue at ~55,000 rows (see index.html.erb v1.1 for the full %>
+<%# rationale and Admin::ComponentSuggestionsController#index v1.2 for the %>
+<%# query logic these fields drive). %>
+<%# %>
+<%# Follows the pattern of software_items/_filters.html.erb (v1.0) — same %>
+<%# form_with GET structure, same field_classes / button_classes helpers, %>
+<%# same col-span-1 self-start grid positioning contract with its parent %>
+<%# index.html.erb (grid grid-cols-4). %>
+<%# %>
+<%# Fields: %>
+<%#   Search (query)  — substring match on order_number (confirmed Session 67: %>
+<%#                      substring, not prefix — see %>
+<%#                      ComponentSuggestion.order_number_contains). %>
+<%#   Manual (manual) — filter to rows flagged "added" / "modified", or %>
+<%#                      "Any" (blank) for all rows. Options + selected value %>
+<%#                      come from Admin::ComponentSuggestionsHelper (new file, %>
+<%#                      this session). %>
+<%# %>
+<%# No Sort field — the index is always ordered by order_number %>
+<%# (ComponentSuggestion.order(:order_number) in the controller); a separate %>
+<%# sort control was not requested for this admin table. %>
+
+<%= form_with url: admin_component_suggestions_path, method: :get, local: true, class: "col-span-1 self-start flex flex-col gap-4 mb-4 p-4 bg-stone-100" do |form| %>
+  <div class="-mb-2 font-medium">Filters</div>
+
+  <%# Search — substring match on order_number. ------------------------------ %>
+  <div>
+    <%= form.label :query, "Search", class: "text-sm text-stone-600 font-medium" %>
+    <%= form.search_field :query, value: params[:query], placeholder: "Search order number...", class: field_classes %>
+    <p class="text-xs text-stone-500 mt-1">Matches anywhere in the order number. Case-insensitive.</p>
+  </div>
+
+  <%# Manual flag filter -------------------------------------------------- %>
+  <div class="flex flex-col">
+    <%= form.label :manual, "Manual", class: "text-sm text-stone-600 font-medium" %>
+    <%= form.select :manual, component_suggestion_filter_manual_options,
+          { selected: component_suggestion_filter_manual_selected, include_blank: "Any" },
+          { class: field_classes } %>
+  </div>
+
+  <div class="flex justify-end gap-2">
+    <%= link_to "Reset", admin_component_suggestions_path, class: button_classes(style: :secondary) %>
+    <%= form.submit "Apply", class: button_classes(style: :secondary) %>
+  </div>
+<% end %>

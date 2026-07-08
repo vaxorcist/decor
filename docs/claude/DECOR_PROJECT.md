@@ -1,5 +1,38 @@
 # decor/docs/claude/DECOR_PROJECT.md
-# version 2.55
+# version 2.58
+# Session 66: Order number / variant — design pivot, NO IMPLEMENTATION.
+#   A full multi-column variant-split design (component_suggestions:
+#   order_number_main/order_number_variant columns; components: three-state
+#   order_number_match_status) was fully specified in consultation, then set
+#   aside before implementation began — risk of "self-indulgent featuritis"
+#   relative to confirmed need at actual data scale. Full design saved for
+#   reference at decor/docs/claude/ORDER_NUMBER_VARIANT_DESIGN.md v1.0 (NEW
+#   this session) — NOT implemented, NOT the current direction.
+#   Adopted instead: order_number + variant concatenated into ONE string at
+#   the external DEC-database export stage (e.g. "DELQA-00", no bare/
+#   undashed numbers); both descriptions concatenated into ONE description
+#   field with " | " delimiter (tested, no conflicts). NO schema split.
+#   Data scope ~55,000 component_suggestions records after filtering (from
+#   an expanded ~85,000). Four concrete requirements confirmed for next
+#   session — see "Component Suggestions Feature" Phase 4 below and
+#   SESSION_HANDOVER.md v68.0 "Session 66 Summary" for full detail.
+# Session 65: Component order_number bulk maintenance — two new admin Components
+#   dropdown items: "Re-validate Order Numbers" (POST, applies immediately, no
+#   preview) and "Download Unvalidated Order Numbers" (GET, CSV, one row per
+#   component). 5 files delivered: routes.rb v3.5, new
+#   admin/component_order_numbers_controller.rb v1.0, two new services
+#   (ComponentOrderNumberRevalidationService, UnvalidatedOrderNumbersExportService),
+#   admin.html.erb v2.6 (v2.5 shipped with a NameError — both new path helpers
+#   were missing the admin_ prefix that Rails still applies to as: routes
+#   declared inside namespace :admin; fixed in v2.6 — see RAILS_SPECIFICS.md v3.5
+#   "Named Routes (as:) Inside namespace — Still Prefixed").
+#   Tests NOT YET written — pending test/fixtures/components.yml,
+#   component_suggestions.yml, component_types.yml, owners.yml (or owner.rb /
+#   component_type.rb) so fixture references / Owner.create! calls aren't guessed.
+# Session 64 (wrap-up): Promoted the admin nav lesson from a changelog note to
+#   a standing rule in "Known Issues & Solutions" (see that section) so future
+#   sessions consult it before starting work, not just read it as history.
+#
 # Session 64 (continued): Admin nav fix — Component Suggestions was missing from
 #   the admin menu entirely. Root cause: Session 63 Phase 1 shipped the admin
 #   CRUD controller + views but never updated decor/app/views/layouts/admin.html.erb,
@@ -73,8 +106,11 @@
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** June 30, 2026 (Session 64 — Component Suggestions Phase 2 + admin nav fix; v2.55)
-**Current Status:** Sessions 1–60 committed, pushed, merged, deployed.
+**Last Updated:** July 7, 2026 (Session 66 — Order number/variant design pivot,
+  no implementation; v2.58)
+**Current Status:** Sessions 1–65 committed, pushed, merged, deployed (Session 65
+  confirmed committed/deployed/tested on the server during Session 66). Session 66
+  itself produced design/documentation only — no application code changed.
 
 ---
 
@@ -99,6 +135,7 @@ decor//
 │   │   │   ├── conditions_controller.rb
 │   │   │   ├── connection_types_controller.rb
 │   │   │   ├── component_suggestions_controller.rb     ← Session 63 (v1.0) NEW
+│   │   │   ├── component_order_numbers_controller.rb   ← Session 65 (v1.0) NEW
 │   │   │   ├── data_transfers_controller.rb            ← Session 63 (v1.4)
 │   │   │   ├── invites_controller.rb
 │   │   │   ├── newsletters_controller.rb               ← Session 58 (v1.1)
@@ -139,6 +176,8 @@ decor//
 │   │   ├── all_owners_export_service.rb               ← Session 50 (v1.1)
 │   │   ├── component_suggestion_export_service.rb     ← Session 63 (v1.0) NEW
 │   │   ├── component_suggestion_import_service.rb     ← Session 63 (v1.0) NEW
+│   │   ├── component_order_number_revalidation_service.rb ← Session 65 (v1.0) NEW
+│   │   ├── unvalidated_order_numbers_export_service.rb ← Session 65 (v1.0) NEW
 │   │   ├── owner_export_service.rb                     ← Session 49 (v1.10)
 │   │   └── owner_import_service.rb                     ← Session 49 (v1.11)
 │   └── views/
@@ -202,6 +241,7 @@ decor//
     ├── controllers/
     │   ├── admin/
     │   │   ├── component_suggestions_controller_test.rb ← Session 63 (v1.0) NEW
+    │   │   ├── component_order_numbers_controller_test.rb ← Session 65 (v1.0) NEW
     │   │   ├── computer_models_controller_test.rb      ← Session 41 (v1.3)
     │   │   ├── data_transfers_controller_test.rb       ← Session 50 (v1.3)
     │   │   ├── newsletters_controller_test.rb          ← Session 58 (v1.0) NEW
@@ -241,6 +281,8 @@ decor//
     ├── services/
     │   ├── component_suggestion_export_service_test.rb ← Session 63 (v1.0) NEW
     │   ├── component_suggestion_import_service_test.rb ← Session 63 (v1.0) NEW
+    │   ├── component_order_number_revalidation_service_test.rb ← Session 65 (v1.0) NEW
+    │   ├── unvalidated_order_numbers_export_service_test.rb ← Session 65 (v1.0) NEW
     │   ├── computer_model_export_service_test.rb      ← Session 41 (v1.2)
     │   ├── computer_model_import_service_test.rb      ← Session 41 (v1.2)
     │   ├── owner_export_service_test.rb               ← Session 49 (v2.0)
@@ -262,6 +304,18 @@ decor//
 
 **Key file versions** (updated each session):
 
+    decor/docs/claude/ORDER_NUMBER_VARIANT_DESIGN.md                                    v1.0  ← Session 66 NEW
+    decor/docs/claude/SESSION_HANDOVER.md                                               v68.0 ← Session 66
+    decor/docs/claude/DECOR_PROJECT.md                                                  v2.58 ← Session 66
+    decor/config/routes.rb                                                              v3.5  ← Session 65
+    decor/app/controllers/admin/component_order_numbers_controller.rb                   v1.0  ← Session 65 NEW
+    decor/app/services/component_order_number_revalidation_service.rb                   v1.0  ← Session 65 NEW
+    decor/app/services/unvalidated_order_numbers_export_service.rb                      v1.0  ← Session 65 NEW
+    decor/app/views/layouts/admin.html.erb                                              v2.6  ← Session 65
+    decor/test/services/component_order_number_revalidation_service_test.rb             v1.0  ← Session 65 NEW
+    decor/test/services/unvalidated_order_numbers_export_service_test.rb                v1.0  ← Session 65 NEW
+    decor/test/controllers/admin/component_order_numbers_controller_test.rb             v1.0  ← Session 65 NEW
+    decor/docs/claude/RAILS_SPECIFICS.md                                                v3.5  ← Session 65
     decor/docs/claude/DECOR_PROJECT.md                                                  v2.53 ← Session 63
     decor/db/migrate/20260511000100_create_component_suggestions.rb                     v1.0  ← Session 63 NEW
     decor/db/migrate/20260511000200_add_order_number_verified_to_components.rb          v1.0  ← Session 63 NEW
@@ -608,6 +662,120 @@ data consistency without blocking entry of new/unknown values.
 
 ---
 
+### Phase 3 — Order Number Bulk Maintenance (admin tools)  ← Session 65
+
+    DONE ✓ (Session 65) — all 5 production files + 3 test files implemented.
+
+    Two admin-only, non-resourceful actions added to the existing Components
+    dropdown (per Ulli's original request — not a new dropdown):
+
+      "Re-validate Order Numbers" (POST /admin/component_order_numbers/revalidate)
+        Re-syncs order_number_verified for EVERY component against the current
+        component_suggestions table. Rule: true iff order_number present AND
+        matches a component_suggestions.order_number; else false. Applies
+        immediately — no preview step (confirmed design decision). Idempotent.
+        Uses update_column (skips model validations — this is a data-integrity
+        sync, not a form edit). Redirects to admin_component_suggestions_path
+        with a flash summarising verified/unverified/unchanged counts.
+
+      "Download Unvalidated Order Numbers" (GET /admin/component_order_numbers/unvalidated)
+        CSV, ONE ROW PER COMPONENT (confirmed — not deduplicated by order_number),
+        ordered by component id (confirmed — not grouped by order_number).
+        Only components with order_number_verified: false AND a non-blank
+        order_number. Columns: order_number, component_type, owner,
+        serial_number, description.
+
+    Files delivered:
+      decor/config/routes.rb (v3.5)
+      decor/app/controllers/admin/component_order_numbers_controller.rb (v1.0 NEW)
+      decor/app/services/component_order_number_revalidation_service.rb (v1.0 NEW)
+      decor/app/services/unvalidated_order_numbers_export_service.rb (v1.0 NEW)
+      decor/app/views/layouts/admin.html.erb (v2.6 — v2.5 shipped with a NameError,
+        see RAILS_SPECIFICS.md v3.5 "Named Routes (as:) Inside namespace")
+      decor/test/services/component_order_number_revalidation_service_test.rb (v1.0 NEW)
+      decor/test/services/unvalidated_order_numbers_export_service_test.rb (v1.0 NEW)
+      decor/test/controllers/admin/component_order_numbers_controller_test.rb (v1.0 NEW)
+
+    Test design notes:
+      All three test files create Component records fresh in-test, assigned to
+      owners(:three) — the project's neutral owner — rather than adding new
+      component fixtures. This was chosen over new components.yml fixtures
+      because both new services scan ALL Component rows project-wide, so any
+      hardcoded count assertion would be fragile against the existing fixture
+      set (pdp11_memory, pdp11_cpu, spare_disk, pdp8_memory,
+      spare_power_supply, charlie_vt100_terminal — all with blank order_number).
+      All assertions are either on the specific records created in each test,
+      or derived from Component.count at call time (never hardcoded).
+
+    Status update (Session 66): confirmed by the user as committed, pushed,
+      merged, and deployed — tests passed, pre-commit checklist complete.
+      No longer "not yet done."
+
+### Phase 4 — Order Number / Variant Simplification (Session 66 — design pivot, NOT implemented)
+
+A full schema-split design was fully specified in consultation this
+session: `component_suggestions` gaining `order_number_main` +
+`order_number_variant` columns (plus a separate `variant_description`),
+`components` gaining a three-state `order_number_match_status` enum
+(`exact_variant_match` / `base_match_only` / `unmatched`), a two-file CSV
+import/export format, deletion guards, and a Stimulus typeahead rework with
+a match-status badge on the component form. **This was set aside before any
+implementation began** — recognized risk of "self-indulgent featuritis":
+added complexity on both the implementation/maintenance side and the
+user-facing side, without confirmed need at the actual data scale
+(~13,000 components / ~46,000 suggestion combinations at design time).
+
+The full design is saved for reference at
+`decor/docs/claude/ORDER_NUMBER_VARIANT_DESIGN.md` (v1.0, NEW this session)
+— **NOT implemented, NOT the current direction.** Revisit only if the
+adopted simpler approach below proves insufficient.
+
+**Adopted approach instead** (closer to the original "Option A" considered
+during design): main order number + variant are concatenated into **one**
+`order_number` string at the external DEC-database export stage (e.g.
+`"DELQA-00"` — no bare/undashed part numbers; every record carries an
+explicit variant suffix, `"-00"` for base models). Both descriptions (main
++ variant) are concatenated into **one** `description` field using `" | "`
+as a delimiter (tested — confirmed not to conflict with any existing data).
+**No schema split of `order_number` or `description`.** Data scope: ~55,000
+`component_suggestions` records after filtering (expanded from ~46,000,
+tested up from ~85,000 before filtering).
+
+**Confirmed requirements for next session** (full detail in
+`SESSION_HANDOVER.md` v68.0, "Session 66 Summary"):
+
+    1. Migration on component_suggestions:
+       a. New nullable "manual" field — "a" = added manually (permanent,
+          never demotes), "m" = modified manually (originated from bulk
+          import, later hand-edited), null = untouched bulk-import record.
+       b. Enlarge description from VARCHAR(100) to VARCHAR(510).
+    2. New admin "Components" dropdown option: download all
+       component_suggestions rows where manual IS NOT NULL — the required
+       backup mechanism, since the import below deletes these rows too.
+    3. Import service rewrite — confirmed root cause of production
+       timeouts: current per-row conflict-check against existing records
+       is O(n) per row. Fix: delete ALL existing records unconditionally
+       (no preservation — download in item 2 is the backup step), then
+       bulk-insert new records relying only on SQLite's existing
+       order_number unique index (no app-level duplicate pre-check).
+    4. Admin suggestions index/listing page — slow to LOAD (fine once
+       loaded). Root cause not yet diagnosed; needs actual controller/view
+       files next session (candidates: missing pagination, missing index,
+       N+1 association load).
+
+    Files needed at start of next session (not yet reviewed):
+      decor/db/migrate/20260511000100_create_component_suggestions.rb
+      decor/app/models/component_suggestion.rb
+      decor/app/services/component_suggestion_import_service.rb
+      decor/app/services/component_suggestion_export_service.rb
+      decor/app/controllers/admin/component_suggestions_controller.rb
+      decor/app/views/admin/component_suggestions/index.html.erb
+      decor/app/views/layouts/admin.html.erb
+      decor/config/routes.rb
+      decor/test/fixtures/component_suggestions.yml
+
+---
+
 ## Appliances → Peripherals Merger — FULLY COMPLETE (Sessions 41–42)
 
 - `appliance` (device_type=1) removed from enum on `Computer` and `ComputerModel`.
@@ -628,6 +796,20 @@ data consistency without blocking entry of new/unknown values.
 ---
 
 ## Known Issues & Solutions
+
+### New admin:: resources require an admin.html.erb nav update — same session (Session 63/64)
+Adding `resources :foo` inside `namespace :admin do ... end` in routes.rb does
+NOT surface the feature anywhere. The admin menu bar lives in
+`decor/app/views/layouts/admin.html.erb` (a separate layout from
+`common/_navigation.html.erb`), with each top-level item being its own
+dropdown `<div data-controller="dropdown">` block. Session 63 shipped the
+Component Suggestions admin CRUD (controller, views, routes) without touching
+this layout, leaving the feature invisible until the user reported it missing
+in Session 64.
+**Rule: any session that adds a new `admin::` resources block MUST also add
+the corresponding `link_to` inside the matching dropdown in admin.html.erb
+(or a new dropdown, if the resource doesn't fit an existing menu group),
+before the session is considered complete — not as a follow-up.**
 
 ### System tests — browser-layer login (Session 59)
 `login_as` uses the Rack adapter. System tests require `sign_in` (browser form).

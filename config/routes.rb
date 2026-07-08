@@ -1,5 +1,25 @@
 # decor/config/routes.rb
-# version 3.4
+# version 3.6
+# v3.6 (Session 67): Phase 4 item 2 — "Download Manual Changes" admin feature.
+#   Added a `download_manual` collection route nested inside the existing
+#   `resources :component_suggestions` block (namespace :admin). Because this
+#   is a collection route on a `resources` block already inside
+#   `namespace :admin`, Rails generates the path helper as
+#   `admin_download_manual_component_suggestions_path` — "admin_" prefix (from
+#   the namespace) + "download_manual_component_suggestions" (the standard
+#   Rails collection-route naming: action + pluralized resource name).
+#   Per RAILS_SPECIFICS.md "Named Routes (as:) Inside namespace — Still
+#   Prefixed" (the Session 65 lesson), this MUST be verified against the
+#   actual routes table before wiring up the admin.html.erb link:
+#     bin/rails routes | grep download_manual
+#   rather than assumed from this comment alone.
+# v3.5 (Session 65): Component order_number bulk maintenance.
+#   Added two admin-only routes, both non-resourceful (no CRUD, no :id param):
+#     POST /admin/component_order_numbers/revalidate  — re-validate action
+#     GET  /admin/component_order_numbers/unvalidated — CSV download action
+#   Handled by Admin::ComponentOrderNumbersController. Both live under
+#   namespace :admin (admin-only maintenance operating across ALL components/
+#   ALL owners — not owner-scoped, matching the component_suggestions pattern).
 # v3.4 (Session 64): Component Suggestions Phase 2.
 #   Added owner-facing GET /component_suggestions route for typeahead JSON endpoint.
 #   Handled by ComponentSuggestionsController#index (NOT under admin namespace).
@@ -109,7 +129,33 @@ Rails.application.routes.draw do
 
     # Component Suggestions — admin-managed typeahead lookup table. Added Session 63.
     # Powers the order_number autocomplete on the components form (Phase 2).
-    resources :component_suggestions, only: %i[index new create edit update destroy]
+    #
+    # download_manual — added Session 67 (Phase 4 item 2). Collection route
+    # (no :id — operates across all manually-flagged rows at once), so it
+    # lives in the `collection do ... end` block rather than `member do`.
+    # Generates admin_download_manual_component_suggestions_path — VERIFY with
+    # `bin/rails routes | grep download_manual` before wiring the admin.html.erb
+    # link, per the Session 65 "Named Routes Inside namespace" lesson.
+    resources :component_suggestions, only: %i[index new create edit update destroy] do
+      collection do
+        get :download_manual
+      end
+    end
+
+    # Component order_number bulk maintenance — added Session 65.
+    # Not a resourceful CRUD controller — just two standalone maintenance actions
+    # operating across ALL Component records (reference-data maintenance, same
+    # scope pattern as component_suggestions above).
+    #   revalidate:   POST — re-syncs Component#order_number_verified for every
+    #                 component against the current component_suggestions table.
+    #                 Runs immediately; no preview step (confirmed design decision).
+    #   unvalidated:  GET  — streams a CSV of components whose order_number is
+    #                 present but order_number_verified is false. One row per
+    #                 component (confirmed design decision — not deduplicated).
+    post "component_order_numbers/revalidate",  to: "component_order_numbers#revalidate",
+                                                 as: :revalidate_component_order_numbers
+    get  "component_order_numbers/unvalidated", to: "component_order_numbers#unvalidated",
+                                                 as: :unvalidated_component_order_numbers
 
     # Newsletters — added Session 56.
     # index:    list stored newsletters.
