@@ -1,5 +1,28 @@
 # RAILS_SPECIFICS.md
-# version 3.3
+# version 3.5
+# Session 65: Named Routes (as:) Inside namespace — Still Prefixed (NEW MANDATORY
+#   section). A custom `as: :foo` route declared inside `namespace :admin do ... end`
+#   is STILL prefixed "admin_" by Rails — exactly like `resources` routes in the
+#   same namespace. Two new routes (revalidate_component_order_numbers,
+#   unvalidated_component_order_numbers) were added correctly in routes.rb, but
+#   the corresponding admin.html.erb links called them WITHOUT the admin_ prefix,
+#   causing a NameError at render time — even though the same file already had a
+#   working example of the correct pattern two dropdowns away (`as: :data_transfer`
+#   → admin_data_transfer_path).
+# Session 64: CI Security Checks lessons from Component Suggestions PR debugging.
+#   1. CI Security Checks — Two Separate Tools (NEW MANDATORY section): Brakeman
+#      (static code analysis) and bundle-audit (gem-version CVE scan) are two
+#      distinct CI jobs; CI/Security (Ruby) = bundle-audit, NOT Brakeman.
+#      Misdiagnosing this cost an entire debugging round-trip in Session 64.
+#   2. bundle-audit reports vulnerabilities in batches — fixing what one CI
+#      failure shows can unmask more on the next run. Always confirm clean with
+#      a full local `bundle-audit check --update` before pushing.
+#   3. gh run view --log-failed requires an explicit run ID outside a TTY.
+#   4. gh pr checks re-displays the SAME run (same run ID/elapsed time) until a
+#      new commit is actually pushed — staging/committing locally isn't enough.
+#   Rails Commands Reference updated: added Step 7 (bundle-audit) alongside
+#   Step 6 (Brakeman), since they were previously listed as if one scan covered
+#   both code and dependency CVE checking.
 # Session 60: System test Capybara rules added (see bottom).
 # Session 58: One new rule from component_conditions UI rename fix.
 #   6. UI Renames — Rails auto-generates strings from model/column names that
@@ -38,7 +61,7 @@
 
 **Ruby on Rails Specific Patterns and Best Practices**
 
-**Last Updated:** May 7, 2026 (v3.3: System test Capybara patterns added; Session 60)
+**Last Updated:** June 30, 2026 (v3.5: Named Routes (as:) Inside namespace prefixing rule added; Session 65)
 
 ---
 
@@ -778,13 +801,109 @@ Step 4: Run full test suite      bin/rails test
 Step 5: Run lint (auto-fix)      bundle exec rubocop -A
         Verify clean             bundle exec rubocop
 
-Step 6: Run security scan        bin/brakeman --no-pager
+Step 6: Run static security scan bin/brakeman --no-pager
+Step 7: Run dependency CVE scan  bundle exec bundle-audit check --update
 ```
 
 **Additional Rails rules:**
 - ❌ NEVER run rubocop on `.erb` files — it cannot parse them
 - ❌ NEVER check only changed files — CI checks entire project
 - Use `bundle exec rubocop -f github` only when debugging CI failures
+- **Brakeman and bundle-audit are two separate CI checks, testing two different
+  things — see "CI Security Checks — Two Separate Tools (MANDATORY)" below.
+  `bin/brakeman` passing locally does NOT mean the CI Security check will pass.
+
+---
+
+## CI Security Checks — Two Separate Tools (MANDATORY, learned Session 64)
+
+GitHub Actions runs **two independent security jobs** under names that look
+similar but check completely different things. Confusing them wastes time —
+this happened in Session 64 (Component Suggestions PR): a failing
+`CI/Security (Ruby)` check was assumed to be Brakeman, `bin/brakeman` was run
+locally, came back clean ("No warnings found"), and the real cause
+(`bundle-audit` flagging outdated gem versions) wasn't found until the actual
+CI log was read.
+
+### The two tools
+
+| CI job name              | Tool             | Checks                                  | Local command                          |
+|---------------------------|------------------|------------------------------------------|------------------------------------------|
+| `CI/Security (Ruby)`      | `bundle-audit`   | Known CVEs in **gem versions** (incl. transitive deps) in `Gemfile.lock` | `bundle exec bundle-audit check --update` |
+| (separate, not yet named in this project's CI list, but exists) | `brakeman`       | Static analysis of **your own code** (SQL injection, mass assignment, XSS, etc.) | `bin/brakeman --no-pager`                |
+
+**Key distinction:** Brakeman scans the code you wrote. `bundle-audit` scans
+the *versions* of every gem in `Gemfile.lock` — including gems you never
+touched, pulled in transitively by something else. A PR that changes zero
+Ruby code can still fail `CI/Security (Ruby)` if any dependency anywhere in
+the lockfile has a newly-published CVE.
+
+### Diagnostic rule
+
+If `CI/Security (Ruby)` fails:
+1. Do NOT assume Brakeman — `bin/brakeman --no-pager` passing locally proves
+   nothing about this check.
+2. Get the actual CI log instead of guessing:
+   ```
+   gh run view <run-id> --log-failed -R <owner>/<repo> > /tmp/fail.log
+   tail -60 /tmp/fail.log
+   ```
+   (`<run-id>` must be passed explicitly when piping to a file — the
+   interactive run-picker only works in a TTY; see `gh run view` note below.)
+3. If the log shows `Name: <gem>`, `CVE:`, `Solution: update to '>= x.y.z'`
+   repeated for several gems, ending in `Vulnerabilities found!` — that's
+   `bundle-audit`, not Brakeman.
+
+### Fix pattern
+
+```bash
+bundle update <gem1> <gem2> <gem3>   # exactly the gems named in the failure
+bundle exec bundle-audit check --update
+```
+
+**bundle-audit reports failures in batches, not all at once on a single run.**
+Fixing the gems shown in one CI failure can unmask a *longer* list of
+previously-hidden advisories on the next run (the scan doesn't necessarily
+exit after enumerating only the first N vulnerable gems — different runs can
+surface different subsets). Do not assume "fixed what CI showed" means clean.
+**Always confirm with a full local `bundle-audit check` run that returns
+"No vulnerabilities found" before pushing** — only that output is a reliable
+signal the CI job will pass.
+
+### Scope note
+
+These dependency CVEs are typically pre-existing on `main`, unrelated to
+whatever feature branch happens to surface them first. It's reasonable to fix
+them on the feature branch to unblock the PR, but also bump `main` directly
+(or let Dependabot's existing PRs handle it) afterward so the next branch
+doesn't inherit the same failing baseline.
+
+---
+
+## `gh run view` — Run ID Required When Not Interactive (learned Session 64)
+
+`gh run view --log-failed` opens an interactive run-picker by default. That
+picker does NOT work when output is piped/redirected:
+
+```bash
+# FAILS outside a TTY:
+gh run view --log-failed -R owner/repo > /tmp/fail.log
+# Error: run or job ID required when not running interactively
+```
+
+**Fix:** pass the run ID explicitly. It's the number in the run's URL
+(`.../actions/runs/<run-id>/job/...`), also shown by `gh pr checks`:
+
+```bash
+gh run view <run-id> --log-failed -R owner/repo > /tmp/fail.log
+tail -60 /tmp/fail.log
+```
+
+Note that `gh pr checks <branch> --watch` re-displays the **same run** (same
+run ID, same elapsed times) until a new commit is actually pushed — re-running
+`gh pr checks` after only staging/committing locally (without `git push`) will
+show stale, unchanged results. Confirm the run ID has changed before treating
+the output as a fresh result.
 
 ---
 
@@ -1106,6 +1225,65 @@ Filter tests for the software index produced 7 failures. Each failure message
 contained the full rendered HTML of the page — nav, sidebar with all dropdown
 options, table rows, footer — making it impossible to see what actually went
 wrong without scrolling through thousands of lines of markup.
+
+---
+
+## Named Routes (as:) Inside namespace — Still Prefixed (MANDATORY, learned Session 65)
+
+**RULE: A custom named route declared with `as: :some_name` inside
+`namespace :admin do ... end` is STILL prefixed with `admin_` by Rails —
+exactly the same as `resources` routes in that namespace.**
+
+This is easy to forget because the `as:` value you write looks like the
+literal helper name. It isn't, once it's inside a namespace block.
+
+**Wrong — link_to call omits the namespace prefix:**
+```erb
+<%= link_to "Re-validate Order Numbers", revalidate_component_order_numbers_path %>
+```
+Raises `NameError: undefined local variable or method
+'revalidate_component_order_numbers_path'` at render time.
+
+**Correct — the actual generated helper carries the admin_ prefix:**
+```ruby
+# config/routes.rb
+namespace :admin do
+  post "component_order_numbers/revalidate", to: "component_order_numbers#revalidate",
+                                              as: :revalidate_component_order_numbers
+end
+# generates: admin_revalidate_component_order_numbers_path
+```
+```erb
+<%= link_to "Re-validate Order Numbers", admin_revalidate_component_order_numbers_path %>
+```
+
+**How to avoid guessing the helper name:** run `bin/rails routes | grep <as-value>`
+and read the `Prefix` column directly, rather than assuming it matches the
+`as:` value verbatim.
+
+```bash
+bin/rails routes | grep revalidate_component_order_numbers
+# revalidate_component_order_numbers  admin_revalidate_component_order_numbers POST  /admin/component_order_numbers/revalidate(.:format)  admin/component_order_numbers#revalidate
+```
+Note the `Prefix` column already shows the un-namespaced name
+(`revalidate_component_order_numbers`) — the actual path helper is
+`Prefix + "_path"` == `admin_revalidate_component_order_numbers_path` only
+because Rails additionally prepends the namespace. When in doubt, generate
+the routes table and read the full helper name Rails reports, not the `as:`
+value alone.
+
+**Why this rule exists (Session 65, June 2026):**
+Two new admin routes were added for Component order_number bulk maintenance:
+`revalidate_component_order_numbers` and `unvalidated_component_order_numbers`,
+both declared inside `namespace :admin do ... end` in `routes.rb`. The two new
+`link_to` calls added to `admin.html.erb` in the same change referenced
+`revalidate_component_order_numbers_path` and
+`unvalidated_component_order_numbers_path` — without the `admin_` prefix.
+The page raised `NameError` on first render. The same file already contained
+a correct, working example of this exact pattern two dropdowns away
+(`as: :data_transfer` inside `namespace :admin` → `admin_data_transfer_path`,
+used in the Imports/Exports dropdown) — the existing correct pattern was not
+cross-checked before writing the new links.
 
 ---
 

@@ -1,0 +1,39 @@
+Running 900 tests in parallel using 8 processes
+Started with run options --seed 15160
+
+
+Progress: |[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[0m[1000D[K[31m FAIL[0m ManualComponentSuggestionsExportServiceTest#test_export_includes_description_and_category_alongside_the_manual_flag (6.98s)
+        --- expected
+        +++ actual
+        @@ -1 +1,3 @@
+        -"a"
+        +# encoding: US-ASCII
+        +#    valid: true
+        +"added"
+        test/services/manual_component_suggestions_export_service_test.rb:92:in 'block in <class:ManualComponentSuggestionsExportServiceTest>'
+
+[32m=[0m[0m[1000D[K[31m FAIL[0m ManualComponentSuggestionsExportServiceTest#test_export_includes_a_'modified'_row (6.99s)
+        --- expected
+        +++ actual
+        @@ -1 +1,3 @@
+        -"m"
+        +# encoding: US-ASCII
+        +#    valid: true
+        +"modified"
+        test/services/manual_component_suggestions_export_service_test.rb:53:in 'block in <class:ManualComponentSuggestionsExportServiceTest>'
+
+[0m[1000D[K[31m FAIL[0m ManualComponentSuggestionsExportServiceTest#test_export_includes_an_'added'_row (7.00s)
+        manual column must contain the raw enum value, not the humanized label.
+        --- expected
+        +++ actual
+        @@ -1 +1,3 @@
+        -"a"
+        +# encoding: US-ASCII
+        +#    valid: true
+        +"added"
+        test/services/manual_component_suggestions_export_service_test.rb:43:in 'block in <class:ManualComponentSuggestionsExportServiceTest>'
+
+[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m[32m=[0m|
+
+Finished in 27.95282s
+900 tests, 2825 assertions, [31m3 failures, 0 errors, [0m[33m0 skips[0m

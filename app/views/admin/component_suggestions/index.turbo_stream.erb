@@ -1,0 +1,35 @@
+<%# decor/app/views/admin/component_suggestions/index.turbo_stream.erb %>
+<%# version 1.0 %>
+<%# Session 67: Phase 4 item 4 — companion to index.html.erb v1.1's "Load more" %>
+<%# infinite-scroll pagination. Handles the turbo_stream-format response that %>
+<%# Pagination#paginate triggers for page 2+ (page 1 always renders as plain %>
+<%# HTML — see decor/app/controllers/concerns/pagination.rb: %>
+<%# `request.format = :html if @page.number == 1`). %>
+<%# %>
+<%# VERIFIED against the real precedent, decor/app/views/software_items/ %>
+<%# index.turbo_stream.erb v1.0 — same two-action shape (append new rows to %>
+<%# the tbody; replace the load-more control), same shared/load_more partial %>
+<%# call, same reliance on controller-set ivars so this template never %>
+<%# hardcodes resource-specific identifiers. Only the row partial name/local %>
+<%# differ (component_suggestion vs software_item). %>
+
+<%= turbo_stream.append @turbo_tbody_id do %>
+  <% @page.records.each do |suggestion| %>
+    <%= render "component_suggestion", suggestion: suggestion %>
+  <% end %>
+<% end %>
+
+<%= turbo_stream.replace @load_more_id do %>
+  <%= render "shared/load_more", id: @load_more_id, page: @page, path: @index_path %>
+<% end %>
+
+
+<%= turbo_stream.append @turbo_tbody_id do %>
+  <% @page.records.each do |suggestion| %>
+    <%= render "component_suggestion", suggestion: suggestion %>
+  <% end %>
+<% end %>
+
+<%= turbo_stream.replace @load_more_id do %>
+  <%= render "shared/load_more", id: @load_more_id, page: @page, path: @index_path %>
+<% end %>

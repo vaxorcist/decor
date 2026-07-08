@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_11_000200) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_07_000100) do
   create_table "component_conditions", force: :cascade do |t|
     t.string "condition", limit: 40, null: false
     t.datetime "created_at", precision: nil, null: false
@@ -21,7 +21,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_11_000200) do
   create_table "component_suggestions", force: :cascade do |t|
     t.string "category", limit: 40
     t.datetime "created_at", precision: nil, null: false
-    t.string "description", limit: 100
+    t.string "description", limit: 510
+    t.string "manual", limit: 1
     t.string "order_number", limit: 20, null: false
     t.datetime "updated_at", precision: nil, null: false
     t.index ["order_number"], name: "index_component_suggestions_on_order_number", unique: true

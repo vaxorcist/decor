@@ -1,50 +1,80 @@
 <%# decor/app/views/admin/component_suggestions/index.html.erb %>
-<%# version 1.0 %>
-<%# Session 63: Phase 1 of Component Suggestions feature. %>
+<%# version 1.1 %>
+<%# Session 67: Phase 4 item 4 rewrite. Root cause of the slow page load %>
+<%# (Session 66 finding, confirmed by code review this session): v1.0 had NO %>
+<%# pagination and NO filtering — it rendered every ComponentSuggestion row %>
+<%# unconditionally (@component_suggestions.each over the full table), which %>
+<%# at ~55,000 rows (Phase 4 data scope) made the page slow to load even %>
+<%# though rendering, once loaded, was fine. %>
 <%# %>
-<%# Lists all ComponentSuggestion records in a table ordered by order_number. %>
-<%# Includes New, Edit, and Delete actions. %>
-<%# Pattern: mirrors admin/software_names/index.html.erb. %>
+<%# Changes from v1.0: %>
+<%#   - Wrapped the table in a grid grid-cols-4 layout: _filters partial takes %>
+<%#     col-span-1 (leftmost column); table takes col-span-3 — same layout %>
+<%#     contract as software_items/index.html.erb v1.1. %>
+<%#   - @component_suggestions.each replaced with @page.records.each — %>
+<%#     @page is what Pagination#paginate actually sets (confirmed by reading %>
+<%#     decor/app/controllers/concerns/pagination.rb this session), NOT an %>
+<%#     ivar named after the model. %>
+<%#   - Row markup extracted into _component_suggestion.html.erb so %>
+<%#     index.turbo_stream.erb can reuse it for "Load more" appends. %>
+<%#   - Added a "Manual" column (Phase 4 item 1) — see the row partial for %>
+<%#     the em-dash-for-nil convention. %>
+<%#   - "Load more" render added at the bottom of the table column, %>
+<%#     confirmed Session 67 to match the existing infinite-scroll pattern %>
+<%#     rather than classic pagination. %>
+<%# %>
+<%# @page            — geared_pagination page object (set by paginate() in %>
+<%#                     Admin::ComponentSuggestionsController#index v1.2) %>
+<%# @page_title      — "Component Suggestions" %>
+<%# @turbo_tbody_id  — "component_suggestions" %>
+<%# @load_more_id    — "load_more_component_suggestions" %>
+<%# @index_path      — admin_component_suggestions_path with current query/manual %>
+<%#                     filter params preserved %>
+<%# %>
+<%# Session 63: Phase 1 of Component Suggestions feature. %>
+<%# Includes New, Edit, and Delete actions. Pattern: mirrors %>
+<%# admin/software_names/index.html.erb for the CRUD actions, and %>
+<%# software_items/index.html.erb (Session 50) for the filter+pagination grid. %>
 
-<div class="max-w-4xl mx-auto mt-8 px-4">
+<div class="px-4 max-w-6xl mx-auto mt-8">
   <div class="flex items-center justify-between mb-6">
-    <h1 class="text-2xl font-semibold text-stone-800">Component Suggestions</h1>
+    <h1 class="text-2xl font-semibold text-stone-800"><%= @page_title %></h1>
     <%= link_to "New Component Suggestion",
                 new_admin_component_suggestion_path,
                 class: "inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded hover:bg-indigo-700" %>
   </div>
 
-  <% if @component_suggestions.any? %>
-    <table class="w-full text-sm text-left">
-      <thead>
-        <tr class="border-b border-stone-200">
-          <th class="pb-2 pr-6 text-stone-500 uppercase text-xs font-medium">Order Number</th>
-          <th class="pb-2 pr-6 text-stone-500 uppercase text-xs font-medium">Description</th>
-          <th class="pb-2 pr-6 text-stone-500 uppercase text-xs font-medium">Category</th>
-          <th class="pb-2 text-stone-500 uppercase text-xs font-medium">Actions</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-stone-100">
-        <% @component_suggestions.each do |suggestion| %>
-          <tr>
-            <td class="py-2 pr-6 font-mono text-stone-800"><%= suggestion.order_number %></td>
-            <td class="py-2 pr-6 text-stone-600"><%= suggestion.description.presence || "—" %></td>
-            <td class="py-2 pr-6 text-stone-600"><%= suggestion.category.presence || "—" %></td>
-            <td class="py-2 space-x-4 whitespace-nowrap">
-              <%= link_to "Edit",
-                          edit_admin_component_suggestion_path(suggestion),
-                          class: "text-indigo-600 hover:text-indigo-900" %>
-              <%= link_to "Delete",
-                          admin_component_suggestion_path(suggestion),
-                          data: { turbo_method: :delete,
-                                  turbo_confirm: "Delete #{suggestion.order_number}? This cannot be undone." },
-                          class: "text-red-600 hover:text-red-900" %>
-            </td>
-          </tr>
-        <% end %>
-      </tbody>
-    </table>
-  <% else %>
-    <p class="text-stone-500 mt-4">No component suggestions yet. Add one or import a CSV file.</p>
-  <% end %>
+  <div class="grid grid-cols-4 gap-4 items-start">
+    <%# Filter sidebar — col-span-1 is set inside the partial's form class. %>
+    <%= render "filters" %>
+
+    <%# Table — takes the remaining 3 columns. %>
+    <div class="col-span-3">
+      <% if @page.records.any? %>
+        <table class="w-full text-sm text-left">
+          <thead>
+            <tr class="border-b border-stone-200">
+              <th class="pb-2 pr-6 text-stone-500 uppercase text-xs font-medium">Order Number</th>
+              <th class="pb-2 pr-6 text-stone-500 uppercase text-xs font-medium">Description</th>
+              <th class="pb-2 pr-6 text-stone-500 uppercase text-xs font-medium">Category</th>
+              <th class="pb-2 pr-6 text-stone-500 uppercase text-xs font-medium">Manual</th>
+              <th class="pb-2 text-stone-500 uppercase text-xs font-medium">Actions</th>
+            </tr>
+          </thead>
+          <%# tbody id is set from @turbo_tbody_id so index.turbo_stream.erb can append to it. %>
+          <tbody id="<%= @turbo_tbody_id %>" class="divide-y divide-stone-100">
+            <% @page.records.each do |suggestion| %>
+              <%= render "component_suggestion", suggestion: suggestion %>
+            <% end %>
+          </tbody>
+        </table>
+      <% else %>
+        <p class="text-stone-500 mt-4">No component suggestions match these filters.</p>
+      <% end %>
+
+      <%# Load-more partial — renders a "Load more" button when more pages exist. %>
+      <%# @index_path includes current filter params so pagination preserves filters. %>
+      <%= render "shared/load_more", id: @load_more_id, page: @page, path: @index_path %>
+    </div>
+  </div>
 </div>
