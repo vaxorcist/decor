@@ -1,5 +1,11 @@
 # decor/test/services/component_order_number_revalidation_service_test.rb
-# version 1.0
+# version 1.1
+# v1.1 (Session 71 — test repair): Same root cause and fix as
+#   unvalidated_order_numbers_export_service_test.rb v1.1 — Session 70's
+#   widened uniqueness scope means every Component.create! for owner three +
+#   memory_board with no explicit serial_number collides with the
+#   charlie_vt100_terminal fixture ("-"/"-") and, in the multi-create tests,
+#   with each other. Added explicit distinct serial_number values throughout.
 # NEW (Session 65): Tests for ComponentOrderNumberRevalidationService.
 #
 # All test components are created fresh in-test (not via components.yml
@@ -29,7 +35,8 @@ class ComponentOrderNumberRevalidationServiceTest < ActiveSupport::TestCase
       owner:                  @neutral_owner,
       component_type:         @component_type,
       order_number:           suggestion.order_number,
-      order_number_verified:  false
+      order_number_verified:  false,
+      serial_number:          "SN-#{SecureRandom.hex(4)}" # avoids colliding with charlie_vt100_terminal ("-"/"-")
     )
 
     ComponentOrderNumberRevalidationService.call
@@ -42,7 +49,8 @@ class ComponentOrderNumberRevalidationServiceTest < ActiveSupport::TestCase
     component = Component.create!(
       owner:          @neutral_owner,
       component_type: @component_type,
-      order_number:   "STALE-#{SecureRandom.hex(4)}"
+      order_number:   "STALE-#{SecureRandom.hex(4)}",
+      serial_number:  "SN-#{SecureRandom.hex(4)}" # avoids colliding with charlie_vt100_terminal ("-"/"-")
     )
     # Force a stale "verified" state directly at the DB layer — this simulates
     # a ComponentSuggestion having been deleted or edited after the component
@@ -57,7 +65,8 @@ class ComponentOrderNumberRevalidationServiceTest < ActiveSupport::TestCase
   end
 
   test "treats a blank order_number as always unverified" do
-    component = Component.create!(owner: @neutral_owner, component_type: @component_type, order_number: nil)
+    component = Component.create!(owner: @neutral_owner, component_type: @component_type, order_number: nil,
+                                   serial_number: "SN-#{SecureRandom.hex(4)}") # avoids colliding with charlie_vt100_terminal ("-"/"-")
     component.update_column(:order_number_verified, true) # force an inconsistent state to prove the sync corrects it
 
     ComponentOrderNumberRevalidationService.call
@@ -71,12 +80,14 @@ class ComponentOrderNumberRevalidationServiceTest < ActiveSupport::TestCase
       owner:                  @neutral_owner,
       component_type:         @component_type,
       order_number:           component_suggestions(:m7516).order_number,
-      order_number_verified:  false
+      order_number_verified:  false,
+      serial_number:          "SN-VERIFY-#{SecureRandom.hex(4)}"
     )
     to_unverify = Component.create!(
       owner:          @neutral_owner,
       component_type: @component_type,
-      order_number:   "STALE-#{SecureRandom.hex(4)}"
+      order_number:   "STALE-#{SecureRandom.hex(4)}",
+      serial_number:  "SN-UNVERIFY-#{SecureRandom.hex(4)}"
     )
     to_unverify.update_column(:order_number_verified, true)
 
@@ -98,7 +109,8 @@ class ComponentOrderNumberRevalidationServiceTest < ActiveSupport::TestCase
       owner:                  @neutral_owner,
       component_type:         @component_type,
       order_number:           suggestion.order_number,
-      order_number_verified:  false
+      order_number_verified:  false,
+      serial_number:          "SN-#{SecureRandom.hex(4)}" # avoids colliding with charlie_vt100_terminal ("-"/"-")
     )
 
     ComponentOrderNumberRevalidationService.call # first run does the real work

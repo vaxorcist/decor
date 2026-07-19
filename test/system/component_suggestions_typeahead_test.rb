@@ -1,5 +1,20 @@
 # decor/test/system/component_suggestions_typeahead_test.rb
-# version 1.0
+# version 1.1
+# v1.1 (Session 68): Updated for the removal of auto-accept-on-single-match
+#   (component_suggestion_controller.js v1.1, part of the Edit Component
+#   typeahead UI changes — narrowing to one match no longer fills fields or
+#   moves focus automatically; the user must press Enter). The single-match
+#   test was renamed from "...auto-fills and moves focus to serial number" to
+#   "...highlights it but waits for Enter to accept", and now asserts the
+#   PRE-Enter state explicitly (description still blank, focus still on
+#   order_number, order_number_verified still "false") before sending Enter
+#   and asserting the same post-accept state the old test checked. This is
+#   the regression guard for the removed behavior — without the pre-Enter
+#   assertions, a regression that reintroduced auto-accept would still pass.
+#   The keyboard-navigation test (multiple matches) needed NO changes: it
+#   already used explicit ArrowDown + Enter and never relied on auto-accept,
+#   the 10-result limit, or the old dash-separated dropdown text format (it
+#   asserts field values after accept, not the dropdown's rendered text).
 # v1.0 (Session 64): Component Suggestions Phase 2.
 #   System tests for the order_number typeahead (component_suggestion_controller.js).
 #   Controller tests (component_suggestions_controller_test.rb) already cover the
@@ -25,7 +40,7 @@
 require "application_system_test_case"
 
 class ComponentSuggestionsTypeaheadTest < ApplicationSystemTestCase
-  test "typing a prefix matching exactly one suggestion auto-fills and moves focus to serial number" do
+  test "typing a prefix matching exactly one suggestion highlights it but waits for Enter to accept" do
     sign_in owners(:one)
     visit new_component_path
 
@@ -33,17 +48,33 @@ class ComponentSuggestionsTypeaheadTest < ApplicationSystemTestCase
     # fixture order_number starts with that prefix.
     fill_in "component_order_number", with: "M75"
 
-    # Auto-accept fills description and focuses serial_number once the single
-    # match is confirmed; wait for description to populate as the signal that
-    # the debounced fetch + accept cycle has completed.
+    # Wait for the dropdown to render the single match before asserting
+    # anything about accept state — this is the debounce + fetch completing.
+    assert page.has_css?("[data-component-suggestion-target='dropdown'] li", count: 1, wait: 5),
+      "Dropdown should render exactly one matching suggestion"
+
+    # v1.1 (Session 68): auto-accept-on-single-match was REMOVED. Narrowing to
+    # one match must NOT fill fields or move focus on its own — it only
+    # highlights the sole item, same as any other match count. These two
+    # assertions are the regression guard for that removal.
+    assert page.has_field?("component_description", with: "", wait: 5),
+      "Description must NOT auto-fill merely because the field narrowed to one match"
+    assert_equal "component_order_number", page.evaluate_script("document.activeElement.id"),
+      "Focus must remain on the order_number field until Enter is pressed — no auto-advance"
+    assert_equal "false", find("input[name='component[order_number_verified]']", visible: false).value,
+      "order_number_verified must still be false before the match is explicitly accepted"
+
+    # Now explicitly confirm the highlighted (only) match with Enter.
+    find_field("component_order_number").send_keys(:enter)
+
     assert page.has_field?("component_description", with: "DELQA Module", wait: 5),
-      "Description should auto-fill from the single matching suggestion"
+      "Description should fill from the suggestion once Enter accepts it"
 
     assert page.has_field?("component_order_number", with: "M7516", wait: 5),
       "Order number should be completed to the full matched value"
 
     assert_equal "true", find("input[name='component[order_number_verified]']", visible: false).value,
-      "order_number_verified hidden field should be set to true after auto-accept"
+      "order_number_verified hidden field should be set to true after accepting via Enter"
 
     assert_equal "component_serial_number", page.evaluate_script("document.activeElement.id"),
       "Focus should move to the serial number field after accepting a suggestion"

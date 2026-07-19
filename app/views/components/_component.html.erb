@@ -1,4 +1,10 @@
-<%# decor/app/views/components/_component.html.erb - version 1.6 %>
+<%# decor/app/views/components/_component.html.erb - version 1.7 %>
+<%# v1.7 (Session 71): Owner Part Number feature — added the missing "Owner %>
+<%#   Part No." cell, matching the header added in index.html.erb v1.8. Placed %>
+<%#   between "DEC Part No." and "DEC Serial No.", matching the field order %>
+<%#   established in components/_form.html.erb v1.12. NOT NULL column — %>
+<%#   .presence || "—" pattern kept for defensive consistency with the %>
+<%#   neighbouring DEC Part/Serial No. cells. %>
 <%# v1.6 (Session 21): Added "Trade" column (barter_status), visible to logged-in %>
 <%#   members only. Cell and its matching header (index.html.erb) are both wrapped %>
 <%#   in - if logged_in? - so the column is completely absent for visitors. %>
@@ -34,6 +40,11 @@
   <%# Order No. — component's own order number %>
   <td class="px-4 py-3 whitespace-nowrap text-stone-600">
     <%= component.order_number.presence || "—" %>
+  </td>
+
+  <%# Owner Part No. — component's own owner part number %>
+  <td class="px-4 py-3 whitespace-nowrap text-stone-600">
+    <%= component.owner_part_number.presence || "—" %>
   </td>
 
   <%# Serial No. — component's own serial number %>

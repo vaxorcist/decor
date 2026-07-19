@@ -1,4 +1,11 @@
-# decor/test/controllers/owners_controller_destroy_test.rb - version 1.3
+# decor/test/controllers/owners_controller_destroy_test.rb - version 1.4
+# v1.4 (Session 71 — test repair): "should delete all associated components"
+#   created two components for alice + cpu_board with no explicit
+#   serial_number. Under Session 70's widened uniqueness scope, both default
+#   to owner_part_number/serial_number "-"/"-" and collide with each other
+#   (component2 failed with RecordInvalid). Added distinct serial_number
+#   values, mirroring the v1.3 fix already applied to the computers test
+#   just above it.
 # v1.3 (Session 28): Changed serial numbers in "should delete all associated computers"
 #   test from "TEST-001"/"TEST-002" to "DESTROY-SN-001"/"DESTROY-SN-002".
 #   alice has a pdp11_70 fixture (unassigned_condition_test) with serial_number
@@ -88,12 +95,14 @@ class OwnersControllerDestroyTest < ActionDispatch::IntegrationTest
     component1 = Component.create!(
       owner: @alice,
       component_type: component_types(:cpu_board),
-      description: "Test component 1"
+      description: "Test component 1",
+      serial_number: "DESTROY-COMP-SN-001" # avoids colliding with component2 / fixtures under the new uniqueness scope
     )
     component2 = Component.create!(
       owner: @alice,
       component_type: component_types(:cpu_board),
-      description: "Test component 2"
+      description: "Test component 2",
+      serial_number: "DESTROY-COMP-SN-002"
     )
 
     alice_component_ids = [component1.id, component2.id]

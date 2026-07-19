@@ -1,15 +1,35 @@
 // decor/app/javascript/controllers/component_suggestion_controller.js
-// version 1.0
-// v1.0 (Session 64): Component Suggestions Phase 2.
-//   Typeahead autocomplete for the Component Order Number field on the
-//   components new/edit form.
+// version 1.1
+// v1.1 (Session 68): Edit Component UI changes (three confirmed changes):
+//   1. Auto-accept-on-single-match REMOVED. Previously, narrowing to exactly
+//      one match auto-filled the fields and moved focus to the serial number
+//      input without waiting for the user to press Enter. This is now
+//      treated the same as any other match count: the dropdown renders, the
+//      first (only) item is highlighted, and the user must press Enter (or
+//      click the item) to accept it. Typing a full/exact suggestion no
+//      longer silently jumps the user to the next field.
+//   2. Dropdown is now viewport-aware. Endpoint limit raised to 100
+//      (component_suggestions_controller.rb v1.1), so up to 100 rows can
+//      render. Rather than a fixed Tailwind max-h-* class (removed from
+//      the <ul> in components/_form.html.erb v1.10), _renderDropdown()
+//      computes available space between the input and the bottom of the
+//      viewport and sets an inline max-height so the dropdown (a) shows
+//      roughly 7-10 rows before scrolling under normal conditions, and
+//      (b) never extends past the bottom edge of the page/viewport.
+//   3. Bracket format changed. Suggestion rows previously showed
+//      "order_number  —  description  —  [category]". Now description and
+//      category are combined into a single bracketed group:
+//      "order_number  (description | category)" — using "|" as the
+//      separator between description and category only when a category is
+//      present. See _renderDropdown() for the exact assembly logic.
 //
 // Purpose:
 //   Fires a debounced fetch to GET /component_suggestions?query=<prefix> as the
 //   user types in the order_number input. Renders a keyboard-navigable dropdown
-//   styled to match Tom Select. On selection, pre-fills order_number and
-//   description, sets the hidden order_number_verified flag to "true", and
-//   moves focus to the component serial number input.
+//   styled to match Tom Select. On explicit accept (Enter or click — never
+//   automatically), pre-fills order_number and description, sets the hidden
+//   order_number_verified flag to "true", and moves focus to the component
+//   serial number input.
 //
 // Targets:
 //   orderNumberInput  — the order_number text input (source of the query)
@@ -23,14 +43,9 @@
 //
 // Keyboard:
 //   ArrowDown / ArrowUp — move highlighted item (wraps top/bottom)
-//   Enter               — accept highlighted item
+//   Enter               — accept highlighted item (the ONLY way a match is accepted,
+//                          along with a direct click — see v1.1 change #1 above)
 //   Escape              — close dropdown without accepting
-//
-// Auto-accept:
-//   When a fetch returns exactly one match, that suggestion is accepted
-//   automatically (fields filled, focus moved) without waiting for Enter.
-//   This matches the locked Phase 2 spec: narrowing to a single candidate is
-//   treated as a confident match.
 //
 // Turbo safety:
 //   connect()    — attaches the outside-click handler and ensures clean state.
@@ -52,6 +67,22 @@
 import { Controller } from "@hotwired/stimulus"
 
 const DEBOUNCE_DELAY = 250  // milliseconds
+
+// Desired dropdown height under normal conditions (plenty of room below the
+// input): enough to show roughly 7-10 rows before the user needs to scroll.
+// Rows render at ~36px tall (py-2 + text-sm line-height), so 8 rows ≈ 288px.
+// This mirrors the previous static "max-h-60" (240px) closely while being a
+// little roomier now that up to 100 results can come back.
+const PREFERRED_MAX_HEIGHT = 288  // pixels
+
+// Never let the dropdown's bottom edge go past the viewport bottom. This much
+// breathing room is kept between the dropdown's bottom edge and the viewport
+// edge so it doesn't touch the very bottom of the browser window.
+const VIEWPORT_BOTTOM_MARGIN = 8  // pixels
+
+// Floor so the dropdown is never squeezed down to an unusably short strip
+// when the input happens to sit very close to the bottom of the viewport.
+const MIN_DROPDOWN_HEIGHT = 100  // pixels
 
 export default class extends Controller {
   static targets = ["orderNumberInput", "descriptionInput", "serialNumberInput", "verifiedFlag", "dropdown"]
@@ -149,16 +180,10 @@ export default class extends Controller {
       return
     }
 
-    if (suggestions.length === 1) {
-      // Auto-accept when the list narrows to exactly one match — per the
-      // locked Phase 2 spec. The user can still keep typing afterward; the
-      // accept() call simply pre-fills fields and moves focus.
-      this._renderDropdown(suggestions)
-      this._setHighlight(0)
-      this._accept(suggestions[0])
-      return
-    }
-
+    // v1.1: no more auto-accept when the list narrows to exactly one match.
+    // Every match count (including exactly one) renders the dropdown and
+    // highlights the first item; the user must press Enter or click to
+    // accept. This applies uniformly regardless of how many results came back.
     this._renderDropdown(suggestions)
     this._setHighlight(0)
   }
@@ -178,13 +203,21 @@ export default class extends Controller {
       const li = document.createElement("li")
       li.dataset.index = index
 
-      // Build display text: order_number is always present; description and
-      // category are optional — omit their separators when absent.
+      // Build display text: order_number is always present. Description and
+      // category are combined into a single bracketed group — "|" separates
+      // them only when both are present; the bracket is omitted entirely if
+      // neither is present.
+      //   "DELQA-00  (Ethernet controller | Networking)"  — both present
+      //   "DELQA-00  (Ethernet controller)"                — description only
+      //   "DELQA-00  (Networking)"                         — category only
+      //   "DELQA-00"                                       — neither present
       const parts = [s.order_number]
-      if (s.description) parts.push(s.description)
-      if (s.category)    parts.push(`[${s.category}]`)
+      const bracketParts = []
+      if (s.description) bracketParts.push(s.description)
+      if (s.category)    bracketParts.push(s.category)
+      if (bracketParts.length > 0) parts.push(`(${bracketParts.join(" | ")})`)
 
-      li.textContent = parts.join("  —  ")
+      li.textContent = parts.join("  ")
 
       // Styling mirrors Tom Select option items: same text size, padding,
       // cursor, and hover colour. The highlighted class is applied by
@@ -205,11 +238,30 @@ export default class extends Controller {
     })
 
     ul.classList.remove("hidden")
+    this._applyViewportAwareHeight(ul)
+  }
+
+  // Computes and applies an inline max-height so the dropdown (a) shows a
+  // reasonable number of rows before needing to scroll, and (b) never
+  // extends past the bottom edge of the viewport, regardless of how many of
+  // the (now up to 100) results came back.
+  _applyViewportAwareHeight(ul) {
+    const inputRect = this.orderNumberInputTarget.getBoundingClientRect()
+    const availableSpace = window.innerHeight - inputRect.bottom - VIEWPORT_BOTTOM_MARGIN
+
+    const maxHeight = Math.max(
+      MIN_DROPDOWN_HEIGHT,
+      Math.min(PREFERRED_MAX_HEIGHT, availableSpace)
+    )
+
+    ul.style.maxHeight = `${maxHeight}px`
+    ul.style.overflowY = "auto"
   }
 
   _closeDropdown() {
     this.dropdownTarget.innerHTML = ""
     this.dropdownTarget.classList.add("hidden")
+    this.dropdownTarget.style.maxHeight = ""
     this._highlightedIndex = -1
   }
 
@@ -231,7 +283,11 @@ export default class extends Controller {
 
     // Compute new index with wrap-around.
     this._highlightedIndex = (this._highlightedIndex + delta + items.length) % items.length
-    this._applyHighlightStyle(items[this._highlightedIndex], true)
+    const highlighted = items[this._highlightedIndex]
+    this._applyHighlightStyle(highlighted, true)
+    // Keep the highlighted item visible when navigating past the edge of the
+    // currently-scrolled viewport of a long (up to 100-row) dropdown.
+    highlighted.scrollIntoView({ block: "nearest" })
   }
 
   _setHighlight(index) {
@@ -267,7 +323,7 @@ export default class extends Controller {
     }
   }
 
-  // ─── Private: accept a suggestion ─────────────────────────────────────────
+  // ─── Private: accept a suggestion (Enter or click ONLY — never automatic) ──
 
   _accept(suggestion) {
     // Fill the order_number field with the accepted value.

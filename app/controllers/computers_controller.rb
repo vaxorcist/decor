@@ -1,5 +1,11 @@
 # decor/app/controllers/computers_controller.rb
-# version 1.22
+# version 1.23
+# v1.23 (Session 70): Owner Part Number feature.
+#   Added :owner_part_number to computer_params. Without this permit, the new
+#   form field (computers/_form.html.erb v2.7) would submit the value but
+#   Rails would silently strip it before it ever reached Computer#save,
+#   and the model's before_validation default ("-") would fire every time
+#   regardless of what the user typed.
 # v1.22 (Session 52): Simplified index device_type branch.
 #   The Type filter (Computer / Peripheral selector) was removed from the
 #   _filters.html.erb sidebar. The else branch previously read
@@ -213,6 +219,7 @@ class ComputersController < ApplicationController
     params.require(:computer).permit(
       :computer_model_id,
       :serial_number,
+      :owner_part_number,
       :computer_condition_id,
       :run_status_id,
       :order_number,

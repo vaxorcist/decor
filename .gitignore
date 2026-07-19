@@ -38,3 +38,7 @@
 !/app/assets/builds/.keep
 /config/master.key
 /.kamal/secrets
+
+# Ignore import and export directories
+/import
+/export

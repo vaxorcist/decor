@@ -1,5 +1,31 @@
 # decor/test/models/component_test.rb
-# version 1.5
+# version 1.7
+# v1.7 (Session 71 — test repair, round 2): The v1.6 fix for "spare
+#   component can be peripheral" used serial_number "MB-SPARE-PERIPHERAL-001"
+#   (23 characters) — over Component#serial_number's 20-char max length
+#   validation, so the test failed on a NEW cause (length, not uniqueness)
+#   introduced by the previous fix itself. Shortened to
+#   "MB-SPARE-PERIPH-001" (19 chars). All other serial_number values added
+#   in v1.6 were re-audited against the 20-char limit and are within it.
+# v1.6 (Session 71 — test repair): Session 70's Owner Part Number feature
+#   widened Component's uniqueness scope to (owner_id, component_type_id,
+#   owner_part_number, serial_number) and made both owner_part_number and
+#   serial_number default to "-" via before_validation when left blank.
+#   Several tests here built Component.new/.create! with the same owner+type
+#   as an existing fixture (or as another record created earlier in the same
+#   test) and no explicit serial_number — under the new scope, two such
+#   records both collapse to the same ("-", "-") pair and collide. Fixed by
+#   giving each a distinct serial_number:
+#     - "valid with required attributes"        (collided with pdp11_memory)
+#     - "valid with optional computer"           (collided with pdp11_memory)
+#     - "valid without computer (spare component)" (collided with spare_disk)
+#     - "spare component can be peripheral"      (collided with pdp11_memory)
+#   "blank serial number is always valid regardless of other blank-serial
+#   components" tested a premise (allow_blank: true, no uniqueness check on
+#   blank) that Session 70 deliberately removed (Option B, confirmed in
+#   DECOR_PROJECT.md "Component" model notes) — a second same-owner+type
+#   spare with no distinguishing value is now REJECTED, not allowed. Replaced
+#   with two tests that document the actual current behaviour instead.
 # v1.5 (Session 28): Added serial_number uniqueness validation tests.
 #   Constraint scope: (owner_id, component_type_id, serial_number).
 #   - same owner + same type + duplicate serial       → invalid
@@ -17,7 +43,8 @@ class ComponentTest < ActiveSupport::TestCase
   test "valid with required attributes" do
     component = Component.new(
       owner: owners(:one),
-      component_type: component_types(:memory_board)
+      component_type: component_types(:memory_board),
+      serial_number: "MB-REQ-ATTR-001" # avoids colliding with pdp11_memory ("-"/"-")
     )
     assert component.valid?
   end
@@ -26,7 +53,8 @@ class ComponentTest < ActiveSupport::TestCase
     component = Component.new(
       owner: owners(:one),
       computer: computers(:alice_pdp11),
-      component_type: component_types(:memory_board)
+      component_type: component_types(:memory_board),
+      serial_number: "MB-OPT-COMPUTER-001" # avoids colliding with pdp11_memory ("-"/"-")
     )
     assert component.valid?
   end
@@ -36,7 +64,8 @@ class ComponentTest < ActiveSupport::TestCase
       owner: owners(:one),
       computer: nil,
       component_type: component_types(:disk_drive),
-      description: "Spare drive"
+      description: "Spare drive",
+      serial_number: "DISK-SPARE-VALID-001" # avoids colliding with spare_disk ("-"/"-")
     )
     assert component.valid?
   end
@@ -144,22 +173,34 @@ class ComponentTest < ActiveSupport::TestCase
            "Same owner + different type + same serial must be valid"
   end
 
-  test "blank serial number is always valid regardless of other blank-serial components" do
-    # Multiple components of the same owner and type with no serial number must
-    # all be valid. allow_blank: true means the uniqueness check is skipped
-    # entirely when serial_number is nil.
-    Component.create!(
-      owner: owners(:one),
-      component_type: component_types(:memory_board)
-      # serial_number omitted → nil
-    )
+  test "second blank-serial component of same owner+type is rejected (Option B, Session 70)" do
+    # Session 70's Owner Part Number feature (Option B, confirmed in
+    # DECOR_PROJECT.md) removed the old allow_blank exemption: a blank
+    # serial_number now defaults to "-" via before_validation, and a SECOND
+    # same-owner+type spare with no distinguishing value collides on
+    # ("-", "-") and is rejected. pdp11_cpu (owner one, cpu_board) is
+    # already such a fixture, so a second one must be invalid.
+    existing = components(:pdp11_cpu)
 
     second_no_serial = Component.new(
-      owner: owners(:one),
-      component_type: component_types(:memory_board)
+      owner: existing.owner,
+      component_type: existing.component_type
+      # serial_number/owner_part_number both omitted → both default to "-",
+      # which pdp11_cpu already occupies for this owner+type.
     )
-    assert second_no_serial.valid?,
-           "Multiple components of the same owner+type with no serial number must all be valid"
+    assert_not second_no_serial.valid?,
+               "A second same-owner+type spare with no distinguishing value must be rejected"
+    assert second_no_serial.errors[:serial_number].any?,
+           "Validation error must be on serial_number"
+  end
+
+  test "different owners may each have a blank-serial spare of the same component type" do
+    # pdp11_memory (owner one) and pdp8_memory (owner two) are both
+    # memory_board fixtures whose serial_number/owner_part_number are both
+    # "-" — proving the uniqueness scope is per-owner, so two different
+    # owners' blank-serial spares of the same type never collide.
+    assert components(:pdp11_memory).valid?
+    assert components(:pdp8_memory).valid?
   end
 
   test "duplicate serial number error message is descriptive" do
@@ -240,7 +281,8 @@ class ComponentTest < ActiveSupport::TestCase
       computer: nil,
       component_type: component_types(:memory_board),
       component_category: :peripheral,
-      description: "Spare terminal not yet connected"
+      description: "Spare terminal not yet connected",
+      serial_number: "MB-SPARE-PERIPH-001" # avoids colliding with pdp11_memory ("-"/"-"); kept within the 20-char max
     )
     assert spare_peripheral.valid?
     assert_nil spare_peripheral.computer

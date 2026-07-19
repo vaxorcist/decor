@@ -1,5 +1,39 @@
 # decor/test/services/owner_import_service_test.rb
-# version 1.7
+# version 1.9
+# v1.9 (Session 71 — test repair, round 2): "component can reference a
+#   computer created in the same import" built its component row via cmp()
+#   with no explicit serial_number. Under the new unconditional duplicate
+#   check (owner_import_service.rb v1.12, Session 70), that component
+#   normalized to owner_part_number/serial_number "-"/"-" and was silently
+#   skipped as a duplicate of alice's pre-existing pdp11_memory fixture
+#   (owner one, memory_board, already "-"/"-") — not created at all, hence
+#   the find_by! RecordNotFound. Fixed by giving it an explicit
+#   serial_number ("TWOPASS-COMP-SN"). Audited every other cmp() call in
+#   this file against alice's fixtures (pdp11_memory/pdp11_cpu/spare_disk,
+#   all "-"/"-") — this was the only one missing an explicit serial_number
+#   outside of the two tests that intentionally exercise that default.
+# v1.8 (Session 71 — test repair): Fixed CSV column-misalignment bug in the
+#   comp()/cmp() row builders. These helpers still returned a fixed-position
+#   array in the PRE-Session-70 column order (no owner_part_number). Since
+#   OwnerExportService::COMPUTER_SECTION_HEADERS / COMPONENT_SECTION_HEADERS
+#   were widened in Session 70 to include owner_part_number, and
+#   CSV::Row.new(headers, values) pairs header→value POSITIONALLY, every
+#   column at or after the insertion point was silently shifted by one for
+#   every test using these helpers — not a bug in owner_import_service.rb
+#   itself, which reads columns by name via col(). This produced exactly the
+#   observed symptoms: "serial_number is required" firing on rows that
+#   supplied a serial_number (because the value ended up under a different
+#   header), find_by!(serial_number: ...) raising RecordNotFound for values
+#   that were never actually written to that column, and row_error message
+#   assertions matching the wrong text entirely.
+#   Fix: comp() and cmp() now build a name-keyed hash and map it onto
+#   OwnerExportService::COMPUTER_SECTION_HEADERS / COMPONENT_SECTION_HEADERS
+#   at runtime, rather than hardcoding a fixed column order. This makes the
+#   helpers immune to any future column reordering/insertion in
+#   OwnerExportService — the row is always built from the ACTUAL header
+#   array, whatever order it's in. No test bodies (call sites) needed to
+#   change — both helpers keep their existing positional-argument signatures
+#   with owner_part_number added as a new optional trailing argument.
 # v1.7 (Session 49 — Session G): Updated for per-section CSV format and partial success.
 #   build_csv / build_csv_with_connections / build_csv_with_software helpers rewritten
 #     to produce the new per-section format (sentinels + section headers); no global
@@ -138,7 +172,7 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
     result = import(build_csv(
       computer_rows:  [comp("computer", "PDP-11/70", nil, "TWOPASS-SN")],
       component_rows: [cmp("PDP-11/70", "TWOPASS-SN", "Memory Board", "integral",
-                           nil, nil, nil, "Attached to new computer", "no_barter")]
+                           nil, "TWOPASS-COMP-SN", nil, "Attached to new computer", "no_barter")]
     ))
     assert result[:success], result[:error]
     computer  = @alice.computers.find_by!(serial_number: "TWOPASS-SN")
@@ -537,21 +571,49 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
     end
   end
 
-  # Short helper for a computer/peripheral row (COMPUTER_SECTION_HEADERS order).
+  # Builds a computer/peripheral row by mapping named values onto the ACTUAL
+  # OwnerExportService::COMPUTER_SECTION_HEADERS column order at runtime,
+  # rather than hardcoding a fixed position list (see v1.8 header comment —
+  # a hardcoded list silently goes out of sync the moment a new column is
+  # inserted into the real header constant). owner_part_number is a new
+  # optional trailing argument; existing call sites are unaffected.
   def comp(record_type, model, order_number = nil, serial_number = nil,
-           condition = nil, run_status = nil, history = nil, barter_status = nil)
-    [record_type, model, order_number, serial_number,
-     condition, run_status, history, barter_status]
+           condition = nil, run_status = nil, history = nil, barter_status = nil,
+           owner_part_number = nil)
+    values_by_header = {
+      "record_type"       => record_type,
+      "model"             => model,
+      "order_number"      => order_number,
+      "owner_part_number" => owner_part_number,
+      "serial_number"     => serial_number,
+      "condition"         => condition,
+      "run_status"        => run_status,
+      "history"           => history,
+      "barter_status"     => barter_status
+    }
+    OwnerExportService::COMPUTER_SECTION_HEADERS.map { |header| values_by_header[header] }
   end
 
-  # Short helper for a component row (COMPONENT_SECTION_HEADERS order):
-  #   record_type, installed_on_model, installed_on_serial, type, category,
-  #   order_number, serial_number, condition, description, barter_status
+  # Same runtime header-mapping approach as comp() above, applied to
+  # OwnerExportService::COMPONENT_SECTION_HEADERS. owner_part_number is a new
+  # optional trailing argument; existing call sites are unaffected.
   def cmp(installed_on_model, installed_on_serial, type_name, category = "integral",
           order_number = nil, serial_number = nil, condition = nil,
-          description = nil, barter_status = nil)
-    ["component", installed_on_model, installed_on_serial, type_name, category,
-     order_number, serial_number, condition, description, barter_status]
+          description = nil, barter_status = nil, owner_part_number = nil)
+    values_by_header = {
+      "record_type"         => "component",
+      "installed_on_model"  => installed_on_model,
+      "installed_on_serial" => installed_on_serial,
+      "type"                => type_name,
+      "category"            => category,
+      "order_number"        => order_number,
+      "owner_part_number"   => owner_part_number,
+      "serial_number"       => serial_number,
+      "condition"           => condition,
+      "description"         => description,
+      "barter_status"       => barter_status
+    }
+    OwnerExportService::COMPONENT_SECTION_HEADERS.map { |header| values_by_header[header] }
   end
 
   def import(csv_content)

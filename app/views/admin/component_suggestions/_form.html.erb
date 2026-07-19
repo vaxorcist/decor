@@ -1,5 +1,7 @@
 <%# decor/app/views/admin/component_suggestions/_form.html.erb %>
-<%# version 1.0 %>
+<%# version 1.1 %>
+<%# v1.1: UI rename — label "Order Number" -> "DEC Part Number". Field name %>
+<%#   (:order_number) and placeholder examples unchanged. %>
 <%# Session 63: Phase 1 of Component Suggestions feature. %>
 <%# %>
 <%# Shared form partial for new and edit actions. %>
@@ -21,7 +23,7 @@
 
   <%# order_number — required, max 20 chars, unique %>
   <div>
-    <%= f.label :order_number, "Order Number", class: "block text-sm font-medium text-stone-700 mb-1" %>
+    <%= f.label :order_number, "DEC Part Number", class: "block text-sm font-medium text-stone-700 mb-1" %>
     <%= f.text_field :order_number,
                      maxlength: 20,
                      class: "w-full border border-stone-300 rounded px-3 py-2 text-sm font-mono

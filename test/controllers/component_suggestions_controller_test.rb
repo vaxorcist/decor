@@ -1,5 +1,12 @@
 # decor/test/controllers/component_suggestions_controller_test.rb
-# version 1.0
+# version 1.1
+# v1.1 (Session 68): Updated to match component_suggestions_controller.rb v1.1's
+#   result limit increase (10 -> 100, part of the Edit Component typeahead UI
+#   changes). "limits results to 10" renamed to "limits results to 100"; the
+#   fixture-creation loop now creates 110 records (instead of 15) so the
+#   assertion still meaningfully exercises truncation above the new limit.
+#   No other test in this file needed changes — the limit assertion was the
+#   only one coupled to the specific number 10.
 # v1.0 (Session 64): Component Suggestions Phase 2.
 #   Integration tests for the owner-facing JSON typeahead endpoint at
 #   GET /component_suggestions?query=...
@@ -11,7 +18,7 @@
 #       the query string, each shaped as { order_number, description, category }.
 #     - case/prefix behaviour: only prefix matches are returned (no substring
 #       matches), consistent with ComponentSuggestion.matching's LIKE 'q%' scope.
-#     - result limit: more than 10 matches are truncated to 10.
+#     - result limit: more than 100 matches are truncated to 100.
 #     - nulls preserved: description/category that are nil on the record come
 #       through as JSON null, not an empty string or omitted key.
 #
@@ -85,8 +92,11 @@ class ComponentSuggestionsControllerTest < ActionDispatch::IntegrationTest
     refute_includes body.map { |h| h["order_number"] }, "XY-AB-100"
   end
 
-  test "limits results to 10" do
-    15.times do |i|
+  test "limits results to 100" do
+    # 110 records comfortably exceeds the 100 limit (component_suggestions_
+    # controller.rb v1.1) while keeping the fixture creation loop reasonably
+    # fast; the exact margin above 100 doesn't matter, only that it's exceeded.
+    110.times do |i|
       ComponentSuggestion.create!(order_number: format("LIM-%03d", i))
     end
 
@@ -94,6 +104,6 @@ class ComponentSuggestionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
 
     body = JSON.parse(response.body)
-    assert_equal 10, body.length
+    assert_equal 100, body.length
   end
 end

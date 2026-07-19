@@ -1,5 +1,11 @@
 # decor/test/controllers/admin/component_order_numbers_controller_test.rb
-# version 1.0
+# version 1.1
+# v1.1 (Session 71 — test repair): Same root cause as
+#   component_order_number_revalidation_service_test.rb v1.1 — each
+#   Component.create! for owner three + memory_board with no explicit
+#   serial_number collides with the charlie_vt100_terminal fixture
+#   ("-"/"-") under Session 70's widened uniqueness scope. Added explicit
+#   serial_number values.
 # NEW (Session 65): Auth + behaviour coverage for
 # Admin::ComponentOrderNumbersController#revalidate and #unvalidated.
 #
@@ -36,7 +42,8 @@ module Admin
         owner:                  @neutral_owner,
         component_type:         @component_type,
         order_number:           suggestion.order_number,
-        order_number_verified:  false
+        order_number_verified:  false,
+        serial_number:          "SN-#{SecureRandom.hex(4)}" # avoids colliding with charlie_vt100_terminal ("-"/"-")
       )
 
       post admin_revalidate_component_order_numbers_url
@@ -53,7 +60,8 @@ module Admin
       component = Component.create!(
         owner:          @neutral_owner,
         component_type: @component_type,
-        order_number:   "STALE-#{SecureRandom.hex(4)}"
+        order_number:   "STALE-#{SecureRandom.hex(4)}",
+        serial_number:  "SN-#{SecureRandom.hex(4)}" # avoids colliding with charlie_vt100_terminal ("-"/"-")
       )
       component.update_column(:order_number_verified, true) # force a stale state
 
@@ -70,7 +78,8 @@ module Admin
         owner:                  @neutral_owner,
         component_type:         @component_type,
         order_number:           component_suggestions(:delqa).order_number,
-        order_number_verified:  false
+        order_number_verified:  false,
+        serial_number:          "SN-#{SecureRandom.hex(4)}" # avoids colliding with charlie_vt100_terminal ("-"/"-")
       )
 
       post admin_revalidate_component_order_numbers_url
@@ -89,7 +98,8 @@ module Admin
         owner:                  @neutral_owner,
         component_type:         @component_type,
         order_number:           "NEEDS-REVIEW-#{SecureRandom.hex(4)}",
-        order_number_verified:  false
+        order_number_verified:  false,
+        serial_number:          "SN-#{SecureRandom.hex(4)}" # avoids colliding with charlie_vt100_terminal ("-"/"-")
       )
 
       get admin_unvalidated_component_order_numbers_url

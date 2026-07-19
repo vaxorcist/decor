@@ -1,5 +1,28 @@
 # RAILS_SPECIFICS.md
-# version 3.5
+# version 3.6
+# Session 67: Phase 4 implementation (order number / variant simplification).
+#   Three new MANDATORY sections added from lessons learned this session:
+#   1. Collection Routes Nested in a Namespaced Resources Block — Different
+#      Prefix Shape Than as: Routes. A second, distinct route-naming trap
+#      found in the same file as the Session 65 lesson: a `collection do`
+#      route on a `resources` block already inside `namespace :admin`
+#      prepends the action name to the ALREADY admin_-prefixed resource name
+#      (download_manual_admin_component_suggestions_path), rather than
+#      prefixing admin_ onto an action_resource name the way a custom `as:`
+#      route does. First guessed wrong (admin_download_manual_..._path),
+#      caught only because `bin/rails routes | grep` was run before shipping.
+#   2. Rails Enum — read_attribute Does Not Bypass Type-Casting; Use
+#      _before_type_cast for the Raw Value. A real bug this session:
+#      ManualComponentSuggestionsExportService used read_attribute(:manual)
+#      expecting the raw "a"/"m" DB value, but got the mapped "added"/
+#      "modified" label instead — read_attribute still goes through the
+#      enum's custom type. Fixed with manual_before_type_cast.
+#   3. Geared Pagination — paginate() Renders the Response Itself. Read the
+#      actual Pagination concern this session for the first time: paginate()
+#      sets @page (not an ivar named after the model) AND internally calls
+#      respond_to { |format| format.turbo_stream; format.html }, so it must
+#      be the last line of the action, after @page_title / @turbo_tbody_id /
+#      @load_more_id / @index_path are already set.
 # Session 65: Named Routes (as:) Inside namespace — Still Prefixed (NEW MANDATORY
 #   section). A custom `as: :foo` route declared inside `namespace :admin do ... end`
 #   is STILL prefixed "admin_" by Rails — exactly like `resources` routes in the
@@ -61,7 +84,8 @@
 
 **Ruby on Rails Specific Patterns and Best Practices**
 
-**Last Updated:** June 30, 2026 (v3.5: Named Routes (as:) Inside namespace prefixing rule added; Session 65)
+**Last Updated:** July 8, 2026 (v3.6: Collection-route prefix shape, enum
+  read_attribute pitfall, and Pagination concern internals added; Session 67)
 
 ---
 
@@ -907,6 +931,54 @@ the output as a fresh result.
 
 ---
 
+## insert_all Bypasses Model Validations and Callbacks — Use unique_by: for Duplicate Handling (learned Session 67)
+
+**RULE: `Model.insert_all(rows, unique_by: :column)` performs a raw bulk SQL
+INSERT. It runs NO model validations and NO callbacks. Duplicate handling
+must be done via `unique_by:` (an `ON CONFLICT ... DO NOTHING` clause), not
+by checking `exists?` per row beforehand.**
+
+This is the correct tool for a **disposable mirror table** — one whose
+source of truth lives outside the Rails app (an external database, a bulk
+CSV feed) and gets fully replaced on each sync, rather than reconciled
+record-by-record against prior state.
+
+```ruby
+ActiveRecord::Base.transaction do
+  ComponentSuggestion.delete_all
+  rows.each_slice(1000) do |batch|
+    ComponentSuggestion.insert_all(batch, unique_by: :order_number)
+  end
+end
+```
+
+**Tradeoffs to know before choosing this pattern:**
+- Model validations (length limits, format checks) do NOT run — anything
+  the source data contains is stored as-is. Acceptable when the upstream
+  source is already trusted (e.g. an internal export from another system
+  of record), NOT acceptable for user-submitted data.
+- `unique_by:` requires an actual DB unique index on the named column(s) —
+  it generates `ON CONFLICT (column) DO NOTHING`, which needs that
+  constraint to target.
+- Within a single `insert_all` call (or across slices sharing an index),
+  the FIRST occurrence of a duplicate key wins; later ones are silently
+  dropped — there's no equivalent of "last write wins" here.
+- `created_at`/`updated_at` are not auto-populated by AR callbacks the way
+  `create!` would — supply them explicitly in each row hash if the schema
+  requires them.
+
+**Why this rule exists (Session 67, July 2026):**
+`ComponentSuggestionImportService` v1.0 checked every incoming CSV row
+against the database via `ComponentSuggestion.exists?(order_number:)` — an
+O(n) round-trip per row against a table that only grows, which caused
+production timeouts at ~55,000 rows. Rewritten (v2.0) around
+`delete_all` + `insert_all(unique_by: :order_number)`, eliminating the
+per-row database round-trip entirely. This was the single highest-value fix
+of the Phase 4 rewrite (see DECOR_PROJECT.md "Component Suggestions Feature
+— Phase 4" for the full context).
+
+---
+
 ## SQLite — VARCHAR Length Enforcement
 
 **VARCHAR length in SQLite is cosmetic only.** SQLite does not enforce VARCHAR(n)
@@ -1286,6 +1358,164 @@ used in the Imports/Exports dropdown) — the existing correct pattern was not
 cross-checked before writing the new links.
 
 ---
+
+## Collection Routes Nested in a Namespaced Resources Block — A SECOND, Different Prefix Shape (MANDATORY, learned Session 67)
+
+**RULE: A `collection do ... end` route nested inside a `resources` block
+that is already inside `namespace :admin` produces a DIFFERENT prefix shape
+than the custom `as:` routes covered above. Do not assume the two work the
+same way — verify each with `bin/rails routes | grep <name>`.**
+
+The Session 65 rule above covers a custom `as: :foo` route declared directly
+inside `namespace :admin do ... end` (not nested in a `resources` block):
+Rails prepends `admin_` onto a name that already ends in the resource/action
+name → `admin_foo_path`.
+
+A **collection route nested inside `resources`** works differently. For:
+```ruby
+namespace :admin do
+  resources :component_suggestions, only: %i[index new create edit update destroy] do
+    collection do
+      get :download_manual
+    end
+  end
+end
+```
+`bin/rails routes | grep download_manual` reports:
+```
+download_manual_admin_component_suggestions  GET  /admin/component_suggestions/download_manual
+```
+The path helper is **`download_manual_admin_component_suggestions_path`** —
+the action name (`download_manual`) is PREPENDED to the resource's own
+already-`admin_`-prefixed route name (`admin_component_suggestions`), not
+appended after a bare resource name the way the `as:` case above works.
+
+**First guessed wrong in Session 67:** `admin_download_manual_component_suggestions_path`
+was written into `admin.html.erb` based on the (incorrect) assumption that
+this case matched the Session 65 `as:` shape. Because `bin/rails routes | grep
+download_manual` was run before the change was shipped, the error was caught
+immediately rather than at render time — but it's worth noting that guessing
+between these two shapes is genuinely easy to get wrong, since both produce
+similarly-structured names that only differ in prepend/append order.
+
+**Rule in one sentence:** every new route helper — whether from a custom
+`as:` route or a `resources` collection/member route, whether namespaced or
+not — gets verified with `bin/rails routes | grep <name>` before it's used
+in a view. There is no shortcut that reliably predicts the helper name from
+the route declaration alone.
+
+---
+
+## Rails Enum — read_attribute Does Not Bypass Type-Casting; Use _before_type_cast for the Raw Value (MANDATORY, learned Session 67)
+
+**RULE: To read the raw underlying DB value of an enum-backed column (not
+the mapped label), use the auto-generated `<attribute>_before_type_cast`
+method — NOT `read_attribute(:<attribute>)`.**
+
+Rails' `enum` macro attaches a custom type to the attribute at the schema
+level. `read_attribute` still goes through that attribute's type-casting —
+it returns the SAME mapped value as the plain accessor (`model.manual`),
+not the raw stored string.
+
+**Wrong — still returns the mapped label, not the raw value:**
+```ruby
+enum :manual, { added: "a", modified: "m" }, prefix: true
+# ...
+suggestion.manual                    # => "added"
+suggestion.read_attribute(:manual)   # => "added"  — NOT "a"! Still type-cast.
+```
+
+**Correct — bypasses the type-casting layer:**
+```ruby
+suggestion.manual_before_type_cast   # => "a"
+```
+
+**Why this rule exists (Session 67, July 2026):**
+`ManualComponentSuggestionsExportService` needed to write the raw one-character
+DB value ("a"/"m") into a CSV column, so the file stays meaningful if someone
+inspects it alongside the raw schema. `read_attribute(:manual)` was used,
+based on the (incorrect) general assumption that `read_attribute` always
+bypasses model-level behavior and returns the raw column value. A test
+comparing the exported value against the expected raw string ("a") caught the
+mismatch immediately — the export was writing "added" instead. Switching to
+`manual_before_type_cast` fixed it.
+
+**When this matters:** any time code needs the literal stored value of an
+enum column for a purpose OTHER than application logic — CSV/data exports,
+debugging, raw SQL comparisons, or anywhere the mapped label would be
+misleading or incompatible with an external format.
+
+---
+
+## Geared Pagination — paginate() Renders the Response Itself (MANDATORY, learned Session 67)
+
+**RULE: `paginate(scope)` is not a plain data-fetch call. It sets `@page`
+(NOT an instance variable named after the model) AND it renders the
+response itself. Every ivar the view needs (`@page_title`,
+`@turbo_tbody_id`, `@load_more_id`, `@index_path`) MUST be assigned BEFORE
+calling `paginate` — it must be the last line of the action.**
+
+The actual `Pagination` concern (`decor/app/controllers/concerns/pagination.rb`)
+is thin but easy to misread:
+```ruby
+module Pagination
+  extend ActiveSupport::Concern
+
+  def paginate(scope, **options)
+    set_page_and_extract_portion_from(scope, **options)
+
+    request.format = :html if @page.number == 1
+    respond_to do |format|
+      format.turbo_stream
+      format.html
+    end
+  end
+end
+```
+Two things this reveals that are easy to get wrong without reading the file:
+1. `set_page_and_extract_portion_from` (from the `geared_pagination` gem)
+   assigns `@page` — always `@page`, regardless of which model is being
+   paginated. The view reads `@page.records`, not `@component_suggestions`
+   or any other model-named ivar.
+2. The `respond_to` block IS the render. `paginate(scope)` doesn't just
+   return paginated data for the controller to do something with — calling
+   it triggers the actual HTML or turbo_stream render, choosing the format
+   based on `@page.number` (page 1 always forces `:html`, so a plain page
+   load never renders the turbo_stream template even if the request headers
+   suggest otherwise).
+
+**Correct controller pattern:**
+```ruby
+def index
+  @page_title     = "Component Suggestions"
+  @turbo_tbody_id = "component_suggestions"
+  @load_more_id   = "load_more_component_suggestions"
+  @index_path     = admin_component_suggestions_path(query: params[:query].presence)
+
+  scope = ComponentSuggestion.order(:order_number)
+  scope = scope.order_number_contains(params[:query]) if params[:query].present?
+
+  paginate(scope)   # last line — sets @page AND renders. Do not assign the return value.
+end
+```
+
+This also fully explains the pre-existing "paginate — NEVER assign the
+return value" rule from PROGRAMMING_GENERAL.md / SESSION_HANDOVER.md
+(`@page = paginate(scope)` overwrites `@page` with whatever `paginate`
+returns from the `respond_to` call, not the Page object `set_page_and_
+extract_portion_from` just built).
+
+**Why this rule exists (Session 67, July 2026):**
+Before reading the concern file, the Session 67 draft of
+`Admin::ComponentSuggestionsController#index` assumed `paginate` set an ivar
+named after the model (`@component_suggestions`) and could be called as an
+ordinary data-loading step with the render happening afterward as usual.
+Reading `decor/app/controllers/concerns/pagination.rb` directly (rather than
+inferring from one example view) corrected both assumptions before any
+broken code shipped.
+
+---
+
 
 ## multi-table ORDER BY — Wrap in Arel.sql()
 

@@ -1,4 +1,24 @@
-<%# decor/app/views/components/_form.html.erb - version 1.9 %>
+<%# decor/app/views/components/_form.html.erb - version 1.12 %>
+<%# v1.12 (Session 70): Owner Part Number feature. Added a "Component Owner %>
+<%#   Part Number" text field to Row 2, between the component's own DEC Part %>
+<%#   Number and DEC Serial Number fields (grouping the three identifier %>
+<%#   fields together). Row 2 grid widened from grid-cols-4 to grid-cols-5 to %>
+<%#   fit the new column. Field permitted in components_controller.rb v2.1. %>
+<%#   No JS/Stimulus wiring needed — Owner Part Number is a plain text field, %>
+<%#   not part of the component-suggestion typeahead (that only concerns %>
+<%#   order_number/description/serial_number, per component_suggestion_controller.js). %>
+<%# v1.11: UI rename — "Order Number" -> "DEC Part Number", "Serial Number" -> %>
+<%#   "DEC Serial Number", wherever those phrases appear as label text or in %>
+<%#   descriptive comments (both the Computer* read-only fields and the %>
+<%#   Component* editable fields). Field/attribute names (:order_number, %>
+<%#   :serial_number, order_number_verified) unchanged. %>
+<%# v1.10 (Session 68): Edit Component UI change — removed the static "max-h-60" %>
+<%#   class from the suggestion dropdown <ul>. Height is now set dynamically by %>
+<%#   component_suggestion_controller.js v1.1 (_applyViewportAwareHeight) so the %>
+<%#   dropdown can show more rows (endpoint limit raised 10 -> 100) while never %>
+<%#   extending past the bottom of the viewport. No other markup changed — the %>
+<%#   auto-accept-on-single-match removal and the bracketed description/category %>
+<%#   format are entirely JS-side changes with no corresponding erb edit needed. %>
 <%# v1.9 (Session 64): Component Suggestions Phase 2. %>
 <%#   Wired the component-suggestion Stimulus controller onto the form_with tag, %>
 <%#   with data-component-suggestion-url-value pointing at component_suggestions_path. %>
@@ -24,7 +44,7 @@
 <% owner_computers = Current.owner.computers.includes(:computer_model).to_a %>
 
 <%# Build option array for f.select: [display_label, value, html_option_attributes] %>
-<%# The full label (shown while browsing) is "Model  /  Order  /  Serial". %>
+<%# The full label (shown while browsing) is "Model  /  DEC Part Number  /  DEC Serial Number". %>
 <%# data-model-name carries just the model name for the post-selection collapsed display. %>
 <% computer_options = owner_computers.map { |c|
      full_label = [
@@ -50,7 +70,7 @@
       } do |f| %>
   <%= render "common/record_errors", record: component %>
 
-  <%# ─── Row 1: Computer Model | Computer Order Number | Computer Serial Number ─── %>
+  <%# ─── Row 1: Computer Model | Computer DEC Part Number | Computer DEC Serial Number ─── %>
   <%# %>
   <%# Stimulus controller wraps all three columns so it can reach all three targets. %>
   <%# data-computer-select-computers-value carries the JSON map for order/serial lookup. %>
@@ -83,10 +103,10 @@
       <p class="mt-1 text-xs text-stone-500">Leave blank if this is a spare component not attached to a computer.</p>
     </div>
 
-    <%# Computer Order Number — read-only, auto-filled by Stimulus. %>
+    <%# Computer DEC Part Number — read-only, auto-filled by Stimulus. %>
     <%# No name attribute: must not be submitted (value belongs to the Computer record). %>
     <div>
-      <label class="block text-sm font-medium text-stone-700">Computer Order Number</label>
+      <label class="block text-sm font-medium text-stone-700">Computer DEC Part Number</label>
       <input type="text"
              readonly
              tabindex="-1"
@@ -96,9 +116,9 @@
       <p class="mt-1 text-xs text-stone-500">Auto-filled from the selected computer.</p>
     </div>
 
-    <%# Computer Serial Number — read-only, auto-filled by Stimulus. %>
+    <%# Computer DEC Serial Number — read-only, auto-filled by Stimulus. %>
     <div>
-      <label class="block text-sm font-medium text-stone-700">Computer Serial Number</label>
+      <label class="block text-sm font-medium text-stone-700">Computer DEC Serial Number</label>
       <input type="text"
              readonly
              tabindex="-1"
@@ -109,8 +129,9 @@
     </div>
   </div>
 
-  <%# ─── Row 2: Component Type | Component Order Number | Component Serial Number | Condition ─── %>
-  <div class="grid grid-cols-4 gap-4">
+  <%# ─── Row 2: Component Type | Component DEC Part Number | Component Owner Part Number | Component DEC Serial Number | Condition ─── %>
+  <%# Widened Session 70 from grid-cols-4 to grid-cols-5 to fit the new Owner Part Number field. %>
+  <div class="grid grid-cols-5 gap-4">
     <div>
       <%= f.label :component_type_id, "Component Type", class: "block text-sm font-medium text-stone-700" %>
       <%# Tom Select applied: searchable, consistent UX with model selects elsewhere. %>
@@ -123,7 +144,7 @@
     </div>
 
     <div class="relative">
-      <%= f.label :order_number, "Component Order Number", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.label :order_number, "Component DEC Part Number", class: "block text-sm font-medium text-stone-700" %>
       <%# Hidden field tracks whether the current order_number came from an %>
       <%# accepted suggestion. Defaults to the persisted value so editing an %>
       <%# existing verified component doesn't silently reset the flag unless %>
@@ -140,16 +161,35 @@
             } %>
       <%# Dropdown list rendered by the Stimulus controller. Starts hidden; %>
       <%# absolutely positioned so it overlays content below without shifting layout. %>
+      <%# v1.10 (Session 68): static "max-h-60" removed — the JS controller now sets %>
+      <%# an inline max-height on render (component_suggestion_controller.js v1.1, %>
+      <%# _applyViewportAwareHeight), computed from the remaining space between this %>
+      <%# input and the bottom of the viewport, so the dropdown (which can now hold %>
+      <%# up to 100 rows, up from 10) never extends past the bottom of the page. %>
+      <%# "overflow-auto" is kept as a class since scrolling is still always wanted; %>
+      <%# only the height cap moved from a static class to a dynamic inline style. %>
       <ul data-component-suggestion-target="dropdown"
-          class="hidden absolute z-10 w-full mt-1 bg-white border border-stone-300 rounded shadow-lg max-h-60 overflow-auto"></ul>
+          class="hidden absolute z-10 w-full mt-1 bg-white border border-stone-300 rounded shadow-lg overflow-auto"></ul>
       <p class="mt-1 text-xs text-stone-500">Maximum 20 characters.</p>
     </div>
 
+    <%# Component Owner Part Number — Session 70. Plain text field, no typeahead. %>
+    <%# Defaults to "-" server-side (component.rb before_validation) if left blank — %>
+    <%# not pre-filled here so an intentionally-blank submission still shows the %>
+    <%# placeholder default consistently rather than duplicating that logic in the view. %>
     <div>
-      <%= f.label :serial_number, "Component Serial Number", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.label :owner_part_number, "Component Owner Part Number", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.text_field :owner_part_number, maxlength: 20, class: field_classes,
+            placeholder: "-" %>
+      <p class="mt-1 text-xs text-stone-500">Maximum 20 characters. Defaults to "-" if left blank.</p>
+    </div>
+
+    <div>
+      <%= f.label :serial_number, "Component DEC Serial Number", class: "block text-sm font-medium text-stone-700" %>
       <%= f.text_field :serial_number, maxlength: 20, class: field_classes,
+            placeholder: "-",
             data: { "component-suggestion-target": "serialNumberInput" } %>
-      <p class="mt-1 text-xs text-stone-500">Maximum 20 characters.</p>
+      <p class="mt-1 text-xs text-stone-500">Maximum 20 characters. Defaults to "-" if left blank.</p>
     </div>
 
     <div>

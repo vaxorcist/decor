@@ -1,4 +1,16 @@
-<%# decor/app/views/computers/_computer.html.erb - version 1.10 %>
+<%# decor/app/views/computers/_computer.html.erb - version 1.12 %>
+<%# v1.12 (Session 71): Owner Part Number feature — added the missing "Owner %>
+<%#   Part Number" cell, matching the header added in index.html.erb v1.11. %>
+<%#   This partial is shared by both /computers and /peripherals (same %>
+<%#   controller, device_context-scoped). Placed after DEC Serial Number, %>
+<%#   matching computers/_form.html.erb v2.7's field order. NOT NULL column — %>
+<%#   .presence || "—" pattern kept for defensive consistency with the %>
+<%#   neighbouring DEC Part/Serial Number cells, even though owner_part_number %>
+<%#   always has a value ("-" at minimum) once the Session 70 migration runs. %>
+<%# v1.11: UI rename — updated inline comments to match the renamed column %>
+<%#   headers in index.html.erb v1.10 ("Model" -> "Computer Model", %>
+<%#   "Order Number" -> "DEC Part Number", "Serial Number" -> "DEC Serial %>
+<%#   Number"). Comment-only change; no cell markup or data affected. %>
 <%# v1.10 (Session 22): Removed the Type column cell entirely. The Type column %>
 <%#   header was removed from index.html.erb at the same time — the Computers page %>
 <%#   always shows computers (type is implicit) and the Appliances page always shows %>
@@ -18,19 +30,24 @@
     <%= link_to computer.owner.user_name, computer.owner, class: "text-indigo-600 hover:text-indigo-900" %>
   </td>
 
-  <!-- Model -->
+  <!-- Computer Model -->
   <td class="px-4 py-3 whitespace-nowrap font-medium text-stone-900">
     <%= link_to computer.computer_model.name, computer, class: "text-indigo-600 hover:text-indigo-900" %>
   </td>
 
-  <!-- Order Number -->
+  <!-- DEC Part Number -->
   <td class="px-4 py-3 whitespace-nowrap text-stone-600">
     <%= computer.order_number.presence || "—" %>
   </td>
 
-  <!-- Serial Number -->
+  <!-- DEC Serial Number -->
   <td class="px-4 py-3 whitespace-nowrap text-stone-600">
     <%= computer.serial_number.presence || "—" %>
+  </td>
+
+  <!-- Owner Part Number -->
+  <td class="px-4 py-3 whitespace-nowrap text-stone-600">
+    <%= computer.owner_part_number.presence || "—" %>
   </td>
 
   <!-- Condition -->

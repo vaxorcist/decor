@@ -1,5 +1,30 @@
 # COMMON_BEHAVIOR.md
-# version 2.7
+# version 3.0
+# Session 71: File Transfer Protocol — replaced three separate workaround rules
+#   (Download File Naming's bare-name/#-prefix-on-collision convention, Output
+#   Path Collision's short-prefix-plus-underscore convention, and Upload File
+#   Naming's one-file-per-message convention) with a single unified scheme:
+#   Claude generates a shell script to export needed files (from the real repo)
+#   into decor/export/ using @-encoded flat names (full path, / → @, all dots
+#   except the true extension → @), and generates a companion placement script
+#   for delivered files staged in decor/import/. Both directories are gitignored.
+#   This was the user's idea, proposed to solve the repeated-basename collision
+#   problem and the browser dot-mangling problem structurally rather than by
+#   naming convention. The three superseded rules are removed rather than kept
+#   alongside the new one, to avoid running two systems in parallel.
+# Session 69: Added a real example to the existing "Token Usage Reporting"
+#   rule (rule already existed — this was a violation of it, not a new rule).
+#   A response that followed a 15-file delivery omitted the token estimate
+#   entirely. Caught by the user asking "Where is the estimated Token Usage??"
+#   rather than self-caught.
+# Session 67: Added "Flagging a Guess Does Not Satisfy Never-Guess" rule.
+#   Real example: index.turbo_stream.erb was written from the general Rails/
+#   Turbo convention (not an unseen project file), explicitly labeled as
+#   inferred, and handed over for the user to verify. The labeling doesn't
+#   change what it is — a guess — and shifts the verification burden onto
+#   the user instead of asking for the real file. The correct move was to
+#   request the actual precedent file, which is what happened only after
+#   the user pointed this out directly.
 # Session 55: Output Path Collision — added rule: when two or more files in the
 #   same session share the same base filename, write them to /mnt/user-data/outputs/
 #   using a short prefix + underscore to prevent silent overwriting.
@@ -32,7 +57,9 @@
 
 **Universal Rules for All Interactions with This User**
 
-**Last Updated:** April 26, 2026 (v2.7: Output Path Collision rule added; Session 55)
+**Last Updated:** July 18, 2026 (v3.0: File Transfer Protocol — export/import
+  scripts with @-encoded flat filenames replace the old bare-name/#-prefix,
+  output-path-collision, and one-file-per-message upload rules; Session 71)
 
 ---
 
@@ -176,6 +203,50 @@ The rules set is not self-enforcing. It requires:
 
 ---
 
+## Flagging a Guess Does Not Satisfy Never-Guess (MANDATORY, learned Session 67)
+
+**RULE: If a file's exact content is unknown, writing a plausible version
+and labeling it as inferred/unverified is NOT a substitute for requesting
+the actual file. It is still a guess — labeling it only shifts the burden
+of verification onto the user instead of Claude asking for what's missing.**
+
+The Never-Guess principle (SESSION_HANDOVER.md "NEVER GUESS RULE") already
+covers path helpers, method names, and behavior. This rule closes a gap:
+it applies equally to entire file contents, even when Claude is transparent
+about the fact that it's guessing.
+
+**Wrong — flagged but still shipped as a deliverable:**
+```
+[Claude writes index.turbo_stream.erb from the general Rails/Turbo
+"append + replace" idiom, adds a comment block saying "FLAGGED — WRITTEN
+FROM CONVENTION, NOT COPIED FROM AN EXISTING FILE... please diff this
+against the real file before treating it as verified" — and delivers it
+as a numbered file alongside genuinely-verified files in the same response.]
+```
+
+**Correct — ask for the file instead:**
+```
+"I don't have decor/app/views/software_items/index.turbo_stream.erb (or an
+equivalent) to confirm this project's exact shape for this pattern. Could
+you upload it? I'll write the new file from that rather than from the
+general convention."
+```
+
+**Why this rule exists (Session 67, July 2026):**
+`admin/component_suggestions/index.turbo_stream.erb` was written from the
+standard Rails/Turbo "append new rows, replace the load-more control" idiom,
+clearly labeled in its own header comment as inferred rather than copied
+from an existing file, and delivered as a numbered file in the same batch
+as several genuinely file-verified deliverables. The user pointed out that
+this was a Never-Guess violation regardless of the disclosure — the
+labeling doesn't change what the artifact is, and it puts verification work
+on the user that should have been resolved by asking for the real file
+before writing anything. (In this instance the guess turned out to match
+the real file once uploaded — but that was luck, not a justification for
+the approach.)
+
+---
+
 ## File Delivery — MANDATORY
 
 ### Always Present Files for Download
@@ -207,46 +278,69 @@ cause placement errors. Always give the full path.
 After delivering 11 files, the placement instructions listed bare filenames only.
 User had to ask for the full paths explicitly.
 
-### Download File Naming
+### File Transfer Protocol — Export/Import Scripts (Session 71)
 
-- ✅ Use the bare filename as the download name (e.g. `show.html.erb`, `routes.rb`)
-- ✅ Prefix with the immediate parent directory **only** when two or more files
-  in the same response share the same filename (e.g. two `show.html.erb` files)
-- ✅ Use `#` as the separator between directory and filename
-  (e.g. `data_transfers#show.html.erb`, `owners#show.html.erb`)
-- ❌ Do NOT add a directory prefix when the filename is already unique in the response
-- ❌ NEVER prefix a file that lives in a subdirectory if its filename is unique —
-  the subdirectory path is irrelevant to the download name
-- ❌ Do NOT use `_` or `/` as the separator (indistinguishable from underscores
-  in the filename; `/` implies a path)
+Replaces the old bare-filename/prefix-on-collision download rule, the old
+per-file output-path-collision rule, and the old one-file-per-message upload
+rule (all three previously lived in this section; see the changelog at the
+top of this file for their history). All three existed to work around the
+same underlying problem — Rails' repeated basenames (`_form.html.erb`,
+`index.html.erb`, etc.) across many directories, plus the browser's
+dot-to-underscore mangling on upload. The export/import script approach
+solves both problems structurally instead of by naming convention, so the
+older workaround rules no longer apply.
 
-**The prefix rule in one sentence:**
-A prefix exists solely to resolve a filename collision. If there is no collision,
-there is no prefix — regardless of where the file lives in the project tree.
+**Encoding scheme:** flatten the full relative path (from the `decor/` root),
+replacing `/` with `@`, and replacing every dot except the true file
+extension's dot with `@` too — so each flattened name contains exactly one
+literal `.`. One dot means the browser's upload mangling can't trigger, and
+the full path being encoded means collisions can't happen either.
+```
+app/views/admin/component_suggestions/index.html.erb
+  → app@views@admin@component_suggestions@index@html.erb
+app/views/computers/_form.html.erb
+  → app@views@computers@_form@html.erb
+config/routes.rb
+  → config@routes.rb
+```
 
-**Examples:**
+**When Claude needs files from the user:**
+- ✅ Generate a shell script that copies the needed files from their real
+  project locations into `decor/export/`, writing each with the @-encoded
+  flat name above
+- ✅ The script assumes it is run from within `decor/export/` — paths to the
+  source files are relative (e.g. `../app/views/...`)
+- ✅ Tell the user to run the script, then upload everything now sitting in
+  `decor/export/` — no manual renaming needed, no collision risk
+- ❌ Do NOT ask the user to hunt down and upload files one at a time anymore
+- ❌ Do NOT ask the user to upload same-named files in separate messages —
+  the flat @-encoding makes that workaround unnecessary
 
-Single `show.html.erb` in the response → download name: `show.html.erb`
+**When Claude delivers files to the user:**
+- ✅ Write every delivered file using its @-encoded flat name, both as the
+  path in `/mnt/user-data/outputs/` and as the download name shown via
+  `present_files` — this single name serves both purposes now
+- ✅ Also generate a placement shell script that copies each delivered file
+  from `decor/import/` back to its real path under `decor/`
+- ✅ The script assumes it is run from within `decor/import/` — destination
+  paths are relative (e.g. `../app/views/...`) — and uses `mkdir -p` for any
+  destination directory that doesn't exist yet
+- ✅ Tell the user to move the delivered files into `decor/import/`, then run
+  the script from inside that directory
+- ❌ Do NOT apply the old bare-filename / `#`-prefix-on-collision naming to
+  delivered files anymore — the @-encoded name is now the only naming rule
+- ❌ Do NOT write two delivered files to the same output path — this is now
+  structurally impossible under @-encoding (the full path is in the name),
+  but stay alert regardless
 
-Two `show.html.erb` files in the same response → download names:
-  `data_transfers#show.html.erb` and `owners#show.html.erb`
+**`decor/export/` and `decor/import/` are both `.gitignore`d** (Session 71) —
+both are transient staging directories and are never committed.
 
-`routes.rb` is always unique → download name: `routes.rb` (no prefix needed)
-
-`admin/site_texts_controller.rb` is the only controller in the response →
-  download name: `site_texts_controller.rb` (not `admin#site_texts_controller.rb`)
-
-**Real example (Session 18, March 6, 2026):**
-When delivering 11 files, several files received unnecessary directory prefixes
-(e.g. `admin#site_texts_controller.rb` when no naming collision existed) and
-used the wrong separator character. Three rules were broken simultaneously:
-no prefix when unique; use `#` not `_`; and separators are only for collisions.
-All three rules already existed — they were simply not checked before naming.
-
-**Real example (Session 20, March 8, 2026):**
-`admin/site_texts_controller.rb` was the only controller delivered in the response.
-It was named `admin_site_texts_controller.rb` in the download — unnecessary prefix,
-wrong separator. One controller, no collision, no prefix needed.
+**Single ad-hoc file exchanges don't need a script.** If only one file is
+being requested or delivered in a response, a script is unnecessary ceremony —
+just name the one file normally (full path stated in prose, correct dots per
+the rule below). The script protocol is for **multi-file** transfers, which
+is where the old rules were actually failing.
 
 ### Output File Naming — Never Substitute Underscores for Dots
 
@@ -266,52 +360,6 @@ correct name with dots.
 user correctly flagged this: "You sent me a file named application_html.erb, but
 it had to be named application.html.erb — That should not have happened!"
 The upload/download constraint was confused and applied in the wrong direction.
-
-### Output Path Collision — Use Prefixed Names for Same-Filename Files
-
-- ✅ When two or more files delivered in the same session share the same base
-  filename (e.g. multiple `index.html.erb` files), write each to a **distinct**
-  path in `/mnt/user-data/outputs/` using a short prefix + underscore
-  (e.g. `home_index.html.erb`, `admin_owners_index.html.erb`)
-- ✅ The download display name shown to the user still follows the `#` separator
-  rule (e.g. `home#index.html.erb`, `admin_owners#index.html.erb`)
-- ❌ NEVER write two different files to the same output path — the second `cp` or
-  `create_file` silently overwrites the first and the earlier file is lost
-
-**Why this matters:**
-The `/mnt/user-data/outputs/` directory is a flat namespace shared across the
-entire session. If two views are both written to `outputs/index.html.erb`, the
-second destroys the first with no warning. The user only ever sees the second file.
-
-**Real example (Session 55, April 26, 2026):**
-`decor/app/views/home/index.html.erb` (v4.6) was written to `outputs/index.html.erb`
-early in the session. Later, `decor/app/views/admin/owners/index.html.erb` (v1.3)
-was also written to `outputs/index.html.erb`, silently overwriting the home view.
-When the home view was needed again for a follow-up edit, it had to be re-uploaded
-by the user — wasting tokens and time.
-
-### Upload File Naming
-
-The browser uses the bare filename as the upload key. If two files with the
-same name (e.g. `show.html.erb` from different directories) are attached to
-the same message, the second silently overwrites the first — Claude only ever
-sees one of them.
-
-- ✅ Upload same-named files in **separate answers** (one file per message)
-- ✅ After each upload, Claude will confirm which file it received before asking for the next
-- ❌ Do NOT rename files before uploading — too much effort and error-prone
-- ❌ Do NOT attach two same-named files in one message
-
-**Example:**
-```
-Answer 1: attach decor/app/views/owners/show.html.erb
-Answer 2: attach decor/app/views/computers/show.html.erb
-```
-
-**Why this matters (Session 12, March 1, 2026):**
-Both `owners/show.html.erb` and `computers/show.html.erb` were attached in the
-same message. The second upload (computers) overwrote the first (owners) in the
-context, so Claude only saw one of them and had to ask for the other separately.
 
 ---
 
@@ -395,6 +443,17 @@ No system warning, 5 large docs loaded:
            only; trust your UI over this number
   WRONG:   **Token Usage (estimate):** ~8,000 / 200,000 (~4% used) ← ignores base cost
 ```
+
+**Real example (Session 69, July 16, 2026):**
+A response that delivered 15 renamed files (a large multi-file UI rename task)
+ended with a closing summary and separator but no token estimate at all —
+not even the "omit it and get called out" fallback; it was simply missing.
+The rule ("NEVER omit the token estimate on a response that follows a file
+delivery") already existed and was not new — this was a plain miss, caught
+only because the user asked "Where is the estimated Token Usage??" in the
+next message. No new mechanism is needed here beyond re-emphasizing: the
+token estimate line is part of every substantive response's closing block,
+the same as the separator lines — check for it the same way.
 
 ---
 

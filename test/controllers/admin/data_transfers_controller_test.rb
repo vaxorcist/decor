@@ -1,5 +1,16 @@
 # decor/test/controllers/admin/data_transfers_controller_test.rb
-# version 1.3
+# version 1.4
+# v1.4 (Session 71 — test repair): "import owner_collection for specific
+#   owner creates records" hardcoded an 8-column data row (the pre-Session-70
+#   column order) below csv << OwnerExportService::COMPUTER_SECTION_HEADERS,
+#   which Session 70 widened to 9 columns (added owner_part_number).
+#   CSV::Row pairs header→value POSITIONALLY, so the shift produced a
+#   garbled row that was treated as an existing-record duplicate (or failed
+#   validation silently) — "Computer.count didn't change by 1, but by 0".
+#   Same root cause and fix as data_transfers_controller_test.rb v1.5 (the
+#   non-admin sibling of this file): new private computer_row() helper maps
+#   named values onto the ACTUAL COMPUTER_SECTION_HEADERS constant at
+#   runtime instead of a hardcoded column list.
 # v1.3 (Session 50): Removed OwnerExportService::CSV_HEADERS references.
 #   Two tests updated:
 #
@@ -358,13 +369,13 @@ class Admin::DataTransfersControllerTest < ActionDispatch::IntegrationTest
   test "import owner_collection for specific owner creates records" do
     login_as(@alice)
 
-    # Per-section format (v1.7+): sentinel + column-declaration row + data rows.
-    # COMPUTER_SECTION_HEADERS: record_type, model, order_number, serial_number,
-    #   condition, run_status, history, barter_status (8 columns).
+    # Per-section format (v1.7+): sentinel + column-declaration row + data row.
+    # computer_row() maps named values onto the actual column order at
+    # runtime (see v1.4 header comment) instead of a hardcoded 8-column list.
     csv_content = CSV.generate(force_quotes: true) do |csv|
       csv << ["! --- computers ---"]
       csv << OwnerExportService::COMPUTER_SECTION_HEADERS
-      csv << ["computer", "PDP-11/70", nil, "ADMIN-IMPORT-SN-01", nil, nil, nil, nil]
+      csv << computer_row("computer", "PDP-11/70", serial_number: "ADMIN-IMPORT-SN-01")
     end
 
     assert_difference "Computer.count", 1 do
@@ -407,6 +418,27 @@ class Admin::DataTransfersControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+  # Builds a computer/peripheral row by mapping named values onto the ACTUAL
+  # OwnerExportService::COMPUTER_SECTION_HEADERS column order at runtime,
+  # rather than hardcoding a fixed position list (see v1.4 header comment).
+  # Mirrors the identical helper in data_transfers_controller_test.rb v1.5.
+  def computer_row(record_type, model, serial_number:, order_number: nil,
+                    owner_part_number: nil, condition: nil, run_status: nil,
+                    history: nil, barter_status: nil)
+    values_by_header = {
+      "record_type"       => record_type,
+      "model"             => model,
+      "order_number"      => order_number,
+      "owner_part_number" => owner_part_number,
+      "serial_number"     => serial_number,
+      "condition"         => condition,
+      "run_status"        => run_status,
+      "history"           => history,
+      "barter_status"     => barter_status
+    }
+    OwnerExportService::COMPUTER_SECTION_HEADERS.map { |header| values_by_header[header] }
+  end
 
   def csv_upload(content, filename: "admin_import_test.csv", content_type: "text/csv")
     tempfile = Tempfile.new(["admin_import_test", ".csv"])

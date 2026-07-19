@@ -1,11 +1,45 @@
 # decor/app/models/component.rb
-# version 1.5
+# version 1.6
+# v1.6 (Session 70): Owner Part Number feature — IMPLEMENTED.
+#   New owner_part_number VARCHAR(20) column (migration 20260716000100).
+#   Confirmed design (Ulli):
+#     - owner_part_number defaults to "-" when blank (data-entry convenience).
+#     - serial_number ALSO now defaults to "-" when blank and is NOW REQUIRED
+#       (presence: true) — the previous allow_blank: true is REMOVED. This
+#       resolves the Computer/Component asymmetry flagged during Session 69
+#       design consultation: both models now behave the same way for both
+#       fields.
+#     - Both default assignments use before_validation, NOT before_save — see
+#       RAILS_SPECIFICS.md "before_validation vs before_save": a before_save
+#       callback runs AFTER presence validations, so a blank value would be
+#       rejected before the default ever had a chance to fill it in.
+#     - Uniqueness scope widened from (owner_id, component_type_id) to
+#       (owner_id, component_type_id, owner_part_number) — the serial_number
+#       uniqueness check now effectively covers all four columns together.
+#       Confirmed: the existing component_type_id dimension is KEPT.
+#   Matches the DB unique index added in migration 20260716000200
+#   (index_components_on_owner_type_opn_and_serial_number).
+#
+#   IMPORTANT — spares behaviour change (Option B, confirmed Session 70):
+#   Session 28 intentionally allowed multiple unserialized spares of the same
+#   component_type for the same owner (that's what allow_blank: true was
+#   for). Removing allow_blank AND uniformly defaulting both new/changed
+#   fields to "-" means: a SECOND spare of the same type for the same owner
+#   with no distinguishing Owner Part Number or DEC Serial Number will now be
+#   REJECTED by the uniqueness validation below (and by the matching DB
+#   index) at save time. Ulli explicitly chose this over auto-assigning a
+#   unique placeholder (Option A) — going forward, the user must supply a
+#   real distinguishing value themselves for a second such spare. Existing
+#   pre-migration collisions were already resolved by a one-time
+#   "SPARE-#{id}" backfill in migration 20260716000100 — this is a one-time
+#   data fix, not an ongoing mechanism.
 # v1.5 (Session 28): Added serial_number uniqueness validation scoped to
 #   component_type (mirrors the DB unique index added in migration 20260316110000).
 #   allow_blank: true — components without a serial number are not subject to
 #   this validation (multiple spare boards of the same type are permitted).
 #   The constraint is global (not per-owner): a serial number identifies a specific
 #   physical unit; no two owners can claim the same component type + serial number.
+#   [Superseded by v1.6 above — allow_blank removed, scope widened.]
 # v1.4 (Session 21): Added barter_status enum.
 # v1.3 (Session 13): Added component_category enum (integral: 0, peripheral: 1).
 
@@ -37,18 +71,32 @@ class Component < ApplicationRecord
   # All barter values are only displayed to logged-in members.
   enum :barter_status, { no_barter: 0, offered: 1, wanted: 2 }, prefix: true
 
+  # Default owner_part_number and serial_number to "-" when left blank.
+  # MUST be before_validation, not before_save — see RAILS_SPECIFICS.md
+  # "before_validation vs before_save". Applies to both fields identically.
+  before_validation :default_owner_part_number
+  before_validation :default_serial_number
+
+  # serial_number is now REQUIRED (Session 70 — allow_blank removed). Every
+  # component has a serial_number of at least "-" after the before_validation
+  # default above runs.
+  validates :serial_number, presence: true, length: { maximum: 20 }
+  validates :owner_part_number, presence: true, length: { maximum: 20 }
+
   # serial_number uniqueness: one owner cannot have two components of the same
-  # type with the same serial number. Different owners may share the same
-  # type+serial combination (owners often invent their own replacement numbering
-  # schemes, so cross-owner collisions are expected and valid).
-  # This validation mirrors the DB unique index on (owner_id, component_type_id,
-  # serial_number). allow_blank skips the check when serial_number is nil or
-  # empty — multiple unserialised spares belonging to the same owner and type
-  # are permitted.
+  # type with the same Owner Part Number AND the same DEC Serial Number
+  # combination. Different owners may repeat the same type+owner-part-number+
+  # serial combination (owners often invent their own numbering schemes, so
+  # cross-owner collisions are expected and valid).
+  #
+  # Widened Session 70 (Owner Part Number feature) from a 2-column scope
+  # (owner_id, component_type_id) to this 3-column scope — combined with the
+  # validated serial_number attribute itself, the full uniqueness check now
+  # covers all four columns. allow_blank REMOVED — see the class-header
+  # comment above for the spares behaviour change this causes going forward.
   validates :serial_number,
-            uniqueness: { scope: [:owner_id, :component_type_id],
-                          message: "has already been taken for this component type" },
-            allow_blank: true
+            uniqueness: { scope: [:owner_id, :component_type_id, :owner_part_number],
+                          message: "combination already exists for this component type and Owner Part Number" }
 
   # Search scope that searches across component type, owner name, computer model,
   # and description.
@@ -71,5 +119,20 @@ class Component < ApplicationRecord
         pattern, pattern, pattern, pattern
       )
       .distinct
+  end
+
+  private
+
+  # Owner Part Number — data-entry convenience. The user is never forced to
+  # invent a value; leaving the field blank stores "-" instead.
+  def default_owner_part_number
+    self.owner_part_number = "-" if owner_part_number.blank?
+  end
+
+  # DEC Serial Number — same convenience, confirmed Session 70. Previously
+  # a blank serial_number was permitted outright (allow_blank: true); it now
+  # silently becomes "-" instead, and the uniqueness check applies to it.
+  def default_serial_number
+    self.serial_number = "-" if serial_number.blank?
   end
 end

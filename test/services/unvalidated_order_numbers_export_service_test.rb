@@ -1,5 +1,13 @@
 # decor/test/services/unvalidated_order_numbers_export_service_test.rb
-# version 1.0
+# version 1.1
+# v1.1 (Session 71 — test repair): Session 70's Owner Part Number feature
+#   widened Component's uniqueness scope to (owner_id, component_type_id,
+#   owner_part_number, serial_number), and blank serial_number now defaults
+#   to "-" via before_validation instead of being left blank. Three
+#   Component.create! calls here used owner three + memory_board with no
+#   explicit serial_number, colliding with the charlie_vt100_terminal
+#   fixture (owner three, memory_board, already "-"/"-") and, in one case,
+#   with each other. Fixed by adding explicit distinct serial_number values.
 # NEW (Session 65): Tests for UnvalidatedOrderNumbersExportService.
 #
 # All test components are created fresh in-test and assigned to owners(:three)
@@ -45,7 +53,8 @@ class UnvalidatedOrderNumbersExportServiceTest < ActiveSupport::TestCase
       owner:                  @owner,
       component_type:         @component_type,
       order_number:           "VERIFIED-#{SecureRandom.hex(4)}",
-      order_number_verified:  true
+      order_number_verified:  true,
+      serial_number:          "SN-#{SecureRandom.hex(4)}" # avoids colliding with charlie_vt100_terminal ("-"/"-")
     )
 
     csv = CSV.parse(UnvalidatedOrderNumbersExportService.export, headers: true)
@@ -71,7 +80,8 @@ class UnvalidatedOrderNumbersExportServiceTest < ActiveSupport::TestCase
   test "includes one row per component even when the same order_number repeats" do
     shared_order_number = "SHARED-#{SecureRandom.hex(4)}"
     Component.create!(owner: @owner, component_type: @component_type,
-                       order_number: shared_order_number, order_number_verified: false)
+                       order_number: shared_order_number, order_number_verified: false,
+                       serial_number: "SN-#{SecureRandom.hex(4)}") # avoids colliding with charlie_vt100_terminal ("-"/"-")
     Component.create!(owner: @owner, component_type: @component_type,
                        order_number: shared_order_number, order_number_verified: false,
                        serial_number: "SN-#{SecureRandom.hex(4)}")
@@ -85,9 +95,11 @@ class UnvalidatedOrderNumbersExportServiceTest < ActiveSupport::TestCase
 
   test "orders rows by component id (creation order)" do
     older = Component.create!(owner: @owner, component_type: @component_type,
-                               order_number: "ORD-A-#{SecureRandom.hex(4)}", order_number_verified: false)
+                               order_number: "ORD-A-#{SecureRandom.hex(4)}", order_number_verified: false,
+                               serial_number: "SN-A-#{SecureRandom.hex(4)}")
     newer = Component.create!(owner: @owner, component_type: @component_type,
-                               order_number: "ORD-B-#{SecureRandom.hex(4)}", order_number_verified: false)
+                               order_number: "ORD-B-#{SecureRandom.hex(4)}", order_number_verified: false,
+                               serial_number: "SN-B-#{SecureRandom.hex(4)}")
 
     csv = CSV.parse(UnvalidatedOrderNumbersExportService.export, headers: true)
     older_index = csv.find_index { |r| r["order_number"] == older.order_number }

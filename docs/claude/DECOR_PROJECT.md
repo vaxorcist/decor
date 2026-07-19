@@ -1,5 +1,68 @@
 # decor/docs/claude/DECOR_PROJECT.md
-# version 2.58
+# version 2.62
+# Session 71: Owner Part Number display fix (8 URLs — owners/computers,
+#   owners/peripherals, owners/components, computers/index (+ /peripherals,
+#   shared view), components/index, and both computer/peripheral edit pages'
+#   embedded component form + list table) — all 9 affected files delivered.
+#   Also: the "Upload-collision lesson… (not yet formalized as a rule edit)"
+#   note below is now RESOLVED — see that note's updated text — via
+#   COMMON_BEHAVIOR.md v3.0's new File Transfer Protocol (export/import
+#   scripts with @-encoded flat filenames), which structurally replaces the
+#   old bare-filename/prefix-on-collision and one-file-per-message rules.
+# Session 70: Owner Part Number feature — IMPLEMENTED (11 of 12 files
+#   delivered; decor/db/schema.rb still needed to confirm the migration's
+#   actual output). All three open design questions from Session 69 answered
+#   by Ulli and implemented: (1) uniqueness scope keeps the existing
+#   model/type dimension — (owner, model/type, owner_part_number,
+#   serial_number); (2) both Computer#serial_number and Component#serial_number
+#   are now presence-required, both default to "-" via before_validation,
+#   same for the new owner_part_number field on both models; (3) spares
+#   collision resolved via a one-time migration backfill assigning
+#   "SPARE-#{id}" to any pre-existing colliding group, with Option B
+#   confirmed — NO auto-assign going forward, a second unserialized spare of
+#   the same type/owner is now rejected at save time unless the user
+#   supplies a real distinguishing value. Owner Part Number also added to
+#   CSV export/import (owner_export_service.rb / owner_import_service.rb) —
+#   computer_model_export_service.rb confirmed OUT of scope (it exports
+#   ComputerModel catalog data, not per-instance owner data). Full detail in
+#   SESSION_HANDOVER.md "Session 70 Summary". NOT YET DONE: tests (6 test
+#   files needed as Pre-Implementation Verification inputs, not yet
+#   received), bin/rails db:migrate has not been run against a real DB,
+#   schema.rb not yet regenerated/confirmed, no lint/Brakeman/bundle-audit,
+#   no git workflow — this now stacks on top of Sessions 67/68/69's
+#   already-outstanding pre-commit checklists.
+# Session 69: Two items — (1) UI Terminology Rename — IMPLEMENTED. "Model" ->
+#   "Computer Model", "Order Number" -> "DEC Part Number", "Serial Number" ->
+#   "DEC Serial Number" across all owner-facing and admin views (15 files).
+#   No column/route/attribute renames — display text only. See "UI
+#   Terminology — Established Renames (Session 69)" under Design Patterns for
+#   the full mapping future sessions must follow. (2) Owner Part Number
+#   feature — DESIGN CONSULTATION ONLY, NOT IMPLEMENTED. New VARCHAR(20)
+#   field requested for computers + components, defaulting to "-", plus a
+#   uniqueness-scope change combining it with DEC Serial Number. Three open
+#   design questions surfaced during file review (scope of the uniqueness
+#   constraint, spares-collision risk, presence semantics) — see "Owner Part
+#   Number Feature — Session 69" below. Also: this session found that
+#   Session 68's work (Component Suggestions typeahead UI refinements, per
+#   the directory tree's "Session 68 (cont'd)" file comments) has no
+#   corresponding "Session 68 Summary" in SESSION_HANDOVER.md and no Session
+#   68 changelog entry in this file's own header — the rule documents
+#   currently in the project appear to be missing Session 68's formal
+#   write-up even though Session 68's code changes clearly exist. Flagged to
+#   the user; not reconstructed from guesswork (Never-Guess).
+# Session 67: Phase 4 of Component Suggestions feature — IMPLEMENTED (was a
+#   design-only pivot in Session 66). All four confirmed requirements
+#   delivered: manual flag + widened description migration, "Download Manual
+#   Changes" admin feature, full import service rewrite (delete-all +
+#   insert_all, fixing the production timeout), and a paginated/filterable
+#   admin index (fixing the slow-load root cause — missing pagination).
+#   12 files delivered (4 NEW, 8 updated) + 4 test files updated/added.
+#   Full detail in SESSION_HANDOVER.md "Session 67 Summary". Three new rules
+#   codified into RAILS_SPECIFICS.md v3.6 and COMMON_BEHAVIOR.md v2.8 from
+#   mistakes caught and corrected mid-session (a route-naming shape confusion,
+#   a Rails enum read_attribute pitfall, and a Never-Guess violation on an
+#   inferred file that turned out to guess correctly by luck, not by rule
+#   compliance).
 # Session 66: Order number / variant — design pivot, NO IMPLEMENTATION.
 #   A full multi-column variant-split design (component_suggestions:
 #   order_number_main/order_number_variant columns; components: three-state
@@ -106,11 +169,20 @@
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** July 7, 2026 (Session 66 — Order number/variant design pivot,
-  no implementation; v2.58)
-**Current Status:** Sessions 1–65 committed, pushed, merged, deployed (Session 65
-  confirmed committed/deployed/tested on the server during Session 66). Session 66
-  itself produced design/documentation only — no application code changed.
+**Last Updated:** July 17, 2026 (Session 70 — Owner Part Number feature
+  implemented, code-complete but unmigrated/untested; v2.61)
+**Current Status:** Sessions 1–65 committed, pushed, merged, deployed. Session 67
+  Phase 4 implementation delivered and locally tested (bin/rails test passing,
+  bundle-audit clean after a json gem bump) — STILL NOT committed/pushed/deployed.
+  Session 68 (Component Suggestions typeahead UI refinements — evidenced in the
+  delivered source but with no formal Session 68 Summary in SESSION_HANDOVER.md)
+  is also sitting uncommitted, status unclear — see SESSION_HANDOVER.md "!! GAP
+  NOTICE !!" section. Session 69's UI rename (15 files) is ALSO uncommitted.
+  Session 70's Owner Part Number feature (11 files: 2 migrations, 2 models,
+  2 controllers, 2 form partials, 2 CSV services, 2 fixtures) is code-complete
+  but has NOT been migrated against a real database, has NOT been tested, and
+  has no test coverage yet — see SESSION_HANDOVER.md "Session 70 Summary" for
+  the full pre-commit checklist across all four sessions' stacked pending work.
 
 ---
 
@@ -304,6 +376,57 @@ decor//
 
 **Key file versions** (updated each session):
 
+    decor/docs/claude/DECOR_PROJECT.md                                                  v2.61 ← Session 70
+    decor/docs/claude/SESSION_HANDOVER.md                                               v71.0 ← Session 70
+    decor/db/migrate/20260716000100_add_owner_part_number_to_computers_and_components.rb v1.0 ← Session 70 NEW
+    decor/db/migrate/20260716000200_enforce_owner_part_number_constraints.rb            v1.0  ← Session 70 NEW
+    decor/app/models/computer.rb                                                        v2.2  ← Session 70
+    decor/app/models/component.rb                                                       v1.6  ← Session 70
+    decor/app/controllers/computers_controller.rb                                       v1.23 ← Session 70
+    decor/app/controllers/components_controller.rb                                      v2.1  ← Session 70
+    decor/app/views/computers/_form.html.erb                                            v2.7  ← Session 70
+    decor/app/views/components/_form.html.erb                                           v1.12 ← Session 70
+    decor/app/services/owner_export_service.rb                                          v1.11 ← Session 70
+    decor/app/services/owner_import_service.rb                                          v1.12 ← Session 70
+    decor/test/fixtures/computers.yml                                                   v1.10 ← Session 70
+    decor/test/fixtures/components.yml                                                  v1.5  ← Session 70
+    decor/docs/claude/COMMON_BEHAVIOR.md                                                v2.9  ← Session 69
+    decor/docs/claude/DECOR_PROJECT.md                                                  v2.60 ← Session 69
+    decor/docs/claude/SESSION_HANDOVER.md                                               v70.0 ← Session 69
+    decor/app/views/computers/_filters.html.erb                                         v1.7  ← Session 69
+    decor/app/views/computers/index.html.erb                                            v1.10 ← Session 69
+    decor/app/views/computers/_computer_component_form.html.erb                         v1.4  ← Session 69
+    decor/app/views/computers/_computer.html.erb                                        v1.11 ← Session 69
+    decor/app/views/components/_form.html.erb                                           v1.11 ← Session 69
+    decor/app/views/components/show.html.erb                                            v1.8  ← Session 69
+    decor/app/views/components/index.html.erb                                           v1.7  ← Session 69
+    decor/app/views/computer_statistics/index.html.erb                                  v1.2  ← Session 69
+    decor/app/views/owners/computers.html.erb                                           v1.5  ← Session 69
+    decor/app/views/owners/peripherals.html.erb                                         v1.4  ← Session 69
+    decor/app/views/owners/components.html.erb                                          v1.5  ← Session 69
+    decor/app/views/admin/component_suggestions/_form.html.erb                          v1.1  ← Session 69
+    decor/app/views/admin/component_suggestions/_filters.html.erb                       v1.1  ← Session 69
+    decor/app/views/admin/component_suggestions/index.html.erb                          v1.4  ← Session 69
+    decor/app/views/layouts/admin.html.erb                                              v2.8  ← Session 69
+    decor/docs/claude/RAILS_SPECIFICS.md                                                v3.6  ← Session 67
+    decor/docs/claude/COMMON_BEHAVIOR.md                                                v2.8  ← Session 67
+    decor/docs/claude/DECOR_PROJECT.md                                                  v2.59 ← Session 67
+    decor/db/migrate/20260707000100_add_manual_and_enlarge_description_to_component_suggestions.rb  v1.0 ← Session 67 NEW
+    decor/app/models/component_suggestion.rb                                            v1.1  ← Session 67
+    decor/app/services/component_suggestion_import_service.rb                           v2.0  ← Session 67
+    decor/app/services/manual_component_suggestions_export_service.rb                   v1.1  ← Session 67 NEW
+    decor/app/controllers/admin/component_suggestions_controller.rb                     v1.2  ← Session 67
+    decor/config/routes.rb                                                              v3.6  ← Session 67
+    decor/app/views/layouts/admin.html.erb                                              v2.7  ← Session 67
+    decor/app/helpers/admin/component_suggestions_helper.rb                             v1.0  ← Session 67 NEW
+    decor/app/views/admin/component_suggestions/_filters.html.erb                       v1.0  ← Session 67 NEW
+    decor/app/views/admin/component_suggestions/_component_suggestion.html.erb          v1.0  ← Session 67 NEW
+    decor/app/views/admin/component_suggestions/index.html.erb                          v1.1  ← Session 67
+    decor/app/views/admin/component_suggestions/index.turbo_stream.erb                  v1.0  ← Session 67 NEW
+    decor/test/models/component_suggestion_test.rb                                      v1.1  ← Session 67
+    decor/test/services/manual_component_suggestions_export_service_test.rb             v1.0  ← Session 67 NEW
+    decor/test/services/component_suggestion_import_service_test.rb                     v2.0  ← Session 67
+    decor/test/controllers/admin/component_suggestions_controller_test.rb               v1.1  ← Session 67
     decor/docs/claude/ORDER_NUMBER_VARIANT_DESIGN.md                                    v1.0  ← Session 66 NEW
     decor/docs/claude/SESSION_HANDOVER.md                                               v68.0 ← Session 66
     decor/docs/claude/DECOR_PROJECT.md                                                  v2.58 ← Session 66
@@ -487,6 +610,12 @@ decor//
   Hash form required to preserve non-contiguous integers (0 and 2).
   Do NOT renumber peripheral to 1 — that would corrupt existing DB records.
 - barter_status enum: 0=no_barter, 1=offered, 2=wanted (prefix: true)
+- owner_part_number VARCHAR(20) NOT NULL  ← Session 70 (Owner Part Number feature)
+  Defaults to "-" via before_validation when left blank (data-entry convenience).
+  serial_number is ALSO now defaulted to "-" via before_validation when blank
+  (was previously a hard validation error). Combined uniqueness scope widened
+  from (owner_id, computer_model_id) to (owner_id, computer_model_id,
+  owner_part_number, serial_number) — existing model dimension KEPT.
 
 ### ComputerModel
 - device_type enum: { computer: 0, peripheral: 2 }, prefix: true
@@ -521,16 +650,38 @@ decor//
 - order_number_verified: boolean NOT NULL, default false  ← Session 63 (Phase 1)
   true  = order_number was accepted from component_suggestions typeahead
   false = order_number typed freely (not validated against suggestions table)
+- owner_part_number VARCHAR(20) NOT NULL  ← Session 70 (Owner Part Number feature)
+  Defaults to "-" via before_validation when left blank, same as Computer.
+  serial_number's previous allow_blank: true is REMOVED — serial_number is now
+  presence: true and ALSO defaults to "-" via before_validation. This resolves
+  the Computer/Component asymmetry flagged in the Session 69 design
+  consultation. Combined uniqueness scope widened from (owner_id,
+  component_type_id) to (owner_id, component_type_id, owner_part_number,
+  serial_number) — existing type dimension KEPT.
+  BEHAVIOUR CHANGE (Option B, confirmed Session 70): Session 28 intentionally
+  allowed multiple unserialized spares of the same component_type per owner.
+  A second such spare with no distinguishing value is now REJECTED at save
+  time — no auto-assign mechanism exists going forward. Pre-existing
+  collisions were one-time-backfilled with "SPARE-#{id}" placeholders by
+  migration 20260716000100; this is a historical data fix, not an ongoing
+  behaviour.
 
-### ComponentSuggestion  ← Session 63 (Phase 1)
+### ComponentSuggestion  ← Session 63 (Phase 1), updated Session 67 (Phase 4)
 - Admin-managed lookup table for component order number autocomplete
 - validates :order_number, presence: true, uniqueness: true, length max 20
-- validates :description, length max 100, optional
+- validates :description, length max 510, optional (widened from 100 — Session 67)
 - validates :category, length max 40, optional (free text; informational display only)
 - order_number VARCHAR(20) NOT NULL, UNIQUE index
-- description  VARCHAR(100) nullable
+- description  VARCHAR(510) nullable (widened Session 67 for concatenated main+variant text)
 - category     VARCHAR(40)  nullable (NOT stored on component when suggestion accepted)
+- manual       VARCHAR(1) nullable — enum :manual, { added: "a", modified: "m" }, prefix: true
+  (Session 67). null = untouched bulk-import row (the normal case). "a" = added via
+  the admin form, permanent. "m" = modified via the admin form after originating
+  from bulk import. Read the RAW value with manual_before_type_cast, not
+  read_attribute (see RAILS_SPECIFICS.md).
 - scope :matching, ->(q) { where("order_number LIKE ?", "#{q}%").order(:order_number) }
+- scope :order_number_contains, ->(q) { where("order_number LIKE ?", "%#{q}%") } (Session 67,
+  substring match for the admin index filter — different from :matching's prefix match)
 
 ### ConnectionGroup
 - belongs_to :owner
@@ -711,6 +862,83 @@ data consistency without blocking entry of new/unknown values.
       merged, and deployed — tests passed, pre-commit checklist complete.
       No longer "not yet done."
 
+### Phase 4 — Order Number / Variant Simplification
+
+    DONE ✓ (Session 67) — all four confirmed requirements implemented.
+    (Session 66 was design-consultation only — the pivot away from the full
+    variant-split design toward the simpler concatenated-field approach.
+    See ORDER_NUMBER_VARIANT_DESIGN.md v1.0 for the shelved full design, kept
+    for reference only.)
+
+    1. Migration — DONE. decor/db/migrate/20260707000100_add_manual_and_
+       enlarge_description_to_component_suggestions.rb: nullable manual
+       VARCHAR(1) column ("a" = added, "m" = modified, null = untouched
+       bulk-import row); description widened VARCHAR(100) → VARCHAR(510).
+    2. "Download Manual Changes" admin feature — DONE. New
+       ManualComponentSuggestionsExportService (CSV of manual: "a"/"m" rows,
+       both together); new admin_component_suggestions download_manual
+       collection route; new link in the Components dropdown
+       (admin.html.erb v2.7).
+    3. Import service rewrite — DONE. ComponentSuggestionImportService v2.0:
+       unconditional delete_all + batched insert_all(unique_by: :order_number),
+       replacing the O(n) per-row exists? check that caused production
+       timeouts. See RAILS_SPECIFICS.md "insert_all Bypasses Model
+       Validations..." for the accepted tradeoffs of this approach.
+    4. Paginated + filterable admin index — DONE. Root cause of the slow
+       load confirmed by code review (not diagnosis from scratch): v1.0 had
+       NO pagination and NO filtering at all. Rewritten to follow the
+       project's established geared_pagination "Load more" infinite-scroll
+       pattern (matching software_items/computers/components), with a new
+       filter sidebar (order_number substring search + manual flag filter).
+
+    Files delivered (Session 67):
+      decor/db/migrate/20260707000100_add_manual_and_enlarge_description_to_component_suggestions.rb  NEW
+      decor/app/models/component_suggestion.rb                                    v1.0 → v1.1
+      decor/app/services/component_suggestion_import_service.rb                   v1.0 → v2.0
+      decor/app/services/manual_component_suggestions_export_service.rb          v1.0 → v1.1 NEW
+      decor/app/controllers/admin/component_suggestions_controller.rb            v1.0 → v1.2
+      decor/config/routes.rb                                                      v3.5 → v3.6
+      decor/app/views/layouts/admin.html.erb                                      v2.6 → v2.7
+      decor/app/helpers/admin/component_suggestions_helper.rb                     NEW
+      decor/app/views/admin/component_suggestions/_filters.html.erb              NEW
+      decor/app/views/admin/component_suggestions/_component_suggestion.html.erb NEW
+      decor/app/views/admin/component_suggestions/index.html.erb                 v1.0 → v1.1
+      decor/app/views/admin/component_suggestions/index.turbo_stream.erb         NEW
+
+    Test files delivered/updated (Session 67):
+      decor/test/models/component_suggestion_test.rb                            v1.0 → v1.1
+      decor/test/services/manual_component_suggestions_export_service_test.rb   NEW
+      decor/test/services/component_suggestion_import_service_test.rb           v1.0 → v2.0
+      decor/test/controllers/admin/component_suggestions_controller_test.rb     v1.0 → v1.1
+      decor/test/services/component_suggestion_export_service_test.rb          UNCHANGED — the
+        underlying ComponentSuggestionExportService is untouched by Phase 4.
+
+    Result: bin/rails test passing (900 tests, 0 failures, 0 errors) as of the
+    last run this session. bundle-audit required one unrelated dependency bump
+    (json gem, CVE-2026-54696, transitive — see RAILS_SPECIFICS.md "CI Security
+    Checks") before coming back clean.
+
+    Two mistakes made and corrected mid-session (both now codified as rules):
+      - First guess at the download_manual path helper name was wrong
+        (admin_download_manual_component_suggestions_path instead of the
+        actual download_manual_admin_component_suggestions_path) — caught by
+        running bin/rails routes before shipping. See RAILS_SPECIFICS.md
+        "Collection Routes Nested in a Namespaced Resources Block."
+      - index.turbo_stream.erb was initially written from general Rails/Turbo
+        convention rather than an actual project file, explicitly flagged as
+        such — this was still a Never-Guess violation regardless of the
+        flag. Caught by the user, not self-corrected. See COMMON_BEHAVIOR.md
+        "Flagging a Guess Does Not Satisfy Never-Guess." (The guess happened
+        to match the real file once uploaded — luck, not compliance.)
+
+    NOT YET DONE — required before this can be committed:
+      [ ] bundle exec rubocop -A / bundle exec rubocop — lint fix + verify (not run this session)
+      [ ] bin/brakeman --no-pager                      — static code security scan (not run this session)
+      [ ] Manual browser check of filters, Load more, Download Manual Changes link, re-import behavior
+      [ ] git workflow: branch → commit → push → PR → CI → merge → deploy
+      [ ] Confirm the json gem bump is also reflected on main (merge this PR, or
+          merge the Dependabot PR for the same bump, whichever comes first)
+
 ### Phase 4 — Order Number / Variant Simplification (Session 66 — design pivot, NOT implemented)
 
 A full schema-split design was fully specified in consultation this
@@ -773,6 +1001,138 @@ tested up from ~85,000 before filtering).
       decor/app/views/layouts/admin.html.erb
       decor/config/routes.rb
       decor/test/fixtures/component_suggestions.yml
+
+---
+
+## Owner Part Number Feature — Sessions 69–70 (IMPLEMENTED, unmigrated/untested)
+
+**Session 69** was design-consultation only (see git history / prior
+version of this file for the original three open questions). **Session 70**
+received Ulli's answers to all three and implemented the feature in full —
+11 of 12 planned files delivered (schema.rb regeneration is the 12th,
+pending an actual `bin/rails db:migrate` run against a real database).
+
+### Confirmed answers (Session 70) and how each was implemented
+
+**1. Uniqueness scope — KEEP the existing model/type dimension.**
+New combined uniqueness:
+`(owner, computer_model, owner_part_number, serial_number)` for Computer,
+`(owner, component_type, owner_part_number, serial_number)` for Component.
+Implemented as a Rails `uniqueness: { scope: [...] }` validation on
+`serial_number` (widened scope array) on both models, backed by a new
+4-column unique DB index on each table (migration 20260716000200).
+
+**2. Presence + defaulting — symmetric across both models and both fields.**
+`Computer#serial_number` (already `presence: true`) and
+`Component#serial_number` (previously `allow_blank: true` — REMOVED) both
+now default to `"-"` via a `before_validation` callback when left blank
+(never `before_save` — see RAILS_SPECIFICS.md "before_validation vs
+before_save"). `owner_part_number` gets the identical treatment on both
+models. This closes the asymmetry flagged in Session 69.
+
+**3. Spares collision — one-time SQL backfill, Option B (no auto-assign).**
+Migration 20260716000100 detects every `(owner_id, component_type_id)` group
+with 2+ components sharing a blank/dash `serial_number`, and assigns each
+member of a colliding group a distinct `"SPARE-#{component.id}"` placeholder
+(component.id is already globally unique, so no per-group counter is
+needed). This fixes ONLY the one-time backfill of pre-existing data.
+**Confirmed: no auto-assign mechanism going forward** (Option B). Once
+migration 20260716000200's constraint is live, a second unserialized spare
+of the same type for the same owner is rejected at save time — the user
+must supply a real distinguishing Owner Part Number or DEC Serial Number
+themselves. This is a genuine, visible behaviour change for owners who
+currently stack unlabeled spares, not just a schema detail.
+
+**4. CSV export/import — owner_export_service.rb / owner_import_service.rb
+only.** `computer_model_export_service.rb` confirmed OUT of scope — it
+exports `ComputerModel` catalog/reference data (model names only), which
+has no relationship to per-instance `owner_part_number` values; adding the
+column there would have nowhere to attach. `owner_export_service.rb` v1.11
+adds `owner_part_number` to both `COMPUTER_SECTION_HEADERS` and
+`COMPONENT_SECTION_HEADERS`. `owner_import_service.rb` v1.12 reads the new
+column (defaulting to `"-"` when absent, matching the model default) and
+widens both duplicate-detection `exists?` checks to include it.
+
+### Real behaviour change flagged from the import-side implementation (not asked, worth knowing)
+
+Previously, `OwnerImportService` never deduplicated blank-serial component
+rows at all (`if serial_number && exists?(...)` — the guard skipped the
+check entirely when `serial_number` was blank), so re-importing a CSV with
+several unserialized spares of the same type created a fresh row every
+time. Now that both `serial_number` and `owner_part_number` normalize to
+`"-"`, that guard was removed and the duplicate check is unconditional — a
+second identical `"-"/"-"` spare row of the same type in a re-import is now
+silently skipped as a duplicate, matching the same dedup behaviour
+serialized components and computers already had. Direct, unavoidable
+consequence of the Option B decision above. Worth a one-time check against
+any CSV taken before this migration if Ulli re-imports historical
+spare-heavy data.
+
+### Files delivered this session (11 of 12)
+
+    decor/db/migrate/20260716000100_add_owner_part_number_to_computers_and_components.rb  NEW
+    decor/db/migrate/20260716000200_enforce_owner_part_number_constraints.rb              NEW
+    decor/app/models/computer.rb                                       v2.1 → v2.2
+    decor/app/models/component.rb                                      v1.5 → v1.6
+    decor/app/controllers/computers_controller.rb                      v1.22 → v1.23
+    decor/app/controllers/components_controller.rb                     v2.0 → v2.1
+    decor/app/views/computers/_form.html.erb                           v2.6 → v2.7
+    decor/app/views/components/_form.html.erb                          v1.11 → v1.12
+    decor/app/services/owner_export_service.rb                        v1.10 → v1.11
+    decor/app/services/owner_import_service.rb                        v1.11 → v1.12
+    decor/test/fixtures/computers.yml                                  v1.9 → v1.10
+    decor/test/fixtures/components.yml                                 v1.4 → v1.5
+
+**12th file, not yet possible:** `decor/db/schema.rb` regeneration — requires
+actually running `bin/rails db:migrate` against a real database first,
+which has NOT happened this session. The two-migration recreation logic
+(especially the `"SPARE-#{id}"` backfill in migration 1) has never run
+against real data — this is the single highest-risk untested piece of the
+whole feature and should be the first thing verified next session.
+
+### Scope notes — deliberately NOT touched this session
+
+- The embedded Component sub-table inside `computers/_form.html.erb`
+  (columns: Type | Description | Order No. | Serial No. | Condition |
+  Trade) was left unchanged — it displays each Component's own fields via a
+  separate association, and adding an Owner Part No. column there wasn't
+  requested. Flag if wanted.
+- No index/show page display views were touched (not requested, not
+  provided this session) — Owner Part Number is only visible on the
+  edit/new forms and in CSV export/import for now.
+
+### Upload-collision lesson from this session — RESOLVED Session 71
+
+`computers/_form.html.erb` and `components/_form.html.erb` share a bare
+filename after browser dot-to-underscore mangling (`_form_html.erb`) —
+uploading them in the same session (even across separate messages, since
+the mangled name is IDENTICAL for both) meant the second upload silently
+overwrote the first on disk mid-session, and the first file had to be
+re-requested. COMMON_BEHAVIOR.md's old "Upload File Naming" rule covered
+this in principle (upload same-named files in separate messages) but didn't
+anticipate that Rails' `_form.html.erb` convention makes this collision
+routine across this entire project (every resource has one). Formalized in
+Session 71: COMMON_BEHAVIOR.md v3.0's "File Transfer Protocol —
+Export/Import Scripts" replaces one-file-per-message with @-encoded flat
+filenames, which structurally prevents this collision rather than relying
+on upload ordering.
+
+### NOT YET DONE — required before this feature can be committed
+
+    [ ] bin/rails db:migrate                          — never run against a real DB this session
+    [ ] decor/db/schema.rb                             — regenerate and review after migrating
+    [ ] Tests — 6 test files needed as Pre-Implementation Verification inputs before
+        writing test code (Never-Guess): computer_test.rb, component_test.rb,
+        owner_export_service_test.rb, owner_import_service_test.rb,
+        computers_controller_test.rb, components_controller_test.rb
+    [ ] bin/rails test                                 — not run (blocked on migrate + tests above)
+    [ ] bundle exec rubocop -A / bundle exec rubocop   — lint fix + verify
+    [ ] bin/brakeman --no-pager                        — static code security scan
+    [ ] bundle exec bundle-audit check --update        — dependency CVE scan
+    [ ] Manual browser check: both new form fields, CSV export/import round-trip
+    [ ] git workflow: branch → commit → push → PR → CI → merge → deploy
+    This now stacks on top of Sessions 67/68/69's own already-outstanding
+    pre-commit checklists (see SESSION_HANDOVER.md for the full combined list).
 
 ---
 
@@ -854,6 +1214,44 @@ Use grid-cols-[auto_1fr_auto] for left/logo/right navbars.
 ### UI Naming (Connections feature)
 - "Connection Group" → "Connection" in all user-facing text
 - "Connection Member" → "Port" in all user-facing text
+
+### UI Terminology — Established Renames (Session 69)
+
+**These are the current, correct UI labels. Any new form/view/table added in
+future sessions MUST use the right-hand column — not the legacy left-hand
+term — for these fields.** Attribute/column/route names are UNCHANGED;
+only displayed text changed.
+
+    Legacy UI label      Current UI label        Underlying attribute (unchanged)
+    ────────────────────────────────────────────────────────────────────────────
+    "Model"               "Computer Model"         computer_model_id / computer.computer_model
+    "Order Number"        "DEC Part Number"         order_number
+    "Serial Number"       "DEC Serial Number"       serial_number
+
+**Compact/abbreviated headers** (narrow table columns) follow the same
+mapping, abbreviated consistently:
+    "Order" / "Order No."   → "DEC P/N" (owners/computers.html.erb, owners/peripherals.html.erb)
+                               or "DEC Part No." (components/index.html.erb, owners/components.html.erb)
+    "Serial" / "Serial No." → "DEC S/N" or "DEC Serial No." (same file-pairing as above)
+
+**Scope confirmed with the user (Session 69):** this includes the Admin >
+Component Suggestions screens and the Components dropdown menu items
+("Re-validate DEC Part Numbers", "Download Unvalidated DEC Part Numbers") —
+i.e. the rename applies project-wide to every place these concepts are
+displayed to a user, not just the primary Computer/Component forms.
+
+**Explicitly NOT renamed (still say "order_number"/"serial_number"):**
+- CSV column headers and literal field-name references in
+  `decor/app/views/data_transfers/show.html.erb` and
+  `decor/app/views/admin/bulk_uploads/new.html.erb` — these are the actual
+  import/export contract column names; renaming them would break CSV
+  compatibility with existing exported files.
+- The downloaded CSV filename in
+  `decor/app/controllers/admin/component_order_numbers_controller.rb`
+  (`unvalidated_order_numbers_<date>.csv`) — not yet addressed; flagged for
+  the user to decide whether it's in scope.
+- Ruby/JS identifiers, method names, route helpers, DB columns, and internal
+  code comments describing *past* decisions (left as historical record).
 
 ---
 
