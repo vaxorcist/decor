@@ -1,5 +1,31 @@
 <%# decor/app/views/admin/component_suggestions/index.html.erb %>
-<%# version 1.1 %>
+<%# version 1.4 %>
+<%# v1.4: UI rename — column header "Order Number" -> "DEC Part Number". %>
+<%#   Historical comments below (Session 67/68) describing the column under its %>
+<%#   old label are left as-is for accuracy; only the live header text changed. %>
+<%# Session 68 (cont'd): v1.2's fix (dropping the page-local max-w-6xl) only %>
+<%#   removed this page's OWN extra width cap — the shared admin layout's %>
+<%#   <main class="mx-auto max-w-7xl px-6 py-6"> was still capping the page at %>
+<%#   1280px, which was still visibly too narrow on wider screens. Confirmed %>
+<%#   scope with the user: this page only, no fixed maximum at all (not just a %>
+<%#   wider fixed cap), without changing the shared layout. Switched the outer %>
+<%#   div to a "full-bleed" pattern (relative left-1/2 right-1/2 w-screen %>
+<%#   -mx-[50vw]) that breaks out of the parent's max-w-7xl and spans the full %>
+<%#   viewport width on any screen size. See the inline comment on the div %>
+<%#   itself for the mechanism and a minor scrollbar-width caveat. %>
+<%# Session 68: Two layout changes requested for this page specifically: %>
+<%#   1. "Unused margins too wide" — the outer wrapping div carried its own %>
+<%#      "max-w-6xl mx-auto" on top of the admin layout's "max-w-7xl mx-auto" %>
+<%#      (decor/app/views/layouts/admin.html.erb <main>), so this page was %>
+<%#      rendering narrower than the layout it sits inside. Removed the %>
+<%#      page-local max-w-6xl/mx-auto so the page now fills the full width %>
+<%#      already provided by the shared admin layout. Deliberately NOT %>
+<%#      touching admin.html.erb itself — that would widen every admin page, %>
+<%#      not just this one, which was not requested. %>
+<%#   2. "Order Number column 25% wider" — added table-fixed + a <colgroup> so %>
+<%#      column widths are explicit percentages instead of auto-sized by %>
+<%#      content. See the inline comment above the <colgroup> for the exact %>
+<%#      baseline assumption and the resulting widths. %>
 <%# Session 67: Phase 4 item 4 rewrite. Root cause of the slow page load %>
 <%# (Session 66 finding, confirmed by code review this session): v1.0 had NO %>
 <%# pagination and NO filtering — it rendered every ComponentSuggestion row %>
@@ -36,7 +62,20 @@
 <%# admin/software_names/index.html.erb for the CRUD actions, and %>
 <%# software_items/index.html.erb (Session 50) for the filter+pagination grid. %>
 
-<div class="px-4 max-w-6xl mx-auto mt-8">
+<div class="relative left-1/2 right-1/2 w-screen -mx-[50vw] px-6 mt-8">
+  <%# v1.3 full-bleed technique: "relative left-1/2 right-1/2 w-screen -mx-[50vw]" %>
+  <%# breaks this div out of the admin layout's centered "max-w-7xl mx-auto" %>
+  <%# container (decor/app/views/layouts/admin.html.erb <main>) and gives it the %>
+  <%# actual viewport width (100vw) instead of a percentage of its parent — so %>
+  <%# it uses all current screen width with no fixed maximum, on any screen size, %>
+  <%# without touching the shared layout or affecting any other admin page. %>
+  <%# px-6 (matches the nav's own horizontal padding) replaces the page's %>
+  <%# previous reliance on the layout's inherited px-6 for left/right breathing %>
+  <%# room, since this div no longer sits inside that padded <main>. %>
+  <%# CAVEAT: 100vw includes the browser's vertical scrollbar width, which can %>
+  <%# cause a few px of horizontal overflow on some browsers/OSes. Not addressed %>
+  <%# here since it's a minor, browser-dependent cosmetic edge case — flag if it %>
+  <%# becomes visible in practice and I'll add a scrollbar-width compensation. %>
   <div class="flex items-center justify-between mb-6">
     <h1 class="text-2xl font-semibold text-stone-800"><%= @page_title %></h1>
     <%= link_to "New Component Suggestion",
@@ -51,10 +90,29 @@
     <%# Table — takes the remaining 3 columns. %>
     <div class="col-span-3">
       <% if @page.records.any? %>
-        <table class="w-full text-sm text-left">
+        <table class="w-full table-fixed text-sm text-left">
+          <%# table-fixed + colgroup added (Session 68) so column widths are explicit %>
+          <%# percentages rather than auto-sized by content — a prerequisite for making %>
+          <%# "Order Number +25% wider" a well-defined, verifiable change rather than a %>
+          <%# vague nudge that the browser's auto layout might not honour predictably. %>
+          <%# %>
+          <%# ASSUMPTION (no prior explicit widths existed to derive this from): %>
+          <%# chosen baseline widths were Order Number 16% / Description 40% / %>
+          <%# Category 16% / Manual 12% / Actions 16% (=100%). Applying the requested %>
+          <%# +25% to Order Number: 16% * 1.25 = 20%. The 4-point difference is taken %>
+          <%# from Description (40% -> 36%), the column with the most room to spare, %>
+          <%# so the other three columns are left untouched. Resulting widths: %>
+          <%#   Order Number 20% | Description 36% | Category 16% | Manual 12% | Actions 16% %>
+          <colgroup>
+            <col style="width: 20%">
+            <col style="width: 36%">
+            <col style="width: 16%">
+            <col style="width: 12%">
+            <col style="width: 16%">
+          </colgroup>
           <thead>
             <tr class="border-b border-stone-200">
-              <th class="pb-2 pr-6 text-stone-500 uppercase text-xs font-medium">Order Number</th>
+              <th class="pb-2 pr-6 text-stone-500 uppercase text-xs font-medium">DEC Part Number</th>
               <th class="pb-2 pr-6 text-stone-500 uppercase text-xs font-medium">Description</th>
               <th class="pb-2 pr-6 text-stone-500 uppercase text-xs font-medium">Category</th>
               <th class="pb-2 pr-6 text-stone-500 uppercase text-xs font-medium">Manual</th>

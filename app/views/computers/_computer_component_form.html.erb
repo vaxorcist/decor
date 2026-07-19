@@ -1,4 +1,16 @@
-<%# decor/app/views/computers/_computer_component_form.html.erb - version 1.3 %>
+<%# decor/app/views/computers/_computer_component_form.html.erb - version 1.5 %>
+<%# v1.5 (Session 71): Owner Part Number feature — added the missing "Owner %>
+<%#   Part Number" field. This is the embedded "Add/Edit [Device]'s Component" %>
+<%#   form on the computer/peripheral edit page — Session 70 added %>
+<%#   owner_part_number to the standalone components/_form.html.erb but missed %>
+<%#   this embedded form entirely, since it's a separate partial. Row 2 widened %>
+<%#   from grid-cols-2 to grid-cols-3; existing DEC Serial Number / DEC Part %>
+<%#   Number order left untouched to minimize unrelated diff — Owner Part %>
+<%#   Number simply appended as the third column. No controller change needed: %>
+<%#   :owner_part_number is already permitted in components_controller.rb v2.1 %>
+<%#   (Session 70), which applies regardless of which form submits it. %>
+<%# v1.4: UI rename — "Order Number" -> "DEC Part Number", "Serial Number" -> %>
+<%#   "DEC Serial Number". Field names (:order_number, :serial_number) unchanged. %>
 <%# Session 10: Added Stimulus Back button alongside submit buttons for consistency. %>
 <%# Fallback: edit_computer_path (same as "Done"), since this form lives on the edit page. %>
 
@@ -24,18 +36,27 @@
     </div>
   </div>
 
-  <!-- Row 2: Serial Number | Order Number -->
-  <div class="grid grid-cols-2 gap-4">
+  <!-- Row 2: DEC Serial Number | DEC Part Number | Owner Part Number -->
+  <%# Widened Session 71 from grid-cols-2 to grid-cols-3 to fit Owner Part Number. %>
+  <div class="grid grid-cols-3 gap-4">
     <div>
-      <%= f.label :serial_number, "Serial Number", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.label :serial_number, "DEC Serial Number", class: "block text-sm font-medium text-stone-700" %>
       <%= f.text_field :serial_number, maxlength: 20, class: field_classes %>
       <p class="mt-1 text-xs text-stone-500">Maximum 20 characters.</p>
     </div>
 
     <div>
-      <%= f.label :order_number, "Order Number", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.label :order_number, "DEC Part Number", class: "block text-sm font-medium text-stone-700" %>
       <%= f.text_field :order_number, maxlength: 20, class: field_classes %>
       <p class="mt-1 text-xs text-stone-500">Maximum 20 characters.</p>
+    </div>
+
+    <%# Owner Part Number — Session 71. Defaults to "-" server-side %>
+    <%# (component.rb before_validation) if left blank, same as computers/_form.html.erb. %>
+    <div>
+      <%= f.label :owner_part_number, "Owner Part Number", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.text_field :owner_part_number, maxlength: 20, class: field_classes, placeholder: "-" %>
+      <p class="mt-1 text-xs text-stone-500">Maximum 20 characters. Defaults to "-" if left blank.</p>
     </div>
   </div>
 

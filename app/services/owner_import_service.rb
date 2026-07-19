@@ -1,5 +1,39 @@
 # decor/app/services/owner_import_service.rb
-# version 1.11
+# version 1.12
+# v1.12 (Session 70): Owner Part Number feature.
+#   process_computer_row: reads the new "owner_part_number" column (col(row,
+#     "owner_part_number").presence || "-" — no legacy fallback name exists,
+#     since the column is brand new; legacy CSVs simply normalize to "-").
+#     The pre-existing duplicate exists? check widened from
+#     (computer_model: model, serial_number:) to also include
+#     owner_part_number:, matching the new 4-column DB uniqueness scope
+#     (migration 20260716000200) and the model validation (computer.rb v2.2).
+#   process_component_row: same owner_part_number read/normalize. serial_number
+#     is ALSO now normalized to "-" when blank (component.rb v1.6 removed
+#     allow_blank — serial_number is never actually blank in the DB anymore).
+#     The duplicate exists? check is widened to include owner_part_number AND
+#     is now UNCONDITIONAL (previously `if serial_number && exists?(...)` —
+#     the `if serial_number` guard skipped the check entirely for blank-serial
+#     spares, so an unlimited number of identical unserialized spares could be
+#     created on repeated re-import). That guard is removed: serial_number is
+#     never nil now, so the check always runs.
+#
+#   IMPORTANT — real behaviour change from the above, flagged for Ulli:
+#   Previously, re-importing a CSV with multiple unserialized spares of the
+#   same component_type created a NEW row every time (no dedup applied to
+#   blank-serial rows at all). Now that both serial_number and
+#   owner_part_number normalize to "-" for such rows, the SECOND (and any
+#   further) identical "-"/"-" spare row of the same type in a re-import will
+#   be silently treated as a duplicate of the first and skipped — exactly the
+#   same dedup behaviour computers and serialized components already had.
+#   This is a direct, intentional consequence of Ulli's Option B decision
+#   (Session 70) not to auto-assign unique placeholders going forward: a CSV
+#   representing several distinct physical spares of the same type now needs
+#   each row to carry ITS OWN distinguishing owner_part_number (or
+#   serial_number) value to be imported as separate records — otherwise only
+#   the first is kept. Worth a one-time check against any CSV export taken
+#   before this migration if Ulli re-imports historical spare-heavy data.
+#
 # v1.11 (Session 49 — Session G): Replaced member-set duplicate check with
 #   owner_group_id exists? check for connection groups.
 #   v1.10's member-set approach broke when a port was added to an existing connection:
@@ -316,10 +350,15 @@ class OwnerImportService
 
   # ── Computer row processing ──────────────────────────────────────────────────
 
-  # New column names: model / order_number / serial_number / condition /
-  #                   run_status / history / barter_status
+  # New column names: model / order_number / owner_part_number / serial_number /
+  #                   condition / run_status / history / barter_status
   # Legacy fallbacks: computer_model / computer_order_number / etc.
+  # (owner_part_number has no legacy fallback name — it's a brand-new column.)
   # barter_status defaults to "no_barter" when absent or blank.
+  # owner_part_number defaults to "-" when absent or blank (Session 70), matching
+  # the model's before_validation default — normalized HERE (not left to the
+  # model) so the duplicate exists? check below compares against the same
+  # value the record will actually be saved with.
   def process_computer_row(row, row_num, device_type = :computer)
     serial_number = col(row, "serial_number", "computer_serial_number")
     model_name    = col(row, "model",         "computer_model")
@@ -339,7 +378,15 @@ class OwnerImportService
       return
     end
 
-    return if @owner.computers.exists?(computer_model: model, serial_number: serial_number)
+    # Session 70: normalize owner_part_number to "-" here so the duplicate
+    # check below matches what will actually be persisted (the model applies
+    # the same default via before_validation, but the exists? check happens
+    # BEFORE a record is built/validated, so it needs its own normalization).
+    owner_part_number = col(row, "owner_part_number").presence || "-"
+
+    return if @owner.computers.exists?(computer_model:     model,
+                                        owner_part_number:  owner_part_number,
+                                        serial_number:      serial_number)
 
     condition  = resolve_computer_condition(col(row, "condition",  "computer_condition"),  row_num)
     return if last_error_for_row?(row_num)
@@ -351,6 +398,7 @@ class OwnerImportService
 
     computer = @owner.computers.build(
       serial_number:      serial_number,
+      owner_part_number:  owner_part_number,
       order_number:       col(row, "order_number", "computer_order_number").presence,
       history:            col(row, "history",       "computer_history").presence,
       computer_model:     model,
@@ -373,10 +421,18 @@ class OwnerImportService
   # ── Component row processing ─────────────────────────────────────────────────
 
   # New column names: installed_on_model / installed_on_serial / type / category /
-  #                   order_number / serial_number / condition / description / barter_status
+  #                   order_number / owner_part_number / serial_number / condition /
+  #                   description / barter_status
   # Legacy fallbacks: (no installed_on_model) / computer_serial_number / component_type / etc.
+  # (owner_part_number has no legacy fallback name — it's a brand-new column.)
   # component_category defaults to "integral" when absent or blank.
   # barter_status defaults to "no_barter" when absent or blank.
+  #
+  # Session 70: serial_number and owner_part_number BOTH now normalize to "-"
+  # when absent/blank (component.rb v1.6 removed allow_blank on serial_number —
+  # it is never actually blank in the DB anymore). The duplicate exists? check
+  # is now UNCONDITIONAL and includes owner_part_number — see the v1.12 header
+  # comment above for the resulting behaviour change on repeated spare imports.
   def process_component_row(row, row_num)
     type_name = col(row, "type", "component_type")
 
@@ -391,11 +447,16 @@ class OwnerImportService
       return
     end
 
-    serial_number = col(row, "serial_number", "component_serial_number").presence
-    if serial_number && @owner.components.exists?(component_type: component_type,
-                                                   serial_number: serial_number)
-      return
-    end
+    # Normalized here (not left blank) so the duplicate check below compares
+    # against the same value the record will actually be saved with — the
+    # model applies the identical default via before_validation, but that
+    # runs after this exists? check, not before it.
+    serial_number      = col(row, "serial_number", "component_serial_number").presence || "-"
+    owner_part_number  = col(row, "owner_part_number").presence || "-"
+
+    return if @owner.components.exists?(component_type:     component_type,
+                                         owner_part_number:  owner_part_number,
+                                         serial_number:      serial_number)
 
     condition = resolve_component_condition(
       col(row, "condition", "component_condition"), row_num
@@ -422,7 +483,8 @@ class OwnerImportService
       component_condition: condition,
       computer:            computer,
       component_category:  category,
-      serial_number:       serial_number,
+      serial_number:        serial_number,
+      owner_part_number:    owner_part_number,
       order_number:        col(row, "order_number", "component_order_number").presence,
       description:         col(row, "description",  "component_description").presence,
       barter_status:       barter_status

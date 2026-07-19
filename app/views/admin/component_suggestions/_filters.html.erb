@@ -1,5 +1,7 @@
 <%# decor/app/views/admin/component_suggestions/_filters.html.erb %>
-<%# version 1.0 %>
+<%# version 1.1 %>
+<%# v1.1: UI rename — placeholder/help text "order number" -> "DEC part number". %>
+<%#   Field name (:query) and underlying order_number_contains scope unchanged. %>
 <%# Session 67: Phase 4 item 4 — filter sidebar for the admin %>
 <%# Component Suggestions index, added alongside pagination to fix the %>
 <%# slow-load issue at ~55,000 rows (see index.html.erb v1.1 for the full %>
@@ -30,8 +32,8 @@
   <%# Search — substring match on order_number. ------------------------------ %>
   <div>
     <%= form.label :query, "Search", class: "text-sm text-stone-600 font-medium" %>
-    <%= form.search_field :query, value: params[:query], placeholder: "Search order number...", class: field_classes %>
-    <p class="text-xs text-stone-500 mt-1">Matches anywhere in the order number. Case-insensitive.</p>
+    <%= form.search_field :query, value: params[:query], placeholder: "Search DEC part number...", class: field_classes %>
+    <p class="text-xs text-stone-500 mt-1">Matches anywhere in the DEC part number. Case-insensitive.</p>
   </div>
 
   <%# Manual flag filter -------------------------------------------------- %>

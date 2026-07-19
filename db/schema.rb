@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_07_000100) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_16_000200) do
   create_table "component_conditions", force: :cascade do |t|
     t.string "condition", limit: 40, null: false
     t.datetime "created_at", precision: nil, null: false
@@ -47,14 +47,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_000100) do
     t.string "order_number", limit: 20
     t.boolean "order_number_verified", default: false, null: false
     t.integer "owner_id", null: false
-    t.string "serial_number", limit: 20
+    t.string "owner_part_number", limit: 20, null: false
+    t.string "serial_number", limit: 20, null: false
     t.datetime "updated_at", precision: nil, null: false
     t.index ["barter_status"], name: "index_components_on_barter_status"
     t.index ["component_category"], name: "index_components_on_component_category"
     t.index ["component_condition_id"], name: "index_components_on_component_condition_id"
     t.index ["component_type_id"], name: "index_components_on_component_type_id"
     t.index ["computer_id"], name: "index_components_on_computer_id"
-    t.index ["owner_id", "component_type_id", "serial_number"], name: "index_components_on_owner_type_and_serial_number", unique: true
+    t.index ["owner_id", "component_type_id", "owner_part_number", "serial_number"], name: "index_components_on_owner_type_opn_and_serial_number", unique: true
     t.index ["owner_id"], name: "index_components_on_owner_id"
   end
 
@@ -83,6 +84,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_000100) do
     t.text "history"
     t.string "order_number", limit: 20
     t.integer "owner_id", null: false
+    t.string "owner_part_number", limit: 20, null: false
     t.integer "run_status_id"
     t.string "serial_number", limit: 20, null: false
     t.datetime "updated_at", precision: nil, null: false
@@ -90,7 +92,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_000100) do
     t.index ["computer_condition_id"], name: "index_computers_on_computer_condition_id"
     t.index ["computer_model_id"], name: "index_computers_on_computer_model_id"
     t.index ["device_type"], name: "index_computers_on_device_type"
-    t.index ["owner_id", "computer_model_id", "serial_number"], name: "index_computers_on_owner_model_and_serial_number", unique: true
+    t.index ["owner_id", "computer_model_id", "owner_part_number", "serial_number"], name: "index_computers_on_owner_model_opn_and_serial_number", unique: true
     t.index ["owner_id"], name: "index_computers_on_owner_id"
     t.index ["run_status_id"], name: "index_computers_on_run_status_id"
   end

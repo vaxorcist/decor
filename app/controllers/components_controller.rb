@@ -1,5 +1,10 @@
 # decor/app/controllers/components_controller.rb
-# version 2.0
+# version 2.1
+# v2.1 (Session 70): Owner Part Number feature.
+#   Added :owner_part_number to component_params. Same rationale as
+#   computers_controller.rb v1.23 — without this permit the new form field
+#   (components/_form.html.erb v1.12) would be silently stripped and the
+#   model's before_validation default ("-") would fire every time.
 # v2.0 (Session 64): Component Suggestions Phase 2.
 #   Added :order_number_verified to component_params. This boolean is set by
 #   the component_suggestion Stimulus controller's hidden field when the user
@@ -167,6 +172,7 @@ class ComponentsController < ApplicationController
       :computer_id,
       :component_condition_id,
       :serial_number,
+      :owner_part_number,
       :order_number,
       :order_number_verified,  # set via hidden field by component_suggestion Stimulus controller
       :description,

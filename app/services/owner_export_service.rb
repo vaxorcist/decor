@@ -1,5 +1,18 @@
 # decor/app/services/owner_export_service.rb
-# version 1.10
+# version 1.11
+# v1.11 (Session 70): Owner Part Number feature.
+#   Added "owner_part_number" to COMPUTER_SECTION_HEADERS (positioned right
+#   after order_number, before serial_number — groups the two DEC-database
+#   identifier columns with the new owner-supplied one) and to
+#   COMPONENT_SECTION_HEADERS (same relative position). Both
+#   export_devices_of_type and export_components updated to write the new
+#   column. CONNECTION_SECTION_HEADERS unchanged — connections reference
+#   computers by model+serial only and don't need this field.
+#   computer_model_export_service.rb intentionally NOT touched — confirmed
+#   with Ulli (Session 70) that it exports ComputerModel reference/catalog
+#   data only (model names), which has no relationship to per-instance
+#   owner_part_number values.
+#
 # v1.10 (Session 49 — Session G): Added owner_group_id to CONNECTION_SECTION_HEADERS.
 #   The member-set duplicate check used by the importer (v1.10) is fragile — adding a
 #   new port to an existing connection changes the set, causing the group to be saved
@@ -60,7 +73,10 @@
 #   Empty sections are silently skipped — no sentinel written.
 #
 #   Legacy note: CSVs exported before v1.7 have a global 18-column header as
-#   the very first row. The importer handles both formats.
+#   the very first row. CSVs exported before v1.11 have no owner_part_number
+#   column at all. The importer handles all of these — a missing
+#   owner_part_number column simply results in the model's before_validation
+#   default ("-") being applied on import (see owner_import_service.rb v1.12).
 
 require "csv"
 
@@ -70,17 +86,15 @@ class OwnerExportService
   # Each constant is written immediately after the section sentinel.
   # Only columns actually populated for that record type are listed.
   #
-  # v1.8: added barter_status to COMPUTER_SECTION_HEADERS.
+  # v1.11: added owner_part_number, positioned right after order_number.
   COMPUTER_SECTION_HEADERS = %w[
-    record_type model order_number serial_number condition run_status history barter_status
+    record_type model order_number owner_part_number serial_number condition run_status history barter_status
   ].freeze
 
-  # v1.8: added category (component_category enum) and barter_status.
-  # v1.9: added installed_on_model — serial numbers are not unique across models;
-  #        both model + serial are needed to unambiguously identify the parent computer
-  #        on re-import (mirrors SOFTWARE_SECTION_HEADERS which already had both).
+  # v1.11: added owner_part_number, positioned right after order_number
+  # (same relative position as COMPUTER_SECTION_HEADERS above).
   COMPONENT_SECTION_HEADERS = %w[
-    record_type installed_on_model installed_on_serial type category order_number serial_number condition description barter_status
+    record_type installed_on_model installed_on_serial type category order_number owner_part_number serial_number condition description barter_status
   ].freeze
 
   # Connections section covers two record types that share the same columns
@@ -89,6 +103,7 @@ class OwnerExportService
   #   connection_member: connection_type_or_model = computer model name; label blank.
   # owner_group_id: stable unique key for the group (unique per owner); used by the
   #   importer for duplicate detection. Blank on connection_member rows.
+  # Not touched Session 70 — connections identify computers by model+serial only.
   CONNECTION_SECTION_HEADERS = %w[
     record_type owner_group_id connection_type_or_model label serial_number
   ].freeze
@@ -138,8 +153,8 @@ class OwnerExportService
   # ── Device rows (computers + peripherals) ────────────────────────────────────
 
   # Column layout (COMPUTER_SECTION_HEADERS):
-  #   record_type | model | order_number | serial_number | condition |
-  #   run_status | history | barter_status
+  #   record_type | model | order_number | owner_part_number | serial_number |
+  #   condition | run_status | history | barter_status
   #
   # barter_status: enum string key — "no_barter", "offered", or "wanted".
   def export_devices_of_type(csv, device_type, sentinel_slug, record_type_name)
@@ -159,6 +174,7 @@ class OwnerExportService
         record_type_name,
         computer.computer_model.name,
         computer.order_number,
+        computer.owner_part_number,
         computer.serial_number,
         computer.computer_condition&.name,
         computer.run_status&.name,
@@ -172,7 +188,7 @@ class OwnerExportService
 
   # Column layout (COMPONENT_SECTION_HEADERS):
   #   record_type | installed_on_model | installed_on_serial | type | category |
-  #   order_number | serial_number | condition | description | barter_status
+  #   order_number | owner_part_number | serial_number | condition | description | barter_status
   #
   # installed_on_model and installed_on_serial are both blank for spare components.
   # Both are required together on re-import to unambiguously identify the parent
@@ -199,6 +215,7 @@ class OwnerExportService
         component.component_type.name,
         component.component_category,             # "integral" or "peripheral"
         component.order_number,
+        component.owner_part_number,
         component.serial_number,
         component.component_condition&.condition,
         component.description,

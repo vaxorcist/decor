@@ -1,7 +1,9 @@
-<%# decor/app/views/computer_statistics/index.html.erb - version 1.1 %>
+<%# decor/app/views/computer_statistics/index.html.erb - version 1.2 %>
+<%# v1.2: UI rename — column header "Model" -> "Computer Model" for clarity. %>
+<%#   No data change; @stats[:model] still refers to a ComputerModel record. %>
 <%# v1.1 (Session 61): Compact table layout; zero-count models no longer rendered. %>
 <%#   Table is now w-auto (shrinks to content) instead of min-w-full so the %>
-<%#   "Registered Computers" column sits close to the "Model" column rather than %>
+<%#   "Registered Computers" column sits close to the "Computer Model" column rather than %>
 <%#   being pushed to the far right of the container. %>
 <%#   Count column is left-aligned with pl-10 (40px) padding — creates a small, %>
 <%#   readable gap without the wide empty expanse of a right-aligned full-width table. %>
@@ -26,7 +28,7 @@
       <table class="w-auto">
         <thead>
           <tr class="border-b border-stone-200">
-            <th class="pb-2 pr-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Model</th>
+            <th class="pb-2 pr-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Computer Model</th>
             <%# pl-10 (40px) creates a modest visual gap between the two columns. %>
             <th class="pb-2 pl-10 text-left text-xs font-medium text-stone-500 uppercase tracking-wider whitespace-nowrap">Registered Computers</th>
           </tr>
@@ -35,7 +37,7 @@
           <% @stats.each do |stat| %>
             <tr class="hover:bg-stone-50">
 
-              <%# Model name — always a link (zero-count models excluded by the controller). %>
+              <%# Computer Model name — always a link (zero-count models excluded by the controller). %>
               <%# Clicking through pre-filters the computers index to this model. %>
               <td class="py-3 pr-2 text-sm">
                 <%= link_to stat[:model].name,

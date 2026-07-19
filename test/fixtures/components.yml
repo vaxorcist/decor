@@ -1,5 +1,22 @@
 # decor/test/fixtures/components.yml
-# version 1.4
+# version 1.5
+# v1.5 (Session 70): Owner Part Number feature.
+#   Added owner_part_number: "-" to every fixture (NOT NULL column now,
+#   fixture loading bypasses model callbacks — same rationale as
+#   computers.yml v1.10).
+#   Added serial_number: "-" explicitly to the three fixtures that previously
+#   had no serial_number key at all (pdp11_memory, pdp8_memory,
+#   charlie_vt100_terminal) — serial_number is also NOT NULL now
+#   (component.rb v1.6 removed allow_blank).
+#   Collision check performed against the widened 4-column uniqueness scope
+#   (owner_id, component_type_id, owner_part_number, serial_number) before
+#   making this change: every (owner, component_type) pairing in this fixture
+#   set is already distinct — pdp11_memory/pdp11_cpu/spare_disk (owner one)
+#   are three different component_types; pdp8_memory/spare_power_supply
+#   (owner two) are two different types; charlie_vt100_terminal (owner three)
+#   has no sibling. No SPARE-# placeholder values needed in fixtures — a
+#   uniform "-" for both new/changed columns across all six fixtures cannot
+#   collide with this data.
 # v1.4 (Session 21): Added barter_status values to two fixtures for filter tests.
 #   charlie_vt100_terminal: barter_status: 1 (offered) — charlie's component.
 #   spare_disk:             barter_status: 2 (wanted)  — alice's spare.
@@ -12,18 +29,24 @@ pdp11_memory:
   owner: one
   computer: alice_pdp11
   component_type: memory_board
+  serial_number: "-"
+  owner_part_number: "-"
   description: Original 256KB core memory board
 
 pdp11_cpu:
   owner: one
   computer: alice_pdp11
   component_type: cpu_board
+  serial_number: "-"
+  owner_part_number: "-"
   description: KD11-A CPU board
 
 spare_disk:
   owner: one
   computer:
   component_type: disk_drive
+  serial_number: "-"
+  owner_part_number: "-"
   barter_status: 2
   description: RL02 disk drive, spare for future restoration projects
 
@@ -31,12 +54,16 @@ pdp8_memory:
   owner: two
   computer: bob_pdp8
   component_type: memory_board
+  serial_number: "-"
+  owner_part_number: "-"
   description: 4K core memory expansion
 
 spare_power_supply:
   owner: two
   computer:
   component_type: power_supply
+  serial_number: "-"
+  owner_part_number: "-"
   description: Spare H742 power supply, untested
 
 # Peripheral fixture for component_category enum tests.
@@ -48,6 +75,8 @@ charlie_vt100_terminal:
   owner: three
   computer: dec_unibus_router
   component_type: memory_board
+  serial_number: "-"
+  owner_part_number: "-"
   description: VT100 terminal connected to charlie dec_unibus_router
   component_category: 1
   barter_status: 1

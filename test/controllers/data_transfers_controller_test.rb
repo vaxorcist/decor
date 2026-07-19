@@ -1,5 +1,18 @@
 # decor/test/controllers/data_transfers_controller_test.rb
-# version 1.4
+# version 1.5
+# v1.5 (Session 71 — test repair): Fixed CSV column-misalignment bug. Four
+#   inline CSV builders hardcoded 8-column data rows (the pre-Session-70
+#   column order) below csv << OwnerExportService::COMPUTER_SECTION_HEADERS,
+#   which Session 70 widened to 9 columns (added owner_part_number).
+#   CSV::Row pairs header→value POSITIONALLY, so every column at or after
+#   the insertion point was silently shifted — this, not a bug in
+#   owner_import_service.rb, was the cause of "Computer.count didn't change
+#   by 1, but by 0" and similar failures. Fix: new private computer_row()
+#   helper builds rows by mapping named values onto the ACTUAL
+#   OwnerExportService::COMPUTER_SECTION_HEADERS constant at runtime (same
+#   approach as comp()/cmp() in owner_import_service_test.rb v1.8), so the
+#   row can never drift out of sync with the real header order again. All
+#   four inline arrays replaced with computer_row(...) calls.
 # v1.4 (Session 50): Fixed two remaining test failures after v1.3 changes.
 #
 #   1. "import flash includes connection group count when groups are imported"
@@ -146,13 +159,13 @@ class DataTransfersControllerTest < ActionDispatch::IntegrationTest
   test "import with valid CSV creates records and shows success notice" do
     login_as(@alice)
 
-    # Per-section format (v1.7+): sentinel + column-declaration row + data rows.
-    # COMPUTER_SECTION_HEADERS: record_type, model, order_number, serial_number,
-    #   condition, run_status, history, barter_status (8 columns).
+    # Per-section format (v1.7+): sentinel + column-declaration row + data row.
+    # computer_row() maps named values onto the actual column order at
+    # runtime (see v1.5 header comment) instead of a hardcoded 8-column list.
     csv_content = CSV.generate(force_quotes: true) do |csv|
       csv << ["! --- computers ---"]
       csv << OwnerExportService::COMPUTER_SECTION_HEADERS
-      csv << ["computer", "PDP-11/70", nil, "CTRL-TEST-SN-01", nil, nil, nil, nil]
+      csv << computer_row("computer", "PDP-11/70", serial_number: "CTRL-TEST-SN-01")
     end
 
     assert_difference "Computer.count", 1 do
@@ -170,7 +183,7 @@ class DataTransfersControllerTest < ActionDispatch::IntegrationTest
     csv_content = CSV.generate(force_quotes: true) do |csv|
       csv << ["! --- computers ---"]
       csv << OwnerExportService::COMPUTER_SECTION_HEADERS
-      csv << ["computer", "PDP-11/70", nil, "CTRL-BOB-SN-01", nil, nil, nil, nil]
+      csv << computer_row("computer", "PDP-11/70", serial_number: "CTRL-BOB-SN-01")
     end
 
     post import_data_transfer_path, params: { file: csv_upload(csv_content) }
@@ -209,7 +222,7 @@ class DataTransfersControllerTest < ActionDispatch::IntegrationTest
     csv_content = CSV.generate(force_quotes: true) do |csv|
       csv << ["! --- computers ---"]
       csv << OwnerExportService::COMPUTER_SECTION_HEADERS
-      csv << ["computer", "PDP-11/70", nil, "CTRL-NOGROUP-SN", nil, nil, nil, nil]
+      csv << computer_row("computer", "PDP-11/70", serial_number: "CTRL-NOGROUP-SN")
     end
 
     post import_data_transfer_path, params: { file: csv_upload(csv_content) }
@@ -227,7 +240,7 @@ class DataTransfersControllerTest < ActionDispatch::IntegrationTest
     csv_content = CSV.generate(force_quotes: true) do |csv|
       csv << ["! --- computers ---"]
       csv << OwnerExportService::COMPUTER_SECTION_HEADERS
-      csv << ["computer", "Nonexistent Model XYZ", nil, "ERR-SN-01", nil, nil, nil, nil]
+      csv << computer_row("computer", "Nonexistent Model XYZ", serial_number: "ERR-SN-01")
     end
 
     assert_no_difference "Computer.count" do
@@ -257,11 +270,32 @@ class DataTransfersControllerTest < ActionDispatch::IntegrationTest
                                   original_filename: filename)
   end
 
+  # Builds a computer/peripheral row by mapping named values onto the ACTUAL
+  # OwnerExportService::COMPUTER_SECTION_HEADERS column order at runtime,
+  # rather than hardcoding a fixed position list (see v1.5 header comment).
+  def computer_row(record_type, model, serial_number:, order_number: nil,
+                    owner_part_number: nil, condition: nil, run_status: nil,
+                    history: nil, barter_status: nil)
+    values_by_header = {
+      "record_type"       => record_type,
+      "model"             => model,
+      "order_number"      => order_number,
+      "owner_part_number" => owner_part_number,
+      "serial_number"     => serial_number,
+      "condition"         => condition,
+      "run_status"        => run_status,
+      "history"           => history,
+      "barter_status"     => barter_status
+    }
+    OwnerExportService::COMPUTER_SECTION_HEADERS.map { |header| values_by_header[header] }
+  end
+
   # Build a per-section CSV with an optional computers block followed by a
   # connections block.
   #
-  # device_rows: array of 8-element arrays matching COMPUTER_SECTION_HEADERS.
-  #   Pass [] to omit the computers section entirely.
+  # device_rows: array of row arrays built via computer_row(), matching
+  #   whatever column order OwnerExportService::COMPUTER_SECTION_HEADERS
+  #   actually has. Pass [] to omit the computers section entirely.
   # connection_groups_data: array of hashes:
   #   { type: String|nil, label: String|nil,
   #     members: [ { model: String, serial: String }, ... ] }

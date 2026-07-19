@@ -1,4 +1,13 @@
-<%# decor/app/views/components/index.html.erb - version 1.6 %>
+<%# decor/app/views/components/index.html.erb - version 1.8 %>
+<%# v1.8 (Session 71): Owner Part Number feature — added the missing "Owner %>
+<%#   Part No." column header. Placed between "DEC Part No." and "DEC Serial %>
+<%#   No.", matching the field order established in components/_form.html.erb %>
+<%#   v1.12 (Type, DEC Part Number, Owner Part Number, DEC Serial Number). %>
+<%#   Matching <td> added to _component.html.erb v1.7 in the same session. %>
+<%# v1.7: UI rename — "Order No." -> "DEC Part No.", "Serial No." -> %>
+<%#   "DEC Serial No.", "Device – Serial No." -> "Device – DEC Serial No.". %>
+<%#   Historical changelog entries below describe the column layout as it %>
+<%#   existed at the time and are left as-is; only the current headers changed. %>
 <%# v1.6 (Session 52): Renamed column header "Computer-Serial No." → %>
 <%#   "Device – Serial No." to reflect that components can be installed on %>
 <%#   computers or peripherals. No structural change; the cell in %>
@@ -27,16 +36,19 @@
             <thead class="bg-stone-50 sticky top-0 z-10">
               <tr>
                 <%# Combined device model name and serial number — covers both computers and peripherals %>
-                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Device – Serial No.</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Device – DEC Serial No.</th>
                 <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Type</th>
                 <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Description</th>
-                <%# Component's own order number %>
-                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Order No.</th>
-                <%# Component's own serial number %>
-                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Serial No.</th>
+                <%# Component's own DEC part number %>
+                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">DEC Part No.</th>
+                <%# Owner Part No. — Session 71. Placed between DEC Part No. and DEC Serial No., %>
+                <%# matching components/_form.html.erb's Row 2 field order. %>
+                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Owner Part No.</th>
+                <%# Component's own DEC serial number %>
+                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">DEC Serial No.</th>
                 <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Owner</th>
                 <%# Barter header — visible to logged-in members only. %>
-                <%# The matching <td> in _component.html.erb v1.6 uses the same guard. %>
+                <%# The matching <td> in _component.html.erb v1.7 uses the same guard. %>
                 <% if logged_in? %>
                   <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Barter</th>
                 <% end %>

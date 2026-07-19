@@ -1,5 +1,26 @@
 # decor/app/models/computer.rb
-# version 2.1
+# version 2.2
+# v2.2 (Session 70): Owner Part Number feature — IMPLEMENTED.
+#   New owner_part_number VARCHAR(20) column (migration 20260716000100).
+#   Confirmed design (Ulli):
+#     - owner_part_number defaults to "-" when blank (data-entry convenience —
+#       the user is never forced to type a value). Implemented via
+#       before_validation, NOT before_save — see RAILS_SPECIFICS.md
+#       "before_validation vs before_save": a before_save callback would run
+#       AFTER the presence validation and the blank value would be rejected
+#       first.
+#     - serial_number ALSO now defaults to "-" when blank (was previously a
+#       hard validation error requiring the user to invent a value — this is
+#       a genuine behaviour change, confirmed by Ulli). presence: true is
+#       unchanged; the default callback runs before it so a blank input never
+#       actually reaches the validator as blank.
+#     - Uniqueness scope widened from (owner_id, computer_model_id) to
+#       (owner_id, computer_model_id, owner_part_number) — the serial_number
+#       uniqueness check now effectively covers all four columns together.
+#       Confirmed: the existing computer_model_id dimension is KEPT (not
+#       dropped in favour of a plain per-owner scope).
+#   Matches the DB unique index added in migration 20260716000200
+#   (index_computers_on_owner_model_opn_and_serial_number).
 # v2.1 (Session 43): Added has_many :software_items, dependent: :destroy.
 #   Deleting a computer destroys all software installed on it (design decision).
 #   The DB FK also carries ON DELETE CASCADE as defense-in-depth (mirrors the
@@ -73,17 +94,34 @@ class Computer < ApplicationRecord
   # All barter values are only displayed to logged-in members.
   enum :barter_status, { no_barter: 0, offered: 1, wanted: 2 }, prefix: true
 
+  # Default owner_part_number and serial_number to "-" when left blank.
+  # MUST be before_validation, not before_save — see RAILS_SPECIFICS.md
+  # "before_validation vs before_save": presence validations below run
+  # BEFORE before_save callbacks, so a before_save default would see the
+  # blank value rejected first. before_validation runs first, so the
+  # presence check below always sees a filled-in value.
+  before_validation :default_owner_part_number
+  before_validation :default_serial_number
+
   # Validations
   validates :serial_number, presence: true
+  validates :owner_part_number, presence: true, length: { maximum: 20 }
 
-  # serial_number uniqueness: one owner cannot have two devices of the same model
-  # with the same serial number. Different models owned by the same owner may share
-  # a serial (e.g. a VT220 "unknown" and a VT320 "unknown" are distinct physical
-  # devices). This mirrors the DB unique index on (owner_id, computer_model_id,
+  # serial_number uniqueness: one owner cannot have two devices of the same
+  # model with the same Owner Part Number AND the same DEC Serial Number
+  # combination. Different models owned by the same owner may repeat a
+  # serial/owner-part-number combination (e.g. a VT220 "unknown"/"-" and a
+  # VT320 "unknown"/"-" are distinct physical devices). This mirrors the DB
+  # unique index on (owner_id, computer_model_id, owner_part_number,
   # serial_number).
+  #
+  # Widened Session 70 (Owner Part Number feature) from a 2-column scope
+  # (owner_id, computer_model_id) to this 3-column scope — combined with the
+  # validated serial_number attribute itself, the full uniqueness check now
+  # covers all four columns.
   validates :serial_number,
-            uniqueness: { scope: [:owner_id, :computer_model_id],
-                          message: "has already been taken for this model" }
+            uniqueness: { scope: [:owner_id, :computer_model_id, :owner_part_number],
+                          message: "combination already exists for this model and Owner Part Number" }
 
   validates :order_number, length: { maximum: 20 }, allow_blank: true
 
@@ -112,5 +150,21 @@ class Computer < ApplicationRecord
         pattern, pattern, pattern, pattern, pattern, pattern, pattern
       )
       .distinct
+  end
+
+  private
+
+  # Owner Part Number — data-entry convenience. The user is never forced to
+  # invent a value; leaving the field blank stores "-" instead. Editable
+  # afterward like any other field.
+  def default_owner_part_number
+    self.owner_part_number = "-" if owner_part_number.blank?
+  end
+
+  # DEC Serial Number — same convenience, confirmed Session 70. Previously
+  # a blank serial_number was a hard validation error; it now silently
+  # becomes "-" instead.
+  def default_serial_number
+    self.serial_number = "-" if serial_number.blank?
   end
 end

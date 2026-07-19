@@ -1,4 +1,7 @@
-<%# decor/app/views/computers/_filters.html.erb - version 1.6 %>
+<%# decor/app/views/computers/_filters.html.erb - version 1.7 %>
+<%# v1.7: UI rename — filter label "Model" -> "Computer Model" for clarity, %>
+<%#   matching the "Computer Model" wording already used on the show page and %>
+<%#   the components filters sidebar. Field name/values (:model) unchanged. %>
 <%# v1.6 (Session 52): Removed "Type" filter (Computer / Peripheral selector). %>
 <%#   The Computers page always shows computers; the Peripherals page always %>
 <%#   shows peripherals. The filter was redundant after the Appliances → %>
@@ -35,7 +38,7 @@
   </div>
 
   <div class="flex flex-col">
-    <%= form.label :model, "Model", class: "text-sm text-stone-600 font-medium" %>
+    <%= form.label :model, "Computer Model", class: "text-sm text-stone-600 font-medium" %>
     <%= form.select :model, computer_filter_models_options, { selected: computer_filter_models_selected, include_blank: "Any" }, { class: field_classes } %>
   </div>
 

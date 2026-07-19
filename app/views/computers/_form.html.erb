@@ -1,4 +1,20 @@
-<%# decor/app/views/computers/_form.html.erb - version 2.6 %>
+<%# decor/app/views/computers/_form.html.erb - version 2.8 %>
+<%# v2.8 (Session 71): Owner Part Number feature — added the missing "Owner %>
+<%#   Part No." column to the embedded "[Device]'s Components" list table %>
+<%#   further down this file. v2.7's own header comment explicitly flagged %>
+<%#   this table as NOT touched, deferring to the user; now added. Column %>
+<%#   placed between "Order No." and "Serial No.", matching the field order %>
+<%#   established in components/_form.html.erb v1.12 and owners/components.html.erb %>
+<%#   v1.6. The embedded "Add/Edit [Device]'s Component" form directly above this %>
+<%#   table (rendered via the computer_component_form partial) also gained its own %>
+<%#   Owner Part Number field this session — see %>
+<%#   computers/_computer_component_form.html.erb v1.5. %>
+<%# v2.7 (Session 70): Owner Part Number feature. Added "Owner Part Number" %>
+<%#   text field to Line 1, widened from grid-cols-3 to grid-cols-4. Placed %>
+<%#   after DEC Serial Number (grouping: Model, then the two DEC-database %>
+<%#   identifier fields, then the new owner-supplied one, matching the %>
+<%#   column order used in owner_export_service.rb v1.11's CSV headers). %>
+<%#   Field permitted in computers_controller.rb v1.23. %>
 <%# v2.6 (Session 54): Added data-controller="tom-select" to three collection_selects. %>
 <%#   computer_model_id — the primary motivation: 400+ entries (one per DEC model). %>
 <%#   computer_condition_id and run_status_id — smaller lists but same UX improvement. %>
@@ -24,11 +40,12 @@
   <%# current value so the param is present but causes no change. %>
   <%= f.hidden_field :device_type %>
 
-  <!-- Line 1: Model | Order Number | Serial Number -->
-  <div class="grid grid-cols-3 gap-4">
+  <!-- Line 1: Model | Order Number | Serial Number | Owner Part Number -->
+  <%# Widened Session 70 from grid-cols-3 to grid-cols-4 to fit Owner Part Number. %>
+  <div class="grid grid-cols-4 gap-4">
     <div>
       <%= f.label :computer_model_id, class: "block text-sm font-medium text-stone-700" do %>
-        Model <span class="text-red-600">*</span>
+        Computer Model <span class="text-red-600">*</span>
       <% end %>
       <%# Model list is scoped to the record's current device_type so peripheral forms %>
       <%# show only peripheral models and computer forms show only computer models. %>
@@ -37,24 +54,32 @@
       <%= f.collection_select :computer_model_id,
             ComputerModel.where(device_type: computer.device_type).order(:name),
             :id, :name,
-            { prompt: "Select a model" },
+            { prompt: "Select a computer model" },
             class: field_classes,
             data: { controller: "tom-select" } %>
       <p class="mt-1 text-xs text-stone-500">Select from list.</p>
     </div>
 
     <div>
-      <%= f.label :order_number, "Order Number", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.label :order_number, "DEC Part Number", class: "block text-sm font-medium text-stone-700" %>
       <%= f.text_field :order_number, maxlength: 20, class: field_classes %>
       <p class="mt-1 text-xs text-stone-500">Maximum 20 characters.</p>
     </div>
 
     <div>
       <%= f.label :serial_number, class: "block text-sm font-medium text-stone-700" do %>
-        Serial Number <span class="text-red-600">*</span>
+        DEC Serial Number <span class="text-red-600">*</span>
       <% end %>
-      <%= f.text_field :serial_number, maxlength: 20, class: field_classes %>
-      <p class="mt-1 text-xs text-stone-500">Maximum 20 characters.</p>
+      <%= f.text_field :serial_number, maxlength: 20, class: field_classes, placeholder: "-" %>
+      <p class="mt-1 text-xs text-stone-500">Maximum 20 characters. Defaults to "-" if left blank.</p>
+    </div>
+
+    <%# Owner Part Number — Session 70. Defaults to "-" server-side %>
+    <%# (computer.rb before_validation) if left blank. %>
+    <div>
+      <%= f.label :owner_part_number, "Owner Part Number", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.text_field :owner_part_number, maxlength: 20, class: field_classes, placeholder: "-" %>
+      <p class="mt-1 text-xs text-stone-500">Maximum 20 characters. Defaults to "-" if left blank.</p>
     </div>
   </div>
 
@@ -143,7 +168,9 @@
   </div>
 
   <%# [Device]'s Components list — below the add/edit form %>
-  <%# Column order: Type | Description | Order No. | Serial No. | Condition | Trade | Actions %>
+  <%# Column order: Type | Description | Order No. | Owner Part No. | Serial No. | Condition | Trade | Actions %>
+  <%# Owner Part No. added Session 71 — see v2.8 header comment above. Placed between %>
+  <%# Order No. and Serial No., matching components/_form.html.erb's field order. %>
   <div>
     <h2 class="text-xl font-semibold mb-4"><%= computer.device_type.capitalize %>'s Components</h2>
 
@@ -155,6 +182,8 @@
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Type</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Description</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Order No.</th>
+              <%# Owner Part No. — Session 71. %>
+              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Owner Part No.</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Serial No.</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Condition</th>
               <%# Trade column — always visible here (form requires login). %>
@@ -175,6 +204,8 @@
                 </td>
                 <%# Order No. %>
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.order_number.presence || "—" %></td>
+                <%# Owner Part No. — component's own owner_part_number %>
+                <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.owner_part_number.presence || "—" %></td>
                 <%# Serial No. — component's own serial number %>
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.serial_number.presence || "—" %></td>
                 <%# Condition %>

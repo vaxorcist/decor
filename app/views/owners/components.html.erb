@@ -1,4 +1,16 @@
-<%# decor/app/views/owners/components.html.erb - version 1.4 %>
+<%# decor/app/views/owners/components.html.erb - version 1.6 %>
+<%# v1.6 (Session 71): Owner Part Number feature — added the missing "Owner Part %>
+<%#   No." column. Session 70 added owner_part_number to the Component model, %>
+<%#   form, and CSV export/import but did not touch this view. Column placed %>
+<%#   between "DEC Part No." and "DEC Serial No.", matching the field order %>
+<%#   established in components/_form.html.erb v1.12 (Type, DEC Part Number, %>
+<%#   Owner Part Number, DEC Serial Number, Condition) — NOTE this ordering %>
+<%#   differs from the Computer-side pages (owner_part_number after serial %>
+<%#   number), intentionally following each model's own established form order %>
+<%#   rather than forcing one convention across both. No fallback dash needed — %>
+<%#   owner_part_number is NOT NULL, defaults to "-" server-side. %>
+<%# v1.5: UI rename — column headers "Order No." -> "DEC Part No.", %>
+<%#   "Serial No." -> "DEC Serial No.". No data change. %>
 <%# v1.4 (Session 45): Software feature Session C. %>
 <%#   Added Software tab (inactive) to the tab strip. %>
 <%#   Tab order: Computers | Peripherals | Components (active) | Connections | Software. %>
@@ -58,8 +70,11 @@
             <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Type</th>
             <%# Description before Order No. and Serial No. (Session 19) %>
             <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Description</th>
-            <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Order No.</th>
-            <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Serial No.</th>
+            <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">DEC Part No.</th>
+            <%# Owner Part No. — Session 71. Placed between DEC Part No. and DEC Serial No., %>
+            <%# matching components/_form.html.erb's Row 2 field order. %>
+            <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Owner Part No.</th>
+            <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">DEC Serial No.</th>
             <%# Trade header — visible to logged-in members only %>
             <% if logged_in? %>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Trade</th>
@@ -88,6 +103,8 @@
               <%# Description — truncated; moved before Order No. and Serial No. (Session 19) %>
               <td class="px-4 py-3 text-stone-600"><%= truncate(component.description, length: 20) || "—" %></td>
               <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.order_number || "—" %></td>
+              <%# Owner Part No. — Session 71. NOT NULL, defaults to "-" server-side; no fallback dash needed. %>
+              <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.owner_part_number %></td>
               <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.serial_number || "—" %></td>
               <%# Trade cell — visible to logged-in members only %>
               <% if logged_in? %>
