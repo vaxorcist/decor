@@ -1,4 +1,10 @@
-<%# decor/app/views/common/_navigation.html.erb - version 2.4 %>
+<%# decor/app/views/common/_navigation.html.erb - version 2.5 %>
+<%# v2.5 (Session 73): Category Help Pages feature. Added 5 new links to the %>
+<%#   "Info" dropdown — one per device/software category — below a divider %>
+<%#   separating them from the 4 pre-existing general-info links. Widened %>
+<%#   the dropdown from w-36 (144px) to w-48 (192px): the new labels %>
+<%#   ("Peripherals Help", "Connections Help") are longer than any existing %>
+<%#   entry and would wrap at the old width. %>
 <%# v2.4 (Session 61): Added "Statistics" dropdown after "Software". %>
 <%#   First entry: "Computers" → computer_statistics_path (Computers Statistics page). %>
 <%#   The dropdown follows the same data-controller="dropdown" pattern as "Info". %>
@@ -30,11 +36,18 @@
       </button>
 
       <div data-dropdown-target="menu"
-           class="hidden absolute left-0 mt-1 w-36 bg-white border border-stone-200 rounded shadow-lg z-50">
+           class="hidden absolute left-0 mt-1 w-48 bg-white border border-stone-200 rounded shadow-lg z-50">
         <%= link_to "Read Me",      readme_path,       class: "block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50" %>
         <%= link_to "News",         news_path,         class: "block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50" %>
         <%= link_to "Barter Trade", barter_trade_path, class: "block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50" %>
         <%= link_to "Privacy",      privacy_path,      class: "block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50" %>
+        <div class="border-t border-stone-200 my-1"></div>
+        <%# Category Help Pages — added Session 73. %>
+        <%= link_to "Computers Help",   help_computers_path,   class: "block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50" %>
+        <%= link_to "Peripherals Help", help_peripherals_path, class: "block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50" %>
+        <%= link_to "Components Help",  help_components_path,  class: "block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50" %>
+        <%= link_to "Connections Help", help_connections_path, class: "block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50" %>
+        <%= link_to "Software Help",    help_software_path,    class: "block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50" %>
       </div>
     </div>
 

@@ -1,5 +1,17 @@
 # RAILS_SPECIFICS.md
-# version 3.6
+# version 3.7
+# Session 73: Category Help Pages feature. One new MANDATORY section added:
+#   Single Source of Truth Refactors — Audit ALL Consumers, Not Just the
+#   File Being Changed. Real example: Session 20 introduced SiteType/
+#   KNOWN_TEXTS as the single source of truth for page titles, but only
+#   updated the admin controller — the owner-facing controller kept its own
+#   stale, separately-hardcoded title lookup for 53 sessions until Session
+#   73 happened to touch it again and caught the drift via Never-Guess file
+#   review, not because anything had broken yet (it hadn't — coincidence
+#   papered over it). Same underlying pattern as the Session 65/67 route-
+#   helper naming traps and the Session 64 admin-nav-menu gap: a value or
+#   piece of logic duplicated in more than one file, where only one copy
+#   gets updated when the concept changes.
 # Session 67: Phase 4 implementation (order number / variant simplification).
 #   Three new MANDATORY sections added from lessons learned this session:
 #   1. Collection Routes Nested in a Namespaced Resources Block — Different
@@ -84,8 +96,8 @@
 
 **Ruby on Rails Specific Patterns and Best Practices**
 
-**Last Updated:** July 8, 2026 (v3.6: Collection-route prefix shape, enum
-  read_attribute pitfall, and Pagination concern internals added; Session 67)
+**Last Updated:** July 19, 2026 (v3.7: Single Source of Truth Refactors —
+  audit all consumers, not just the file at hand; Session 73)
 
 ---
 
@@ -1444,6 +1456,53 @@ mismatch immediately — the export was writing "added" instead. Switching to
 enum column for a purpose OTHER than application logic — CSV/data exports,
 debugging, raw SQL comparisons, or anywhere the mapped label would be
 misleading or incompatible with an external format.
+
+---
+
+## Single Source of Truth Refactors — Audit ALL Consumers, Not Just the File Being Changed (MANDATORY, learned Session 73)
+
+**RULE: When a value or a piece of logic is duplicated across more than one
+file and gets consolidated into a single source of truth (a constant, a
+class method, a helper), grep the ENTIRE codebase for every other place
+that duplicated logic could also live — not just the one file the current
+task happens to be touching. Fix all of them in the same change, or at
+minimum flag the others explicitly as known-stale.**
+
+This is the same underlying failure shape as three other rules already in
+this document (the Session 65/67 route-helper naming traps, the Session 64
+admin-nav-menu gap) — a concept that exists in more than one place, where
+only the copy directly in front of Claude gets updated when the concept
+changes. The danger is specifically that the un-updated copy can look
+completely fine for a long time: it only breaks once a NEW case comes along
+that the original coincidence doesn't cover.
+
+**Real example (Session 73, July 2026):**
+Session 20 introduced `SiteText::KNOWN_TEXTS` and `SiteText.title_for_key`
+as the single source of truth for text-page titles — but that refactor only
+updated `Admin::SiteTextsController`. The owner-facing
+`SiteTextsController` kept its own separate, private `title_for_key` hash
+with only `"readme"` hardcoded, falling back to `key.titleize` for
+everything else. For 53 sessions this looked completely fine: `.titleize`
+of "news", "barter_trade", and "privacy" all happened to produce the exact
+same string as their `KNOWN_TEXTS`-configured titles. The drift was only
+caught in Session 73 because implementing 5 new Category Help Pages
+happened to pick titles ("Computers Help") that do NOT match what
+`.titleize` would produce from their keys ("Help Computers") — at which
+point the stale duplicate would have silently shipped a wrong page heading
+had the actual controller file not been read directly (Never-Guess) before
+writing new code near it.
+
+**How to apply this rule:**
+Before extending or touching any file that consumes a "single source of
+truth" constant/method, grep for the OLD pattern that source of truth was
+meant to replace — do not assume a past refactor's changelog entry
+("consolidated into KNOWN_TEXTS") means every consumer was actually
+updated. A changelog note describes intent; it doesn't verify completeness.
+```bash
+# Before adding a new KNOWN_TEXTS-style entry anywhere, check for other
+# hardcoded copies of the same concept:
+grep -rn "title_for_key\|KNOWN_TEXTS" decor/app/
+```
 
 ---
 

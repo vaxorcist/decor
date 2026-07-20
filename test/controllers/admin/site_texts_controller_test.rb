@@ -1,5 +1,13 @@
 # decor/test/controllers/admin/site_texts_controller_test.rb
-# version 1.1
+# version 1.2
+# v1.2 (Session 73): Added tests for the generalized url_for_key(key) fix
+#   (admin/site_texts_controller.rb v1.3). The old hardcoded `case` statement
+#   only covered the 4 pre-existing keys, so it could never have caught a
+#   regression on a 5th key by construction. These new tests deliberately use
+#   "help_computers" — one of the 5 new Category Help Pages keys added this
+#   session, and NOT one of the 4 keys the old case statement happened to
+#   list — to prove the redirect works for a key the method was never
+#   special-cased for. Also added "help_computers" to the teardown cleanup list.
 # v1.1 (Session 53): Added tests for download_confirm and download actions.
 #   Also documents why the delete_confirm Turbo bug wasn't caught by this file:
 #   controller tests call routes directly and cannot observe JS/Turbo link behaviour.
@@ -25,7 +33,7 @@ class Admin::SiteTextsControllerTest < ActionDispatch::IntegrationTest
 
   def teardown
     # Clean up any SiteText records created during tests
-    SiteText.where(key: %w[readme news test_upload_key]).destroy_all
+    SiteText.where(key: %w[readme news test_upload_key help_computers]).destroy_all
   end
 
   # ── new ─────────────────────────────────────────────────────────────────────
@@ -87,6 +95,52 @@ class Admin::SiteTextsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to new_admin_site_text_path
     assert_equal "Please select a .md file to upload.", flash[:alert]
+  end
+
+  # ── url_for_key generalization (Session 73) ──────────────────────────────────
+  #
+  # These use "help_computers" specifically — one of the 5 new Category Help
+  # Pages keys, deliberately NOT one of the 4 keys the old hardcoded `case`
+  # statement in url_for_key used to special-case. A regression back to the
+  # old case statement (or a typo in the new send("#{key}_path") call) would
+  # fail these tests even though the 4 pre-existing-key tests above still pass.
+
+  test "POST create for a Category Help Pages key redirects to its own public page" do
+    tempfile = Tempfile.new(["upload", ".md"])
+    tempfile.write("# Computers Help")
+    tempfile.rewind
+    tempfile.close
+
+    upload = Rack::Test::UploadedFile.new(tempfile.path, "text/plain", false,
+                                          original_filename: "help_computers.md")
+
+    assert_difference "SiteText.count", 1 do
+      post admin_site_texts_path, params: { key: "help_computers", file: upload }
+    end
+
+    assert_redirected_to help_computers_path
+    assert_equal "Computers Help was successfully updated.", flash[:notice]
+  ensure
+    tempfile&.unlink
+  end
+
+  test "url_for_key falls back to root_path for a key with no matching route" do
+    tempfile = Tempfile.new(["upload", ".md"])
+    tempfile.write("# Orphan")
+    tempfile.rewind
+    tempfile.close
+
+    upload = Rack::Test::UploadedFile.new(tempfile.path, "text/plain", false,
+                                          original_filename: "orphan.md")
+
+    # "orphan_key_with_no_route" is intentionally NOT in SiteText::KNOWN_TEXTS
+    # and has no matching route — exercises the rescue NoMethodError branch.
+    post admin_site_texts_path, params: { key: "orphan_key_with_no_route", file: upload }
+
+    assert_redirected_to root_path
+  ensure
+    tempfile&.unlink
+    SiteText.where(key: "orphan_key_with_no_route").destroy_all
   end
 
   # ── delete_confirm ───────────────────────────────────────────────────────────
