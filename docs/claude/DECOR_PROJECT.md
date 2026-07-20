@@ -1,5 +1,34 @@
 # decor/docs/claude/DECOR_PROJECT.md
-# version 2.62
+# version 2.64
+# Session 73: Category Help Pages feature — IMPLEMENTED (7 files: 5
+#   production, 2 test; 0 migrations). 5 new owner-facing help pages (one per
+#   device/software category) added entirely as data + routes on the
+#   existing SiteText subsystem — no schema change. Two real bugs found and
+#   fixed while implementing (both were pre-existing, unrelated to this
+#   session's own additions, caught because Never-Guess required reading the
+#   actual files rather than assuming the admin-only Session 20 KNOWN_TEXTS
+#   refactor had been applied everywhere): (1) the owner-facing
+#   SiteTextsController still had its own stale title_for_key hash that was
+#   never updated to delegate to SiteText.title_for_key; (2) the admin
+#   controller's url_for_key was a hardcoded case statement requiring manual
+#   editing on every future SiteText key addition, generalized to a single
+#   send("#{key}_path") call. Also fixed a real documentation gap flagged
+#   back in Session 69/72's "!! GAP NOTICE !!" pattern: SiteText had never
+#   appeared in this document's "Data Model Overview" at all despite existing
+#   since Session 18 — added below. Full detail in SESSION_HANDOVER.md
+#   "Session 73 Summary".
+# Session 72: Confirmed by Ulli — Sessions 67, 68, 69, and 70 (all previously
+#   described below and in SESSION_HANDOVER.md as sitting locally uncommitted)
+#   have ALL already been committed, pushed, merged, and deployed to main.
+#   This session's own work: the feature/owner_part_number PR's CI/Security
+#   (Ruby) check failed on bundle-audit (not Brakeman — confirmed via the
+#   actual CI log, per the existing "CI Security Checks — Two Separate Tools"
+#   rule); four gems bumped (loofah >= 2.25.2, rails-html-sanitizer >= 1.7.1,
+#   sqlite3 >= 2.9.5, websocket-driver >= 0.8.2) to clear a batch of CVEs;
+#   confirmed clean locally with bundle-audit before re-pushing; merged;
+#   deployed. See SESSION_HANDOVER.md "Session 72 Summary" for full detail.
+#   "Current Status" below and the Owner Part Number Feature section's NOT
+#   YET DONE checklist are both updated to reflect everything now being live.
 # Session 71: Owner Part Number display fix (8 URLs — owners/computers,
 #   owners/peripherals, owners/components, computers/index (+ /peripherals,
 #   shared view), components/index, and both computer/peripheral edit pages'
@@ -169,20 +198,15 @@
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** July 17, 2026 (Session 70 — Owner Part Number feature
-  implemented, code-complete but unmigrated/untested; v2.61)
-**Current Status:** Sessions 1–65 committed, pushed, merged, deployed. Session 67
-  Phase 4 implementation delivered and locally tested (bin/rails test passing,
-  bundle-audit clean after a json gem bump) — STILL NOT committed/pushed/deployed.
-  Session 68 (Component Suggestions typeahead UI refinements — evidenced in the
-  delivered source but with no formal Session 68 Summary in SESSION_HANDOVER.md)
-  is also sitting uncommitted, status unclear — see SESSION_HANDOVER.md "!! GAP
-  NOTICE !!" section. Session 69's UI rename (15 files) is ALSO uncommitted.
-  Session 70's Owner Part Number feature (11 files: 2 migrations, 2 models,
-  2 controllers, 2 form partials, 2 CSV services, 2 fixtures) is code-complete
-  but has NOT been migrated against a real database, has NOT been tested, and
-  has no test coverage yet — see SESSION_HANDOVER.md "Session 70 Summary" for
-  the full pre-commit checklist across all four sessions' stacked pending work.
+**Last Updated:** July 19, 2026 (Session 73 — Category Help Pages feature
+  implemented, code-complete; v2.64)
+**Current Status:** Sessions 1–72 all committed, pushed, merged, and deployed
+  to main (see prior entries below for full detail). Session 73's Category
+  Help Pages feature (7 files) is **code-complete but NOT YET tested,
+  lint/security-scanned, or committed** — see "Category Help Pages Feature —
+  Session 73" below and SESSION_HANDOVER.md "Session 73 Summary" for the
+  full NOT YET DONE checklist. This stacks on top of no other open checklist
+  — Sessions 67–72 are fully closed out.
 
 ---
 
@@ -221,8 +245,8 @@ decor//
 │   │   │   └── pagination.rb
 │   │   ├── application_controller.rb
 │   │   ├── component_suggestions_controller.rb         ← Session 64 (v1.0) NEW
-│   │   ├── components_controller.rb                    ← Session 64 (v2.0)
-│   │   ├── computers_controller.rb                     ← Session 52 (v1.22)
+│   │   ├── components_controller.rb                    ← Session 70 (v2.1)
+│   │   ├── computers_controller.rb                     ← Session 70 (v1.23)
 │   │   ├── connection_groups_controller.rb
 │   │   ├── data_transfers_controller.rb                ← Session 49 (v1.6)
 │   │   ├── home_controller.rb                         ← Session 51 (v1.1)
@@ -236,9 +260,10 @@ decor//
 │   │   ├── components_helper.rb                       ← Session 52 (v1.4)
 │   │   └── software_items_helper.rb                   ← Session 50 (v1.0) NEW
 │   ├── models/
-│   │   ├── component_suggestion.rb                    ← Session 63 (v1.0) NEW
-│   │   ├── computer.rb                                 ← Session 43 (v2.1)
+│   │   ├── component_suggestion.rb                    ← Session 67 (v1.1)
+│   │   ├── computer.rb                                 ← Session 70 (v2.2)
 │   │   ├── computer_model.rb                          ← Session 41 (v1.3)
+│   │   ├── component.rb                                ← Session 70 (v1.6)
 │   │   ├── newsletter.rb
 │   │   ├── owner.rb                                   ← Session 43 (v1.5)
 │   │   ├── software_condition.rb                      ← Session 43 (v1.0) NEW
@@ -247,19 +272,23 @@ decor//
 │   ├── services/
 │   │   ├── all_owners_export_service.rb               ← Session 50 (v1.1)
 │   │   ├── component_suggestion_export_service.rb     ← Session 63 (v1.0) NEW
-│   │   ├── component_suggestion_import_service.rb     ← Session 63 (v1.0) NEW
+│   │   ├── component_suggestion_import_service.rb     ← Session 67 (v2.0)
+│   │   ├── manual_component_suggestions_export_service.rb ← Session 67 (v1.1) NEW
 │   │   ├── component_order_number_revalidation_service.rb ← Session 65 (v1.0) NEW
 │   │   ├── unvalidated_order_numbers_export_service.rb ← Session 65 (v1.0) NEW
-│   │   ├── owner_export_service.rb                     ← Session 49 (v1.10)
-│   │   └── owner_import_service.rb                     ← Session 49 (v1.11)
+│   │   ├── owner_export_service.rb                     ← Session 70 (v1.11)
+│   │   └── owner_import_service.rb                     ← Session 70 (v1.12)
 │   └── views/
 │       ├── admin/
 │       │   ├── component_conditions/
 │       │   │   └── _form.html.erb                     ← Session 58 (v1.2)
 │       │   ├── component_suggestions/                  ← Session 63 NEW
-│       │   │   ├── _form.html.erb                     ← Session 63 (v1.0) NEW
+│       │   │   ├── _form.html.erb                     ← Session 69 (v1.1)
+│       │   │   ├── _filters.html.erb                  ← Session 69 (v1.1)
+│       │   │   ├── _component_suggestion.html.erb     ← Session 67 (v1.0) NEW
 │       │   │   ├── edit.html.erb                      ← Session 63 (v1.0) NEW
-│       │   │   ├── index.html.erb                     ← Session 63 (v1.0) NEW
+│       │   │   ├── index.html.erb                     ← Session 69 (v1.4)
+│       │   │   ├── index.turbo_stream.erb              ← Session 67 (v1.0) NEW
 │       │   │   └── new.html.erb                       ← Session 63 (v1.0) NEW
 │       │   ├── data_transfers/
 │       │   │   └── show.html.erb                      ← Session 63 (v1.4)
@@ -274,21 +303,22 @@ decor//
 │       │   ├── software_conditions/
 │       │   └── software_names/
 │       ├── common/
-│       │   └── _navigation.html.erb                   ← Session 53 (v2.2)
+│       │   └── _navigation.html.erb                   ← Session 61 (v2.4)
 │       ├── data_transfers/
 │       │   └── show.html.erb                          ← Session 49 (v1.9)
 │       ├── home/
 │       │   └── index.html.erb                         ← Session 51 (v4.4)
 │       ├── layouts/
-│       │   └── admin.html.erb                         ← Session 53 (v2.2)
+│       │   └── admin.html.erb                         ← Session 69 (v2.8)
 │       ├── computers/
+│       │   ├── _form.html.erb                         ← Session 71 (display fix)
 │       │   └── show.html.erb                          ← Session 47 (v2.2)
 │       ├── owners/
 │       │   ├── _owner.html.erb                        ← Session 41 (v3.5)
-│       │   ├── computers.html.erb                     ← Session 45 (v1.4)
-│       │   ├── components.html.erb                    ← Session 45 (v1.4)
+│       │   ├── computers.html.erb                     ← Session 71 (display fix)
+│       │   ├── components.html.erb                    ← Session 71 (display fix)
 │       │   ├── connections.html.erb                   ← Session 45 (v1.2)
-│       │   ├── peripherals.html.erb                   ← Session 45 (v1.3)
+│       │   ├── peripherals.html.erb                   ← Session 71 (display fix)
 │       │   ├── show.html.erb                          ← Session 46 (v2.4)
 │       │   └── software.html.erb                      ← Session 46 (v1.1)
 │       └── software_items/
@@ -301,18 +331,21 @@ decor//
 │           ├── new.html.erb                           ← Session 46 (v1.0) NEW
 │           └── show.html.erb                          ← Session 46 (v1.1)
 ├── config/
-│   └── routes.rb                                      ← Session 63 (v3.3)
+│   └── routes.rb                                      ← Session 67 (v3.6)
 ├── db/
 │   └── migrate/
 │       ├── 20260401000000_create_software_names.rb    ← Session 43 (v1.0) NEW
 │       ├── 20260401000100_create_software_conditions.rb ← Session 43 (v1.0) NEW
 │       ├── 20260401000200_create_software_items.rb    ← Session 43 (v1.0) NEW
 │       ├── 20260511000100_create_component_suggestions.rb ← Session 63 (v1.0) NEW
-│       └── 20260511000200_add_order_number_verified_to_components.rb ← Session 63 (v1.0) NEW
+│       ├── 20260511000200_add_order_number_verified_to_components.rb ← Session 63 (v1.0) NEW
+│       ├── 20260707000100_add_manual_and_enlarge_description_to_component_suggestions.rb ← Session 67 (v1.0) NEW
+│       ├── 20260716000100_add_owner_part_number_to_computers_and_components.rb ← Session 70 (v1.0) NEW
+│       └── 20260716000200_enforce_owner_part_number_constraints.rb ← Session 70 (v1.0) NEW
 └── test/
     ├── controllers/
     │   ├── admin/
-    │   │   ├── component_suggestions_controller_test.rb ← Session 63 (v1.0) NEW
+    │   │   ├── component_suggestions_controller_test.rb ← Session 67 (v1.1)
     │   │   ├── component_order_numbers_controller_test.rb ← Session 65 (v1.0) NEW
     │   │   ├── computer_models_controller_test.rb      ← Session 41 (v1.3)
     │   │   ├── data_transfers_controller_test.rb       ← Session 50 (v1.3)
@@ -321,44 +354,44 @@ decor//
     │   │   ├── site_texts_controller_test.rb           ← Session 53 (v1.1)
     │   │   ├── software_conditions_controller_test.rb  ← Session 44 (v1.0) NEW
     │   │   └── software_names_controller_test.rb       ← Session 44 (v1.0) NEW
-    │   ├── computers_controller_test.rb                ← Session 59 (v1.11)
+    │   ├── computers_controller_test.rb                ← Session 70 (updated)
+    │   ├── components_controller_test.rb               ← Session 70 (updated)
     │   ├── connection_groups_controller_test.rb        ← Session 38 (v1.1)
     │   ├── data_transfers_controller_test.rb           ← Session 50 (v1.4)
     │   ├── owners_controller_test.rb                  ← Session 58 (v2.0)
     │   └── software_items_controller_test.rb          ← Session 50 (v1.5)
     ├── fixtures/
     │   ├── computer_models.yml                         ← Session 41 (v1.3)
-    │   ├── computers.yml                              ← Session 41 (v1.9)
+    │   ├── computers.yml                              ← Session 70 (v1.10)
+    │   ├── components.yml                              ← Session 70 (v1.5)
     │   ├── newsletters.yml                            ← Session 58 (v1.0) NEW
     │   ├── owners.yml                                 ← Session 58 (v2.2)
     │   ├── software_conditions.yml                    ← Session 43 (v1.0) NEW
     │   ├── software_items.yml                         ← Session 43 (v1.0) NEW
     │   ├── component_suggestions.yml                  ← Session 63 (v1.0) NEW
-    │   ├── software_conditions.yml                    ← Session 43 (v1.0) NEW
-    │   ├── software_items.yml                         ← Session 43 (v1.0) NEW
     │   └── software_names.yml                         ← Session 43 (v1.0) NEW
     ├── mailers/
     │   └── newsletter_mailer_test.rb                  ← Session 58 (v1.0) NEW
     ├── models/
     │   ├── computer_model_test.rb                     ← Session 41 (v1.3)
-    │   ├── computer_test.rb                           ← Session 41 (v1.7)
+    │   ├── computer_test.rb                           ← Session 70 (updated)
+    │   ├── component_test.rb                          ← Session 70 (updated)
     │   ├── newsletter_test.rb                         ← Session 58 (v1.1) NEW
     │   ├── owner_test.rb                              ← Session 58 (v1.5)
     │   ├── software_condition_test.rb                 ← Session 43 (v1.0) NEW
     │   ├── software_item_test.rb                      ← Session 43 (v1.0) NEW
-    │   ├── component_suggestion_test.rb                ← Session 63 (v1.0) NEW
-    │   ├── software_condition_test.rb                 ← Session 43 (v1.0) NEW
-    │   ├── software_item_test.rb                      ← Session 43 (v1.0) NEW
+    │   ├── component_suggestion_test.rb                ← Session 67 (v1.1)
     │   └── software_name_test.rb                      ← Session 43 (v1.0) NEW
     ├── services/
     │   ├── component_suggestion_export_service_test.rb ← Session 63 (v1.0) NEW
-    │   ├── component_suggestion_import_service_test.rb ← Session 63 (v1.0) NEW
+    │   ├── component_suggestion_import_service_test.rb ← Session 67 (v2.0)
+    │   ├── manual_component_suggestions_export_service_test.rb ← Session 67 (v1.0) NEW
     │   ├── component_order_number_revalidation_service_test.rb ← Session 65 (v1.0) NEW
     │   ├── unvalidated_order_numbers_export_service_test.rb ← Session 65 (v1.0) NEW
     │   ├── computer_model_export_service_test.rb      ← Session 41 (v1.2)
     │   ├── computer_model_import_service_test.rb      ← Session 41 (v1.2)
-    │   ├── owner_export_service_test.rb               ← Session 49 (v2.0)
-    │   └── owner_import_service_test.rb               ← Session 49 (v1.7)
+    │   ├── owner_export_service_test.rb               ← Session 70 (updated)
+    │   └── owner_import_service_test.rb               ← Session 70 (updated)
     ├── support/
     │   ├── authentication_helper.rb                   ← Session 59 (v2.1)
     │   └── response_helpers.rb                        ← Session 50 (v1.0) NEW
@@ -372,10 +405,31 @@ decor//
     └── test_helper.rb                                 ← Session 50 (v1.2)
 ```
 
+**Note (Session 72):** the tree above is annotated with the versions/sessions
+known from delivered file headers and the Key file versions table, but has
+not been regenerated from an actual `tree` command output since Session 41.
+Run the command above and upload a fresh `decor_tree.txt` when convenient —
+this is a documentation nicety, not a blocker (Gemfile/Gemfile.lock, which
+Session 72 touched, aren't shown in this filtered tree at all since `*.lock`
+is excluded).
+
 ---
 
 **Key file versions** (updated each session):
 
+    decor/docs/claude/DECOR_PROJECT.md                                                  v2.64 ← Session 73
+    decor/docs/claude/SESSION_HANDOVER.md                                               v73.0 ← Session 73
+    decor/docs/claude/RAILS_SPECIFICS.md                                                v3.7  ← Session 73
+    decor/app/models/site_text.rb                                                       v1.2  ← Session 73
+    decor/app/controllers/site_texts_controller.rb                                       v1.1  ← Session 73
+    decor/app/controllers/admin/site_texts_controller.rb                                 v1.3  ← Session 73
+    decor/config/routes.rb                                                               v3.7  ← Session 73
+    decor/app/views/common/_navigation.html.erb                                          v2.5  ← Session 73
+    decor/test/controllers/admin/site_texts_controller_test.rb                           v1.2  ← Session 73
+    decor/test/controllers/site_texts_controller_test.rb                                 v1.0  ← Session 73 NEW
+    decor/docs/claude/DECOR_PROJECT.md                                                  v2.63 ← Session 72
+    decor/docs/claude/SESSION_HANDOVER.md                                               v72.0 ← Session 72
+    decor/Gemfile.lock (loofah, rails-html-sanitizer, sqlite3, websocket-driver bumped) ← Session 72
     decor/docs/claude/DECOR_PROJECT.md                                                  v2.61 ← Session 70
     decor/docs/claude/SESSION_HANDOVER.md                                               v71.0 ← Session 70
     decor/db/migrate/20260716000100_add_owner_part_number_to_computers_and_components.rb v1.0 ← Session 70 NEW
@@ -683,6 +737,35 @@ decor//
 - scope :order_number_contains, ->(q) { where("order_number LIKE ?", "%#{q}%") } (Session 67,
   substring match for the admin index filter — different from :matching's prefix match)
 
+### SiteText  ← documented here for the first time in Session 73 (model itself
+  ### dates to Session 18 — this was a genuine documentation gap, same shape
+  ### as the still-open Session 68 gap noted in SESSION_HANDOVER.md's "!!
+  ### GAP NOTICE !!"; closed now, not reconstructed from guesswork — read
+  ### directly from decor/app/models/site_text.rb)
+- Generic key/content lookup table backing every admin-managed, owner-facing
+  static text page (README, News, Barter Trade, Privacy, and — as of Session
+  73 — the 5 Category Help pages).
+- key     VARCHAR(40) NOT NULL, UNIQUE index
+- content TEXT NOT NULL (approved TEXT use — free-form Markdown body,
+  per PROGRAMMING_GENERAL.md's TEXT exception for long free-form content)
+- `KNOWN_TEXTS` (class constant) is the single source of truth: an array of
+  `{ key:, title: }` hashes. Drives every admin selector (Upload/Download/
+  Delete dropdowns) via `SiteText.options_for_select_list`, and page titles
+  via `SiteText.title_for_key`. **Adding a new text page requires only a new
+  KNOWN_TEXTS entry + a matching public route — no migration, no admin
+  controller/view changes.**
+- **Load-bearing naming convention (Session 73):** every public route's
+  `as:` name MUST be identical to its `key` string. `Admin::
+  SiteTextsController#url_for_key` (v1.3) relies on this to compute
+  `send("#{key}_path")` generically for ANY key, with no per-key case
+  branch. Breaking this convention for a future key silently falls back to
+  `root_path` instead of the new page.
+- `.for(key)` — convenience finder (Session 18)
+- `SiteTextsController#show` (owner-facing, no `require_login` — public) and
+  `Admin::SiteTextsController` (upload/download/delete, admin-only) are both
+  fully generic over `KNOWN_TEXTS` — see "Category Help Pages Feature —
+  Session 73" below for what was and wasn't touched.
+
 ### ConnectionGroup
 - belongs_to :owner
 - belongs_to :connection_type (optional)
@@ -932,6 +1015,9 @@ data consistency without blocking entry of new/unknown values.
         to match the real file once uploaded — luck, not compliance.)
 
     NOT YET DONE — required before this can be committed:
+      Session 72 update: ALL items below are done — committed, pushed, merged,
+      deployed to main, per Ulli's confirmation (see SESSION_HANDOVER.md
+      "Session 72 Summary"). Left as historical record.
       [ ] bundle exec rubocop -A / bundle exec rubocop — lint fix + verify (not run this session)
       [ ] bin/brakeman --no-pager                      — static code security scan (not run this session)
       [ ] Manual browser check of filters, Load more, Download Manual Changes link, re-import behavior
@@ -1002,15 +1088,117 @@ tested up from ~85,000 before filtering).
       decor/config/routes.rb
       decor/test/fixtures/component_suggestions.yml
 
+    (Session 72 note: this design pivot was implemented in Session 67 and is
+    confirmed deployed on main — see the Phase 4 "DONE" entry above.)
+
 ---
 
-## Owner Part Number Feature — Sessions 69–70 (IMPLEMENTED, unmigrated/untested)
+## Category Help Pages Feature — Session 73 (IMPLEMENTED, code-complete, not yet tested/committed)
 
-**Session 69** was design-consultation only (see git history / prior
-version of this file for the original three open questions). **Session 70**
-received Ulli's answers to all three and implemented the feature in full —
-11 of 12 planned files delivered (schema.rb regeneration is the 12th,
-pending an actual `bin/rails db:migrate` run against a real database).
+5 new owner-facing help pages, one per device/software category, added to
+the existing generic `SiteText` subsystem (see "SiteText" in Data Model
+Overview above). **No migration** — these are pure data (new `KNOWN_TEXTS`
+entries) plus routes plus a nav link, following the exact pattern already
+established by README/News/Barter Trade/Privacy.
+
+### New keys, titles, routes
+
+    Key                  Title                Route helper
+    help_computers       Computers Help       help_computers_path
+    help_peripherals     Peripherals Help     help_peripherals_path
+    help_components      Components Help      help_components_path
+    help_connections     Connections Help     help_connections_path
+    help_software        Software Help        help_software_path
+
+Admin-manageable via the existing admin "Texts" dropdown (Upload Text /
+Download Text / Delete Text) — no changes needed there; all three admin
+views iterate `SiteText::KNOWN_TEXTS`, so the 5 new entries appeared
+automatically. Owner-facing: linked from the "Info" dropdown in
+`common/_navigation.html.erb`, below a new divider separating them from the
+4 pre-existing general-info links.
+
+### Two pre-existing bugs found and fixed (Never-Guess — confirmed by reading
+### the actual files, not assumed from the Session 20 changelog description)
+
+1. **`decor/app/controllers/site_texts_controller.rb`** (owner-facing) had
+   never been updated when Session 20 introduced `SiteText.title_for_key` /
+   `KNOWN_TEXTS` as the single source of truth for page titles — that
+   refactor only touched the admin controller. The owner-facing controller
+   kept its own private `title_for_key` hash with only `"readme"`
+   hardcoded, falling back to `key.titleize` for everything else. This
+   happened to produce correct output for the 4 pre-existing keys purely by
+   coincidence (`.titleize` of "news"/"barter_trade"/"privacy" all happen to
+   match their configured titles). It would NOT have worked for the new
+   pages — `"help_computers".titleize` → "Help Computers", not the intended
+   "Computers Help". Fixed (v1.1) by deleting the private method and
+   delegating to `SiteText.title_for_key`, matching the admin controller.
+2. **`decor/app/controllers/admin/site_texts_controller.rb`**'s
+   `url_for_key` was a hardcoded `case` statement mapping key → route
+   helper — needing a manual edit every time a `KNOWN_TEXTS` entry was
+   added (the same "touch N places, miss one" shape as the Session 64
+   admin-nav-menu gap and the Session 68 documentation gap). Every existing
+   route's `as:` name is identical to its key, so this was generalized
+   (v1.3) to `send("#{key}_path")`, rescuing `NoMethodError` back to
+   `root_path`. No future `KNOWN_TEXTS` addition should ever need to touch
+   this file again for this purpose — only `site_text.rb` + `routes.rb`.
+
+### Files delivered (7: 5 production, 2 test; 0 migrations)
+
+    decor/app/models/site_text.rb                            v1.1 → v1.2
+    decor/app/controllers/site_texts_controller.rb            v1.0 → v1.1
+    decor/app/controllers/admin/site_texts_controller.rb      v1.2 → v1.3
+    decor/config/routes.rb                                    v3.6 → v3.7
+    decor/app/views/common/_navigation.html.erb                v2.4 → v2.5
+    decor/test/controllers/admin/site_texts_controller_test.rb v1.1 → v1.2
+    decor/test/controllers/site_texts_controller_test.rb      NEW (v1.0 —
+      this controller had NO test coverage at all before this session,
+      flagged per PROGRAMMING_GENERAL.md's mandatory Test Coverage Check
+      while fixing the title_for_key bug in it)
+
+**No changes needed** to `admin.html.erb` (Texts dropdown already generic
+over `KNOWN_TEXTS`), the three `admin/site_texts/*.html.erb` views (already
+`KNOWN_TEXTS`-driven), `db/schema.rb` (no migration), or `site_texts/
+show.html.erb` (already fully generic over `@site_text`/`@title`).
+
+### Open item raised during this session, not yet resolved
+
+Whether `decor/app/helpers/application_helper.rb`'s `render_markdown` (or
+equivalent) enables Redcarpet's `:with_toc_data` extension — required for
+Markdown headers to get `id=` attributes, which in turn is required for
+in-page anchor links (`[Trade Status](#trade-status)`) to actually work on
+these help pages. Not confirmed either way this session — the helper file
+was not reviewed. Worth checking during the manual browser check below if
+any of the 5 new pages are written with an in-page table of contents.
+
+### NOT YET DONE — required before this feature can be committed
+
+    [ ] Place the 7 delivered files into the actual project (via the Session
+        73 placement script)
+    [ ] Upload actual Markdown content for the 5 new keys via Admin > Texts >
+        Upload Text (pages currently show "== Empty ==" until content exists)
+    [ ] bin/rails test
+    [ ] bundle exec rubocop -A / bundle exec rubocop
+    [ ] bin/brakeman --no-pager
+    [ ] bundle exec bundle-audit check --update
+    [ ] Manual browser check: all 5 new Info dropdown links; admin Upload/
+        Download/Delete selectors show the 5 new entries; help_computers_path
+        renders "Computers Help" as its heading (regression check for the
+        title_for_key fix); confirm whether render_markdown supports header
+        anchors (see "Open item" above) if any page needs a TOC
+    [ ] git workflow: branch → commit → push → PR → CI → merge → deploy
+
+---
+
+## Owner Part Number Feature — Sessions 69–72 (IMPLEMENTED, migrated, tested, deployed)
+
+**Session 69** was design-consultation only. **Session 70** received Ulli's
+answers to all three open questions and implemented the feature in full —
+11 of 12 planned files delivered in that session, with `schema.rb`
+regeneration (the 12th item) completed once `bin/rails db:migrate` was
+actually run. **Session 72** closed out the remaining pre-commit checklist
+(an additional `bundle-audit` gem-CVE fix was needed to get CI green) and
+merged/deployed the feature to `main` — see SESSION_HANDOVER.md "Session 72
+Summary" for the full incident.
 
 ### Confirmed answers (Session 70) and how each was implemented
 
@@ -1068,7 +1256,7 @@ consequence of the Option B decision above. Worth a one-time check against
 any CSV taken before this migration if Ulli re-imports historical
 spare-heavy data.
 
-### Files delivered this session (11 of 12)
+### Files delivered Session 70 (11 of 12; schema.rb confirmed via migrate in Session 72)
 
     decor/db/migrate/20260716000100_add_owner_part_number_to_computers_and_components.rb  NEW
     decor/db/migrate/20260716000200_enforce_owner_part_number_constraints.rb              NEW
@@ -1083,14 +1271,17 @@ spare-heavy data.
     decor/test/fixtures/computers.yml                                  v1.9 → v1.10
     decor/test/fixtures/components.yml                                 v1.4 → v1.5
 
-**12th file, not yet possible:** `decor/db/schema.rb` regeneration — requires
-actually running `bin/rails db:migrate` against a real database first,
-which has NOT happened this session. The two-migration recreation logic
-(especially the `"SPARE-#{id}"` backfill in migration 1) has never run
-against real data — this is the single highest-risk untested piece of the
-whole feature and should be the first thing verified next session.
+**12th item, Session 70 → confirmed Session 72:** `decor/db/schema.rb`
+regeneration — required actually running `bin/rails db:migrate` against a
+real database, which had not happened as of Session 70's close. This was
+completed at the start of Session 72's git workflow (`db:migrate ok` per
+Ulli), along with `bin/rails test`, `bin/rails test:system`, `bundle exec
+rubocop -A`, and `bin/brakeman --no-pager` all passing before the branch was
+pushed. The two-migration recreation logic — including the
+`"SPARE-#{id}"` backfill in migration 1 — has now run successfully against
+a real database with no reported issues.
 
-### Scope notes — deliberately NOT touched this session
+### Scope notes — deliberately NOT touched this session (Session 70)
 
 - The embedded Component sub-table inside `computers/_form.html.erb`
   (columns: Type | Description | Order No. | Serial No. | Condition |
@@ -1118,6 +1309,17 @@ filenames, which structurally prevents this collision rather than relying
 on upload ordering.
 
 ### NOT YET DONE — required before this feature can be committed
+
+**Session 72 update: ALL items below are now confirmed complete.** The
+Owner Part Number feature was migrated (`bin/rails db:migrate`), tested
+(`bin/rails test`, `bin/rails test:system`), lint/security-scanned (`bundle
+exec rubocop -A`, `bin/brakeman --no-pager`), and — after fixing an
+unrelated `bundle-audit` CI failure on four gems (loofah,
+rails-html-sanitizer, sqlite3, websocket-driver) — committed, pushed,
+opened as a PR, merged, and deployed via `kamal deploy`. See
+SESSION_HANDOVER.md "Session 72 Summary" for the complete incident detail.
+Left below as historical record of what this checklist looked like at the
+end of Session 70.
 
     [ ] bin/rails db:migrate                          — never run against a real DB this session
     [ ] decor/db/schema.rb                             — regenerate and review after migrating
@@ -1170,6 +1372,18 @@ in Session 64.
 the corresponding `link_to` inside the matching dropdown in admin.html.erb
 (or a new dropdown, if the resource doesn't fit an existing menu group),
 before the session is considered complete — not as a follow-up.**
+
+### CI Security (Ruby) failures — always confirm which tool, and confirm clean before pushing (Session 64, reinforced Session 72)
+`CI/Security (Ruby)` is `bundle-audit` (gem-version CVE scan), NOT Brakeman
+(static code scan) — two separate CI jobs. A clean local `bin/brakeman`
+proves nothing about this check. Pull the actual CI log
+(`gh run view <run-id> --log-failed`) before assuming which tool failed.
+`bundle-audit` reports vulnerabilities in batches — fixing what one CI run
+shows can unmask more on the next run. Always confirm with a full local
+`bundle exec bundle-audit check --update` returning "No vulnerabilities
+found" before re-pushing. Session 72 hit this again: four gems (loofah,
+rails-html-sanitizer, sqlite3, websocket-driver) surfaced in a single batch
+on the `feature/owner_part_number` PR.
 
 ### System tests — browser-layer login (Session 59)
 `login_as` uses the Rack adapter. System tests require `sign_in` (browser form).

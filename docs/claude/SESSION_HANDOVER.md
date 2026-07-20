@@ -1,5 +1,25 @@
 # decor/docs/claude/SESSION_HANDOVER.md
-# version 71.1
+# version 73.0
+# Session 73: Category Help Pages feature — 5 new owner-facing help pages
+#   (Computers/Peripherals/Components/Connections/Software), admin-manageable
+#   via the existing generic SiteText subsystem. Code-complete (7 files: 5
+#   production, 2 test), NOT YET tested/lint/security-scanned/committed. Two
+#   pre-existing bugs found and fixed via Never-Guess file review (a stale
+#   title_for_key in the owner-facing controller; a hardcoded per-key case
+#   statement in the admin controller's url_for_key, generalized). Also
+#   closed a documentation gap: SiteText had never appeared in DECOR_PROJECT.md's
+#   Data Model Overview despite existing since Session 18 — added this
+#   session. See "Session 73 Summary" below for full detail.
+# Session 72: CI Security (Ruby) failure on the feature/owner_part_number PR
+#   diagnosed as bundle-audit (not Brakeman, per the existing rule) via the
+#   actual CI log; four gems bumped (loofah, rails-html-sanitizer, sqlite3,
+#   websocket-driver) to clear a batch of CVEs; confirmed clean locally;
+#   merged and deployed. Separately, Ulli confirmed Sessions 67-70 (previously
+#   described throughout this document as "sitting locally, uncommitted")
+#   have ALL already been committed, pushed, merged, and deployed to main.
+#   All "NOT YET committed/pushed/deployed" language for those sessions is
+#   now resolved — see "Session 72 Summary" below and the update notes added
+#   to the Date/Branch/Status block and each affected session summary.
 # Session 71: Owner Part Number display fix (9 files — the 8 URLs missing the
 #   column/field, per Session 70's own gap flag) delivered. Separately: agreed
 #   and implemented a new File Transfer Protocol with the user — COMMON_BEHAVIOR.md
@@ -38,23 +58,16 @@
 #   below for confirmed requirements going into next session.
 # Session 65: Component order_number bulk maintenance (admin Components dropdown).
 
-**Date:** July 17, 2026
-**Branch:** main (Sessions 49–65 committed, pushed, merged, deployed). Session 67's
-  Phase 4 work, Session 68's Component Suggestions UI refinements (status/paper
-  trail unclear — see GAP NOTICE below), Session 69's UI Terminology Rename, AND
-  Session 70's Owner Part Number feature are ALL sitting locally, uncommitted,
-  on top of each other.
-**Status:** Session 70 implemented the Owner Part Number feature end to end —
-  11 of 12 planned files delivered, code-complete, but NOT migrated against a
-  real database, NOT tested (bin/rails test not run, no unit tests written yet —
-  6 existing test files are needed first per Never-Guess/Pre-Implementation
-  Verification), and NOT lint/security-scanned. See "Session 70 Summary" below
-  for full detail, the resulting CSV re-import behaviour change worth knowing
-  about, and the complete NOT YET DONE checklist — this is the very first thing
-  to pick up next session, starting with an actual `bin/rails db:migrate` run.
-  Session 69's UI Terminology Rename (15 files) and Session 67's Phase 4 work
-  are both still separately outstanding on their own checklists further down.
-  Read the GAP NOTICE below before doing anything else.
+**Date:** July 19, 2026
+**Branch:** main (Sessions 49–72 all committed, pushed, merged, and deployed).
+  Session 73 (Category Help Pages feature, this session) is **code-complete
+  but NOT YET tested, lint/security-scanned, or committed** — sitting
+  locally. This is a single-session checklist, not a multi-session stack
+  like the Sessions 67–70 situation Session 72 resolved.
+**Status:** Sessions 1–72 fully closed out (see "Session 72 Summary"). Session
+  73's checklist (see "Session 73 Summary" below) is the only currently open
+  one. The GAP NOTICE below (Session 68's missing formal summary — a
+  documentation-only issue, not a code issue) also remains open.
 
 ---
 
@@ -101,6 +114,14 @@ exists outside this project and simply wasn't the version uploaded here, or
 Session 68's rule-doc updates were never actually produced/delivered despite
 the code changes shipping. Worth checking before treating this document as
 a complete history.
+
+**Update (Session 72):** Ulli confirmed the underlying code for Sessions
+67–70 has all been committed, pushed, merged, and deployed to `main` — the
+"uncommitted, stacked locally" situation described above and throughout this
+document is now resolved on the git/deploy side. This documentation gap
+(no formal Session 68 Summary ever written here) is a separate, still-open
+issue — it does not block or affect the code, which is live — but is left
+flagged in case Ulli wants to reconstruct it later from source history.
 
 ---
 
@@ -437,7 +458,292 @@ See SESSION_HANDOVER v64.0 for the full rule.
 
 ---
 
+## !! CI SECURITY CHECKS — bundle-audit reports in batches, confirm clean locally (learned Session 64, reinforced Session 72) !!
+
+`CI/Security (Ruby)` is `bundle-audit` (dependency CVE scan), NOT Brakeman
+(static code scan) — two separate CI jobs. If `CI/Security (Ruby)` fails,
+pull the actual CI log (`gh run view <run-id> --log-failed -R <owner>/<repo>`)
+rather than assuming it's the same tool as a clean local `bin/brakeman` run.
+
+**Session 72 reinforcement:** the `feature/owner_part_number` PR failed
+`CI/Security (Ruby)` on four gems simultaneously in one batch: `loofah`
+(2.25.1 → needed >= 2.25.2), `rails-html-sanitizer` (1.7.0 → >= 1.7.1),
+`sqlite3` (2.9.1 → >= 2.9.5), `websocket-driver` (0.8.0 → >= 0.8.2). Fixed
+with `bundle update loofah rails-html-sanitizer sqlite3 websocket-driver`,
+confirmed clean with a full local `bundle exec bundle-audit check --update`
+before re-pushing. See "Session 72 Summary" below for the full incident.
+
+---
+
+## Note for next session — Documentation Compression Experiment (after Session 73's main work)
+
+After Session 73's Category Help Pages feature was delivered and this rule
+set updated, Ulli asked whether the rule documents could be shrunk ~30%
+without losing much. Findings and status, for whoever picks this up:
+
+- **Confirmed real bloat, not just an impression:** `RAILS_SPECIFICS.md` has
+  a stray `**End of RAILS_SPECIFICS.md**` marker mid-file (~line 1761 in the
+  v3.7 delivered this session) with ~140 more lines appended after it (the
+  System Tests Capybara section) — content was tacked on past a false "end"
+  in some past session and never noticed. Separately, `SESSION_HANDOVER.md`
+  had 32 `!! BANNER !!` sections, several of which fully restated rules
+  already documented in complete detail in `RAILS_SPECIFICS.md`, plus 10
+  full `## Session N Summary` narratives that duplicate feature detail
+  already carried in `DECOR_PROJECT.md`.
+- **Drafted a compressed `SESSION_HANDOVER.md` as a proof of concept** —
+  delivered as `SESSION_HANDOVER_COMPRESSED_DRAFT.md` (1,490 → 788 lines,
+  ~47% reduction). Approach: turned duplicate-content banners into short
+  pointers into `RAILS_SPECIFICS.md`, and compressed the resolved historical
+  session summaries (65, 66, 67, 69, 70, 72) down to what shipped + the one
+  durable lesson + a pointer, while leaving Session 73 (open), the GAP
+  NOTICE, and Sessions 59/61 (whose design rationale isn't duplicated
+  elsewhere) untouched.
+- **Status: NOT adopted.** This draft was for Ulli to compare against the
+  real `SESSION_HANDOVER.md` before treating it as the working file — that
+  review had not happened when the session ended on a token-limit warning.
+  **Do not assume the compressed draft is in effect** — the full
+  `SESSION_HANDOVER.md` (this file, v73.0) remains authoritative until Ulli
+  confirms the draft (or a revised version of it) should replace it.
+- **Not yet started:** the equivalent compression pass on `RAILS_SPECIFICS.md`
+  (fixing the duplicate-`End of` bug alone recovers ~140 lines) and on
+  `DECOR_PROJECT.md` (whose closed-out feature sections have similar
+  "Session N update: this is now done" annotations bolted onto full original
+  narratives).
+- **Next session should:** ask Ulli whether the compressed draft looked
+  right, and only then either adopt it (bump `SESSION_HANDOVER.md`'s version,
+  replace it) or revise it further — before doing the same pass on the other
+  two documents.
+
+Unrelated: the Session 73 Category Help Pages feature itself is still
+sitting at "code-complete, not yet tested/committed" — see its own checklist
+in the summary immediately below. That work is independent of the
+documentation-compression question above and still needs the standard
+pre-commit checklist run.
+
+---
+
+## Session 73 Summary — Category Help Pages feature: implemented, code-complete, not yet tested/committed
+
+**5 new owner-facing help pages (Computers, Peripherals, Components,
+Connections, Software), built entirely on top of the existing `SiteText`
+generic text-page subsystem. No migration.** 7 files delivered (5
+production, 2 test).
+
+### What this request turned out to need
+
+Before writing anything, `decor/app/models/site_text.rb`,
+`decor/app/controllers/site_texts_controller.rb`,
+`decor/app/controllers/admin/site_texts_controller.rb`,
+`decor/config/routes.rb`, `decor/app/views/common/_navigation.html.erb`,
+`decor/app/views/layouts/admin.html.erb`, the three
+`decor/app/views/admin/site_texts/*.html.erb` views,
+`decor/app/views/site_texts/show.html.erb`, `decor/db/schema.rb`, and
+`decor/test/controllers/admin/site_texts_controller_test.rb` were all
+requested and read directly (Never-Guess / Pre-Implementation
+Verification — via the File Transfer Protocol export script). This
+confirmed `SiteText` is a generic `key`/`content` model whose `KNOWN_TEXTS`
+constant is the actual single source of truth driving every admin
+selector — meaning the 5 new pages needed no schema change at all, just 5
+new `KNOWN_TEXTS` entries + 5 new routes + 5 new nav links.
+
+**Also surfaced a real documentation gap while reading:** `SiteText` had
+never appeared anywhere in DECOR_PROJECT.md's "Data Model Overview" despite
+existing since Session 18 — the same shape of gap as the still-open Session
+68 issue (see GAP NOTICE above), just for a different model. Closed this
+one: added a full "SiteText" entry to DECOR_PROJECT.md's Data Model
+Overview this session.
+
+### Two pre-existing bugs found and fixed (not new bugs from this session's own additions)
+
+1. **`site_texts_controller.rb` (owner-facing) — stale `title_for_key`.**
+   Session 20 introduced `SiteText.title_for_key` / `KNOWN_TEXTS` as the
+   single source of truth for page titles, but that refactor only touched
+   the admin controller — the owner-facing controller kept its own private
+   `title_for_key` hash with only `"readme"` hardcoded, falling back to
+   `key.titleize` otherwise. This coincidentally produced correct output for
+   the 4 pre-existing keys (`.titleize` of "news"/"barter_trade"/"privacy"
+   happens to match their configured titles) but would have shipped the
+   WRONG title for the new pages (`"help_computers".titleize` → "Help
+   Computers", not "Computers Help"). Fixed (v1.1) by deleting the private
+   method and delegating to `SiteText.title_for_key`.
+2. **`admin/site_texts_controller.rb` — hardcoded `url_for_key` case
+   statement.** Required manual editing every time a `KNOWN_TEXTS` entry was
+   added — the same "touch N places, miss one" trap as the Session 64
+   admin-nav-menu gap and the Session 68 documentation gap. Every existing
+   route's `as:` name is identical to its key, so this was generalized
+   (v1.3) to a single `send("#{key}_path")` call, rescuing `NoMethodError`
+   back to `root_path`. No future `KNOWN_TEXTS` addition should need to
+   touch this file again for this purpose.
+
+Both were caught by actually reading the files rather than assuming the
+Session 20 refactor had been applied everywhere — see DECOR_PROJECT.md
+"Category Help Pages Feature — Session 73" for the full write-up.
+
+### New keys, titles, routes
+
+    Key                  Title                Route helper
+    help_computers       Computers Help       help_computers_path
+    help_peripherals     Peripherals Help     help_peripherals_path
+    help_components      Components Help      help_components_path
+    help_connections     Connections Help     help_connections_path
+    help_software        Software Help        help_software_path
+
+Owner-facing: new links in the "Info" dropdown (`_navigation.html.erb`),
+below a new divider separating them from the 4 pre-existing general-info
+links; dropdown widened `w-36` → `w-48` (the new labels are longer than any
+existing entry and would wrap at the old width). Admin-facing: **zero
+changes needed** to `admin.html.erb`'s "Texts" dropdown or any of the three
+admin `site_texts` views — all already iterate `KNOWN_TEXTS` generically, so
+the 5 new entries appear automatically in Upload/Download/Delete.
+
+### Files delivered (7: 5 production, 2 test; 0 migrations)
+
+    decor/app/models/site_text.rb                            v1.1 → v1.2
+    decor/app/controllers/site_texts_controller.rb            v1.0 → v1.1
+    decor/app/controllers/admin/site_texts_controller.rb      v1.2 → v1.3
+    decor/config/routes.rb                                    v3.6 → v3.7
+    decor/app/views/common/_navigation.html.erb                v2.4 → v2.5
+    decor/test/controllers/admin/site_texts_controller_test.rb v1.1 → v1.2
+    decor/test/controllers/site_texts_controller_test.rb      NEW (v1.0)
+
+### Test Coverage Check (per PROGRAMMING_GENERAL.md, offered proactively)
+
+`site_texts_controller_test.rb` had never existed for the owner-facing
+controller — flagged and written from scratch (3 tests: content render,
+empty-placeholder path, and a regression test specifically proving the
+`title_for_key` fix using the `help_computers` key). The admin controller
+test file was extended with 2 new tests that deliberately use
+`help_computers` — a key the OLD hardcoded `case` statement never
+special-cased — so a regression back to the old code, or a typo in the new
+`send("#{key}_path")` call, would fail these specific tests even though
+tests against the 4 pre-existing keys would still pass. `site_text.rb`
+(data-only change) and `_navigation.html.erb` (view/CSS only) needed no new
+tests.
+
+### Open item raised, not yet resolved
+
+Whether `render_markdown` (in `application_helper.rb`, not reviewed this
+session) enables Redcarpet's `:with_toc_data` extension — required for
+Markdown header `id=` attributes, which in turn is required for in-page
+anchor links (e.g. `[Trade Status](#trade-status)`) to work on any of the 5
+new help pages. Raised when Ulli asked how to link to a multi-word Markdown
+header; answered the general Markdown convention (lowercase, hyphenated)
+but flagged that whether it actually works here depends on a file not yet
+reviewed. Worth checking during the manual browser check below if any new
+page is written with an in-page table of contents.
+
+### NOT YET DONE — required before this feature can be committed
+
+    [ ] Place the 7 delivered files into the actual project (via the
+        Session 73 placement script, decor/import/place_session_73_files.sh)
+    [ ] Upload actual Markdown content for the 5 new keys via Admin > Texts >
+        Upload Text (pages currently show "== Empty ==")
+    [ ] bin/rails test
+    [ ] bundle exec rubocop -A / bundle exec rubocop
+    [ ] bin/brakeman --no-pager
+    [ ] bundle exec bundle-audit check --update
+    [ ] Manual browser check: all 5 new Info dropdown links; admin
+        Upload/Download/Delete selectors show the 5 new entries;
+        help_computers_path renders "Computers Help" as its heading
+        (regression check for the title_for_key fix); confirm whether
+        render_markdown supports header anchors if a TOC is wanted on any
+        new page
+    [ ] git workflow: branch → commit → push → PR → CI → merge → deploy
+
+---
+
+## Session 72 Summary — CI Security (bundle-audit) fix, merge, and deploy; all prior stacked sessions confirmed committed
+
+**This session closed out the `feature/owner_part_number` branch (Session
+70's Owner Part Number feature) and, per Ulli's confirmation, resolved the
+"four sessions' worth of uncommitted local work" situation described
+throughout this document.**
+
+### Ulli's confirmation (this session)
+
+Ulli confirmed that Sessions 67 (Component Suggestions Phase 4), 68
+(Component Suggestions UI refinements — the session with the still-unresolved
+missing-summary documentation gap, see the GAP NOTICE above), 69 (UI
+Terminology Rename), and 70 (Owner Part Number feature) have ALL already been
+committed, pushed, merged, and deployed to `main` — this had simply not been
+communicated to Claude in prior sessions. **All "NOT YET committed/pushed/
+deployed" and "sitting locally, uncommitted" language throughout this
+document (Sessions 67, 69, 70 summaries, the Date/Branch/Status block above)
+describes a state that no longer applies as of this session.** The
+documentation gap around Session 68's missing formal summary is a separate,
+still-open item — it is a paper-trail gap only, not a code/deployment gap.
+
+### This session's own work — CI Security (Ruby) failure on the Owner Part Number PR
+
+After Session 70's `bin/rails db:migrate`, `bin/rails test`,
+`bin/rails test:system`, `bundle exec rubocop -A`, and `bin/brakeman
+--no-pager` all passed, the branch was pushed and a PR opened
+(`feature/owner_part_number`). `gh pr checks --watch` showed 4 of 5 checks
+green, with `CI/Security (Ruby)` failing.
+
+Per the "CI Security Checks — Two Separate Tools" rule (RAILS_SPECIFICS.md /
+this document's own banner above), this was correctly NOT assumed to be
+Brakeman (which had already passed locally) — the actual CI log was pulled
+via `gh run view <run-id> --log-failed`, which confirmed `bundle-audit` as
+the failing tool, batch-reporting four vulnerable gems at once:
+
+    loofah                2.25.1  → >= 2.25.2  (3 advisories: javascript: URI
+                                                 bypass ×2, SVG href bypass)
+    rails-html-sanitizer  1.7.0   → >= 1.7.1   (possible XSS)
+    sqlite3               2.9.1   → >= 2.9.5   (2 use-after-free CVEs)
+    websocket-driver       0.8.0   → >= 0.8.2   (4 advisories: memory
+                                                 exhaustion ×2, resource-limit
+                                                 bypass, malformed-Host DoS —
+                                                 the last one specifically
+                                                 required 0.8.2, not just 0.8.1)
+
+Fixed with `bundle update loofah rails-html-sanitizer sqlite3
+websocket-driver`; confirmed clean with a full local `bundle exec
+bundle-audit check --update` ("No vulnerabilities found") before pushing the
+fix commit, per the "bundle-audit reports in batches" rule — the fix was not
+assumed complete just because it addressed everything the first CI failure
+showed.
+
+Pushed, `gh pr checks` re-run (confirmed a new run ID, not a stale
+re-display), all 5 checks green. Merged with `gh pr merge --merge` (regular
+merge, per project convention), switched back to `main`, pulled, deleted the
+local and remote feature branch, deployed with `kamal deploy`.
+
+### Net result of this session
+
+- Sessions 67, 68 (code only), 69, and 70 — all now confirmed live on `main`
+  and deployed.
+- Four additional gem CVEs (independent of any Session 67–70 code) fixed as
+  part of getting this PR's CI green: `loofah`, `rails-html-sanitizer`,
+  `sqlite3`, `websocket-driver`.
+- Per the RAILS_SPECIFICS.md "Scope note" on CI Security Checks, these four
+  gem bumps are now part of `main`'s baseline via this merge — no separate
+  Dependabot reconciliation needed since this branch's merge already carries
+  the fix forward.
+
+### Outstanding items after this session
+
+- **Session 68's missing formal SESSION_HANDOVER.md/DECOR_PROJECT.md summary**
+  — a documentation-only gap, not a code gap; the underlying UI refinement
+  code is live on `main` per Ulli's confirmation above. Left open for Ulli to
+  decide whether it's worth reconstructing from source/git history, since the
+  code itself needs no further action.
+- No other checklist items remain open from Sessions 67, 69, or 70 — all
+  their individual "NOT YET DONE" lists (below, in their own summaries) are
+  now satisfied and are left in place as historical record with a note added
+  to each rather than deleted, per the project's practice of dating and
+  preserving lessons learned.
+
+---
+
 ## Session 70 Summary — Owner Part Number feature: IMPLEMENTED, unmigrated/untested
+
+> **Session 72 update:** Ulli confirmed this feature has since been fully
+> migrated, tested, lint/security-scanned, committed, pushed, merged, and
+> deployed to `main` — see "Session 72 Summary" above. The checklist and
+> narrative below are left as the historical record of what was true at the
+> close of Session 70 itself; do not read the "NOT YET DONE" list at the
+> bottom of this section as still current.
 
 **Code-complete, 11 of 12 planned files delivered. NOT run against a real
 database, NOT tested, NOT lint/security-scanned.** Picks up directly from
@@ -581,6 +887,15 @@ contains the full path, so two files can never encode to the same name.
 
 ### NOT YET DONE — required before this feature can be committed
 
+**Session 72 update: ALL items below are now confirmed complete —
+`bin/rails db:migrate` was run, the 6 test files were provided/written,
+`bin/rails test` and `bin/rails test:system` both passed, `bundle exec
+rubocop -A` / `bin/brakeman --no-pager` both ran clean, and the full git
+workflow (branch → commit → push → PR → CI → merge → deploy) completed in
+Session 72 — including an additional `bundle-audit` gem-CVE fix required to
+get CI green, see "Session 72 Summary" above.** Left below as historical
+record of what this checklist looked like at the end of Session 70 itself.
+
     [ ] bin/rails db:migrate                          — never run against a real DB this session
     [ ] decor/db/schema.rb                             — regenerate and review after migrating
     [ ] Tests — 6 test files needed as Pre-Implementation Verification inputs before
@@ -601,6 +916,11 @@ contains the full path, so two files can never encode to the same name.
 ---
 
 ## Session 69 Summary — UI Terminology Rename (implemented) + Owner Part Number (design only)
+
+> **Session 72 update:** Part 1 of this session (the UI Terminology Rename)
+> has since been committed, pushed, merged, and deployed to `main`, per
+> Ulli's confirmation — see "Session 72 Summary" above. The "NOT YET DONE"
+> list at the end of Part 1 below is historical.
 
 ### Part 1 — UI Terminology Rename: IMPLEMENTED, 15 files
 
@@ -656,6 +976,12 @@ already renamed those two himself before this session started.
     [ ] Manual browser check of all 15 renamed views
     [ ] git workflow — on top of Session 67's already-outstanding checklist below
 
+    (Session 72 update: git workflow item above is now done — see "Session 72
+    Summary." The grep-for-hardcoded-assertions and manual-browser-check items
+    were folded into Session 70/72's broader `bin/rails test` / manual-check
+    passes; not separately itemised, but no rename-related test failures were
+    reported.)
+
 ### Part 2 — Owner Part Number: DESIGN CONSULTATION ONLY, NOT IMPLEMENTED
 
 No files created or modified for this part. Full detail in DECOR_PROJECT.md
@@ -698,9 +1024,18 @@ answered by the user:
 **Status: WAITING — do not implement until the three questions above are
 answered and the requested files are provided.**
 
+(Session 72 note: all three questions were answered in Session 70 and the
+feature is now fully implemented and deployed — see "Session 70 Summary"
+above and "Session 72 Summary" further up. This "WAITING" status is
+historical.)
+
 ---
 
 ## Session 67 Summary — Component Suggestions Phase 4: fully implemented
+
+> **Session 72 update:** confirmed committed, pushed, merged, and deployed to
+> `main` — see "Session 72 Summary" above. The "NOT YET DONE" checklist at
+> the end of this section is historical.
 
 **All four confirmed requirements from Session 66 delivered.** 12 production
 files (4 new, 8 updated) + 4 test files updated/added. `bin/rails test`:
@@ -817,6 +1152,9 @@ validation limits, missing methods) before assuming a logic bug in the
 newly-delivered code.
 
 ### NOT YET DONE — required before this can be committed
+
+**Session 72 update: ALL items below are now confirmed complete — see
+"Session 72 Summary" above.** Left as historical record.
 
     [ ] bundle exec rubocop -A / bundle exec rubocop — lint fix + verify (not run this session)
     [ ] bin/brakeman --no-pager                      — static code security scan (not run this session)
@@ -941,6 +1279,11 @@ decor/test/fixtures/component_suggestions.yml
 with @-encoded flat filenames — over manually uploading these one at a time;
 see COMMON_BEHAVIOR.md v3.0.)
 
+(Session 72 note: this design pivot was subsequently implemented in Session
+67 and is deployed — see "Session 67 Summary" above and "Session 72
+Summary" further up. This section is left as historical record of the
+decision-making process.)
+
 ---
 
 ## Session 65 Summary
@@ -1014,6 +1357,10 @@ each test creates, or `Component.count` derived at call time.
     [ ] bundle exec bundle-audit check --update      — dependency CVE scan (separate tool — see RAILS_SPECIFICS.md v3.5 "CI Security Checks")
     [ ] Manual browser check of both new Components dropdown links
     [ ] git workflow: branch → commit → push → PR → CI → merge → deploy
+
+(Session 66 confirmed this session's checklist was completed and this
+feature is live — see the "Status update (Session 66)" note in
+DECOR_PROJECT.md's Phase 3 section.)
 
 ---
 
@@ -1134,7 +1481,7 @@ correct UX — users previously had no way to sign out from the nav.
     decor/test/controllers/computers_controller_test.rb    v1.10 → v1.11
     decor/test/system/authentication_test.rb               v1.0  NEW
     decor/test/system/computers_filters_test.rb            v1.0  NEW
-    decor/test/system/components_filters_test.rb           v1.0  NEW
+    decor/test/system/components_filters_test.rb            v1.0  NEW
     decor/test/system/software_items_filters_test.rb       v1.0  NEW
     decor/test/system/connection_groups_test.rb            v1.0  NEW
 

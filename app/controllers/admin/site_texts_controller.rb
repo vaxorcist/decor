@@ -1,5 +1,18 @@
 # decor/app/controllers/admin/site_texts_controller.rb
-# version 1.2
+# version 1.3
+# v1.3 (Session 73): Bug fix — url_for_key was a hardcoded `case` statement
+#   mapping key => route helper, requiring a manual edit here every single
+#   time a new SiteText::KNOWN_TEXTS entry was added (a "touch N places, miss
+#   one" trap — the same shape of mistake as the Session 64 admin-nav-menu
+#   gap and the Session 68 documentation gap). Every existing route's `as:`
+#   name is IDENTICAL to its key (config/routes.rb, both before and after
+#   v3.7), so the case statement is replaced with one dynamic call:
+#   `send("#{key}_path")`. Adding a future SiteText page now requires editing
+#   ONLY site_text.rb (KNOWN_TEXTS) + routes.rb (as: == key) — this file
+#   never needs to change again for that purpose. Falls back to root_path if
+#   the helper doesn't exist (same behavior as the old `else root_path`
+#   branch), e.g. if a key is ever added to KNOWN_TEXTS without a matching
+#   route.
 # v1.2 (Session 53): Added Download option.
 #   download_confirm: renders selector page — admin picks which text to download.
 #   download:         streams the stored content as a <key>.md file attachment.
@@ -98,14 +111,14 @@ class Admin::SiteTextsController < Admin::BaseController
   private
 
   # Returns the public path for a given key so the admin is redirected to the
-  # page they just updated. Falls back to root if the key has no named route.
+  # page they just updated. Relies on the project convention that every
+  # site_texts route's `as:` name is identical to its key (config/routes.rb) —
+  # e.g. key "help_computers" => help_computers_path. Falls back to root_path
+  # if the key has no matching named route (e.g. a KNOWN_TEXTS entry added
+  # without a corresponding route).
   def url_for_key(key)
-    case key
-    when "readme"       then readme_path
-    when "news"         then news_path
-    when "barter_trade" then barter_trade_path
-    when "privacy"      then privacy_path
-    else root_path
-    end
+    send("#{key}_path")
+  rescue NoMethodError
+    root_path
   end
 end

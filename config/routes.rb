@@ -1,5 +1,17 @@
 # decor/config/routes.rb
-# version 3.6
+# version 3.7
+# v3.7 (Session 73): Category Help Pages feature.
+#   Added 5 new public text-page routes, following the exact same pattern as
+#   the 4 existing ones (readme/news/barter_trade/privacy): all served by
+#   site_texts#show, `defaults: { key: ... }`, `as:` identical to the key
+#   string. The `as:` == key convention is REQUIRED — admin/site_texts_
+#   controller.rb v1.3's generalized url_for_key(key) does `send("#{key}_path")`
+#   to redirect to the right public page after an upload, for ANY key,
+#   without a per-key case branch. Breaking the as:-equals-key convention for
+#   a future key would silently fall back that redirect to root_path.
+#   New keys: help_computers, help_peripherals, help_components,
+#   help_connections, help_software. See DECOR_PROJECT.md "Category Help
+#   Pages Feature — Session 73" for full context.
 # v3.6 (Session 67): Phase 4 item 2 — "Download Manual Changes" admin feature.
 #   Added a `download_manual` collection route nested inside the existing
 #   `resources :component_suggestions` block (namespace :admin). Because this
@@ -62,6 +74,15 @@ Rails.application.routes.draw do
   get "news",         to: "site_texts#show", defaults: { key: "news" },         as: :news
   get "barter_trade", to: "site_texts#show", defaults: { key: "barter_trade" }, as: :barter_trade
   get "privacy",      to: "site_texts#show", defaults: { key: "privacy" },      as: :privacy
+
+  # Category Help Pages — added Session 73. Same site_texts#show pattern as
+  # above. `as:` MUST equal the key string (see v3.7 changelog note above) —
+  # admin/site_texts_controller.rb's url_for_key relies on it.
+  get "help_computers",   to: "site_texts#show", defaults: { key: "help_computers" },   as: :help_computers
+  get "help_peripherals", to: "site_texts#show", defaults: { key: "help_peripherals" }, as: :help_peripherals
+  get "help_components",  to: "site_texts#show", defaults: { key: "help_components" },  as: :help_components
+  get "help_connections", to: "site_texts#show", defaults: { key: "help_connections" }, as: :help_connections
+  get "help_software",    to: "site_texts#show", defaults: { key: "help_software" },    as: :help_software
 
   # Statistics pages — public, no login required.
   # computer_statistics: counts of registered computers per computer model.
