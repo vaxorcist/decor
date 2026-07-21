@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_16_000200) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_21_000100) do
   create_table "component_conditions", force: :cascade do |t|
     t.string "condition", limit: 40, null: false
     t.datetime "created_at", precision: nil, null: false
@@ -41,15 +41,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_16_000200) do
     t.integer "component_condition_id"
     t.integer "component_type_id", null: false
     t.integer "computer_id"
-    t.datetime "created_at", precision: nil, null: false
+    t.datetime "created_at", null: false
     t.text "description"
-    t.text "history"
+    t.string "history", limit: 500
     t.string "order_number", limit: 20
     t.boolean "order_number_verified", default: false, null: false
     t.integer "owner_id", null: false
     t.string "owner_part_number", limit: 20, null: false
     t.string "serial_number", limit: 20, null: false
-    t.datetime "updated_at", precision: nil, null: false
+    t.datetime "updated_at", null: false
     t.index ["barter_status"], name: "index_components_on_barter_status"
     t.index ["component_category"], name: "index_components_on_component_category"
     t.index ["component_condition_id"], name: "index_components_on_component_condition_id"
@@ -79,15 +79,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_16_000200) do
     t.integer "barter_status", default: 0, null: false
     t.integer "computer_condition_id"
     t.integer "computer_model_id", null: false
-    t.datetime "created_at", precision: nil, null: false
+    t.datetime "created_at", null: false
     t.integer "device_type", default: 0, null: false
-    t.text "history"
+    t.string "history", limit: 500
     t.string "order_number", limit: 20
     t.integer "owner_id", null: false
     t.string "owner_part_number", limit: 20, null: false
     t.integer "run_status_id"
     t.string "serial_number", limit: 20, null: false
-    t.datetime "updated_at", precision: nil, null: false
+    t.datetime "updated_at", null: false
     t.index ["barter_status"], name: "index_computers_on_barter_status"
     t.index ["computer_condition_id"], name: "index_computers_on_computer_condition_id"
     t.index ["computer_model_id"], name: "index_computers_on_computer_model_id"

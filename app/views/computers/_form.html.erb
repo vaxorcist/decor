@@ -1,4 +1,24 @@
-<%# decor/app/views/computers/_form.html.erb - version 2.8 %>
+<%# decor/app/views/computers/_form.html.erb - version 3.0 %>
+<%# v3.0 (Session 74): History-length limit feature. computers.history (and %>
+<%#   components.history, which has no form field) were unqualified TEXT — %>
+<%#   unbounded — in violation of PROGRAMMING_GENERAL.md's VARCHAR-length %>
+<%#   rule. Migration 20260721000100 converts both to VARCHAR(500) with a %>
+<%#   CHECK constraint; Computer#history now also validates length <= 500 %>
+<%#   (computer.rb v2.3). Added maxlength: 500 to the History textarea here %>
+<%#   and a "Maximum 500 characters." note, matching the pattern already %>
+<%#   used by every other length-limited field in this file. %>
+<%# v2.9 (Session 74): Fixed a hardcoded "Computer Model" field label. %>
+<%#   The Model field label ("Computer Model", added by the Session 69 UI %>
+<%#   Terminology rename) was a static string that never accounted for %>
+<%#   device_type: peripheral — so /computers/new?device_type=peripheral %>
+<%#   showed "Computer Model" instead of "Peripheral Model". This was a %>
+<%#   regression against the file's own v2.0 (Session 17) rule — "All %>
+<%#   hardcoded 'Computer' strings replaced with device_type.capitalize" — %>
+<%#   which the rest of this file (submit button, both component-section %>
+<%#   headings) still correctly follows. Fixed by interpolating %>
+<%#   computer.device_type.capitalize, same pattern as everywhere else in %>
+<%#   this file. See also computers/new.html.erb v1.5 for the matching %>
+<%#   fix to the required-fields notice on the same page. %>
 <%# v2.8 (Session 71): Owner Part Number feature — added the missing "Owner %>
 <%#   Part No." column to the embedded "[Device]'s Components" list table %>
 <%#   further down this file. v2.7's own header comment explicitly flagged %>
@@ -45,7 +65,7 @@
   <div class="grid grid-cols-4 gap-4">
     <div>
       <%= f.label :computer_model_id, class: "block text-sm font-medium text-stone-700" do %>
-        Computer Model <span class="text-red-600">*</span>
+        <%= computer.device_type.capitalize %> Model <span class="text-red-600">*</span>
       <% end %>
       <%# Model list is scoped to the record's current device_type so peripheral forms %>
       <%# show only peripheral models and computer forms show only computer models. %>
@@ -125,8 +145,8 @@
   <!-- Line 3: History — 3 rows -->
   <div>
     <%= f.label :history, class: "block text-sm font-medium text-stone-700" %>
-    <%= f.text_area :history, rows: 3, style: "min-height: 4.5rem;", class: field_classes %>
-    <p class="mt-1 text-xs text-stone-500">Provenance, previous owners, how you acquired it, etc.</p>
+    <%= f.text_area :history, rows: 3, maxlength: 500, style: "min-height: 4.5rem;", class: field_classes %>
+    <p class="mt-1 text-xs text-stone-500">Provenance, previous owners, how you acquired it, etc. Maximum 500 characters.</p>
   </div>
 
   <%# Button row — submit + secondary actions + Back button %>

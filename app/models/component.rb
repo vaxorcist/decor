@@ -1,5 +1,13 @@
 # decor/app/models/component.rb
-# version 1.6
+# version 1.7
+# v1.7 (Session 74): History-length limit feature. history was an
+#   unqualified TEXT column (unbounded) — same violation as computer.rb.
+#   Migration 20260721000100 converts the DB column to VARCHAR(500) with a
+#   CHECK constraint; this validation is the matching model-level half.
+#   Note: no form field currently exposes Component#history at all
+#   (components/_form.html.erb only has :description) — this validation
+#   guards any programmatic write path (e.g. CSV import) even though the UI
+#   doesn't touch it today.
 # v1.6 (Session 70): Owner Part Number feature — IMPLEMENTED.
 #   New owner_part_number VARCHAR(20) column (migration 20260716000100).
 #   Confirmed design (Ulli):
@@ -82,6 +90,12 @@ class Component < ApplicationRecord
   # default above runs.
   validates :serial_number, presence: true, length: { maximum: 20 }
   validates :owner_part_number, presence: true, length: { maximum: 20 }
+
+  # History-length limit — Session 74. Matches the DB CHECK constraint added
+  # by migration 20260721000100 (VARCHAR(500)). allow_blank: true — history
+  # is optional; this only bounds it when present. No form currently writes
+  # to this column, but the validation guards any programmatic write path.
+  validates :history, length: { maximum: 500 }, allow_blank: true
 
   # serial_number uniqueness: one owner cannot have two components of the same
   # type with the same Owner Part Number AND the same DEC Serial Number

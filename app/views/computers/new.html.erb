@@ -1,4 +1,12 @@
-<%# decor/app/views/computers/new.html.erb - version 1.4 %>
+<%# decor/app/views/computers/new.html.erb - version 1.5 %>
+<%# v1.5 (Session 74): Fixed a hardcoded "Computer Model" string in the %>
+<%#   required-fields notice — same regression as computers/_form.html.erb %>
+<%#   v2.9 (see its changelog for the full explanation): the Session 69 UI %>
+<%#   Terminology rename introduced "Computer Model" as a static string, %>
+<%#   never accounting for device_type: peripheral. The <h1> two lines %>
+<%#   above this notice already correctly used %>
+<%#   @computer.device_type.capitalize (added Session 18, v1.4) — this %>
+<%#   notice just hadn't been updated to match when the rename landed. %>
 <%# v1.4 (Session 18): Heading now uses @computer.device_type.capitalize for %>
 <%#   consistency with edit.html.erb (v1.3). Defaults to "Add Computer" since %>
 <%#   Computer.new defaults device_type to 0 (computer). %>
@@ -8,7 +16,7 @@
   <h1 class="text-2xl font-semibold mb-4">Add <%= @computer.device_type.capitalize %></h1>
 
   <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
-    <strong>Required fields:</strong> Computer Model and DEC Serial Number.
+    <strong>Required fields:</strong> <%= @computer.device_type.capitalize %> Model and DEC Serial Number.
     Components can be added after saving.
   </div>
 
