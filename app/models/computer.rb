@@ -1,5 +1,13 @@
 # decor/app/models/computer.rb
-# version 2.2
+# version 2.3
+# v2.3 (Session 74): History-length limit feature. history was an
+#   unqualified TEXT column (unbounded) — a violation of
+#   PROGRAMMING_GENERAL.md's VARCHAR-length rule that had gone unnoticed.
+#   Migration 20260721000100 converts the DB column to VARCHAR(500) with a
+#   CHECK constraint (defense-in-depth per PROGRAMMING_GENERAL.md); this
+#   validation is the matching model-level half of that pair, giving a
+#   friendly validation error instead of a raw SQL exception if it's ever
+#   exceeded (e.g. via CSV import, which bypasses the form's maxlength).
 # v2.2 (Session 70): Owner Part Number feature — IMPLEMENTED.
 #   New owner_part_number VARCHAR(20) column (migration 20260716000100).
 #   Confirmed design (Ulli):
@@ -124,6 +132,11 @@ class Computer < ApplicationRecord
                           message: "combination already exists for this model and Owner Part Number" }
 
   validates :order_number, length: { maximum: 20 }, allow_blank: true
+
+  # History-length limit — Session 74. Matches the DB CHECK constraint added
+  # by migration 20260721000100 (VARCHAR(500)). allow_blank: true — history
+  # is optional; this only bounds it when present.
+  validates :history, length: { maximum: 500 }, allow_blank: true
 
   # Search scope that searches across model name, owner name, serial number,
   # order_number, history, condition, and run status.

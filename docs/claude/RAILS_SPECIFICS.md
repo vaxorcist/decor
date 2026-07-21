@@ -1,5 +1,24 @@
 # RAILS_SPECIFICS.md
-# version 3.7
+# version 3.8
+# Session 74: Fixed a real structural bug flagged at the end of Session 73's
+#   "Documentation Compression Experiment" note: a stray premature
+#   "**End of RAILS_SPECIFICS.md**" marker sat at the old line 1761, with the
+#   entire "System Tests — Capybara Assertion Patterns" section (and three
+#   related System Tests sections, ~140 lines) tacked on AFTER that false
+#   "end" in some earlier session and never noticed since. Removed the
+#   premature marker; that content now flows as ordinary sections before the
+#   one true "End of RAILS_SPECIFICS.md" marker at the actual end of the
+#   file. No content was removed, reworded, or reordered — only the stray
+#   marker line itself. This was a pure documentation-integrity fix, not a
+#   rule change; no session should have been silently missing this section
+#   on a `view`-tool read (which truncates past ~16,000 characters anyway,
+#   per COMMON_BEHAVIOR.md's Reading Rule Documents section) but a `bash cat`
+#   read would have picked up the content either side of the false marker
+#   regardless — the bug was cosmetic/structural, not a content-loss risk
+#   under this project's mandatory bash cat reading rule. Fixed anyway,
+#   since a stray "end of file" marker mid-document is misleading on its own
+#   terms. The equivalent compression pass on DECOR_PROJECT.md (per Session
+#   73's note) is still pending — not done this session.
 # Session 73: Category Help Pages feature. One new MANDATORY section added:
 #   Single Source of Truth Refactors — Audit ALL Consumers, Not Just the
 #   File Being Changed. Real example: Session 20 introduced SiteType/
@@ -96,8 +115,9 @@
 
 **Ruby on Rails Specific Patterns and Best Practices**
 
-**Last Updated:** July 19, 2026 (v3.7: Single Source of Truth Refactors —
-  audit all consumers, not just the file at hand; Session 73)
+**Last Updated:** July 20, 2026 (v3.8: removed a stray premature "End of"
+  marker that had ~140 lines of System Tests content tacked on after it,
+  unnoticed for several sessions; Session 74)
 
 ---
 
@@ -1757,8 +1777,6 @@ sentinel_idx = rows.index { |r| r["record_type"]&.start_with?("!") }
 ```
 
 ---
-
-**End of RAILS_SPECIFICS.md**
 
 ## System Tests — Capybara Assertion Patterns (MANDATORY, learned Session 60)
 

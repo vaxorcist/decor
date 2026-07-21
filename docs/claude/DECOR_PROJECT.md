@@ -1,5 +1,29 @@
 # decor/docs/claude/DECOR_PROJECT.md
-# version 2.64
+# version 2.65
+# Session 74: Documentation compression pass (continuing the Session 73
+#   experiment, now also applied to SESSION_HANDOVER.md and RAILS_SPECIFICS.md
+#   this same session — see those files' own changelogs). In this file:
+#   (1) compressed the header changelog entries for Sessions 65–72 (all
+#   closed-out; full detail already lives in the body sections below and in
+#   SESSION_HANDOVER.md) from multi-paragraph entries down to 2–4 lines each
+#   — Session 73's entry, still open, kept in full; (2) merged the two
+#   back-to-back "Phase 4" sections (one marked DONE, one a fully-superseded
+#   Session 66 design-pivot narrative) into one, preserving the genuinely
+#   useful, non-duplicated data-format decision (order_number/description
+#   concatenation with " | " delimiter) that had no other home, while
+#   dropping the shelved schema-split design detail down to a pointer at
+#   ORDER_NUMBER_VARIANT_DESIGN.md + SESSION_HANDOVER.md; (3) compressed two
+#   fully-resolved "NOT YET DONE" checklists (Phase 4's, Owner Part Number's)
+#   that had a confirmatory "all done" note bolted onto the entire original
+#   checkbox list preserved "as historical record" — replaced each with a
+#   short prose confirmation, since the checklist items themselves add
+#   nothing once resolved and Session 72's incident detail already covers
+#   what actually happened. Deliberately NOT touched: Directory Tree, Key
+#   file versions table, Data Model Overview, Design Patterns, Known Issues
+#   & Solutions, Quick Reference Commands — these are live reference content
+#   (Pre-Implementation Verification depends on them), not duplicated
+#   narrative, and compressing them the same way risked deleting the only
+#   copy of real information rather than removing genuine duplication.
 # Session 73: Category Help Pages feature — IMPLEMENTED (7 files: 5
 #   production, 2 test; 0 migrations). 5 new owner-facing help pages (one per
 #   device/software category) added entirely as data + routes on the
@@ -17,110 +41,37 @@
 #   appeared in this document's "Data Model Overview" at all despite existing
 #   since Session 18 — added below. Full detail in SESSION_HANDOVER.md
 #   "Session 73 Summary".
-# Session 72: Confirmed by Ulli — Sessions 67, 68, 69, and 70 (all previously
-#   described below and in SESSION_HANDOVER.md as sitting locally uncommitted)
-#   have ALL already been committed, pushed, merged, and deployed to main.
-#   This session's own work: the feature/owner_part_number PR's CI/Security
-#   (Ruby) check failed on bundle-audit (not Brakeman — confirmed via the
-#   actual CI log, per the existing "CI Security Checks — Two Separate Tools"
-#   rule); four gems bumped (loofah >= 2.25.2, rails-html-sanitizer >= 1.7.1,
-#   sqlite3 >= 2.9.5, websocket-driver >= 0.8.2) to clear a batch of CVEs;
-#   confirmed clean locally with bundle-audit before re-pushing; merged;
-#   deployed. See SESSION_HANDOVER.md "Session 72 Summary" for full detail.
-#   "Current Status" below and the Owner Part Number Feature section's NOT
-#   YET DONE checklist are both updated to reflect everything now being live.
-# Session 71: Owner Part Number display fix (8 URLs — owners/computers,
-#   owners/peripherals, owners/components, computers/index (+ /peripherals,
-#   shared view), components/index, and both computer/peripheral edit pages'
-#   embedded component form + list table) — all 9 affected files delivered.
-#   Also: the "Upload-collision lesson… (not yet formalized as a rule edit)"
-#   note below is now RESOLVED — see that note's updated text — via
-#   COMMON_BEHAVIOR.md v3.0's new File Transfer Protocol (export/import
-#   scripts with @-encoded flat filenames), which structurally replaces the
-#   old bare-filename/prefix-on-collision and one-file-per-message rules.
-# Session 70: Owner Part Number feature — IMPLEMENTED (11 of 12 files
-#   delivered; decor/db/schema.rb still needed to confirm the migration's
-#   actual output). All three open design questions from Session 69 answered
-#   by Ulli and implemented: (1) uniqueness scope keeps the existing
-#   model/type dimension — (owner, model/type, owner_part_number,
-#   serial_number); (2) both Computer#serial_number and Component#serial_number
-#   are now presence-required, both default to "-" via before_validation,
-#   same for the new owner_part_number field on both models; (3) spares
-#   collision resolved via a one-time migration backfill assigning
-#   "SPARE-#{id}" to any pre-existing colliding group, with Option B
-#   confirmed — NO auto-assign going forward, a second unserialized spare of
-#   the same type/owner is now rejected at save time unless the user
-#   supplies a real distinguishing value. Owner Part Number also added to
-#   CSV export/import (owner_export_service.rb / owner_import_service.rb) —
-#   computer_model_export_service.rb confirmed OUT of scope (it exports
-#   ComputerModel catalog data, not per-instance owner data). Full detail in
-#   SESSION_HANDOVER.md "Session 70 Summary". NOT YET DONE: tests (6 test
-#   files needed as Pre-Implementation Verification inputs, not yet
-#   received), bin/rails db:migrate has not been run against a real DB,
-#   schema.rb not yet regenerated/confirmed, no lint/Brakeman/bundle-audit,
-#   no git workflow — this now stacks on top of Sessions 67/68/69's
-#   already-outstanding pre-commit checklists.
-# Session 69: Two items — (1) UI Terminology Rename — IMPLEMENTED. "Model" ->
-#   "Computer Model", "Order Number" -> "DEC Part Number", "Serial Number" ->
-#   "DEC Serial Number" across all owner-facing and admin views (15 files).
-#   No column/route/attribute renames — display text only. See "UI
-#   Terminology — Established Renames (Session 69)" under Design Patterns for
-#   the full mapping future sessions must follow. (2) Owner Part Number
-#   feature — DESIGN CONSULTATION ONLY, NOT IMPLEMENTED. New VARCHAR(20)
-#   field requested for computers + components, defaulting to "-", plus a
-#   uniqueness-scope change combining it with DEC Serial Number. Three open
-#   design questions surfaced during file review (scope of the uniqueness
-#   constraint, spares-collision risk, presence semantics) — see "Owner Part
-#   Number Feature — Session 69" below. Also: this session found that
-#   Session 68's work (Component Suggestions typeahead UI refinements, per
-#   the directory tree's "Session 68 (cont'd)" file comments) has no
-#   corresponding "Session 68 Summary" in SESSION_HANDOVER.md and no Session
-#   68 changelog entry in this file's own header — the rule documents
-#   currently in the project appear to be missing Session 68's formal
-#   write-up even though Session 68's code changes clearly exist. Flagged to
-#   the user; not reconstructed from guesswork (Never-Guess).
-# Session 67: Phase 4 of Component Suggestions feature — IMPLEMENTED (was a
-#   design-only pivot in Session 66). All four confirmed requirements
-#   delivered: manual flag + widened description migration, "Download Manual
-#   Changes" admin feature, full import service rewrite (delete-all +
-#   insert_all, fixing the production timeout), and a paginated/filterable
-#   admin index (fixing the slow-load root cause — missing pagination).
-#   12 files delivered (4 NEW, 8 updated) + 4 test files updated/added.
-#   Full detail in SESSION_HANDOVER.md "Session 67 Summary". Three new rules
-#   codified into RAILS_SPECIFICS.md v3.6 and COMMON_BEHAVIOR.md v2.8 from
-#   mistakes caught and corrected mid-session (a route-naming shape confusion,
-#   a Rails enum read_attribute pitfall, and a Never-Guess violation on an
-#   inferred file that turned out to guess correctly by luck, not by rule
-#   compliance).
-# Session 66: Order number / variant — design pivot, NO IMPLEMENTATION.
-#   A full multi-column variant-split design (component_suggestions:
-#   order_number_main/order_number_variant columns; components: three-state
-#   order_number_match_status) was fully specified in consultation, then set
-#   aside before implementation began — risk of "self-indulgent featuritis"
-#   relative to confirmed need at actual data scale. Full design saved for
-#   reference at decor/docs/claude/ORDER_NUMBER_VARIANT_DESIGN.md v1.0 (NEW
-#   this session) — NOT implemented, NOT the current direction.
-#   Adopted instead: order_number + variant concatenated into ONE string at
-#   the external DEC-database export stage (e.g. "DELQA-00", no bare/
-#   undashed numbers); both descriptions concatenated into ONE description
-#   field with " | " delimiter (tested, no conflicts). NO schema split.
-#   Data scope ~55,000 component_suggestions records after filtering (from
-#   an expanded ~85,000). Four concrete requirements confirmed for next
-#   session — see "Component Suggestions Feature" Phase 4 below and
-#   SESSION_HANDOVER.md v68.0 "Session 66 Summary" for full detail.
-# Session 65: Component order_number bulk maintenance — two new admin Components
-#   dropdown items: "Re-validate Order Numbers" (POST, applies immediately, no
-#   preview) and "Download Unvalidated Order Numbers" (GET, CSV, one row per
-#   component). 5 files delivered: routes.rb v3.5, new
-#   admin/component_order_numbers_controller.rb v1.0, two new services
-#   (ComponentOrderNumberRevalidationService, UnvalidatedOrderNumbersExportService),
-#   admin.html.erb v2.6 (v2.5 shipped with a NameError — both new path helpers
-#   were missing the admin_ prefix that Rails still applies to as: routes
-#   declared inside namespace :admin; fixed in v2.6 — see RAILS_SPECIFICS.md v3.5
-#   "Named Routes (as:) Inside namespace — Still Prefixed").
-#   Tests NOT YET written — pending test/fixtures/components.yml,
-#   component_suggestions.yml, component_types.yml, owners.yml (or owner.rb /
-#   component_type.rb) so fixture references / Owner.create! calls aren't guessed.
+# Session 72: Confirmed by Ulli — Sessions 67–70 all already committed/pushed/
+#   merged/deployed to main. This session: fixed a bundle-audit CI failure (4
+#   gems), merged/deployed feature/owner_part_number. Full detail: "Owner Part
+#   Number Feature — Sessions 69–72" below; SESSION_HANDOVER.md "Session 72 Summary".
+# Session 71: Owner Part Number display fix (9 files). Also: the old upload-
+#   collision workaround is now RESOLVED via COMMON_BEHAVIOR.md v3.0's File
+#   Transfer Protocol (export/import scripts, @-encoded flat filenames).
+# Session 70: Owner Part Number feature — IMPLEMENTED (11/12 files; schema.rb
+#   confirmed via Session 72's db:migrate). All 3 Session 69 design questions
+#   answered/implemented. Full detail: "Owner Part Number Feature — Sessions
+#   69–72" below; SESSION_HANDOVER.md "Session 70 Summary".
+# Session 69: UI Terminology Rename — IMPLEMENTED (15 files; see "UI
+#   Terminology — Established Renames" under Design Patterns). Owner Part
+#   Number — design consultation only this session, implemented Session 70.
+#   Also flagged the still-open Session 68 documentation gap — see
+#   SESSION_HANDOVER.md "!! GAP NOTICE !!".
+# Session 67: Component Suggestions Phase 4 — IMPLEMENTED (was design-only in
+#   Session 66). Manual flag + widened description migration, "Download
+#   Manual Changes" export, import rewrite (delete_all + insert_all — fixed
+#   the production timeout), paginated/filterable admin index. 12 production
+#   + 4 test files. Full detail: "Component Suggestions Feature — Phase 4"
+#   below; SESSION_HANDOVER.md "Session 67 Summary".
+# Session 66: Order number / variant — design pivot, NO IMPLEMENTATION. Full
+#   variant-split design specified then shelved (risk of featuritis) —
+#   reference only at ORDER_NUMBER_VARIANT_DESIGN.md v1.0. Adopted simpler
+#   concatenated-field approach instead (implemented Session 67). Full
+#   detail: "Component Suggestions Feature — Phase 4" below.
+# Session 65: Component order_number bulk maintenance — two new admin
+#   Components dropdown items (Re-validate / Download Unvalidated Order
+#   Numbers), 8 files. Full detail: "Component Suggestions Feature — Phase 3"
+#   below; SESSION_HANDOVER.md "Session 65 Summary".
 # Session 64 (wrap-up): Promoted the admin nav lesson from a changelog note to
 #   a standing rule in "Known Issues & Solutions" (see that section) so future
 #   sessions consult it before starting work, not just read it as history.
@@ -198,15 +149,16 @@
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** July 19, 2026 (Session 73 — Category Help Pages feature
-  implemented, code-complete; v2.64)
+**Last Updated:** July 20, 2026 (Session 74 — documentation compression
+  pass; no project code changed this session; v2.65)
 **Current Status:** Sessions 1–72 all committed, pushed, merged, and deployed
   to main (see prior entries below for full detail). Session 73's Category
-  Help Pages feature (7 files) is **code-complete but NOT YET tested,
+  Help Pages feature (7 files) is still **code-complete but NOT YET tested,
   lint/security-scanned, or committed** — see "Category Help Pages Feature —
   Session 73" below and SESSION_HANDOVER.md "Session 73 Summary" for the
-  full NOT YET DONE checklist. This stacks on top of no other open checklist
-  — Sessions 67–72 are fully closed out.
+  full NOT YET DONE checklist. Session 74 touched only this file,
+  SESSION_HANDOVER.md, and RAILS_SPECIFICS.md (compression pass) — no
+  application code changed, so this checklist is unaffected.
 
 ---
 
@@ -417,6 +369,9 @@ is excluded).
 
 **Key file versions** (updated each session):
 
+    decor/docs/claude/DECOR_PROJECT.md                                                  v2.65 ← Session 74
+    decor/docs/claude/SESSION_HANDOVER.md                                               v74.0 ← Session 74
+    decor/docs/claude/RAILS_SPECIFICS.md                                                v3.8  ← Session 74
     decor/docs/claude/DECOR_PROJECT.md                                                  v2.64 ← Session 73
     decor/docs/claude/SESSION_HANDOVER.md                                               v73.0 ← Session 73
     decor/docs/claude/RAILS_SPECIFICS.md                                                v3.7  ← Session 73
@@ -1015,81 +970,24 @@ data consistency without blocking entry of new/unknown values.
         to match the real file once uploaded — luck, not compliance.)
 
     NOT YET DONE — required before this can be committed:
-      Session 72 update: ALL items below are done — committed, pushed, merged,
-      deployed to main, per Ulli's confirmation (see SESSION_HANDOVER.md
-      "Session 72 Summary"). Left as historical record.
-      [ ] bundle exec rubocop -A / bundle exec rubocop — lint fix + verify (not run this session)
-      [ ] bin/brakeman --no-pager                      — static code security scan (not run this session)
-      [ ] Manual browser check of filters, Load more, Download Manual Changes link, re-import behavior
-      [ ] git workflow: branch → commit → push → PR → CI → merge → deploy
-      [ ] Confirm the json gem bump is also reflected on main (merge this PR, or
-          merge the Dependabot PR for the same bump, whichever comes first)
+      All items completed as of Session 72 (lint, Brakeman, manual browser
+      check, git workflow, json gem bump confirmed on main) — see
+      SESSION_HANDOVER.md "Session 72 Summary" for the full incident.
 
-### Phase 4 — Order Number / Variant Simplification (Session 66 — design pivot, NOT implemented)
-
-A full schema-split design was fully specified in consultation this
-session: `component_suggestions` gaining `order_number_main` +
-`order_number_variant` columns (plus a separate `variant_description`),
-`components` gaining a three-state `order_number_match_status` enum
-(`exact_variant_match` / `base_match_only` / `unmatched`), a two-file CSV
-import/export format, deletion guards, and a Stimulus typeahead rework with
-a match-status badge on the component form. **This was set aside before any
-implementation began** — recognized risk of "self-indulgent featuritis":
-added complexity on both the implementation/maintenance side and the
-user-facing side, without confirmed need at the actual data scale
-(~13,000 components / ~46,000 suggestion combinations at design time).
-
-The full design is saved for reference at
-`decor/docs/claude/ORDER_NUMBER_VARIANT_DESIGN.md` (v1.0, NEW this session)
-— **NOT implemented, NOT the current direction.** Revisit only if the
-adopted simpler approach below proves insufficient.
-
-**Adopted approach instead** (closer to the original "Option A" considered
-during design): main order number + variant are concatenated into **one**
-`order_number` string at the external DEC-database export stage (e.g.
-`"DELQA-00"` — no bare/undashed part numbers; every record carries an
-explicit variant suffix, `"-00"` for base models). Both descriptions (main
-+ variant) are concatenated into **one** `description` field using `" | "`
-as a delimiter (tested — confirmed not to conflict with any existing data).
-**No schema split of `order_number` or `description`.** Data scope: ~55,000
-`component_suggestions` records after filtering (expanded from ~46,000,
-tested up from ~85,000 before filtering).
-
-**Confirmed requirements for next session** (full detail in
-`SESSION_HANDOVER.md` v68.0, "Session 66 Summary"):
-
-    1. Migration on component_suggestions:
-       a. New nullable "manual" field — "a" = added manually (permanent,
-          never demotes), "m" = modified manually (originated from bulk
-          import, later hand-edited), null = untouched bulk-import record.
-       b. Enlarge description from VARCHAR(100) to VARCHAR(510).
-    2. New admin "Components" dropdown option: download all
-       component_suggestions rows where manual IS NOT NULL — the required
-       backup mechanism, since the import below deletes these rows too.
-    3. Import service rewrite — confirmed root cause of production
-       timeouts: current per-row conflict-check against existing records
-       is O(n) per row. Fix: delete ALL existing records unconditionally
-       (no preservation — download in item 2 is the backup step), then
-       bulk-insert new records relying only on SQLite's existing
-       order_number unique index (no app-level duplicate pre-check).
-    4. Admin suggestions index/listing page — slow to LOAD (fine once
-       loaded). Root cause not yet diagnosed; needs actual controller/view
-       files next session (candidates: missing pagination, missing index,
-       N+1 association load).
-
-    Files needed at start of next session (not yet reviewed):
-      decor/db/migrate/20260511000100_create_component_suggestions.rb
-      decor/app/models/component_suggestion.rb
-      decor/app/services/component_suggestion_import_service.rb
-      decor/app/services/component_suggestion_export_service.rb
-      decor/app/controllers/admin/component_suggestions_controller.rb
-      decor/app/views/admin/component_suggestions/index.html.erb
-      decor/app/views/layouts/admin.html.erb
-      decor/config/routes.rb
-      decor/test/fixtures/component_suggestions.yml
-
-    (Session 72 note: this design pivot was implemented in Session 67 and is
-    confirmed deployed on main — see the Phase 4 "DONE" entry above.)
+**Data format adopted (Session 66 design pivot, superseded by the DONE
+implementation above):** a full schema-split design (separate
+`order_number_main`/`order_number_variant` columns, a three-state
+`order_number_match_status` enum) was fully specified in consultation, then
+shelved before implementation — risk of "self-indulgent featuritis" relative
+to confirmed need at the ~55,000-record scale. Full shelved design kept for
+reference only at `decor/docs/claude/ORDER_NUMBER_VARIANT_DESIGN.md` v1.0;
+narrative in SESSION_HANDOVER.md "Session 66 Summary". **Adopted instead**
+(implemented Session 67, reflected in the DONE section above): main order
+number + variant concatenated into ONE `order_number` string at the external
+DEC-database export stage (e.g. `"DELQA-00"` — every record carries an
+explicit variant suffix, `"-00"` for base models); both descriptions
+concatenated into ONE `description` field using `" | "` as the delimiter.
+No schema split of either column.
 
 ---
 
@@ -1310,31 +1208,13 @@ on upload ordering.
 
 ### NOT YET DONE — required before this feature can be committed
 
-**Session 72 update: ALL items below are now confirmed complete.** The
-Owner Part Number feature was migrated (`bin/rails db:migrate`), tested
-(`bin/rails test`, `bin/rails test:system`), lint/security-scanned (`bundle
-exec rubocop -A`, `bin/brakeman --no-pager`), and — after fixing an
+All items completed as of Session 72: migrated (`bin/rails db:migrate`),
+tested (`bin/rails test`, `bin/rails test:system`), lint/security-scanned
+(`bundle exec rubocop -A`, `bin/brakeman --no-pager`), and — after fixing an
 unrelated `bundle-audit` CI failure on four gems (loofah,
 rails-html-sanitizer, sqlite3, websocket-driver) — committed, pushed,
-opened as a PR, merged, and deployed via `kamal deploy`. See
-SESSION_HANDOVER.md "Session 72 Summary" for the complete incident detail.
-Left below as historical record of what this checklist looked like at the
-end of Session 70.
-
-    [ ] bin/rails db:migrate                          — never run against a real DB this session
-    [ ] decor/db/schema.rb                             — regenerate and review after migrating
-    [ ] Tests — 6 test files needed as Pre-Implementation Verification inputs before
-        writing test code (Never-Guess): computer_test.rb, component_test.rb,
-        owner_export_service_test.rb, owner_import_service_test.rb,
-        computers_controller_test.rb, components_controller_test.rb
-    [ ] bin/rails test                                 — not run (blocked on migrate + tests above)
-    [ ] bundle exec rubocop -A / bundle exec rubocop   — lint fix + verify
-    [ ] bin/brakeman --no-pager                        — static code security scan
-    [ ] bundle exec bundle-audit check --update        — dependency CVE scan
-    [ ] Manual browser check: both new form fields, CSV export/import round-trip
-    [ ] git workflow: branch → commit → push → PR → CI → merge → deploy
-    This now stacks on top of Sessions 67/68/69's own already-outstanding
-    pre-commit checklists (see SESSION_HANDOVER.md for the full combined list).
+merged, and deployed via `kamal deploy`. See SESSION_HANDOVER.md "Session
+72 Summary" for the complete incident detail.
 
 ---
 
