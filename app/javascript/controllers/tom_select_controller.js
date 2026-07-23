@@ -1,4 +1,18 @@
-// decor/app/javascript/controllers/tom_select_controller.js - version 1.0
+// decor/app/javascript/controllers/tom_select_controller.js - version 1.1
+// v1.1 (Session 76): Fixed sortField — see the inline comment at the
+//   sortField option below for the full root-cause explanation. Reported
+//   symptom: the Computer Model dropdown on /computers/new was not sorted
+//   alphabetically, either before or after typing to filter it. Root cause
+//   was NOT the Rails-side query (computers/_form.html.erb's
+//   ComputerModel.where(...).order(:name) was already correct) — it was
+//   this file's `sortField: false`, which is not a valid Tom Select option
+//   value and silently fell back to a JS integer-object-key enumeration
+//   order (i.e. sorted by id) instead. Fixes all three selects that use
+//   this controller (Computer Model, Condition, Run Status) — the smaller
+//   two lists likely happened to look correct by coincidence (ids assigned
+//   in roughly alphabetical creation order), which is why only the large
+//   Computer Model list (400+ entries, ids assigned over time in no
+//   particular relation to name) made the bug visible.
 // Session 54: Searchable combobox controller using the Tom Select library.
 //
 // Purpose:
@@ -46,9 +60,30 @@ export default class extends Controller {
       // Disallow free-text entry — only pre-loaded options are valid choices.
       create: false,
 
-      // Preserve the server-side sort order (queries already use ORDER BY name).
-      // Setting sortField to false tells Tom Select not to re-sort the option list.
-      sortField: false,
+      // Explicitly sort dropdown options (both the full list and filtered
+      // search results while typing) alphabetically by visible text.
+      //
+      // v1.1 fix: this was previously `sortField: false`, based on the
+      // (incorrect) assumption that `false` tells Tom Select to leave the
+      // server-side ORDER BY name order untouched. `sortField` is not a
+      // boolean option — passing false isn't a valid configuration, so Tom
+      // Select fell back to enumerating its internal options object by key.
+      // Since collection_select's option VALUES are the numeric `id`s,
+      // JavaScript engines always enumerate integer-like object keys in
+      // ascending numeric order (per the ECMAScript spec for integer-index
+      // properties) — completely ignoring both insertion order and the
+      // Rails-side ORDER BY name. The result: every Tom Select dropdown was
+      // silently ordered by database id, not by name, both in the closed
+      // list and while filtering by typed characters (the same underlying
+      // object order feeds the search results too).
+      //
+      // Fix: set sortField explicitly to sort by the option's visible text,
+      // ascending — this is honored both for the full list and for filtered
+      // search results, and doesn't depend on option value type at all.
+      sortField: {
+        field: "text",
+        direction: "asc",
+      },
 
       // Raise the option cap well above the default (50) to handle the computer
       // model list (400+ entries) and any other long list without truncation.
