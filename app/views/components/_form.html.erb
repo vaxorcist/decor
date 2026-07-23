@@ -1,4 +1,21 @@
-<%# decor/app/views/components/_form.html.erb - version 1.12 %>
+<%# decor/app/views/components/_form.html.erb - version 1.13 %>
+<%# v1.13 (Session 75, pending): Fixed Row 2 field misalignment. At %>
+<%#   grid-cols-5 width, three of the five labels ("Component DEC Part %>
+<%#   Number", "Component Owner Part Number", "Component DEC Serial %>
+<%#   Number") wrap onto two lines while the other two ("Component Type", %>
+<%#   "Run Status") stay on one line — pushing only those three inputs down %>
+<%#   and leaving the row visually staggered. The helper <p> text below each %>
+<%#   input coincidentally looked aligned since it just follows whatever %>
+<%#   input position resulted, which was the actual symptom reported %>
+<%#   ("the descriptive texts are aligned instead"). %>
+<%#   Fix: every Row 2 label now gets "flex items-end min-h-[2.5rem]" — a %>
+<%#   fixed two-line-tall box (text-sm line-height is 1.25rem/line, so %>
+<%#   2.5rem = 2 lines) with the label text bottom-anchored inside it. A %>
+<%#   one-line label sits at the bottom of the same box a two-line label %>
+<%#   fills completely, so every input directly below starts at the same y %>
+<%#   regardless of how many lines its own label wrapped to. Row 1 and Row 3 %>
+<%#   labels are untouched — their columns are wider (grid-cols-3 / %>
+<%#   grid-cols-2) and none of their labels wrap at this width. %>
 <%# v1.12 (Session 70): Owner Part Number feature. Added a "Component Owner %>
 <%#   Part Number" text field to Row 2, between the component's own DEC Part %>
 <%#   Number and DEC Serial Number fields (grouping the three identifier %>
@@ -131,9 +148,19 @@
 
   <%# ─── Row 2: Component Type | Component DEC Part Number | Component Owner Part Number | Component DEC Serial Number | Condition ─── %>
   <%# Widened Session 70 from grid-cols-4 to grid-cols-5 to fit the new Owner Part Number field. %>
+  <%# %>
+  <%# v1.13 label-height fix: at grid-cols-5 width, "Component DEC Part Number", %>
+  <%# "Component Owner Part Number", and "Component DEC Serial Number" wrap to two %>
+  <%# lines while "Component Type" and "Run Status" stay on one line — this %>
+  <%# staggered the input boxes below them. Every label in this row now carries %>
+  <%# "flex items-end min-h-[2.5rem]": a fixed two-line-tall box (text-sm line-height %>
+  <%# is 1.25rem/line) with the label text bottom-anchored inside it, so a %>
+  <%# one-line label sits flush with the bottom of the same box a two-line label %>
+  <%# fills completely — every input starts at the same y regardless of how many %>
+  <%# lines its own label wrapped to. %>
   <div class="grid grid-cols-5 gap-4">
     <div>
-      <%= f.label :component_type_id, "Component Type", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.label :component_type_id, "Component Type", class: "flex items-end min-h-[2.5rem] text-sm font-medium text-stone-700" %>
       <%# Tom Select applied: searchable, consistent UX with model selects elsewhere. %>
       <%= f.collection_select :component_type_id,
             ComponentType.order(:name),
@@ -144,7 +171,7 @@
     </div>
 
     <div class="relative">
-      <%= f.label :order_number, "Component DEC Part Number", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.label :order_number, "Component DEC Part Number", class: "flex items-end min-h-[2.5rem] text-sm font-medium text-stone-700" %>
       <%# Hidden field tracks whether the current order_number came from an %>
       <%# accepted suggestion. Defaults to the persisted value so editing an %>
       <%# existing verified component doesn't silently reset the flag unless %>
@@ -178,14 +205,14 @@
     <%# not pre-filled here so an intentionally-blank submission still shows the %>
     <%# placeholder default consistently rather than duplicating that logic in the view. %>
     <div>
-      <%= f.label :owner_part_number, "Component Owner Part Number", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.label :owner_part_number, "Component Owner Part Number", class: "flex items-end min-h-[2.5rem] text-sm font-medium text-stone-700" %>
       <%= f.text_field :owner_part_number, maxlength: 20, class: field_classes,
             placeholder: "-" %>
       <p class="mt-1 text-xs text-stone-500">Maximum 20 characters. Defaults to "-" if left blank.</p>
     </div>
 
     <div>
-      <%= f.label :serial_number, "Component DEC Serial Number", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.label :serial_number, "Component DEC Serial Number", class: "flex items-end min-h-[2.5rem] text-sm font-medium text-stone-700" %>
       <%= f.text_field :serial_number, maxlength: 20, class: field_classes,
             placeholder: "-",
             data: { "component-suggestion-target": "serialNumberInput" } %>
@@ -193,7 +220,7 @@
     </div>
 
     <div>
-      <%= f.label :component_condition_id, "Run Status", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.label :component_condition_id, "Run Status", class: "flex items-end min-h-[2.5rem] text-sm font-medium text-stone-700" %>
       <%# Tom Select applied: searchable, consistent UX. %>
       <%= f.collection_select :component_condition_id,
             ComponentCondition.order(:condition),
