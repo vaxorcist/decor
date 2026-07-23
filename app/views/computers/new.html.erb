@@ -1,4 +1,16 @@
-<%# decor/app/views/computers/new.html.erb - version 1.5 %>
+<%# decor/app/views/computers/new.html.erb - version 1.6 %>
+<%# v1.6 (Session 75 redelivery): Updated the required-fields notice text. %>
+<%#   Stale since Session 70's Owner Part Number feature made both %>
+<%#   serial_number and owner_part_number default to "-" via %>
+<%#   before_validation rather than serial_number alone being hard- %>
+<%#   required (see DECOR_PROJECT.md "Owner Part Number Feature — Sessions %>
+<%#   69–72"). Notice now reflects the actual constraint that matters: the %>
+<%#   combined uniqueness scope requires at least one of DEC Serial Number %>
+<%#   or Owner Part Number to be a real, non-default value. The device_type %>
+<%#   label (Computer Model / Peripheral Model) was already dynamic via %>
+<%#   @computer.device_type.capitalize (v1.4/v1.5) and needed no further %>
+<%#   change — this single edit covers both /computers/new and %>
+<%#   /computers/new?device_type=peripheral. %>
 <%# v1.5 (Session 74): Fixed a hardcoded "Computer Model" string in the %>
 <%#   required-fields notice — same regression as computers/_form.html.erb %>
 <%#   v2.9 (see its changelog for the full explanation): the Session 69 UI %>
@@ -16,8 +28,8 @@
   <h1 class="text-2xl font-semibold mb-4">Add <%= @computer.device_type.capitalize %></h1>
 
   <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
-    <strong>Required fields:</strong> <%= @computer.device_type.capitalize %> Model and DEC Serial Number.
-    Components can be added after saving.
+    <strong>Required fields:</strong> <%= @computer.device_type.capitalize %> Model and at least one of
+    DEC Serial Number and Owner Part Number. Components can be added after saving.
   </div>
 
   <%= render "form", computer: @computer %>

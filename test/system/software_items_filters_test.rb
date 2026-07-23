@@ -1,5 +1,26 @@
 # decor/test/system/software_items_filters_test.rb
-# version 1.1
+# version 1.2
+#
+# v1.2 (Session 76): Fixed a StaleElementReferenceError caught by CI on
+#   feature/bug_fixing_3 (CI/Tests (System) failure,
+#   test_selecting_an_owner_id_adds_it_to_the_URL). Root cause: all three
+#   "selecting a ___ adds it to the URL" tests (software_name_id, owner_id,
+#   barter_status) read `first_option.text` in the final assertion, AFTER
+#   `click_button "Apply"` had already navigated the page via Turbo. Turbo
+#   replaces the DOM on navigation, so `first_option` — a reference captured
+#   before the click — points to a now-detached node; calling `.text` on it
+#   can raise StaleElementReferenceError. This is timing-dependent (Selenium
+#   staleness detection isn't fully deterministic), which is why only the
+#   owner_id test failed in this particular CI run despite all three tests
+#   sharing the identical pattern. Fixed all three by capturing the expected
+#   text into a plain Ruby string (`expected_text = first_option.text`)
+#   BEFORE clicking Apply, and asserting against that string instead of
+#   re-reading the (potentially stale) element afterward. Confirmed by
+#   reading the actual failure log (gh run view --log-failed) rather than
+#   guessing from the CI summary alone — this bug was unrelated to any of
+#   this session's other changes (Tom Select sortField, components/
+#   _form.html.erb dropdown label/grid), which don't touch software_items
+#   at all.
 #
 # v1.1 (Session 60): Three categories of fixes.
 #
@@ -115,10 +136,15 @@ class SoftwareItemsFiltersTest < ApplicationSystemTestCase
     first_option = select_el.all("option").reject { |o| o.value.empty? }.first
     skip "No software_name_id options found in fixture data" unless first_option
 
+    # Capture the expected text as a plain string BEFORE clicking Apply.
+    # Reading first_option.text AFTER the click risks StaleElementReference-
+    # Error: click_button navigates via Turbo, which replaces the DOM, and
+    # first_option is a reference to a node from the pre-navigation page.
+    expected_text = first_option.text
     select_el.find("option[value='#{first_option.value}']").select_option
     click_button "Apply"
 
-    assert page.has_select?("software_name_id", selected: first_option.text, wait: 5),
+    assert page.has_select?("software_name_id", selected: expected_text, wait: 5),
       "After selecting, the software_name_id filter must show the selected option"
   end
 
@@ -128,10 +154,13 @@ class SoftwareItemsFiltersTest < ApplicationSystemTestCase
     first_option = select_el.all("option").reject { |o| o.value.empty? }.first
     skip "No owner_id options found in fixture data" unless first_option
 
+    # Same fix as the software_name_id test above — capture the expected
+    # text before the Turbo-driven navigation, not after.
+    expected_text = first_option.text
     select_el.find("option[value='#{first_option.value}']").select_option
     click_button "Apply"
 
-    assert page.has_select?("owner_id", selected: first_option.text, wait: 5),
+    assert page.has_select?("owner_id", selected: expected_text, wait: 5),
       "After selecting, the owner_id filter must show the selected option"
   end
 
@@ -143,10 +172,13 @@ class SoftwareItemsFiltersTest < ApplicationSystemTestCase
     first_option = select_el.all("option").reject { |o| o.value.empty? }.first
     skip "No barter_status options found" unless first_option
 
+    # Same fix as the two tests above — same latent staleness risk, even
+    # though this one didn't happen to fail in the CI run that surfaced it.
+    expected_text = first_option.text
     select_el.find("option[value='#{first_option.value}']").select_option
     click_button "Apply"
 
-    assert page.has_select?("barter_status", selected: first_option.text, wait: 5),
+    assert page.has_select?("barter_status", selected: expected_text, wait: 5),
       "After selecting, the barter_status filter must show the selected option"
   end
 

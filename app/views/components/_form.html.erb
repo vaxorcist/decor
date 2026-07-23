@@ -1,5 +1,66 @@
-<%# decor/app/views/components/_form.html.erb - version 1.13 %>
-<%# v1.13 (Session 75, pending): Fixed Row 2 field misalignment. At %>
+<%# decor/app/views/components/_form.html.erb - version 1.17 %>
+<%# v1.17 (Session 76): Two more Row 1 helper <p> texts ("Computer DEC Part %>
+<%#   Number" and "Computer DEC Serial Number" fields) still read %>
+<%#   "Auto-filled from the selected computer." — stale for the same %>
+<%#   reason as v1.15/v1.16's fixes, now that the select above them can %>
+<%#   pick either a computer or a peripheral. Changed both to "Auto-filled %>
+<%#   from the selected device." — "device" chosen instead of repeating %>
+<%#   "computer/peripheral" here, since it's shorter and there's no width %>
+<%#   constraint issue this time (per Ulli's own preference). %>
+<%# v1.16 (Session 76): Two follow-up fixes to Row 1, both reported after %>
+<%#   v1.15: %>
+<%#   1. Wording order corrected back to "Computer/Peripheral" (matching %>
+<%#      the v1.14 label) in both the include_blank text and the helper %>
+<%#      <p> text below the field — v1.15 had used "peripheral/computer" %>
+<%#      per an instruction that was itself corrected this session. %>
+<%#   2. The Computer/Peripheral column was too narrow: with the v1.14 %>
+<%#      option label now four segments long (Model / DEC Part Number / %>
+<%#      Owner Part Number / DEC Serial Number), the closing ")" of the %>
+<%#      include_blank text no longer fit within the column at the %>
+<%#      original equal grid-cols-3 width. Changed the Row 1 grid from %>
+<%#      "grid-cols-3" to the arbitrary "grid-cols-[3fr_2fr_2fr]" — a %>
+<%#      3:2:2 ratio, i.e. the first column is 1.5x (50% wider than) each %>
+<%#      of the other two, which don't need the extra space (both are %>
+<%#      short read-only fields). Requires a Tailwind rebuild — %>
+<%#      "grid-cols-[3fr_2fr_2fr]" is a new arbitrary-value class not %>
+<%#      previously used anywhere in this project (see %>
+<%#      RAILS_SPECIFICS.md "Tailwind CSS — Rebuild Required After Class %>
+<%#      Changes"): run bin/rails tailwindcss:build, then hard-refresh %>
+<%#      the browser. %>
+<%# v1.15 (Session 76): Follow-up to v1.14. Two instances of stale wording %>
+<%#   below the renamed label, both now consistent with "Computer/ %>
+<%#   Peripheral": the select's include_blank text ("Spare (not attached to %>
+<%#   a computer)" → "...to a peripheral/computer)") and the helper <p> %>
+<%#   text just below the field ("...not attached to a computer." → %>
+<%#   "...not attached to a peripheral/computer."). %>
+<%# v1.14 (Session 76): Two fixes to the Row 1 "Computer Model" dropdown, %>
+<%#   reported from /components/new: %>
+<%#   1. Label text was "Computer Model" even though the select's option %>
+<%#      list (owner_computers, line ~61) is built from Current.owner. %>
+<%#      computers, which — since computers and peripherals share the same %>
+<%#      table/device_type enum — includes BOTH device types. Renamed to %>
+<%#      "Computer/Peripheral" to reflect that a component can belong to %>
+<%#      either. The attribute itself (:computer_id) is unchanged. %>
+<%#   2. The combined option label only showed Model / DEC Part Number / %>
+<%#      DEC Serial Number — Owner Part Number was missing, even though it's %>
+<%#      (per Ulli) sometimes the only field that distinguishes two %>
+<%#      otherwise-identical devices of the same model. Added %>
+<%#      c.owner_part_number to the label, positioned between DEC Part %>
+<%#      Number and DEC Serial Number — matching this same file's Row 2 %>
+<%#      field order for Components (DEC Part Number, then Owner Part %>
+<%#      Number, then DEC Serial Number; see line ~161 below), rather than %>
+<%#      inventing a new ordering. computer.owner_part_number is always a %>
+<%#      real string (defaults to "-" via before_validation — see %>
+<%#      computer.rb), so the .presence || "—" fallback pattern already %>
+<%#      used for the other two fields is applied identically here for %>
+<%#      consistency, even though in practice it will rarely if ever fall %>
+<%#      through to the em-dash. %>
+<%#   The computers_json map (auto-fill for the read-only Row 1 display %>
+<%#   fields) and the Row 1 read-only "Computer DEC Part Number" / %>
+<%#   "Computer DEC Serial Number" fields were NOT touched — only the %>
+<%#   select's own option label changed. Adding Owner Part Number to the %>
+<%#   read-only auto-fill display wasn't requested; flag if wanted. %>
+<%# v1.13 (Session 75): Fixed Row 2 field misalignment. At %>
 <%#   grid-cols-5 width, three of the five labels ("Component DEC Part %>
 <%#   Number", "Component Owner Part Number", "Component DEC Serial %>
 <%#   Number") wrap onto two lines while the other two ("Component Type", %>
@@ -61,13 +122,17 @@
 <% owner_computers = Current.owner.computers.includes(:computer_model).to_a %>
 
 <%# Build option array for f.select: [display_label, value, html_option_attributes] %>
-<%# The full label (shown while browsing) is "Model  /  DEC Part Number  /  DEC Serial Number". %>
+<%# The full label (shown while browsing) is %>
+<%# "Model  /  DEC Part Number  /  Owner Part Number  /  DEC Serial Number" %>
+<%# (v1.14 — Owner Part Number added, positioned to match this file's own %>
+<%# Row 2 field order for Components). %>
 <%# data-model-name carries just the model name for the post-selection collapsed display. %>
 <% computer_options = owner_computers.map { |c|
      full_label = [
        c.computer_model.name,
-       c.order_number.presence  || "—",
-       c.serial_number.presence || "—"
+       c.order_number.presence       || "—",
+       c.owner_part_number.presence  || "—",
+       c.serial_number.presence      || "—"
      ].join("  /  ")
      [full_label, c.id, { data: { model_name: c.computer_model.name } }]
    } %>
@@ -87,7 +152,7 @@
       } do |f| %>
   <%= render "common/record_errors", record: component %>
 
-  <%# ─── Row 1: Computer Model | Computer DEC Part Number | Computer DEC Serial Number ─── %>
+  <%# ─── Row 1: Computer/Peripheral | Computer DEC Part Number | Computer DEC Serial Number ─── %>
   <%# %>
   <%# Stimulus controller wraps all three columns so it can reach all three targets. %>
   <%# data-computer-select-computers-value carries the JSON map for order/serial lookup. %>
@@ -96,18 +161,18 @@
   <%# carries data-controller="computer-select" with focus/blur actions that manage %>
   <%# the collapse-to-model-name display. Tom Select hides the native element, which %>
   <%# would silence those focus/blur events and break the collapse behaviour. %>
-  <div class="grid grid-cols-3 gap-4"
+  <div class="grid grid-cols-[3fr_2fr_2fr] gap-4"
        data-controller="computer-select"
        data-computer-select-computers-value="<%= computers_json %>">
 
-    <%# Computer Model: f.select (not collection_select) so options can carry %>
+    <%# Computer/Peripheral: f.select (not collection_select) so options can carry %>
     <%# data-model-name for the post-selection collapsed display. %>
     <%# Three data-action events wired: change (pick), focus (open), blur (close). %>
     <div>
-      <%= f.label :computer_id, "Computer Model", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.label :computer_id, "Computer/Peripheral", class: "block text-sm font-medium text-stone-700" %>
       <%= f.select :computer_id,
             computer_options,
-            { include_blank: "Spare (not attached to a computer)" },
+            { include_blank: "Spare (not attached to a computer/peripheral)" },
             class: field_classes,
             data: {
               "computer-select-target": "computerSelect",
@@ -117,7 +182,7 @@
                 "blur->computer-select#closeDropdown"
               ].join(" ")
             } %>
-      <p class="mt-1 text-xs text-stone-500">Leave blank if this is a spare component not attached to a computer.</p>
+      <p class="mt-1 text-xs text-stone-500">Leave blank if this is a spare component not attached to a computer/peripheral.</p>
     </div>
 
     <%# Computer DEC Part Number — read-only, auto-filled by Stimulus. %>
@@ -130,7 +195,7 @@
              placeholder="—"
              data-computer-select-target="orderNumber"
              class="w-full h-10 p-3 rounded border border-stone-300 bg-stone-50 text-sm text-stone-400 cursor-not-allowed">
-      <p class="mt-1 text-xs text-stone-500">Auto-filled from the selected computer.</p>
+      <p class="mt-1 text-xs text-stone-500">Auto-filled from the selected device.</p>
     </div>
 
     <%# Computer DEC Serial Number — read-only, auto-filled by Stimulus. %>
@@ -142,7 +207,7 @@
              placeholder="—"
              data-computer-select-target="serialNumber"
              class="w-full h-10 p-3 rounded border border-stone-300 bg-stone-50 text-sm text-stone-400 cursor-not-allowed">
-      <p class="mt-1 text-xs text-stone-500">Auto-filled from the selected computer.</p>
+      <p class="mt-1 text-xs text-stone-500">Auto-filled from the selected device.</p>
     </div>
   </div>
 
