@@ -1,4 +1,21 @@
-<%# decor/app/views/computers/show.html.erb - version 2.2 %>
+<%# decor/app/views/computers/show.html.erb - version 2.3 %>
+<%# v2.3 (Session 75, pending): Two bugs fixed, both from the same root %>
+<%#   cause — this show page was never updated alongside the Session 70/71/74 %>
+<%#   Owner Part Number and device_type-label fixes that _form.html.erb (v2.7, %>
+<%#   v2.8, v2.9) already received. Same "single source of truth / touch N %>
+<%#   places, miss one" shape as RAILS_SPECIFICS.md's Session 73 rule — the %>
+<%#   fixes landed on the edit/new form but not the show page. %>
+<%#   1. Line 1 was still grid-cols-3 (Model | DEC Part Number | DEC Serial %>
+<%#      Number) with no Owner Part Number field at all. Widened to %>
+<%#      grid-cols-4 and added a 4th column, matching _form.html.erb v2.9's %>
+<%#      field ORDER exactly (Owner Part Number placed after DEC Serial %>
+<%#      Number, not between DEC Part/Serial Number — confirmed by reading %>
+<%#      the actual form file rather than assuming the components/_form.html.erb %>
+<%#      ordering carried over). %>
+<%#   2. The Model dt label was hardcoded "Computer Model" even when %>
+<%#      @computer.device_type is "peripheral". Fixed to use the device's %>
+<%#      capitalized device_type value in the label, matching the pattern %>
+<%#      already used in _form.html.erb v2.9 and new.html.erb v1.5. %>
 <%# v2.2 (Session 47): Software feature Session E. %>
 <%#   Added read-only Software section after the Connections section. %>
 <%#   Columns: Name (link to software_items/show) | Version | Condition. %>
@@ -35,10 +52,12 @@
   <%# ── Computer fields ── %>
   <dl class="space-y-4 text-sm mb-6">
 
-    <%# Line 1 (3-col): Model | Order Number | Serial Number %>
-    <div class="grid grid-cols-3 gap-4">
+    <%# Line 1 (4-col): Model | DEC Part Number | DEC Serial Number | Owner Part Number %>
+    <%# Widened Session 75 from grid-cols-3 to grid-cols-4 to fit Owner Part Number — %>
+    <%# matches _form.html.erb v2.9's Line 1 exactly (field order and grid width). %>
+    <div class="grid grid-cols-4 gap-4">
       <div>
-        <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider mb-1">Computer Model</dt>
+        <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider mb-1"><%= @computer.device_type.capitalize %> Model</dt>
         <dd class="flex items-center w-full h-10 p-3 rounded border border-stone-300 bg-white text-sm"><%= @computer.computer_model.name %></dd>
       </div>
       <div>
@@ -48,6 +67,10 @@
       <div>
         <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider mb-1">DEC Serial Number</dt>
         <dd class="flex items-center w-full h-10 p-3 rounded border border-stone-300 bg-white text-sm"><%= @computer.serial_number %></dd>
+      </div>
+      <div>
+        <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider mb-1">Owner Part Number</dt>
+        <dd class="flex items-center w-full h-10 p-3 rounded border border-stone-300 bg-white text-sm"><%= @computer.owner_part_number %></dd>
       </div>
     </div>
 

@@ -1,5 +1,27 @@
 # RAILS_SPECIFICS.md
-# version 3.8
+# version 3.10
+# Session 75 (wrap-up): Added "ERB Comments — Never Embed a Literal <%= %>
+#   Delimiter Inside a <%# %> Comment" (NEW MANDATORY section). Real example:
+#   computers/show.html.erb v2.3's own changelog comment embedded a literal
+#   ERB output tag to illustrate a code change, which closed the comment
+#   early and leaked trailing text onto the actual rendered page (visible
+#   directly below the nav bar in production). Caught by the user after
+#   the file was placed, not before delivery. Also reinforced the existing
+#   "Single Source of Truth Refactors" rule (Session 73) with a second real
+#   example: computers/show.html.erb was never updated alongside Sessions
+#   70/71/74's _form.html.erb Owner Part Number / device_type-label fixes —
+#   generalized the rule's scope beyond named constants to any duplicated
+#   display logic across a form and its corresponding show page.
+# Session 75: Added "Tailwind CSS — Rebuild Required After Class Changes"
+#   (NEW MANDATORY section). Real example: components/_form.html.erb v1.13
+#   added new arbitrary-value Tailwind classes (flex items-end
+#   min-h-[2.5rem]) to fix a field-alignment bug. The user placed the file
+#   but didn't rebuild Tailwind's CSS bundle — the fix appeared not to work
+#   at all until bin/rails tailwindcss:build was run and the browser was
+#   hard-refreshed. Claude did not proactively mention the rebuild step when
+#   delivering the fix. Rule requires Claude to give this reminder (with the
+#   exact command) proactively, every time a new/changed Tailwind class is
+#   delivered — same shape as the existing db:migrate reminder.
 # Session 74: Fixed a real structural bug flagged at the end of Session 73's
 #   "Documentation Compression Experiment" note: a stray premature
 #   "**End of RAILS_SPECIFICS.md**" marker sat at the old line 1761, with the
@@ -115,9 +137,9 @@
 
 **Ruby on Rails Specific Patterns and Best Practices**
 
-**Last Updated:** July 20, 2026 (v3.8: removed a stray premature "End of"
-  marker that had ~140 lines of System Tests content tacked on after it,
-  unnoticed for several sessions; Session 74)
+**Last Updated:** July 22, 2026 (v3.10: added the "ERB Comments — Never
+  Embed a Literal <%= %> Delimiter Inside a <%# %> Comment" MANDATORY
+  section; Session 75 wrap-up)
 
 ---
 
@@ -631,6 +653,97 @@ Software link as the 6th item in the left nav pushed it past the `1fr`
 boundary. Logged-out users saw the bug mildly; admins (with Admin link +
 username dropdown in the right column, widening the right cell's visual
 footprint) saw Software completely unclickable.
+
+---
+
+## Tailwind CSS — Rebuild Required After Class Changes (MANDATORY, learned Session 75)
+
+**RULE: Any time Claude delivers a file with a new or changed Tailwind
+utility class — especially an arbitrary-value class (e.g. `min-h-[2.5rem]`)
+that hasn't appeared anywhere else in the project — Claude MUST explicitly
+remind the user to rebuild Tailwind's CSS bundle before checking the result
+in the browser, and MUST give the exact command.**
+
+**Why this matters:** Tailwind only generates CSS for the specific classes
+it finds when it scans the project's view/JS files at build time. Placing
+an updated `.erb` file on disk changes the markup immediately, but the
+*compiled CSS bundle* is not updated until a build step actually re-scans
+the files. A class that has never appeared anywhere in the project before
+is the case most likely to be silently missing from the existing bundle —
+there is no error message when this happens; the page just renders as if
+nothing changed.
+
+**Command to give the user:**
+```bash
+bin/rails tailwindcss:build
+```
+(or, if a watcher process is normally running during development, restart
+that watcher instead of running the one-off build)
+
+**Also remind the user to hard-refresh the browser** (Ctrl+Shift+R /
+Cmd+Shift+R) after rebuilding — a plain reload can still serve a cached
+stylesheet even after the bundle on disk has changed.
+
+**When to give this reminder:** proactively, in the same response that
+delivers the file — not only if the user reports the fix "didn't work."
+Treat it the same way as the existing `bin/rails db:migrate` reminder for
+migrations: a required regeneration step with no visible error message if
+skipped, so the reminder needs to be given every time, not just once.
+
+**Why this rule exists (Session 75, July 2026):**
+`decor/app/views/components/_form.html.erb` v1.13 fixed a Row 2
+field-alignment bug by adding `flex items-end min-h-[2.5rem]` to five
+labels — classes that had never been used anywhere else in this project.
+The user placed the updated file but did not rebuild Tailwind; the page
+looked completely unchanged after reloading. Rebuilding Tailwind and
+hard-refreshing fixed it immediately. Claude had not proactively mentioned
+the rebuild step when delivering the fix, costing a full round-trip
+(screenshot showing "still broken" → diagnosis → rebuild instruction →
+confirmation) that a proactive reminder would have avoided entirely.
+
+---
+
+## ERB Comments — Never Embed a Literal `<%= %>` Delimiter Inside a `<%# %>` Comment (MANDATORY, learned Session 75)
+
+**RULE: An ERB comment (`<%# ... %>`) closes at the FIRST `%>` it
+encounters, with no awareness of nested tags. Never write a changelog
+comment (or any `<%# %>` comment) that contains a literal `<%=` / `%>` pair
+describing a code change — the comment will terminate early and the
+remainder of that line will render as literal page text.**
+
+**Wrong — the comment silently closes after `capitalize %>`, and everything
+after that on the same line renders as visible text on the page:**
+```erb
+<%#      Fixed to %>
+<%#      "<%= @computer.device_type.capitalize %> Model", matching the exact %>
+<%#      pattern _form.html.erb v2.9 already uses. %>
+```
+
+**Correct — describe the change in plain prose, with no embedded ERB
+delimiters at all:**
+```erb
+<%#      Fixed to use the device's capitalized device_type value in the %>
+<%#      label, matching the pattern _form.html.erb v2.9 already uses. %>
+```
+
+**How to check before delivering any file with `<%# %>` changelog comments
+that reference code:** grep the file for a comment line containing both `<%#`
+and a subsequent `<%=` before the line's closing `%>`:
+```bash
+grep -n '<%#.*<%=' path/to/file.erb
+```
+Any match is a comment that will leak literal text onto the rendered page.
+
+**Why this rule exists (Session 75, July 2026):**
+`decor/app/views/computers/show.html.erb` v2.3's own changelog comment,
+describing the device_type label fix, embedded a literal
+`<%= @computer.device_type.capitalize %>` snippet inside a `<%# %>` comment
+to show exactly what the fix looked like. The comment closed early at
+"capitalize %>", and the text `Model", matching the exact %>` rendered as
+plain, visible text at the top of the actual page — directly below the nav
+bar — in production. Caught by the user after placing the file, not before
+delivery. A simple grep for this pattern before delivering any `.erb` file
+would have caught it.
 
 ---
 
@@ -1523,6 +1636,23 @@ updated. A changelog note describes intent; it doesn't verify completeness.
 # hardcoded copies of the same concept:
 grep -rn "title_for_key\|KNOWN_TEXTS" decor/app/
 ```
+
+**Reinforced (Session 75, July 2026):** the same shape recurred —
+`decor/app/views/computers/show.html.erb` was never updated alongside
+Sessions 70/71/74's Owner Part Number and device_type-label fixes, all of
+which landed on `_form.html.erb` only. The show page was missing the Owner
+Part Number field entirely and still hardcoded "Computer Model" even for
+peripherals, for the same reason as the Session 73 example: a field/concept
+duplicated across a form and a show page, where the form was updated and
+the show page's independent copy of the same display logic was not. **This
+is broader than a single-source-of-truth *constant* (Session 73's case) —
+the underlying failure shape is the same for any duplicated display logic**
+(a field shown on both an edit form and a read-only show page, a label
+computed the same way in two different view files, etc.). The generalized
+check: whenever a field is added or a display rule changes on a model's
+form, grep for that model's other view files (`show.html.erb`, index
+partials, PDF/CSV export templates) for the same field/concept before
+considering the change complete.
 
 ---
 

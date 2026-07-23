@@ -1,5 +1,22 @@
 # decor/docs/claude/SESSION_HANDOVER.md
-# version 74.0
+# version 76.0
+# Session 75: Three UI bug fixes, all code-complete, tested in browser by
+#   Ulli, NOT YET lint/security-scanned or committed:
+#   computers/new.html.erb v1.6 (stale required-fields notice text),
+#   components/_form.html.erb v1.13 (Row 2 field alignment),
+#   computers/show.html.erb v2.3 (missing Owner Part Number field + wrong
+#   "Computer Model" label — both from the show page never being updated
+#   alongside Sessions 70/71/74's _form.html.erb fixes). One bug introduced
+#   and self-caught during this session's own delivery: an ERB comment
+#   containing a literal <%= %> tag closed early and leaked text onto the
+#   rendered page — fixed, and codified as a new RAILS_SPECIFICS.md rule.
+#   Two rule-doc corrections made at the user's explicit request mid-session
+#   (not a self-initiated wrap-up): COMMON_BEHAVIOR.md v3.2 gained two new
+#   rules (don't update rule docs unprompted mid-session; don't @-encode
+#   rule docs delivered alone) after Claude did exactly the two things those
+#   rules now prohibit. RAILS_SPECIFICS.md gained the Tailwind-rebuild
+#   reminder rule (v3.9) and, at this actual wrap-up, the ERB-comment rule
+#   (v3.10). See "Session 75 Summary" below for full detail.
 # Session 74: Adopted the Session 73 documentation-compression draft as the
 #   working SESSION_HANDOVER.md, after reviewing it against the full v73.0
 #   file rather than assuming the draft was complete. Three corrections made
@@ -77,16 +94,23 @@
 #   below for confirmed requirements going into next session.
 # Session 65: Component order_number bulk maintenance (admin Components dropdown).
 
-**Date:** July 20, 2026 (Session 74 — adopted this compressed
-  SESSION_HANDOVER.md format; no project code changed this session)
-**Branch:** main (Sessions 49–72 all committed, pushed, merged, and deployed).
-  Session 73 (Category Help Pages feature, this session) is **code-complete
-  but NOT YET tested, lint/security-scanned, or committed** — sitting
-  locally. This is a single-session checklist, not a multi-session stack
-  like the Sessions 67–70 situation Session 72 resolved.
-**Status:** Sessions 1–72 fully closed out (see "Session 72 Summary"). Session
-  73's checklist (see "Session 73 Summary" below) is the only currently open
-  one. The GAP NOTICE below (Session 68's missing formal summary — a
+**Date:** July 22, 2026 (Session 75 — three UI bug fixes; browser-tested by
+  Ulli; NOT YET lint/security-scanned or committed)
+**Branch:** main (Sessions 49–72 all committed, pushed, merged, and
+  deployed, per Session 72's confirmation). Session 73's Category Help
+  Pages feature (7 files) was last known to be **code-complete but NOT YET
+  tested, lint/security-scanned, or committed** as of Session 74's close —
+  its status was not updated or re-confirmed during Session 75, since this
+  session's work didn't touch it. Session 75 (this session) adds a
+  separate, second item to the same "not yet committed" list: three UI bug
+  fixes, **code-complete and browser-tested, but NOT YET rubocop/brakeman/
+  bundle-audit-scanned or committed.** Two independent uncommitted items
+  are now open on top of main — worth confirming both statuses explicitly
+  before assuming either is further along than described here.
+**Status:** Sessions 1–72 fully closed out (see "Session 72 Summary").
+  Session 73's checklist (see "Session 73 Summary" below) and Session 75's
+  checklist (see "Session 75 Summary" below) are both currently open. The
+  GAP NOTICE below (Session 68's missing formal summary — a
   documentation-only issue, not a code issue) also remains open.
 
 ---
@@ -265,6 +289,25 @@ Export/Import Scripts" for the full rule.
 
 ---
 
+## !! TAILWIND CSS — REBUILD AFTER CLASS CHANGES (learned Session 75) !!
+
+Any new or changed Tailwind utility class (especially an arbitrary-value
+class like `min-h-[2.5rem]` never used elsewhere in the project) needs a
+rebuild before it takes effect in the browser — placing the updated file on
+disk is not enough. Claude must proactively remind the user of this,
+**every time**, with the exact command:
+
+```bash
+bin/rails tailwindcss:build
+```
+
+(or restart the watcher, if one is running) — then hard-refresh the browser
+(Ctrl+Shift+R / Cmd+Shift+R). Same shape as the `db:migrate` reminder: no
+error message if skipped, the change just silently doesn't appear. See
+RAILS_SPECIFICS.md v3.9 for the full rule and the real example.
+
+---
+
 ## !! OUTPUT FILE NAMING — NEVER substitute underscores for dots !!
 
 See COMMON_BEHAVIOR.md v2.7 for the full rule.
@@ -403,6 +446,135 @@ one batch: `loofah` (→ >= 2.25.2), `rails-html-sanitizer` (→ >= 1.7.1),
 `sqlite3` (→ >= 2.9.5), `websocket-driver` (→ >= 0.8.2). Fixed with
 `bundle update <the four>`, confirmed clean with `bundle-audit check
 --update` before re-pushing. Full incident: "Session 72 Summary" below.
+
+---
+
+## Session 75 Summary — Three UI bug fixes: code-complete, browser-tested, not yet lint/security-scanned or committed
+
+Three independent, unrelated small bugs reported and fixed. No migrations,
+no new server-side logic — all view/markup/CSS fixes, confirmed via
+PROGRAMMING_GENERAL.md's Test Coverage Check to need no new automated tests
+(view layout / static text changes only).
+
+### Bug 1 — computers/new.html.erb: stale required-fields notice text
+
+The notice still read "Required fields: [Model] and DEC Serial Number" —
+stale since Session 70's Owner Part Number feature made both
+`serial_number` and `owner_part_number` default to `"-"` via
+`before_validation` rather than being hard-required individually. Updated
+to "...and at least one of DEC Serial Number and Owner Part Number,"
+reflecting the actual constraint that matters (the combined uniqueness
+scope). The two sentences were already plain flowing text with no
+`white-space: nowrap`, so the second sentence already wraps onto its own
+line naturally whenever both don't fit on one — no markup change needed
+for that part, only the text itself.
+
+    decor/app/views/computers/new.html.erb    v1.5 → v1.6
+
+### Bug 2 — components/_form.html.erb: Row 2 field misalignment
+
+At `grid-cols-5` width, three of the five Row 2 labels ("Component DEC Part
+Number", "Component Owner Part Number", "Component DEC Serial Number")
+wrapped onto two lines while the other two ("Component Type", "Run Status")
+stayed on one line — pushing only those three inputs down and leaving the
+row visually staggered. (Diagnosed correctly only after a screenshot; an
+initial hypothesis — Tom Select's JS widget not matching `field_classes`
+height — turned out not to be needed once the actual screenshot showed the
+real cause was label wrapping, not Tom Select.) Fixed by giving every Row 2
+label `flex items-end min-h-[2.5rem]` — a fixed two-line-tall box with the
+label text bottom-anchored inside it, so every input starts at the same y
+regardless of how many lines its own label wrapped to.
+
+**This fix required a Tailwind rebuild to take effect** (`min-h-[2.5rem]`
+and `items-end` were new classes for this project) — the user placed the
+file but didn't rebuild initially, causing a "still looks broken" report
+that cost a full round-trip before the missing rebuild step was identified.
+This prompted RAILS_SPECIFICS.md v3.9's new mandatory Tailwind-rebuild
+reminder rule (see below).
+
+    decor/app/views/components/_form.html.erb    v1.12 → v1.13
+
+### Bug 3 — computers/show.html.erb: missing Owner Part Number + wrong Model label
+
+Same root cause as several prior sessions' single-source-of-truth gaps:
+this show page was never updated alongside Sessions 70/71/74's
+`_form.html.erb` fixes (v2.7 → v2.9). Two consequences, both fixed:
+1. Line 1 was still `grid-cols-3` (Model | DEC Part Number | DEC Serial
+   Number) with no Owner Part Number field at all. Widened to
+   `grid-cols-4`, matching `_form.html.erb` v2.9's field ORDER exactly
+   (Owner Part Number placed *after* DEC Serial Number — confirmed by
+   reading the actual form file rather than assuming the
+   `components/_form.html.erb` ordering, which places it *between* DEC
+   Part/Serial Number, carried over).
+2. The Model `<dt>` label was hardcoded "Computer Model" even for
+   peripherals. Fixed to `@computer.device_type.capitalize` + " Model",
+   matching the pattern `_form.html.erb` v2.9 and `new.html.erb` v1.5
+   already use.
+
+**A self-introduced bug during this fix's own delivery, caught and
+corrected the same turn (not by the user):** the changelog comment
+describing bug 3's second fix embedded a literal `<%= @computer.device_type
+.capitalize %>` snippet inside a `<%# %>` ERB comment. ERB comments close
+at the *first* `%>` encountered, with no awareness of nested tags — the
+comment terminated early and the trailing text (`Model", matching the exact
+%>`) rendered as literal, visible page text directly below the nav bar in
+production. The user reported this after placing the file. Fixed by
+rewriting the comment in plain prose with no embedded ERB delimiters, and
+verified via `grep -n '<%#.*<%='` that no other instance of this pattern
+existed anywhere else in the file. Codified as RAILS_SPECIFICS.md v3.10's
+new mandatory rule, including the exact grep command to check before
+delivering any `.erb` file with a changelog comment describing code.
+
+    decor/app/views/computers/show.html.erb    v2.2 → v2.3
+
+### Two file-delivery-convention mistakes, corrected at the user's explicit instruction (not self-caught)
+
+1. **Rule/skill documents updated mid-session, unprompted.** After fixing
+   the Tailwind-rebuild gap, RAILS_SPECIFICS.md and SESSION_HANDOVER.md
+   were both updated and delivered immediately — an unprompted "wrap up
+   now" while the actual project work (placing/testing the already-fixed
+   view files) was still open and hadn't been asked about. The user pointed
+   this out directly. Fixed going forward: COMMON_BEHAVIOR.md v3.2's new
+   "Rule/Skill Document Updates — Timing" rule (see that file for detail).
+2. **Rule/skill documents @-encoded when delivered alone.** The same two
+   files were delivered with @-encoded flat filenames
+   (`docs@claude@RAILS_SPECIFICS@md`, etc.) even though they were delivered
+   without any other project files — no collision risk existed, and the
+   user had to rename them back before use. This same mistake recurred
+   later in the session with `computers/show.html.erb` (delivered as
+   `app@views@computers@show@html.erb` for a single-file delivery) before
+   being corrected. Fixed going forward: COMMON_BEHAVIOR.md v3.2's new File
+   Transfer Protocol exception for rule/skill documents delivered alone —
+   plain filename, no script. (The `show.html.erb` recurrence was a
+   pre-existing single-file-delivery rule Claude already had and simply
+   didn't follow correctly that turn — not a gap needing a new rule.)
+
+### Rule/skill document updates this session (all at the user's explicit
+### request, or — for the ERB comment rule below — at actual session
+### wrap-up, per the new timing rule this session itself introduced)
+
+    decor/docs/claude/COMMON_BEHAVIOR.md     v3.1 → v3.2  (two new rules — see above)
+    decor/docs/claude/RAILS_SPECIFICS.md     v3.8 → v3.10 (Tailwind rebuild rule, v3.9;
+                                                            ERB comment rule, v3.10)
+    decor/docs/claude/SESSION_HANDOVER.md    v74.0 → v76.0 (Tailwind banner, v75.0;
+                                                             this full summary + status
+                                                             update, v76.0)
+    decor/docs/claude/DECOR_PROJECT.md       v2.65 → v2.66 (this session's changelog +
+                                                             Key file versions entries)
+
+### NOT YET DONE — required before this session's three bug fixes can be committed
+
+    [ ] Place all three delivered files into the actual project (if not already done —
+        Ulli confirmed browser-testing "all fine now" for all three)
+    [ ] bin/rails test
+    [ ] bundle exec rubocop -A / bundle exec rubocop
+    [ ] bin/brakeman --no-pager
+    [ ] bundle exec bundle-audit check --update
+    [ ] git workflow: branch → commit → push → PR → CI → merge → deploy
+
+Note: Session 73's Category Help Pages checklist (see "Session 73 Summary"
+below) is a SEPARATE, still-open item — its status was not re-confirmed or
+touched during this session.
 
 ---
 

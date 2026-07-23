@@ -1,5 +1,18 @@
 # decor/docs/claude/DECOR_PROJECT.md
-# version 2.65
+# version 2.66
+# Session 75: Three independent UI bug fixes — computers/new.html.erb v1.6
+#   (stale required-fields notice text, updated for the Owner Part Number
+#   OR-requirement), components/_form.html.erb v1.13 (Row 2 field
+#   misalignment — labels wrapping to two lines pushed only some inputs
+#   down), computers/show.html.erb v2.3 (missing Owner Part Number field +
+#   hardcoded "Computer Model" label that should read device_type-based).
+#   All code-complete and browser-tested by Ulli; NOT YET lint/security-
+#   scanned or committed. No migrations, no new server-side logic — view/
+#   markup/CSS changes only. Full detail: SESSION_HANDOVER.md "Session 75
+#   Summary". Also: two rule-doc corrections made mid-session at Ulli's
+#   explicit request (COMMON_BEHAVIOR.md v3.2), plus a Tailwind-rebuild
+#   reminder rule and an ERB-comment-gotcha rule (RAILS_SPECIFICS.md v3.9,
+#   v3.10) — see those files' own changelogs.
 # Session 74: Documentation compression pass (continuing the Session 73
 #   experiment, now also applied to SESSION_HANDOVER.md and RAILS_SPECIFICS.md
 #   this same session — see those files' own changelogs). In this file:
@@ -149,16 +162,19 @@
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** July 20, 2026 (Session 74 — documentation compression
-  pass; no project code changed this session; v2.65)
+**Last Updated:** July 22, 2026 (Session 75 — three UI bug fixes,
+  browser-tested; v2.66)
 **Current Status:** Sessions 1–72 all committed, pushed, merged, and deployed
   to main (see prior entries below for full detail). Session 73's Category
-  Help Pages feature (7 files) is still **code-complete but NOT YET tested,
-  lint/security-scanned, or committed** — see "Category Help Pages Feature —
-  Session 73" below and SESSION_HANDOVER.md "Session 73 Summary" for the
-  full NOT YET DONE checklist. Session 74 touched only this file,
-  SESSION_HANDOVER.md, and RAILS_SPECIFICS.md (compression pass) — no
-  application code changed, so this checklist is unaffected.
+  Help Pages feature (7 files) was last known to be **code-complete but NOT
+  YET tested, lint/security-scanned, or committed** as of Session 74's
+  close — not re-confirmed or touched during Session 75. Session 75 (this
+  session) adds a SEPARATE open item: three UI bug fixes across
+  computers/new.html.erb, components/_form.html.erb, and
+  computers/show.html.erb — **code-complete and browser-tested by Ulli, but
+  NOT YET lint/security-scanned or committed.** See "Session 75 Summary" in
+  SESSION_HANDOVER.md for the full write-up and NOT YET DONE checklist. Two
+  independent uncommitted items are now open on top of main.
 
 ---
 
@@ -369,6 +385,13 @@ is excluded).
 
 **Key file versions** (updated each session):
 
+    decor/docs/claude/DECOR_PROJECT.md                                                  v2.66 ← Session 75
+    decor/docs/claude/SESSION_HANDOVER.md                                               v76.0 ← Session 75
+    decor/docs/claude/RAILS_SPECIFICS.md                                                v3.10 ← Session 75
+    decor/docs/claude/COMMON_BEHAVIOR.md                                                v3.2  ← Session 75
+    decor/app/views/computers/new.html.erb                                              v1.6  ← Session 75
+    decor/app/views/components/_form.html.erb                                           v1.13 ← Session 75
+    decor/app/views/computers/show.html.erb                                             v2.3  ← Session 75
     decor/docs/claude/DECOR_PROJECT.md                                                  v2.65 ← Session 74
     decor/docs/claude/SESSION_HANDOVER.md                                               v74.0 ← Session 74
     decor/docs/claude/RAILS_SPECIFICS.md                                                v3.8  ← Session 74
