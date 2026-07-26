@@ -1,5 +1,61 @@
 # decor/docs/claude/DECOR_PROJECT.md
-# version 2.66
+# version 2.69
+# Session 78: Three independent items, all code-complete, NOT YET placed/
+#   tested/committed: (1) dropdown_controller.js v1.0->v1.1 — fixed Session
+#   77's carried-over open item (admin dropdowns not closing siblings) via
+#   a shared "dropdown:open" CustomEvent broadcast/listen pattern, no
+#   admin.html.erb change needed; (2) connection_groups/_form.html.erb
+#   v1.2->v1.3 — Device dropdown was missing Owner Part Number in both
+#   places its option label is built (persisted rows + new-row template);
+#   (3) common/_navigation.html.erb v2.6->v2.7 — REAL bug found behind a
+#   misreported symptom ("New connection group page content is not
+#   centered" — the actual page was already correctly centered; the nav's
+#   logo wasn't truly centered on the viewport at all, since its
+#   grid-cols-[auto_1fr_auto] middle column only centers on leftover space
+#   between the nav's unequal-width left/right groups). Fixed by
+#   absolutely-positioning the logo against a relative <nav>. New
+#   MANDATORY RAILS_SPECIFICS.md v3.14 section added.
+# Session 77: Six independent small bug fixes, all code-complete, NOT YET
+#   placed/tested/lint/security-scanned/committed:
+#   (1) computers/_form.html.erb v3.0->v3.1 — hardcoded "Select a computer
+#   model" prompt made dynamic ("Select a #{device_type} model");
+#   (2) owners/peripherals.html.erb v1.5->v1.6 — hardcoded "Computer Model"
+#   column header fixed to "Peripheral Model" on this peripherals-only page;
+#   (3) computers/show.html.erb v2.3->v2.4 — Components sub-table gained the
+#   missing Owner Part No. column (same show-page-lags-form-page shape as
+#   Sessions 73/75); (4) components/_filters.html.erb v1.2->v1.4 — Search
+#   help text clarified with the actual searched fields, then DEC Part
+#   Number added to both the search scope and the text at Ulli's explicit
+#   follow-up request; (5) component.rb v1.7->v1.8 — order_number added to
+#   the `search` scope (previously untested — 3 new tests added,
+#   component_test.rb v1.7->v1.8); (6) components/_form.html.erb v1.17->v1.18
+#   — Computer/Peripheral dropdown had no ordering at all (a plain f.select,
+#   not Tom Select — Session 76's sortField fix doesn't apply here), fixed
+#   with a Ruby-side sort_by. Also: common/_navigation.html.erb v2.5->v2.6 —
+#   real bug, fixed: Info dropdown's first item was obscured on every
+#   filter-sidebar page, root cause a z-index tie with each page's sticky
+#   <h1> broken by DOM order (see RAILS_SPECIFICS.md v3.13 new MANDATORY
+#   section for the full mechanism). One NEW bug reported this session, NOT
+#   yet diagnosed or fixed: admin interface dropdowns don't close each other
+#   when a new one is opened, so multiple stay open and later ones cover
+#   earlier ones. Files were requested (dropdown_controller.js,
+#   layouts/admin.html.erb) but not uploaded before Ulli ended the session —
+#   carried over as an open item for next session.
+# Session 76: Ulli confirmed Sessions 73 and 75 are both now checked and
+#   deployed — see "Category Help Pages Feature — Session 73" (marked
+#   RESOLVED below) and the updated Current Status. This session's own
+#   work: computers/new.html.erb v1.6 redelivered (Session 75's file had
+#   never actually been placed into the real project); four successive
+#   fixes to components/_form.html.erb's Row 1 Computer/Peripheral dropdown
+#   (v1.13 → v1.17 — label rename, Owner Part Number added to the option
+#   label, column widened 50%, wording consistency); a project-wide Tom
+#   Select dropdown sort-order bug fixed in tom_select_controller.js
+#   (v1.0 → v1.1 — sortField: false silently sorted every dropdown by
+#   database id instead of name); a CI-caught StaleElementReferenceError
+#   fixed in software_items_filters_test.rb (v1.1 → v1.2), unrelated to
+#   this session's other work. Full detail: SESSION_HANDOVER.md "Session 76
+#   Summary". Two new MANDATORY RAILS_SPECIFICS.md sections added (v3.10 →
+#   v3.12) from this session's real bugs — see that file's own changelog.
 # Session 75: Three independent UI bug fixes — computers/new.html.erb v1.6
 #   (stale required-fields notice text, updated for the Owner Part Number
 #   OR-requirement), components/_form.html.erb v1.13 (Row 2 field
@@ -162,19 +218,17 @@
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** July 22, 2026 (Session 75 — three UI bug fixes,
-  browser-tested; v2.66)
-**Current Status:** Sessions 1–72 all committed, pushed, merged, and deployed
-  to main (see prior entries below for full detail). Session 73's Category
-  Help Pages feature (7 files) was last known to be **code-complete but NOT
-  YET tested, lint/security-scanned, or committed** as of Session 74's
-  close — not re-confirmed or touched during Session 75. Session 75 (this
-  session) adds a SEPARATE open item: three UI bug fixes across
-  computers/new.html.erb, components/_form.html.erb, and
-  computers/show.html.erb — **code-complete and browser-tested by Ulli, but
-  NOT YET lint/security-scanned or committed.** See "Session 75 Summary" in
-  SESSION_HANDOVER.md for the full write-up and NOT YET DONE checklist. Two
-  independent uncommitted items are now open on top of main.
+**Last Updated:** July 25, 2026 (Session 78 — admin-dropdown-siblings fix,
+  Owner Part Number on the Connection form's Device dropdown, and a real
+  nav-logo-centering fix; v2.69)
+**Current Status:** Sessions 1–76 all committed, pushed, merged, and
+  deployed to main (per Ulli's confirmation at the start of Session 76).
+  Sessions 77 and 78's own work (11 files total — see SESSION_HANDOVER.md
+  "Session 77 Summary" and "Session 78 Summary") is code-complete but NOT
+  YET placed into the real project, tested, linted, security-scanned, or
+  committed. Session 77's previously-undiagnosed admin-dropdown bug was
+  diagnosed and fixed this session (Session 78, Item 1) — no open bugs
+  remain undiagnosed as of this writing.
 
 ---
 
@@ -323,7 +377,7 @@ decor//
     │   │   ├── software_conditions_controller_test.rb  ← Session 44 (v1.0) NEW
     │   │   └── software_names_controller_test.rb       ← Session 44 (v1.0) NEW
     │   ├── computers_controller_test.rb                ← Session 70 (updated)
-    │   ├── components_controller_test.rb               ← Session 70 (updated)
+    │   ├── components_controller_test.rb                ← Session 70 (updated)
     │   ├── connection_groups_controller_test.rb        ← Session 38 (v1.1)
     │   ├── data_transfers_controller_test.rb           ← Session 50 (v1.4)
     │   ├── owners_controller_test.rb                  ← Session 58 (v2.0)
@@ -368,7 +422,7 @@ decor//
     │   ├── components_filters_test.rb                 ← Session 59 (v1.0) NEW
     │   ├── computers_filters_test.rb                  ← Session 59 (v1.0) NEW
     │   ├── connection_groups_test.rb                  ← Session 59 (v1.0) NEW
-    │   └── software_items_filters_test.rb             ← Session 59 (v1.0) NEW
+    │   └── software_items_filters_test.rb             ← Session 76 (v1.2)
     ├── application_system_test_case.rb                ← Session 59 (v1.1)
     └── test_helper.rb                                 ← Session 50 (v1.2)
 ```
@@ -385,6 +439,30 @@ is excluded).
 
 **Key file versions** (updated each session):
 
+    decor/docs/claude/DECOR_PROJECT.md                                                  v2.69 ← Session 78
+    decor/docs/claude/SESSION_HANDOVER.md                                               v79.0 ← Session 78
+    decor/docs/claude/RAILS_SPECIFICS.md                                                v3.14 ← Session 78
+    decor/app/javascript/controllers/dropdown_controller.js                             v1.1  ← Session 78
+    decor/app/views/connection_groups/_form.html.erb                                     v1.3  ← Session 78
+    decor/app/views/common/_navigation.html.erb                                          v2.7  ← Session 78
+    decor/docs/claude/DECOR_PROJECT.md                                                  v2.68 ← Session 77
+    decor/docs/claude/SESSION_HANDOVER.md                                               v78.0 ← Session 77
+    decor/docs/claude/RAILS_SPECIFICS.md                                                v3.13 ← Session 77
+    decor/app/views/computers/_form.html.erb                                            v3.1  ← Session 77
+    decor/app/views/owners/peripherals.html.erb                                          v1.6  ← Session 77
+    decor/app/views/computers/show.html.erb                                              v2.4  ← Session 77
+    decor/app/views/components/_filters.html.erb                                         v1.4  ← Session 77
+    decor/app/models/component.rb                                                        v1.8  ← Session 77
+    decor/test/models/component_test.rb                                                  v1.8  ← Session 77
+    decor/app/views/components/_form.html.erb                                            v1.18 ← Session 77
+    decor/app/views/common/_navigation.html.erb                                          v2.6  ← Session 77
+    decor/docs/claude/DECOR_PROJECT.md                                                  v2.67 ← Session 76
+    decor/docs/claude/SESSION_HANDOVER.md                                               v77.0 ← Session 76
+    decor/docs/claude/RAILS_SPECIFICS.md                                                v3.12 ← Session 76
+    decor/app/views/computers/new.html.erb                                              v1.6  ← Session 76 (redelivered)
+    decor/app/views/components/_form.html.erb                                           v1.17 ← Session 76
+    decor/app/javascript/controllers/tom_select_controller.js                          v1.1  ← Session 76
+    decor/test/system/software_items_filters_test.rb                                    v1.2  ← Session 76
     decor/docs/claude/DECOR_PROJECT.md                                                  v2.66 ← Session 75
     decor/docs/claude/SESSION_HANDOVER.md                                               v76.0 ← Session 75
     decor/docs/claude/RAILS_SPECIFICS.md                                                v3.10 ← Session 75
@@ -1014,7 +1092,7 @@ No schema split of either column.
 
 ---
 
-## Category Help Pages Feature — Session 73 (IMPLEMENTED, code-complete, not yet tested/committed)
+## Category Help Pages Feature — Session 73 (RESOLVED Session 76 — checked and deployed)
 
 5 new owner-facing help pages, one per device/software category, added to
 the existing generic `SiteText` subsystem (see "SiteText" in Data Model
@@ -1087,26 +1165,13 @@ Whether `decor/app/helpers/application_helper.rb`'s `render_markdown` (or
 equivalent) enables Redcarpet's `:with_toc_data` extension — required for
 Markdown headers to get `id=` attributes, which in turn is required for
 in-page anchor links (`[Trade Status](#trade-status)`) to actually work on
-these help pages. Not confirmed either way this session — the helper file
-was not reviewed. Worth checking during the manual browser check below if
-any of the 5 new pages are written with an in-page table of contents.
+these help pages. Not confirmed either way as of this writing.
 
-### NOT YET DONE — required before this feature can be committed
+### Status — RESOLVED Session 76
 
-    [ ] Place the 7 delivered files into the actual project (via the Session
-        73 placement script)
-    [ ] Upload actual Markdown content for the 5 new keys via Admin > Texts >
-        Upload Text (pages currently show "== Empty ==" until content exists)
-    [ ] bin/rails test
-    [ ] bundle exec rubocop -A / bundle exec rubocop
-    [ ] bin/brakeman --no-pager
-    [ ] bundle exec bundle-audit check --update
-    [ ] Manual browser check: all 5 new Info dropdown links; admin Upload/
-        Download/Delete selectors show the 5 new entries; help_computers_path
-        renders "Computers Help" as its heading (regression check for the
-        title_for_key fix); confirm whether render_markdown supports header
-        anchors (see "Open item" above) if any page needs a TOC
-    [ ] git workflow: branch → commit → push → PR → CI → merge → deploy
+Ulli confirmed at the start of Session 76 that this feature (all 7 files,
+plus actual Markdown content uploaded for the 5 new keys) is fully tested,
+lint/security-scanned, committed, merged, and deployed to `main`.
 
 ---
 
@@ -1241,6 +1306,176 @@ merged, and deployed via `kamal deploy`. See SESSION_HANDOVER.md "Session
 
 ---
 
+## Session 78 — Admin dropdown siblings fix, Owner Part Number on Connection form, real nav-centering fix
+
+All items below are code-complete but **NOT YET** placed into the real
+project, tested, linted, security-scanned, or committed — see
+SESSION_HANDOVER.md "Session 78 Summary" for the full detail and NOT YET
+DONE checklist.
+
+1. **`dropdown_controller.js` v1.0 → v1.1** — fixed Session 77's carried-over
+   open item: admin nav dropdowns didn't close each other when a new one
+   opened. Fixed with a shared `dropdown:open` CustomEvent broadcast on
+   `document`; every dropdown instance closes itself unless it's the
+   source. No `admin.html.erb` change needed.
+2. **`connection_groups/_form.html.erb` v1.2 → v1.3** — the Device dropdown
+   (Ports section, `/owners/:id/connection_groups/new`) was missing Owner
+   Part Number from its option label in BOTH places that label is built
+   (persisted-row `fields_for` loop + the server-rendered `<template>` for
+   new rows). Added between DEC Serial Number and the device_type
+   parenthetical, matching this file's own dash-separated label style.
+3. **`common/_navigation.html.erb` v2.6 → v2.7** — reported as "the New
+   connection group page content is not centered," but the actual page was
+   already correctly centered (`max-w-2xl mx-auto`). The real bug: the
+   nav's logo was never truly centered on the viewport — its
+   `grid-cols-[auto_1fr_auto]` middle column only centers on the leftover
+   space between the nav's unequal-width left (7 items) and right (2-3
+   items) groups. Fixed by absolutely-positioning the logo
+   (`absolute left-1/2 -translate-x-1/2`) against a `relative` `<nav>`,
+   independent of either group's width. Full mechanism and code examples:
+   **RAILS_SPECIFICS.md v3.14, "Nav Logo Centering."**
+
+---
+
+## Session 77 — Six small UI/search bug fixes + a real nav-dropdown z-index fix
+
+All items below are code-complete but **NOT YET** placed into the real
+project, tested, linted, security-scanned, or committed — see
+SESSION_HANDOVER.md "Session 77 Summary" for the full NOT YET DONE
+checklist.
+
+1. **`computers/_form.html.erb` v3.0 → v3.1** — the Model `collection_select`'s
+   `prompt:` was hardcoded `"Select a computer model"`, wrong on
+   `/computers/new?device_type=peripheral`. Made dynamic:
+   `"Select a #{computer.device_type} model"`, matching the label above it.
+2. **`owners/peripherals.html.erb` v1.5 → v1.6** — the model column `<th>` was
+   hardcoded "Computer Model" on a page that only ever lists peripherals.
+   Changed to "Peripheral Model".
+3. **`computers/show.html.erb` v2.3 → v2.4** — the Components sub-table
+   (separate from the Computer-level fields section fixed in v2.3) was
+   missing an Owner Part No. column entirely. Added between "Order No." and
+   "Serial No.", matching the column order already established in
+   `computers/_form.html.erb`'s own Components sub-table. Same
+   single-source-of-truth-drift shape as the Session 73/75 examples already
+   in RAILS_SPECIFICS.md.
+4. **`components/_filters.html.erb` v1.2 → v1.4** — reported: unclear which
+   fields the Search box actually searches. v1.3 added a plain-language
+   field list to the help text (confirmed from `component.rb`'s `search`
+   scope: component type, owner username, computer/peripheral model,
+   description). Ulli's explicit follow-up: DEC Part Number (order_number)
+   should be searchable too — v1.4 updated the help text to match once (5)
+   below added it to the actual scope.
+5. **`component.rb` v1.7 → v1.8** — added `order_number` to the `search`
+   scope's `LIKE` clause (5th field). This scope had **no test coverage at
+   all** before this session — `component_test.rb` v1.7 → v1.8 added 3
+   tests (match by order_number, no-match returns empty, blank query
+   returns all). One length-limit mistake caught and fixed before delivery:
+   a first-draft test literal was 21 characters, one over
+   `serial_number`'s 20-char max — would have failed on an unrelated cause
+   (length, not the search logic under test).
+6. **`components/_form.html.erb` v1.17 → v1.18** — reported: the
+   Computer/Peripheral dropdown on `/components/new` wasn't sorted
+   alphabetically. Root cause was NOT Session 76's Tom Select `sortField`
+   bug — this select is a hand-built `f.select` (not `collection_select`),
+   deliberately excluded from Tom Select so its `computer-select` Stimulus
+   controller (collapse-to-model-name) still works. The actual cause:
+   `owner_computers = Current.owner.computers.includes(:computer_model)
+   .to_a` had no ordering applied at all. Fixed with a Ruby-side `sort_by`
+   on the already-in-memory array (`[model name, order_number,
+   serial_number]`, ascending) — same "small collection, Ruby-side sort"
+   pattern already established in `computer_statistics_controller.rb`,
+   avoiding the multi-table `Arel.sql`/`.references` complexity a DB-side
+   `ORDER BY` on the joined `computer_models` table would need.
+7. **`common/_navigation.html.erb` v2.5 → v2.6** — real, non-obvious bug:
+   the Info dropdown's first item ("Read Me") was obscured on every page
+   with a filter sidebar (Owners/Computers/Peripherals/Components/
+   Software); every item further down the same dropdown rendered fine.
+   Root cause: this file's `relative z-10` nav wrapper ties in z-index with
+   each of those pages' own `sticky top-0 z-10` `<h1>` — the tie is broken
+   by DOM order, and the page's `<h1>` (later in the document) wins,
+   painting over the dropdown wherever they visually overlap. Fixed by
+   raising the wrapper to `z-20`. Full mechanism, code examples, and the
+   diagnostic symptom to watch for next time: **RAILS_SPECIFICS.md v3.13,
+   "Sticky Page Headers vs. Nav Dropdowns."** Diagnosis required requesting
+   four files in sequence (nav partial, filter partial, layout, and finally
+   the actual page template) before the tie was found.
+
+### Open item — NOT diagnosed, carried to next session
+
+**Admin interface: opening one dropdown menu doesn't close previously-open
+ones.** Reported from `/admin/owners` — with several admin nav dropdowns
+open at once (Owners, Computers, Peripherals, Components, Connections,
+Software, Newsletters, Imports/Exports, Texts all visible simultaneously in
+the reported screenshot), later-opened menus partially cover earlier ones.
+Two files were requested to diagnose this
+(`decor/app/javascript/controllers/dropdown_controller.js` and
+`decor/app/views/layouts/admin.html.erb`) but the session ended before they
+were uploaded. Next session: pick up from there — the fix will likely need
+each dropdown's Stimulus controller to close its siblings when it opens
+(e.g. a shared "close others" custom event), since each `data-controller="dropdown"`
+block is currently an independent instance with no awareness of the others.
+
+---
+
+## Component/Peripheral Dropdown Enhancements — Session 76 (components/_form.html.erb Row 1)
+
+Four small, successive fixes to the Row 1 "Computer/Peripheral" select in
+`decor/app/views/components/_form.html.erb`, all reported from
+`/components/new`. No controller/helper/model changes were needed — the
+dropdown's option list is built entirely inline in this view.
+
+**1. Label rename.** "Computer Model" → "Computer/Peripheral" — a Component
+can belong to either device type, since both share the same underlying
+`Computer` table/`device_type` enum.
+
+**2. Owner Part Number added to the option label.** The combined option
+text was `Model / DEC Part Number / DEC Serial Number`; Owner Part Number
+can be the only field distinguishing two otherwise-identical devices, so it
+was added, positioned between DEC Part Number and DEC Serial Number to
+match this same file's established Row 2 field order for Components:
+`Model / DEC Part Number / Owner Part Number / DEC Serial Number`.
+
+**3. Column widened 50%.** Once the option label grew to four segments, its
+closing `)` no longer fit at the original equal `grid-cols-3` width. Row 1's
+grid changed to the arbitrary `grid-cols-[3fr_2fr_2fr]` (first column 1.5x
+the other two, which stay narrow since they're short read-only fields).
+Required (and got) a Tailwind rebuild reminder per the existing
+RAILS_SPECIFICS.md rule.
+
+**4. Wording consistency.** Two "Spare (not attached to a computer)"-style
+texts (the select's `include_blank` and the helper `<p>` below it) were
+updated to "...a computer/peripheral" to match the renamed label; a
+transient word-order reversal was caught and corrected the same session.
+Two "Auto-filled from the selected computer." helper texts (for the
+read-only Row 1 DEC Part/Serial Number fields) were shortened to
+"Auto-filled from the selected device." — Ulli's own choice, since no
+column-width constraint applied there.
+
+    decor/app/views/components/_form.html.erb    v1.13 → v1.17
+
+Full turn-by-turn detail: SESSION_HANDOVER.md "Session 76 Summary."
+
+---
+
+## Tom Select Dropdown Sort Order Bug — Session 76 (tom_select_controller.js, project-wide)
+
+`tom_select_controller.js`'s `sortField: false` (present since the
+controller's creation in Session 54) is not a valid Tom Select option
+value. Tom Select silently fell back to enumerating options by internal
+object key — and since `collection_select` option values are numeric ids,
+JavaScript always enumerates integer-like object keys in ascending numeric
+order, regardless of the Rails-side `ORDER BY name`. Every Tom Select
+dropdown (Computer Model, Condition, Run Status) was actually sorted by
+database id, not name, both before and after typing to filter. Fixed with
+an explicit `sortField: { field: "text", direction: "asc" }`. Full
+technical detail and the underlying JS-integer-key mechanism: **RAILS_
+SPECIFICS.md v3.12, "Tom Select sortField — Must Be an Explicit Sort Spec,
+Never a Boolean."**
+
+    decor/app/javascript/controllers/tom_select_controller.js    v1.0 → v1.1
+
+---
+
 ## Appliances → Peripherals Merger — FULLY COMPLETE (Sessions 41–42)
 
 - `appliance` (device_type=1) removed from enum on `Computer` and `ComputerModel`.
@@ -1287,6 +1522,17 @@ shows can unmask more on the next run. Always confirm with a full local
 found" before re-pushing. Session 72 hit this again: four gems (loofah,
 rails-html-sanitizer, sqlite3, websocket-driver) surfaced in a single batch
 on the `feature/owner_part_number` PR.
+
+### CI/Tests (System) failures — get the actual log; don't assume relation to the current session's other changes (Session 76)
+A `CI/Tests (System)` failure can be a pre-existing latent bug in a test
+file, unrelated to whatever else is being worked on in the same PR/branch.
+Session 76's `feature/bug_fixing_3` failed CI/Tests (System) after several
+unrelated fixes (Tom Select sort, Component dropdown label/layout) had
+already been pushed and passed Lint/Security/Unit — the actual failure
+(`StaleElementReferenceError` in `software_items_filters_test.rb`) had
+nothing to do with any of them. Pull the actual log
+(`gh run view <run-id> --log-failed`) and trace the failing line before
+assuming it's caused by the session's other work.
 
 ### System tests — browser-layer login (Session 59)
 `login_as` uses the Rack adapter. System tests require `sign_in` (browser form).
@@ -1356,6 +1602,13 @@ Component Suggestions screens and the Components dropdown menu items
 ("Re-validate DEC Part Numbers", "Download Unvalidated DEC Part Numbers") —
 i.e. the rename applies project-wide to every place these concepts are
 displayed to a user, not just the primary Computer/Component forms.
+
+**Exception noted Session 76:** the Component form's Row 1 selector for
+which Computer/Peripheral a Component belongs to is deliberately labeled
+"Computer/Peripheral", not "Computer Model" — since that field selects a
+*device* (which may be either type), not a *model* the way the Computer
+form's own Model field does. Not a rename of the established "Model" →
+"Computer Model" mapping above; a different field entirely.
 
 **Explicitly NOT renamed (still say "order_number"/"serial_number"):**
 - CSV column headers and literal field-name references in

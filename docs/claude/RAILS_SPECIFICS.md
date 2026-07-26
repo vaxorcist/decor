@@ -1,5 +1,60 @@
 # RAILS_SPECIFICS.md
-# version 3.10
+# version 3.14
+# Session 78: One new MANDATORY section added: Nav Logo Centering — a 1fr
+#   Grid/Flex Middle Column Centers On Leftover Space, Not the Viewport.
+#   Real bug: reported as "the New connection group page content is not
+#   centered," but the actual page (connection_groups/new.html.erb) already
+#   correctly centered its content with max-w-2xl mx-auto. The real bug was
+#   in common/_navigation.html.erb: the edge-to-edge <nav> used
+#   grid-cols-[auto_1fr_auto] with the logo centered inside the middle 1fr
+#   column — which only centers within the space left over after the two
+#   flanking columns, and those columns are NOT equal width (7 left-side
+#   links vs. 2-3 right-side items), so the logo sat shifted off true
+#   viewport-center. Any page content that genuinely centers on the full
+#   viewport then looks "off" relative to the nav's own miscentered logo.
+#   Fixed by taking the logo out of the flow entirely: <nav> is now
+#   `relative`, logo wrapper is `absolute left-1/2 -translate-x-1/2`.
+# Session 77: One new MANDATORY section added: Sticky Page Headers vs. Nav
+#   Dropdowns — Equal z-index Ties Are Broken By DOM Order. Real bug: the
+#   Info dropdown on Owners/Computers/Peripherals/Components/Software only
+#   had its FIRST item obscured, everything below it rendered fine. Root
+#   cause: common/_navigation.html.erb's left-nav-group wrapper and each
+#   page's sticky <h1> both used z-10 — a tie, broken by DOM order in the
+#   <h1>'s favor since it comes later in the document. Fixed by raising the
+#   nav wrapper to z-20. Also this session (no new rules, existing patterns
+#   applied): computers/_form.html.erb's hardcoded "Select a computer
+#   model" prompt made dynamic; owners/peripherals.html.erb's hardcoded
+#   "Computer Model" header fixed to "Peripheral Model"; computers/
+#   show.html.erb's Components sub-table gained the Owner Part No. column
+#   it was missing (same single-source-of-truth-drift shape as Sessions
+#   73/75); components/_form.html.erb's Computer/Peripheral dropdown
+#   (a plain f.select, NOT a collection_select/Tom Select — the Session 76
+#   sortField fix doesn't apply here) had no ordering at all on its
+#   in-memory owner_computers array, fixed with a Ruby-side sort_by;
+#   component.rb's `search` scope gained order_number (DEC Part Number) as
+#   a searchable field, at the user's explicit follow-up request, with new
+#   test coverage since this scope had none before.
+# Session 76: Two new MANDATORY sections added from this session's real bugs:
+#   1. Tom Select sortField — Must Be an Explicit Sort Spec, Never a Boolean.
+#      `sortField: false` (present since Session 54) is not a valid Tom
+#      Select option value. It silently fell back to enumerating options by
+#      internal object key — and since collection_select's option VALUES
+#      are numeric ids, JS always enumerates integer-like keys in ascending
+#      numeric order, regardless of the Rails-side ORDER BY name. Every Tom
+#      Select dropdown (Computer Model, Condition, Run Status) was actually
+#      sorted by database id, not by name, both before and after typing to
+#      filter. Fixed with an explicit `sortField: { field: "text",
+#      direction: "asc" }`.
+#   2. System Tests — Capture Expected Values Before Turbo Navigation, Not
+#      After (added as a new subsection under the existing System Tests —
+#      Capybara Assertion Patterns group). Reading a Capybara element's
+#      `.text` (or any other property) AFTER a Turbo-driven navigation
+#      (click_button/click_link that submits/follows a Turbo form or link)
+#      risks StaleElementReferenceError, since Turbo replaces the DOM on
+#      navigation and the element reference predates that replacement.
+#      Caught via an actual CI System Tests failure log
+#      (test_selecting_an_owner_id_adds_it_to_the_URL) — same latent bug
+#      existed in two sibling tests in the same file that hadn't failed yet.
 # Session 75 (wrap-up): Added "ERB Comments — Never Embed a Literal <%= %>
 #   Delimiter Inside a <%# %> Comment" (NEW MANDATORY section). Real example:
 #   computers/show.html.erb v2.3's own changelog comment embedded a literal
@@ -137,9 +192,8 @@
 
 **Ruby on Rails Specific Patterns and Best Practices**
 
-**Last Updated:** July 22, 2026 (v3.10: added the "ERB Comments — Never
-  Embed a Literal <%= %> Delimiter Inside a <%# %> Comment" MANDATORY
-  section; Session 75 wrap-up)
+**Last Updated:** July 25, 2026 (v3.14: added nav-logo-centering MANDATORY
+  section; Session 78)
 
 ---
 
@@ -608,6 +662,139 @@ catch. Controller integration tests bypass the view layer entirely.
 
 ---
 
+## Sticky Page Headers vs. Nav Dropdowns — Equal z-index Ties Are Broken By DOM Order (MANDATORY, learned Session 77)
+
+**RULE: Never give a page-level sticky element (headers, table `<thead>`s,
+sticky filter sidebars) the same z-index as the top nav's positioned
+wrapper. When z-index values tie, CSS breaks the tie by DOM order — the
+LATER element in the document wins — regardless of which one "looks like"
+it should visually sit on top.**
+
+`common/_navigation.html.erb` wraps each group of nav dropdowns in a
+`position:relative` div carrying its own explicit z-index (originally added
+in Session 53 to fix nav-internal overflow — see "CSS grid grid-cols-N"
+above). This matters because a dropdown menu's OWN z-index (e.g. `z-50`) is
+only compared LOCALLY, within its nearest ancestor stacking context. Once
+nested inside a `position:relative`/`sticky`/`fixed` ancestor that has its
+own explicit z-index, the descendant's `z-50` has no bearing on how the
+WHOLE subtree stacks against content outside that ancestor — what matters
+for winning against outside content is the ANCESTOR's z-index value, not
+the dropdown's own.
+
+**Wrong — nav wrapper and a page's sticky `<h1>` both at z-10; the `<h1>`
+(later in the DOM) wins the tie and paints over the top of any open
+dropdown that visually overlaps it:**
+```erb
+<%# common/_navigation.html.erb %>
+<div class="relative z-10">
+  ... dropdown menus here, each internally z-50, but capped by this div's z-10 ...
+</div>
+```
+```erb
+<%# owners/index.html.erb (and the equivalent index page for %>
+<%#   Computers/Peripherals/Components/Software) %>
+<h1 class="sticky top-0 z-10 bg-white ...">Owners</h1>
+```
+
+**Correct — raise the nav wrapper's z-index clearly above any page-level
+z-10 sticky element:**
+```erb
+<div class="relative z-20">
+  ...
+</div>
+```
+
+**Diagnostic symptom to watch for:** if only the FIRST item of an open
+dropdown looks obscured/covered while every item further down the same
+dropdown renders fine, suspect this exact tie. A page's sticky header is
+usually short, so it only overlaps the very top of a taller dropdown menu
+— not the whole thing — which is why the symptom looks partial rather than
+total.
+
+**Why this rule exists (Session 77, July 2026):** Reported: the Info
+dropdown wasn't fully visible when opened from Owners/Computers/
+Peripherals/Components/Software. Diagnosis required requesting and reading
+four separate files in sequence — the nav partial, the page's filter
+partial, the shared application layout, and finally the actual page
+template (`owners/index.html.erb`) — before the tie was found; none of the
+first three files, viewed alone, contained anything that looked like a
+conflict. Fixed by raising `common/_navigation.html.erb`'s left-nav-group
+wrapper from `z-10` to `z-20`. This also incidentally protects the
+"Statistics" dropdown (which shares the same wrapper) from the identical
+latent issue — not reported as a visible bug, presumably only because its
+items sit further right and don't currently overlap any page's short
+`<h1>`, but the same root cause applies to it too.
+
+---
+
+## Nav Logo Centering — A 1fr Grid/Flex Middle Column Centers on Leftover Space, Not the Viewport (MANDATORY, learned Session 78)
+
+**RULE: If a nav bar has no `max-width` wrapper (i.e. it spans the full
+viewport edge-to-edge) and centers a logo/element using a middle `1fr` grid
+column or a `flex-1 flex justify-center` div flanked by two other
+groups, the centered element is NOT centered on the viewport unless the
+two flanking groups are exactly equal width. It is centered on whatever
+space is left over between them — which shifts toward whichever side is
+narrower.**
+
+This is easy to miss because it looks correct in isolation: the logo IS
+centered — just centered on the wrong reference box (the leftover middle
+column) instead of the one that actually matters (the full viewport).
+
+**Wrong — logo only centers within the 1fr leftover space:**
+```erb
+<nav class="grid grid-cols-[auto_1fr_auto] items-center gap-2 px-6 py-4">
+  <div class="flex items-center gap-6">  <%# left: 7 links — wide %> </div>
+  <div class="flex-1 flex justify-center"> <%# logo — NOT true-centered %>
+    <%= image_tag "logo.png" %>
+  <% end %>
+  <div class="flex items-center gap-6">  <%# right: 2-3 items — narrow %> </div>
+</nav>
+```
+
+**Correct — take the centered element out of the flow entirely, position
+it absolutely against the full nav width:**
+```erb
+<nav class="relative flex items-center justify-between gap-2 px-6 py-4">
+  <div class="flex items-center gap-6">  <%# left group, natural width %> </div>
+  <div class="absolute left-1/2 -translate-x-1/2">
+    <%= image_tag "logo.png" %>
+  </div>
+  <div class="flex items-center gap-6">  <%# right group, natural width %> </div>
+</nav>
+```
+
+`absolute left-1/2 -translate-x-1/2` centers the element on its nearest
+`relative` ancestor's full width — here, the `<nav>` itself — regardless of
+how wide the left and right groups are. This is the standard fix whenever
+a nav's flanking groups can't be guaranteed equal width (true here: the
+left group grows every time a new top-level nav item is added, the right
+group only grows for logged-in/admin state).
+
+**Diagnostic symptom to watch for:** a page's own content is reported as
+"not centered," but the actual page template already uses correct
+`mx-auto` centering. Check the nav's logo/brand element next — if the nav
+has no `max-width` wrapper and centers that element via a `1fr`
+column/flex sibling of unequal-width groups, the nav (not the page) is the
+actual bug, and it will make every correctly-centered page look wrong by
+comparison.
+
+**Why this rule exists (Session 78, July 2026):**
+Reported: "the New connection group page content is not centered."
+`connection_groups/new.html.erb` was read first and confirmed correct
+(`max-w-2xl mx-auto`, and `layouts/application.html.erb`'s `<main>` has no
+competing width constraint). The actual cause was
+`common/_navigation.html.erb`'s `grid-cols-[auto_1fr_auto]` logo column —
+the left group (Info, Owners, Computers, Peripherals, Components,
+Software, Statistics — 7 items) is significantly wider than the right
+group (Admin, username dropdown, Sign out — 2-3 items), so the middle 1fr
+column, and the logo centered inside it, sat visibly right of true
+viewport-center. Every genuinely-centered page content block then looked
+"off" relative to that miscentered visual anchor. Fixed by switching the
+logo to `absolute left-1/2 -translate-x-1/2` against a `relative` `<nav>`.
+
+---
+
 ## CSS grid grid-cols-N — Equal columns cause overflow hidden behind later items
 
 **RULE: Never use `grid-cols-N` (equal `1fr` columns) for a left/logo/right
@@ -700,6 +887,63 @@ hard-refreshing fixed it immediately. Claude had not proactively mentioned
 the rebuild step when delivering the fix, costing a full round-trip
 (screenshot showing "still broken" → diagnosis → rebuild instruction →
 confirmation) that a proactive reminder would have avoided entirely.
+
+---
+
+## Tom Select sortField — Must Be an Explicit Sort Spec, Never a Boolean (MANDATORY, learned Session 76)
+
+**RULE: `sortField` in `tom_select_controller.js` must always be an explicit
+sort spec object (`{ field: "text", direction: "asc" }`) — never `false` or
+any other boolean. Tom Select does not treat `false` as "leave the option
+order alone"; it's simply not a recognized value, and Tom Select silently
+falls back to enumerating options by its internal object key instead.**
+
+**Why this actually breaks alphabetical order — the JS integer-key quirk:**
+Rails' `collection_select` builds each `<option>` with the record's `id` as
+its value. Tom Select internally stores options in a JS object keyed by
+that value. Per the ECMAScript spec, **object keys that look like
+non-negative integers are always enumerated in ascending numeric order
+first** — before any string keys, regardless of insertion order. So even
+though the Rails-side query used `.order(:name)`, and even though the
+options were inserted into the DOM in that alphabetical order, Tom Select's
+internal enumeration silently re-orders them by **id**, not by name — for
+both the closed dropdown and while filtering by typed characters (search
+results are built from the same underlying object).
+
+**Wrong — looks like it should preserve server order, but doesn't:**
+```javascript
+new TomSelect(el, {
+  // ...
+  sortField: false,   // NOT a valid value — Tom Select falls back to
+                       // enumerating options by internal object key, which
+                       // for numeric-id option values means ascending id
+                       // order, not the alphabetical order the Rails query
+                       // actually produced.
+});
+```
+
+**Correct — explicit sort spec, honored for both the closed list and filtered results:**
+```javascript
+new TomSelect(el, {
+  // ...
+  sortField: {
+    field: "text",
+    direction: "asc",
+  },
+});
+```
+
+**Why this rule exists (Session 76, July 2026):**
+Reported symptom: the Computer Model dropdown on `/computers/new` was not
+sorted alphabetically, either before or after typing to filter it. The
+Rails-side query (`ComputerModel.where(...).order(:name)` in
+`computers/_form.html.erb`) was already correct — the bug was entirely in
+`tom_select_controller.js`'s `sortField: false`, present since the
+controller's creation in Session 54. This fix applies to every select using
+this shared controller (Computer Model, Condition, Run Status) — the
+smaller two lists likely looked correct by coincidence (ids assigned in
+roughly alphabetical creation order), which is why only the 400+-entry
+Computer Model list made the bug visible enough to report.
 
 ---
 
@@ -1962,6 +2206,48 @@ To assert the selection persists after form submission, compare option text:
 ```ruby
 assert page.has_select?("software_name_id", selected: first_option.text, wait: 5)
 ```
+
+**Addendum (Session 76) — capture that text BEFORE navigating, not after:**
+The example immediately above reads `first_option.text` in the same
+statement as the assertion. If the assertion happens AFTER a Turbo-driven
+navigation (a `click_button`/`click_link` that submits a form or follows a
+link), reading a property off `first_option` at that point risks
+`Selenium::WebDriver::Error::StaleElementReferenceError` — Turbo replaces
+the DOM on navigation, and `first_option` is a reference to a node from the
+pre-navigation page. This is timing-dependent (Selenium's staleness
+detection isn't fully deterministic), so the bug can sit latent in a test
+for a long time before it actually fails a CI run.
+
+**Wrong — reads first_option.text AFTER click_button has already navigated:**
+```ruby
+first_option = select_el.all("option").reject { |o| o.value.empty? }.first
+select_el.find("option[value='#{first_option.value}']").select_option
+click_button "Apply"                      # Turbo navigates; DOM is replaced
+
+assert page.has_select?("owner_id", selected: first_option.text, wait: 5)
+#                                            ^^^^^^^^^^^^^^^^^^^ risks StaleElementReferenceError
+```
+
+**Correct — capture the text as a plain string BEFORE the click:**
+```ruby
+first_option = select_el.all("option").reject { |o| o.value.empty? }.first
+expected_text = first_option.text                     # captured before navigation
+select_el.find("option[value='#{first_option.value}']").select_option
+click_button "Apply"
+
+assert page.has_select?("owner_id", selected: expected_text, wait: 5)
+```
+
+**Why this rule exists (Session 76, July 2026):**
+CI's `CI/Tests (System)` check failed with
+`Selenium::WebDriver::Error::StaleElementReferenceError` in
+`SoftwareItemsFiltersTest#test_selecting_an_owner_id_adds_it_to_the_URL`.
+Two sibling tests in the same file (`software_name_id`, `barter_status`)
+had the identical pattern and the identical latent risk, but happened not
+to fail in that particular run — confirming this is a timing-dependent bug
+class, not something tied to any specific field. All three tests were
+fixed by capturing the expected text into a local variable before the
+Turbo-driven click, rather than re-reading the element afterward.
 
 ---
 

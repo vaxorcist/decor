@@ -1,4 +1,22 @@
-<%# decor/app/views/components/_form.html.erb - version 1.17 %>
+<%# decor/app/views/components/_form.html.erb - version 1.18 %>
+<%# v1.18 (Session 77): Reported: the Computer/Peripheral dropdown on %>
+<%#   /components/new was not ordered alphabetically. Root cause is %>
+<%#   DIFFERENT from Session 76's Tom Select sortField bug — this select %>
+<%#   (line ~172) is a hand-built f.select, not a collection_select, and %>
+<%#   deliberately does NOT carry data-controller="tom-select" (see the %>
+<%#   v1.8 comment below — Tom Select would break the computer-select %>
+<%#   collapse-to-model-name behaviour). The actual cause: %>
+<%#   `owner_computers = Current.owner.computers.includes(:computer_model) %>
+<%#   .to_a` (line ~122) had NO ordering applied at all — options rendered %>
+<%#   in whatever order the DB happened to return rows. Fixed with a %>
+<%#   Ruby-side sort_by (owner_computers is already a small, unpaginated, %>
+<%#   in-memory array via .to_a — same "small collection, Ruby-side sort" %>
+<%#   pattern already established in computer_statistics_controller.rb, %>
+<%#   avoiding the multi-table Arel.sql/.references complexity a DB-side %>
+<%#   ORDER BY on the joined computer_models table would need). Sorted by %>
+<%#   [model name (case-insensitive), order_number, serial_number] — the %>
+<%#   latter two as deterministic tie-breakers when two devices share the %>
+<%#   same model, matching the label's own field order. %>
 <%# v1.17 (Session 76): Two more Row 1 helper <p> texts ("Computer DEC Part %>
 <%#   Number" and "Computer DEC Serial Number" fields) still read %>
 <%#   "Auto-filled from the selected computer." — stale for the same %>
@@ -119,7 +137,11 @@
 <%# v1.5 (Session 10 rev 2): Computer Model dropdown collapses to model name after selection. %>
 
 <%# Capture owner's computers once — used for the dropdown options and the JSON map. %>
-<% owner_computers = Current.owner.computers.includes(:computer_model).to_a %>
+<%# Sorted alphabetically by model name (case-insensitive), ascending — Session 77. %>
+<%# order_number/serial_number are tie-breakers only, for deterministic ordering %>
+<%# when two devices share the same model; they don't affect the primary sort. %>
+<% owner_computers = Current.owner.computers.includes(:computer_model).to_a
+     .sort_by { |c| [c.computer_model.name.downcase, c.order_number.to_s, c.serial_number.to_s] } %>
 
 <%# Build option array for f.select: [display_label, value, html_option_attributes] %>
 <%# The full label (shown while browsing) is %>

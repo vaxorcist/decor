@@ -1,4 +1,21 @@
-<%# decor/app/views/components/_filters.html.erb - version 1.2 %>
+<%# decor/app/views/components/_filters.html.erb - version 1.4 %>
+<%# v1.4 (Session 77): Follow-up to v1.3 — the user asked that DEC Part %>
+<%#   Number (order_number) also be searchable, since it wasn't in the %>
+<%#   field list v1.3 had just clarified. Added to component.rb's `search` %>
+<%#   scope (v1.8) and to this file's help-text field list to match. Search %>
+<%#   still does NOT cover serial_number or owner_part_number — not asked %>
+<%#   for, and out of scope for this change. %>
+<%# v1.3 (Session 77): Reported: unclear which fields the Search box %>
+<%#   actually searches. Confirmed via component.rb's `search` scope %>
+<%#   (v1.7): component type name, owner username, computer/peripheral %>
+<%#   model name, and description — NOT order_number, serial_number, or %>
+<%#   owner_part_number. Added a plain-language field list to the existing %>
+<%#   help text below the input, so users don't have to guess (or read %>
+<%#   source) to know what a search term will and won't match. No change %>
+<%#   to the search scope itself or to the input's width — the existing %>
+<%#   text-xs helper <p> already wraps onto multiple lines as needed at %>
+<%#   this sidebar's width, so the extra sentence doesn't require layout %>
+<%#   changes. %>
 <%# v1.2 (Session 52): Added "Peripheral Model" filter after "Computer Model". %>
 <%#   computer_model param — unchanged; now scoped to computer models only in helper. %>
 <%#   peripheral_model param — new; handled by components_controller v1.9. %>
@@ -15,7 +32,9 @@
   <div>
     <%= form.label :query, "Search", class: "text-sm text-stone-600 font-medium" %>
     <%= form.search_field :query, value: params[:query], placeholder: "Search...", class: field_classes %>
-    <p class="text-xs text-stone-500 mt-1">Use % for any characters, _ for single character. Case-insensitive.</p>
+    <%# Session 77: field list added/updated — must stay in sync with %>
+    <%# component.rb's `search` scope. %>
+    <p class="text-xs text-stone-500 mt-1">Searches component type, owner username, computer/peripheral model, DEC Part Number, and description. Use % for any characters, _ for single character. Case-insensitive.</p>
   </div>
 
   <div class="flex flex-col">

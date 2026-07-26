@@ -1,4 +1,19 @@
-<%# decor/app/views/computers/show.html.erb - version 2.3 %>
+<%# decor/app/views/computers/show.html.erb - version 2.4 %>
+<%# v2.4 (Session 77): Same "single source of truth / touch N places, miss %>
+<%#   one" shape as v2.3 below and RAILS_SPECIFICS.md's Session 73 rule — %>
+<%#   the Components sub-table on THIS page (further down, a separate %>
+<%#   table from the Computer-level fields v2.3 already fixed) was still %>
+<%#   missing an Owner Part No. column entirely, even though the %>
+<%#   equivalent sub-table in computers/_form.html.erb gained one back in %>
+<%#   Session 71 (v2.8). Added "Owner Part No." between "Order No." and %>
+<%#   "Serial No.", matching the column order established in %>
+<%#   computers/_form.html.erb v2.8's own header comment ("Column placed %>
+<%#   between 'Order No.' and 'Serial No.', matching the field order %>
+<%#   established in components/_form.html.erb v1.12 and %>
+<%#   owners/components.html.erb v1.6"). No controller change needed — %>
+<%#   @components is already eager-loaded and owner_part_number is already %>
+<%#   a plain column read, same pattern as order_number/serial_number two %>
+<%#   lines below. %>
 <%# v2.3 (Session 75, pending): Two bugs fixed, both from the same root %>
 <%#   cause — this show page was never updated alongside the Session 70/71/74 %>
 <%#   Owner Part Number and device_type-label fixes that _form.html.erb (v2.7, %>
@@ -124,6 +139,9 @@
             <tr>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Type</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Order No.</th>
+              <%# Owner Part No. — Session 77. Placed between Order No. and Serial No., %>
+              <%# matching computers/_form.html.erb v2.8's established column order. %>
+              <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Owner Part No.</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Serial No.</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Description</th>
               <th class="px-4 py-2"></th>
@@ -136,6 +154,8 @@
                   <%= link_to component.component_type.name, component_path(component), class: "text-indigo-600 hover:text-indigo-900" %>
                 </td>
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.order_number.presence || "—" %></td>
+                <%# Owner Part No. — Session 77. NOT NULL, defaults to "-" server-side. %>
+                <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.owner_part_number %></td>
                 <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= component.serial_number.presence || "—" %></td>
                 <td class="px-4 py-3 text-stone-600"><%= truncate(component.description, length: 80) || "—" %></td>
                 <td class="px-4 py-3 whitespace-nowrap text-right">

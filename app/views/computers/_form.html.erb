@@ -1,4 +1,12 @@
-<%# decor/app/views/computers/_form.html.erb - version 3.0 %>
+<%# decor/app/views/computers/_form.html.erb - version 3.1 %>
+<%# v3.1 (Session 77): Fixed a hardcoded "Select a computer model" prompt on %>
+<%#   the Model collection_select — showed the wrong text on %>
+<%#   /computers/new?device_type=peripheral (still said "computer" even for %>
+<%#   a peripheral). Same root cause shape as v2.9's field-label fix just %>
+<%#   below: a hardcoded "computer" string that never accounted for %>
+<%#   device_type: peripheral. Fixed by interpolating %>
+<%#   computer.device_type, matching the pattern already used for the %>
+<%#   field label two lines above it. %>
 <%# v3.0 (Session 74): History-length limit feature. computers.history (and %>
 <%#   components.history, which has no form field) were unqualified TEXT — %>
 <%#   unbounded — in violation of PROGRAMMING_GENERAL.md's VARCHAR-length %>
@@ -71,10 +79,13 @@
       <%# show only peripheral models and computer forms show only computer models. %>
       <%# data-controller="tom-select" activates the searchable combobox — essential %>
       <%# when device_type=peripheral: all PDP models are listed (400+ entries). %>
+      <%# Prompt text — Session 77: was hardcoded "Select a computer model", %>
+      <%# wrong for device_type: peripheral. Now interpolates the device's %>
+      <%# own device_type, matching the label above. %>
       <%= f.collection_select :computer_model_id,
             ComputerModel.where(device_type: computer.device_type).order(:name),
             :id, :name,
-            { prompt: "Select a computer model" },
+            { prompt: "Select a #{computer.device_type} model" },
             class: field_classes,
             data: { controller: "tom-select" } %>
       <p class="mt-1 text-xs text-stone-500">Select from list.</p>
