@@ -1,18 +1,5 @@
 # COMMON_BEHAVIOR.md
-# version 3.2
-# Session 75: Two new MANDATORY rules, both added at the user's explicit
-#   in-the-moment request (not a self-initiated wrap-up — see the first rule
-#   below, which this addition itself complies with by staying scoped to
-#   only what was asked). (1) "Rule/Skill Document Updates — Timing": don't
-#   update rule/skill docs mid-session unless explicitly asked or it's the
-#   real end-of-session wrap-up. (2) File Transfer Protocol exception: rule/
-#   skill documents delivered on their own (not bundled with other project
-#   files) use their plain filename, not @-encoding — they live in exactly
-#   one location each, so the collision problem @-encoding solves doesn't
-#   apply to them. Both rules were prompted by the same real incident this
-#   session: RAILS_SPECIFICS.md and SESSION_HANDOVER.md were updated and
-#   delivered as an unprompted mid-session "wrap-up," using @-encoded names
-#   the user then had to rename back before use.
+# version 3.1
 # Session 74: Reinforced the existing Token Usage Reporting rule with a
 #   second real example — the same miss from Session 69 (separator lines
 #   and token estimate omitted from a response's closing block) recurred.
@@ -74,9 +61,8 @@
 
 **Universal Rules for All Interactions with This User**
 
-**Last Updated:** July 21, 2026 (v3.2: added "Rule/Skill Document Updates —
-  Timing" and the File Transfer Protocol's rule/skill-document @-encoding
-  exception; Session 75)
+**Last Updated:** July 21, 2026 (v3.1: reinforced Token Usage Reporting with
+  a second real example of the separator/estimate omission recurring)
 
 ---
 
@@ -97,44 +83,6 @@ The `decor-session-rules` skill was modified twice in one session without prior
 approval. The user could not see the changes in the web UI and had to explicitly
 ask for a downloadable file. Both the approval step and the download step were
 missing. This rule exists to prevent both failures.
-
----
-
-## Rule/Skill Document Updates — Timing (MANDATORY, learned Session 75)
-
-**RULE: Do not update rule or skill documents mid-session just because a new
-rule was learned or a mistake was corrected. Only update them when:**
-- **(a) the user explicitly asks for a rule to be added/changed right now, or**
-- **(b) it's the actual end-of-session wrap-up.**
-
-A rule discovered mid-session — with substantive project work still open —
-should be noted and folded into the standard end-of-session wrap-up along
-with everything else learned that session, not written up and delivered
-immediately as an isolated "mini wrap-up." Doing the latter wastes tokens
-on a document that still needs touching again at the real wrap-up anyway
-(changelog, version stamp, and any cross-referenced bookkeeping like the
-Key file versions table would otherwise get updated twice instead of once).
-
-**This does not relax the existing "Skill and Rule Document Changes"
-protocol above** — approval is still required before any edit, and a
-downloadable file is still required after. This rule adds a timing
-constraint on top: even with approval, don't reach for the rule docs
-unprompted while other work is still open.
-
-**Exception:** an explicit in-the-moment request ("add a rule about X now")
-is permission for that one edit — do it immediately. It is NOT permission to
-also perform other end-of-session bookkeeping (Directory Tree, Key file
-versions table, full "Session N Summary" write-ups) that belongs to the real
-wrap-up, unless that bookkeeping is itself what was asked for.
-
-**Why this rule exists (Session 75, July 2026):**
-After fixing a Tailwind-rebuild gap mid-session, RAILS_SPECIFICS.md and
-SESSION_HANDOVER.md were both updated and delivered immediately — as if
-closing out the session — while the actual project work (placing/testing/
-committing the two already-delivered view file fixes) was still open and
-had not been asked about. Nothing about this update was requested as an
-isolated action; it was an unprompted "wrap up now" that should have waited
-for either an explicit request or the genuine end-of-session pass.
 
 ---
 
@@ -397,27 +345,12 @@ just name the one file normally (full path stated in prose, correct dots per
 the rule below). The script protocol is for **multi-file** transfers, which
 is where the old rules were actually failing.
 
-**Exception — rule/skill documents delivered on their own (MANDATORY,
-learned Session 75):** `COMMON_BEHAVIOR.md`, `RAILS_SPECIFICS.md`,
-`PROGRAMMING_GENERAL.md`, `DECOR_PROJECT.md`, `SESSION_HANDOVER.md`, and
-skill files each live in exactly one location — there is no other file
-anywhere in the project sharing their basename, so the @-encoding scheme's
-whole purpose (preventing basename collisions across many directories)
-doesn't apply to them. **When delivering one or more of these documents
-WITHOUT other project files in the same delivery, use the plain real
-filename — do NOT @-encode it, and do NOT generate a placement script.**
-The user already knows exactly where each of these files goes. Only
-@-encode a rule/skill document when it's bundled together WITH other
-project files in a multi-file transfer that already needs the script
-protocol for those other files — encoding it consistently with the rest of
-that batch avoids a mixed-convention delivery.
-
-**Why this rule exists (Session 75, July 2026):**
-`RAILS_SPECIFICS.md` and `SESSION_HANDOVER.md` were delivered together as
-`docs@claude@RAILS_SPECIFICS@md` and `docs@claude@SESSION_HANDOVER@md`, with
-no placement script generated — an unnecessary renaming step for two files
-that only ever live in one place and were never collision-prone in the
-first place. The user had to rename them back before use.
+**Reinforced (Session 78):** a 2-file request was initially made as a plain
+prose "please upload these two files" ask instead of generating the
+mandatory export script. Caught by the user, not self-caught. No new rule
+needed — this was a plain miss of the existing rule above, not a gap in
+it. Worth a deliberate check at request time: "is this more than one file?
+If so, generate the script — don't just list filenames in prose."
 
 ### Output File Naming — Never Substitute Underscores for Dots
 

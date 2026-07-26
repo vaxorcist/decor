@@ -1,4 +1,56 @@
-<%# decor/app/views/connection_groups/_form.html.erb - version 1.2 %>
+<%# decor/app/views/connection_groups/_form.html.erb - version 1.4 %>
+<%# v1.4 (Session 79): Reported — "New connection group page content is not %>
+<%#   centered." Confirmed via pixel measurement of a screenshot that the %>
+<%#   page's div.max-w-2xl.mx-auto wrapper (connection_groups/new.html.erb) %>
+<%#   IS correctly centered — its left margin matched expectation almost %>
+<%#   exactly. The right margin was far smaller (113px vs. an expected ~465px), %>
+<%#   which is the signature of a CHILD overflowing the container's right %>
+<%#   edge, not the container itself being mispositioned. %>
+<%# %>
+<%#   ROOT CAUSE: the Device <select> (both the mf.select below and its %>
+<%#   <template> twin) uses class="flex-1 ...". flex-1 sets flex-grow/shrink, %>
+<%#   but every flex item still defaults to min-width: auto — the browser %>
+<%#   will not shrink an item below its OWN content's intrinsic minimum %>
+<%#   width, regardless of flex-shrink. A <select>'s intrinsic width is %>
+<%#   driven by its widest <option> text. Session 78 (this same file) added %>
+<%#   "– Owner P/N #{c.owner_part_number}" to every option label, lengthening %>
+<%#   every option substantially. That pushed the select's intrinsic minimum %>
+<%#   width past the space actually available in the flex row, so it refused %>
+<%#   to shrink and instead overflowed to the right, past the page's %>
+<%#   max-w-2xl boundary — visually eating into the right margin and making %>
+<%#   the whole block look shifted right, even though the container itself %>
+<%#   was still correctly centered by mx-auto the entire time. %>
+<%# %>
+<%#   FIX: add min-w-0 to the select's own classes — the standard Tailwind/ %>
+<%#   CSS override that lets a flex item shrink below its content's %>
+<%#   intrinsic width. Long option text now truncates/ellipses within the %>
+<%#   select's actual allotted flex space instead of forcing an overflow. %>
+<%#   Fixed in BOTH places this select is built (mf.select in the fields_for %>
+<%#   loop below, AND the raw <select> in the <template> block) — same %>
+<%#   "kept in sync by hand" requirement noted in the v1.3 changelog below, %>
+<%#   since there is still no shared helper generating this markup. %>
+<%# %>
+<%#   Requires a Tailwind rebuild (min-w-0 has not been used anywhere in %>
+<%#   this file before) — see the reminder at the end of this delivery. %>
+<%# v1.3 (Session 78): Reported — the Device dropdown (Ports section) was %>
+<%#   missing Owner Part Number entirely from its option label, showing only %>
+<%#   Model – SN xxx (device_type). Owner Part Number can be the only field %>
+<%#   distinguishing two otherwise-identical devices (same shape as the %>
+<%#   Session 76 fix to components/_form.html.erb's Row 1 selector), so it %>
+<%#   was added here too, between DEC Serial Number and the device_type %>
+<%#   parenthetical, matching this file's own dash-separated label style %>
+<%#   (rather than importing components/_form.html.erb's slash-separated %>
+<%#   format, which is a different file's convention). %>
+<%#   Fixed in BOTH places this label is built: the persisted-row %>
+<%#   f.fields_for loop's mf.select, AND the server-rendered <template> block %>
+<%#   used by connection-members#add for new rows — these two copies must be %>
+<%#   kept in sync by hand, since the template's options are pre-rendered %>
+<%#   server-side rather than derived from the live select at JS time (see %>
+<%#   connection_members_controller.js — confirmed it has no device-label %>
+<%#   logic of its own, it only clones this template). %>
+<%#   Computer#owner_part_number is NOT NULL and defaults to "-" via %>
+<%#   before_validation (Session 70), so no blank/nil guard is needed here — %>
+<%#   every row always has a real value to display. %>
 <%# v1.2 (Session 38): Added owner_group_id (Connection ID) field. %>
 <%#   Per-member: added owner_member_id (Port ID) and label (Port Label) fields. %>
 <%#   Template block updated to include both new member fields. %>
@@ -105,12 +157,18 @@
                               class: "w-16 flex-shrink-0 border border-stone-300 rounded px-2 py-1 text-sm text-stone-900" %>
 
           <%# Device dropdown. %>
+          <%# Session 78: Owner Part Number added between DEC Serial Number and %>
+          <%#   the device_type parenthetical — was missing entirely before. %>
+          <%# Session 79: min-w-0 added — without it, flex-1's default %>
+          <%#   min-width:auto let the longer Session-78 option text push this %>
+          <%#   select past its allotted flex space, overflowing the page's %>
+          <%#   max-w-2xl container and making the whole page look off-center. %>
           <%= mf.select :computer_id,
                         @computers.map { |c|
-                          ["#{c.computer_model.name} – SN #{c.serial_number} (#{c.device_type})", c.id]
+                          ["#{c.computer_model.name} – SN #{c.serial_number} – Owner P/N #{c.owner_part_number} (#{c.device_type})", c.id]
                         },
                         { include_blank: "— select a device —" },
-                        class: "flex-1 border border-stone-300 rounded px-2 py-1 text-sm text-stone-900 bg-white" %>
+                        class: "flex-1 min-w-0 border border-stone-300 rounded px-2 py-1 text-sm text-stone-900 bg-white" %>
 
           <%# Port label — optional free-text. %>
           <%= mf.text_field :label,
@@ -137,6 +195,14 @@
     <%# Template for new port rows added via JS. %>
     <%# NEW_INDEX is replaced with Date.now() by the Stimulus controller. %>
     <%# The template is rendered server-side so device dropdown options are pre-filled. %>
+    <%# Session 78: this option label MUST be kept identical to the one in the %>
+    <%#   f.fields_for loop above — both were missing Owner Part Number, both %>
+    <%#   are now fixed the same way. There is no shared helper generating this %>
+    <%#   label; it is duplicated by necessity (persisted rows use Rails form %>
+    <%#   builder options, the template is raw server-rendered HTML for JS to %>
+    <%#   clone) and must be updated in both places by hand if it changes again. %>
+    <%# Session 79: min-w-0 added here too — same overflow fix as the %>
+    <%#   mf.select above, kept in sync for the identical reason. %>
     <template data-connection-members-target="template">
       <div class="flex items-center gap-2 mb-2" data-member-row>
         <input type="hidden"
@@ -154,11 +220,11 @@
 
         <%# Device dropdown. %>
         <select name="connection_group[connection_members_attributes][NEW_INDEX][computer_id]"
-                class="flex-1 border border-stone-300 rounded px-2 py-1 text-sm text-stone-900 bg-white">
+                class="flex-1 min-w-0 border border-stone-300 rounded px-2 py-1 text-sm text-stone-900 bg-white">
           <option value="">— select a device —</option>
           <% @computers.each do |c| %>
             <option value="<%= c.id %>">
-              <%= c.computer_model.name %> – SN <%= c.serial_number %> (<%= c.device_type %>)
+              <%= c.computer_model.name %> – SN <%= c.serial_number %> – Owner P/N <%= c.owner_part_number %> (<%= c.device_type %>)
             </option>
           <% end %>
         </select>

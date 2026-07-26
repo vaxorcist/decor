@@ -1,4 +1,50 @@
-<%# decor/app/views/common/_navigation.html.erb - version 2.5 %>
+<%# decor/app/views/common/_navigation.html.erb - version 2.7 %>
+<%# v2.7 (Session 78): Reported — "the New connection group page content is %>
+<%#   not centered." Root cause was NOT that page %>
+<%#   (connection_groups/new.html.erb already correctly centers its content %>
+<%#   with max-w-2xl mx-auto against the full viewport, confirmed by reading %>
+<%#   it directly). The actual bug is HERE: this <nav> has no max-width %>
+<%#   wrapper at all (edge-to-edge, full viewport width) and used %>
+<%#   grid-cols-[auto_1fr_auto] with the logo centered inside the middle 1fr %>
+<%#   column via flex justify-center. That only centers the logo within the %>
+<%#   space LEFT OVER after the two flanking auto-sized columns — and those %>
+<%#   two columns are NOT equal width (7 left-side links vs. 2-3 right-side %>
+<%#   items), so the middle column itself sits shifted toward the narrower %>
+<%#   (right) side, and the logo along with it. Any page content that %>
+<%#   genuinely centers on the full viewport (like connection_groups/ %>
+<%#   new.html.erb's mx-auto div) will then look "off" relative to the %>
+<%#   nav's own, not-actually-centered, logo. %>
+<%#   Fixed by taking the logo out of the grid/flex flow entirely: <nav> is %>
+<%#   now relative, and the logo's wrapper is absolute left-1/2 %>
+<%#   -translate-x-1/2 — this centers it on <nav>'s own full width (i.e. the %>
+<%#   full viewport, since <nav> has no max-width) regardless of how wide %>
+<%#   the left/right link groups are. Left/right groups changed from a %>
+<%#   3-column CSS grid to a plain flex justify-between container, since the %>
+<%#   grid's middle column no longer needs to exist. %>
+<%# v2.6 (Session 77): Reported: the Info dropdown wasn't fully visible on %>
+<%#   Owners/Computers/Peripherals/Components/Software — specifically, only %>
+<%#   its FIRST item ("Read Me") was obscured; every item below it rendered %>
+<%#   fine. Root cause: this div's "relative z-10" ties in z-index with each %>
+<%#   of those pages' own sticky top-0 z-10 <h1> (e.g. owners/index.html.erb %>
+<%#   line 11). Equal z-index is broken by DOM order, and the page's <h1> %>
+<%#   comes AFTER <nav> in the document — so it paints on top of anything %>
+<%#   from this div it visually overlaps, which is exactly where a dropdown's %>
+<%#   first item lands (right at the top of the page content, directly below %>
+<%#   the nav bar). Items further down the dropdown aren't covered simply %>
+<%#   because the <h1> is short and doesn't reach that far. %>
+<%#   Fixed by raising this div's z-index from z-10 to z-20 — clearly above %>
+<%#   any z-10 page-level sticky element (headers, table <thead>s, filter %>
+<%#   sidebars), so the ENTIRE nav subtree (including the dropdown menus' %>
+<%#   own z-50, which is only ever compared locally within this div's %>
+<%#   stacking context) now wins unambiguously rather than relying on a %>
+<%#   DOM-order tiebreak. This also protects the "Statistics" dropdown from %>
+<%#   the identical latent issue — not reported, presumably because its %>
+<%#   items land further right and don't spatially overlap any page's short %>
+<%#   <h1>, but the same root cause applied to it too. %>
+<%#   The right-side owner/profile dropdown (line ~95) was NOT touched — its %>
+<%#   wrapping divs carry no z-index of their own, so its z-50 menu already %>
+<%#   compares directly against page content at the body root level and was %>
+<%#   never affected by this bug. %>
 <%# v2.5 (Session 73): Category Help Pages feature. Added 5 new links to the %>
 <%#   "Info" dropdown — one per device/software category — below a divider %>
 <%#   separating them from the 4 pre-existing general-info links. Widened %>
@@ -18,12 +64,19 @@
 <%# v2.1 (Session 48): Added "Software" nav link and "My Software" dropdown item. %>
 <%# v2.0 (Session 41): Appliances → Peripherals merger Phase 2. %>
 
-<%# grid-cols-[auto_1fr_auto]: left and right columns size to content; %>
-<%# centre column (logo) fills the remaining space. %>
-<nav class="grid grid-cols-[auto_1fr_auto] items-center gap-2 px-6 py-4">
+<%# Session 78 (v2.7): nav is now `relative` so the logo (below) can be %>
+<%# absolutely centered on <nav>'s own full width, independent of the left %>
+<%# and right groups' widths. Left/right groups are now plain %>
+<%# `flex justify-between` items — the grid-cols-[auto_1fr_auto] middle %>
+<%# column is no longer needed since the logo isn't inside the flow. %>
+<nav class="relative flex items-center justify-between gap-2 px-6 py-4">
 
-  <%# relative z-10: ensures left nav links are always above centre/right content %>
-  <div class="flex items-center justify-start gap-6 relative z-10">
+  <%# relative z-20: ensures left nav links (and their dropdowns) are always %>
+  <%# above BOTH centre/right nav content AND any page-level sticky element %>
+  <%# using z-10 (e.g. sticky <h1> headers, table <thead>s, filter %>
+  <%# sidebars) — see the v2.6 changelog entry above for why z-10 (the %>
+  <%# previous value) was not high enough. %>
+  <div class="flex items-center justify-start gap-6 relative z-20">
 
     <%# Info dropdown — static text pages. %>
     <div class="relative" data-controller="dropdown">
@@ -80,7 +133,12 @@
 
   </div>
 
-  <div class="flex-1 flex justify-center">
+  <%# Session 78: absolute + left-1/2 -translate-x-1/2 centers this on %>
+  <%# <nav>'s full width (the whole viewport, since <nav> has no max-width) %>
+  <%# — NOT on the leftover space between the two side groups, which is %>
+  <%# what the old flex-1/grid-1fr approach did and which shifted right %>
+  <%# whenever the left group was wider than the right group (it always is). %>
+  <div class="absolute left-1/2 -translate-x-1/2">
     <%= link_to root_path do %>
       <%= image_tag "logo.png", class: "h-8" %>
     <% end %>

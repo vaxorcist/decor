@@ -1,5 +1,14 @@
 # decor/test/models/component_test.rb
-# version 1.7
+# version 1.8
+# v1.8 (Session 77): Added tests for the `search` scope (component.rb v1.8)
+#   — this scope had NO test coverage at all before this session. Added
+#   three tests: matching by order_number (the new field added this
+#   session), confirming a query that matches nothing returns empty, and
+#   confirming a blank query returns all records (the scope's own
+#   documented short-circuit). Kept deliberately narrow — testing every
+#   pre-existing searchable field (component type, owner, computer model,
+#   description) was not part of this session's change and is left as a
+#   separate future addition if wanted.
 # v1.7 (Session 71 — test repair, round 2): The v1.6 fix for "spare
 #   component can be peripheral" used serial_number "MB-SPARE-PERIPHERAL-001"
 #   (23 characters) — over Component#serial_number's 20-char max length
@@ -353,5 +362,48 @@ class ComponentTest < ActiveSupport::TestCase
     memory = components(:pdp11_memory)
     assert_equal "no_barter", memory.barter_status
     assert memory.barter_status_no_barter?
+  end
+
+  # --- search scope tests (Session 77) ---
+  # No coverage existed for this scope before this session. Kept narrow —
+  # focused on the order_number addition, plus the scope's own documented
+  # blank-query short-circuit. Pre-existing searchable fields (component
+  # type, owner, computer model, description) are not covered here.
+
+  test "search matches by order_number (DEC Part Number)" do
+    # Distinctive order_number that appears nowhere else in this record's
+    # own fields, so a match proves the order_number branch specifically —
+    # not a coincidental match on component type/owner/description.
+    findable = Component.create!(
+      owner: owners(:one),
+      component_type: component_types(:memory_board),
+      order_number: "XZQ99-PARTSEARCH",
+      description: "Totally unrelated text",
+      serial_number: "MB-SEARCH-ORDER-001" # avoids colliding with pdp11_memory ("-"/"-")
+    )
+
+    results = Component.search("XZQ99-PARTSEARCH")
+    assert_includes results, findable,
+                     "search must match on order_number (DEC Part Number)"
+  end
+
+  test "search returns no results for a query matching no field" do
+    Component.create!(
+      owner: owners(:one),
+      component_type: component_types(:memory_board),
+      order_number: "XZQ99-NOMATCH",
+      serial_number: "MB-SRCH-NOMATCH-01" # avoids colliding with pdp11_memory ("-"/"-"); kept within the 20-char max
+    )
+
+    results = Component.search("NoSuchStringZZZ999")
+    assert_empty results,
+                 "A query matching no component/owner/type/model/order_number/description must return no results"
+  end
+
+  test "search returns all records when query is blank" do
+    # Derived from data, not hardcoded — see PROGRAMMING_GENERAL.md
+    # "Derive Test Assertions from Data, Not Constants."
+    assert_equal Component.count, Component.search("").count,
+                 "A blank query must short-circuit to all records (scope's own documented behaviour)"
   end
 end

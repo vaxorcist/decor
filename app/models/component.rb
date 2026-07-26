@@ -1,5 +1,15 @@
 # decor/app/models/component.rb
-# version 1.7
+# version 1.8
+# v1.8 (Session 77): Added order_number (DEC Part Number) to the `search`
+#   scope's LIKE clause. Reported: the Components filter's Search box gave
+#   no indication of which fields it queried, and once clarified (v77
+#   _filters.html.erb text), the user asked that DEC Part Number be
+#   searchable too — it previously was NOT included (search only covered
+#   component type name, owner username, computer/peripheral model name,
+#   and description). No column/schema change — order_number already
+#   exists on this table; only the scope's WHERE clause and placeholder
+#   count changed. See components/_filters.html.erb v1.4 for the matching
+#   help-text update.
 # v1.7 (Session 74): History-length limit feature. history was an
 #   unqualified TEXT column (unbounded) — same violation as computer.rb.
 #   Migration 20260721000100 converts the DB column to VARCHAR(500) with a
@@ -113,7 +123,7 @@ class Component < ApplicationRecord
                           message: "combination already exists for this component type and Owner Part Number" }
 
   # Search scope that searches across component type, owner name, computer model,
-  # and description.
+  # order_number (DEC Part Number), and description.
   # Supports SQL wildcards (% for any characters, _ for single character).
   # Case-insensitive search.
   scope :search, ->(query) do
@@ -122,15 +132,17 @@ class Component < ApplicationRecord
     # SQL LIKE pattern — user can include their own wildcards or we wrap the whole thing
     pattern = query.include?("%") || query.include?("_") ? query : "%#{query}%"
 
-    # Search in: component type name, owner username, computer model name, description
+    # Search in: component type name, owner username, computer model name,
+    # order_number (DEC Part Number — added Session 77), description
     joins(:owner, :component_type)
       .left_outer_joins(computer: :computer_model)
       .where(
         "LOWER(component_types.name) LIKE LOWER(?) OR
          LOWER(owners.user_name) LIKE LOWER(?) OR
          LOWER(computer_models.name) LIKE LOWER(?) OR
+         LOWER(components.order_number) LIKE LOWER(?) OR
          LOWER(components.description) LIKE LOWER(?)",
-        pattern, pattern, pattern, pattern
+        pattern, pattern, pattern, pattern, pattern
       )
       .distinct
   end
