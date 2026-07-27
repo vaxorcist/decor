@@ -1,5 +1,17 @@
 # decor/docs/claude/DECOR_PROJECT.md
-# version 2.69
+# version 2.70
+# Session 79: One item — connection_groups/_form.html.erb v1.3 -> v1.4.
+#   Reported: the New Connection Group page STILL looked "not centered"
+#   after Session 78's nav-logo fix. Diagnosed via pixel measurement of the
+#   actual screenshot (not assumption): the page's max-w-2xl mx-auto
+#   container was correctly positioned; a NEW, different bug — the Device
+#   <select>'s flex-1 with no min-w-0 letting Session 78's own lengthened
+#   option text (Owner Part Number added) overflow the container's right
+#   edge. Fixed by adding min-w-0 to both copies of the select (mf.select
+#   + <template>). New MANDATORY RAILS_SPECIFICS.md v3.15 section added.
+#   Ulli confirmed at session end: ALL outstanding items (Sessions 77, 78,
+#   and this session's fix) tested and deployed — see updated Current
+#   Status below.
 # Session 78: Three independent items, all code-complete, NOT YET placed/
 #   tested/committed: (1) dropdown_controller.js v1.0->v1.1 — fixed Session
 #   77's carried-over open item (admin dropdowns not closing siblings) via
@@ -218,17 +230,17 @@
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** July 25, 2026 (Session 78 — admin-dropdown-siblings fix,
-  Owner Part Number on the Connection form's Device dropdown, and a real
-  nav-logo-centering fix; v2.69)
-**Current Status:** Sessions 1–76 all committed, pushed, merged, and
-  deployed to main (per Ulli's confirmation at the start of Session 76).
-  Sessions 77 and 78's own work (11 files total — see SESSION_HANDOVER.md
-  "Session 77 Summary" and "Session 78 Summary") is code-complete but NOT
-  YET placed into the real project, tested, linted, security-scanned, or
-  committed. Session 77's previously-undiagnosed admin-dropdown bug was
-  diagnosed and fixed this session (Session 78, Item 1) — no open bugs
-  remain undiagnosed as of this writing.
+**Last Updated:** July 26, 2026 (Session 79 — fixed a flex-1/min-w-0
+  overflow bug in connection_groups/_form.html.erb that was still making
+  the New Connection Group page look off-center after Session 78's
+  nav-logo fix; v2.70)
+**Current Status:** Sessions 1–79 ALL committed, pushed, merged, and
+  deployed to main — Ulli confirmed at the end of Session 79 that every
+  outstanding item from Sessions 77, 78, and 79 passed the full pre-commit
+  checklist and is now deployed. No open bugs remain undiagnosed or
+  uncommitted as of this writing. (The Session 68 documentation-gap GAP
+  NOTICE — a missing formal summary, not a code issue — remains open; see
+  SESSION_HANDOVER.md.)
 
 ---
 
@@ -439,6 +451,10 @@ is excluded).
 
 **Key file versions** (updated each session):
 
+    decor/docs/claude/DECOR_PROJECT.md                                                  v2.70 ← Session 79
+    decor/docs/claude/SESSION_HANDOVER.md                                               v80.0 ← Session 79
+    decor/docs/claude/RAILS_SPECIFICS.md                                                v3.15 ← Session 79
+    decor/app/views/connection_groups/_form.html.erb                                     v1.4  ← Session 79
     decor/docs/claude/DECOR_PROJECT.md                                                  v2.69 ← Session 78
     decor/docs/claude/SESSION_HANDOVER.md                                               v79.0 ← Session 78
     decor/docs/claude/RAILS_SPECIFICS.md                                                v3.14 ← Session 78
@@ -1306,7 +1322,66 @@ merged, and deployed via `kamal deploy`. See SESSION_HANDOVER.md "Session
 
 ---
 
+## Session 79 — Flex item overflow fix: New Connection Group page still looked off-center after Session 78
+
+**RESOLVED this session** — placed, tested, linted, security-scanned,
+committed, and deployed; confirmed by Ulli at session end. See
+SESSION_HANDOVER.md "Session 79 Summary" for full detail.
+
+Reported again: the New Connection Group page "is not properly centered"
+— after Session 78 had already investigated and fixed a real, different
+bug (the nav logo not being centered on the viewport). Rather than assume
+Session 78's fix was incomplete, the actual screenshot was measured
+pixel-by-pixel:
+
+    Element                          Left edge   Right edge   Width    Center
+    Nav logo box                     801         883          82       842
+    Ports row (Port ID → × button)   452         1489         1037     970.5
+    (viewport width 1602, true center 800.5)
+
+The page's `max-w-2xl mx-auto` container (`connection_groups/new.html.erb`)
+was confirmed still correctly centered — its left margin was close to
+expectation. The right margin, however, was far smaller than expected:
+asymmetric in a way that doesn't fit "wrong centering" but exactly fits "a
+child is overflowing the container's right edge."
+
+**Root cause:** the Device `<select>` in `connection_groups/_form.html.erb`
+(both the `mf.select` and its `<template>` twin) used `class="flex-1 ..."`
+with no `min-w-0`. Every flex item defaults to `min-width: auto`, so
+`flex-1` alone does not let a `<select>` shrink below its own widest
+`<option>` text's intrinsic width. Session 78's own change to this exact
+file — adding `– Owner P/N #{c.owner_part_number}` to every option label —
+lengthened that intrinsic width enough to overflow the row past the page's
+`max-w-2xl` boundary, eating into the right margin and making the whole
+page look shifted right. **A genuine regression introduced by Session 78's
+own fix, surfacing one session later.**
+
+**Fix:** added `min-w-0` to both copies of the select. New MANDATORY
+RAILS_SPECIFICS.md v3.15 section added: "Flex Item Overflow — flex-1 Does
+Not Override min-width: auto."
+
+    decor/app/views/connection_groups/_form.html.erb    v1.3 → v1.4
+
+No automated test — CSS class change only, no server-side logic (per
+PROGRAMMING_GENERAL.md's Test Coverage Check).
+
+**Process note:** the single-file delivery of this fix was initially
+@-encoded (`app@views@connection_groups@_form@html.erb`) despite
+COMMON_BEHAVIOR.md's own File Transfer Protocol explicitly exempting
+single ad-hoc file transfers from that scheme — the same mistake as
+Session 75's recurrence, now a second recurrence. Caught by Ulli, not
+self-caught. No new rule needed; reinforced in COMMON_BEHAVIOR.md instead
+of adding a third copy of an existing rule.
+
+---
+
 ## Session 78 — Admin dropdown siblings fix, Owner Part Number on Connection form, real nav-centering fix
+
+**RESOLVED Session 79** (placed, tested, linted, security-scanned,
+committed, deployed — see "Session 79" above for that session's own
+follow-on fix, and SESSION_HANDOVER.md "Session 79 Summary" for the full
+closeout). Original session narrative preserved below as historical
+record.
 
 All items below are code-complete but **NOT YET** placed into the real
 project, tested, linted, security-scanned, or committed — see
@@ -1338,6 +1413,11 @@ DONE checklist.
 ---
 
 ## Session 77 — Six small UI/search bug fixes + a real nav-dropdown z-index fix
+
+**RESOLVED Session 79** (placed, tested, linted, security-scanned,
+committed, deployed, together with Sessions 78 and 79 — see
+SESSION_HANDOVER.md "Session 79 Summary"). Original session narrative
+preserved below as historical record.
 
 All items below are code-complete but **NOT YET** placed into the real
 project, tested, linted, security-scanned, or committed — see

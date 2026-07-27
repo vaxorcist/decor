@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_21_000100) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_27_000100) do
   create_table "component_conditions", force: :cascade do |t|
     t.string "condition", limit: 40, null: false
     t.datetime "created_at", precision: nil, null: false
@@ -224,6 +224,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_21_000100) do
     t.index ["name"], name: "index_software_names_on_name", unique: true
   end
 
+  create_table "storage_locations", force: :cascade do |t|
+    t.datetime "created_at", precision: nil, null: false
+    t.string "name", limit: 50, null: false
+    t.integer "owner_id", null: false
+    t.datetime "updated_at", precision: nil, null: false
+    t.index ["owner_id", "name"], name: "index_storage_locations_on_owner_id_and_name", unique: true
+    t.index ["owner_id"], name: "index_storage_locations_on_owner_id"
+  end
+
   add_foreign_key "components", "component_conditions"
   add_foreign_key "components", "component_types"
   add_foreign_key "components", "computers", on_delete: :cascade
@@ -240,4 +249,5 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_21_000100) do
   add_foreign_key "software_items", "owners"
   add_foreign_key "software_items", "software_conditions"
   add_foreign_key "software_items", "software_names"
+  add_foreign_key "storage_locations", "owners"
 end
