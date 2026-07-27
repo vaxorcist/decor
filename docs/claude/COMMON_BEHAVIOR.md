@@ -1,5 +1,22 @@
 # COMMON_BEHAVIOR.md
-# version 3.1
+# version 3.2
+# Session 79: Reinforcement, not a new rule — the File Transfer Protocol's
+#   existing single-ad-hoc-file exception ("just name the one file
+#   normally... a script is unnecessary ceremony") was violated a SECOND
+#   time: a single-file delivery (connection_groups/_form.html.erb) was
+#   @-encoded despite being delivered alone. The first recurrence
+#   (rule/skill documents, Session 75) was supposedly fixed by two new
+#   rules that session's SESSION_HANDOVER.md summary describes as landing
+#   in "COMMON_BEHAVIOR.md v3.2" — but this document, as uploaded to the
+#   project, was still v3.1 with no trace of either rule when Session 79
+#   started. !! GAP FLAGGED FOR ULLI, same shape as the existing Session 68
+#   GAP NOTICE in SESSION_HANDOVER.md: either a newer copy of this file
+#   (containing the real Session 75 v3.2 content) exists outside this
+#   project and wasn't the version uploaded here, or that update was
+#   described as done but never actually produced. Not reconstructed from
+#   guesswork — only this session's own reinforcement note is added below;
+#   the two rules Session 75 described are NOT fabricated here since their
+#   exact original wording is unknown.
 # Session 74: Reinforced the existing Token Usage Reporting rule with a
 #   second real example — the same miss from Session 69 (separator lines
 #   and token estimate omitted from a response's closing block) recurred.
@@ -61,8 +78,9 @@
 
 **Universal Rules for All Interactions with This User**
 
-**Last Updated:** July 21, 2026 (v3.1: reinforced Token Usage Reporting with
-  a second real example of the separator/estimate omission recurring)
+**Last Updated:** July 26, 2026 (v3.2: reinforced the File Transfer
+  Protocol's single-ad-hoc-file exception after a second recurrence of the
+  same miss; also flags a version-history gap for Ulli — see changelog)
 
 ---
 
@@ -351,6 +369,20 @@ mandatory export script. Caught by the user, not self-caught. No new rule
 needed — this was a plain miss of the existing rule above, not a gap in
 it. Worth a deliberate check at request time: "is this more than one file?
 If so, generate the script — don't just list filenames in prose."
+
+**Reinforced again (Session 79) — the opposite-direction miss:** a
+single-file delivery (`connection_groups/_form.html.erb`, delivered alone)
+was @-encoded anyway, even though the rule immediately above ("Single
+ad-hoc file exchanges don't need a script") already says plainly that a
+lone file should use its normal name, no script, no encoding. This is the
+second time this exact miss has happened (the first was Session 75, with
+rule/skill documents specifically — see that session's own note elsewhere
+in this file). No new rule needed — both directions of this mistake
+(multi-file requests made in plain prose; single-file deliveries
+needlessly @-encoded) are already covered by the existing rule text
+above. The check that would have caught this: before naming an output
+file, ask "is this the ONLY file in this delivery? If so, use its plain
+path — the @-encoding scheme is for multi-file transfers only."
 
 ### Output File Naming — Never Substitute Underscores for Dots
 

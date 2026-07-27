@@ -1,5 +1,17 @@
 # decor/app/models/owner.rb
-# version 1.6
+# version 1.7
+# v1.7 (Session A, Storage Locations feature): Added
+#   has_many :storage_locations, dependent: :destroy. Unlike the
+#   has_many :computers / :connection_groups ordering note below, this
+#   addition has no equivalent ordering dependency: when an owner is
+#   destroyed, each StorageLocation's own has_many (added in Session C)
+#   will nullify storage_location_id on any still-existing Computer/
+#   Component/SoftwareItem before that record is itself destroyed via the
+#   owner's other has_many associations — regardless of which collection
+#   Rails processes first, no error results (a nullify against an
+#   already-destroyed record simply finds nothing to update; a destroy
+#   against a record whose storage_location_id was already nullified
+#   destroys it as normal either way).
 # v1.6 (Session 56): Newsletter feature.
 #   - Added newsletter integer column support (0 = no newsletter, 1 = newsletter).
 #   - Added validates :newsletter inclusion [0, 1].
@@ -27,6 +39,11 @@ class Owner < ApplicationRecord
 
   # Connection groups owned by this owner. Destroyed after computers (see note above).
   has_many :connection_groups, dependent: :destroy
+
+  # Private, owner-defined storage locations (Session A, Storage Locations
+  # feature). Destroyed along with the owner — no ordering dependency on the
+  # other associations above (see v1.7 changelog note).
+  has_many :storage_locations, dependent: :destroy
 
   PASSWORD_RESET_EXPIRY = 2.hours
 

@@ -1,5 +1,21 @@
 # RAILS_SPECIFICS.md
-# version 3.14
+# version 3.15
+# Session 79: One new MANDATORY section added: Flex Item Overflow —
+#   flex-1 Does Not Override min-width: auto. Real bug: reported as "the
+#   New connection group page content is not centered" — AGAIN, after
+#   Session 78's nav-logo fix. Pixel measurement of a screenshot showed the
+#   page's max-w-2xl mx-auto container was still correctly centered (left
+#   margin matched expectation), but the right margin was far smaller than
+#   expected — the signature of a child overflowing the container's right
+#   edge, not the container itself being mispositioned. Root cause: the
+#   Device <select> in connection_groups/_form.html.erb (both the mf.select
+#   and its <template> twin) uses class="flex-1 ..." with no min-w-0. Every
+#   flex item defaults to min-width:auto, so flex-1 alone does not let a
+#   <select> shrink below its own widest <option> text's intrinsic width.
+#   Session 78's own change to this same file (adding "– Owner P/N ..." to
+#   every option label) lengthened that intrinsic width enough to overflow
+#   the row past the page's max-w-2xl boundary. Fixed by adding min-w-0 to
+#   both selects.
 # Session 78: One new MANDATORY section added: Nav Logo Centering — a 1fr
 #   Grid/Flex Middle Column Centers On Leftover Space, Not the Viewport.
 #   Real bug: reported as "the New connection group page content is not
@@ -192,8 +208,8 @@
 
 **Ruby on Rails Specific Patterns and Best Practices**
 
-**Last Updated:** July 25, 2026 (v3.14: added nav-logo-centering MANDATORY
-  section; Session 78)
+**Last Updated:** July 26, 2026 (v3.15: added flex-item-overflow /
+  min-w-0 MANDATORY section; Session 79)
 
 ---
 
@@ -792,6 +808,91 @@ column, and the logo centered inside it, sat visibly right of true
 viewport-center. Every genuinely-centered page content block then looked
 "off" relative to that miscentered visual anchor. Fixed by switching the
 logo to `absolute left-1/2 -translate-x-1/2` against a `relative` `<nav>`.
+
+---
+
+## Flex Item Overflow — flex-1 Does Not Override min-width: auto (MANDATORY, learned Session 79)
+
+**RULE: A flex item with `flex-1` (or any `flex-grow`/`flex-shrink` combination)
+still defaults to `min-width: auto`. This means the browser will NOT shrink
+that item below its own content's intrinsic minimum width, no matter what
+`flex-shrink` says. If the item's content (a `<select>`'s widest `<option>`
+text, a long unbreakable string, etc.) is wider than the space actually
+available in the row, the item overflows its flex container instead of
+shrinking to fit. Add `min-w-0` explicitly whenever a flex item's content
+could plausibly be wide enough to trigger this.**
+
+**Why this is easy to miss:** `flex-1` reads as "this element takes its
+share of the available space and shrinks/grows to fit" — and for content
+with a small or entirely absent intrinsic width (most `<input>` fields,
+short labels) that's exactly what happens, so the bug can sit invisible
+for a long time. It only appears once something inside the flex item has
+enough content to exceed the row's available space — a long `<select>`
+option, a long word with no break opportunity, a wide inline image, etc.
+
+**Diagnostic symptom to watch for:** a page reported as "not centered" or
+"content is shifted," where the *container* doing the centering
+(`max-w-* mx-auto`) is actually correctly positioned, but a **child**
+inside it is overflowing past the container's edge. The tell is asymmetric
+margins: measure (or inspect in DevTools) the left and right margins of
+the centered container — if one side roughly matches what the CSS should
+produce and the other is much smaller, suspect an overflowing child, not a
+centering bug in the container itself.
+
+**Wrong — flex-1 alone does not prevent overflow:**
+```erb
+<div class="flex items-center gap-2">
+  <input class="w-16 flex-shrink-0 ...">
+  <select class="flex-1 ...">              <%# no min-w-0 — can overflow %>
+    <% long_option_list.each do |o| %>
+      <option><%= o.very_long_label %></option>
+    <% end %>
+  </select>
+  <input class="w-36 flex-shrink-0 ...">
+</div>
+```
+
+**Correct — min-w-0 lets the flex item actually shrink to its allotted space:**
+```erb
+<select class="flex-1 min-w-0 ...">
+  <% long_option_list.each do |o| %>
+    <option><%= o.very_long_label %></option>
+  <% end %>
+</select>
+```
+
+`min-w-0` (Tailwind's `min-width: 0`) overrides the browser's default
+`min-width: auto` on the flex item, so `flex-shrink` can actually take
+effect all the way down to (and including) content narrower than the
+content's own intrinsic width — long option text then wraps/truncates/
+scrolls within the select's rendered box instead of forcing the box wider
+than its flex allocation.
+
+**When to apply this defensively, even without a reported bug:** any time
+a flex item combining `flex-1`/`flex-grow` with a `<select>`, long label,
+or other variable-length text content is added or edited — particularly
+if the option/label source is user data (device names, part numbers,
+serial numbers) with no enforced maximum rendered width. Fixed-width
+siblings (`w-16 flex-shrink-0`, `w-36 flex-shrink-0`) in the same row do
+NOT have this problem, since their width doesn't depend on content.
+
+**Why this rule exists (Session 79, July 2026):**
+Reported: "the New connection group page content is not centered" — the
+SAME report Session 78 had already investigated and fixed (that session's
+fix was a real, separate bug: the nav's logo not being centered on the
+viewport). Rather than re-diagnose by assumption, the actual screenshot
+was measured pixel-by-pixel: the page's `max-w-2xl mx-auto` container
+(`connection_groups/new.html.erb`) had a left margin close to the expected
+value, but a right margin far smaller than expected — asymmetric in a way
+inconsistent with "wrong centering," but exactly consistent with "child
+overflowing the right edge." The child was
+`connection_groups/_form.html.erb`'s Device `<select>`
+(`class="flex-1 ..."`, no `min-w-0`), whose intrinsic content width had
+just been lengthened by Session 78's own addition of Owner Part Number
+text to every option label — the fix that added Owner Part Number
+inadvertently introduced this overflow regression in the same file, one
+session later. Fixed by adding `min-w-0` to both copies of the select
+(the persisted-row `mf.select` and the `<template>`'s raw `<select>`).
 
 ---
 

@@ -1,0 +1,21 @@
+# decor/test/fixtures/storage_locations.yml
+# version 1.0
+# Session A (Storage Locations feature, Part 1 of 6).
+#
+# Two fixtures, one per owner with existing device fixtures (alice/owner one,
+# bob/owner two) — mirrors the pattern established in connection_groups.yml.
+#
+# Deliberately NOT assigned to owners(:three)/charlie (the project's neutral
+# test-support owner, per RAILS_SPECIFICS.md "Fixture Ownership") because no
+# test in this suite yet asserts a hardcoded count against alice's or bob's
+# storage_locations — safe to use them directly, same reasoning
+# connection_groups.yml already applies. Revisit and move to charlie if a
+# future session adds a count assertion against either owner.
+
+alice_attic:
+  owner: one
+  name: Attic Shelf 3
+
+bob_garage:
+  owner: two
+  name: Garage Box B
