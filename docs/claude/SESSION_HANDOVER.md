@@ -1,18 +1,17 @@
 # decor/docs/claude/SESSION_HANDOVER.md
 # version 80.0
-# Session 79: Reported again — the New Connection Group page "is not
-#   properly centered," after Session 78 had already fixed a real, related
-#   but different bug (the nav logo). Diagnosed via actual pixel
-#   measurement of the screenshot rather than assumption: the page's
-#   max-w-2xl mx-auto container was still correctly centered; a NEW bug —
-#   connection_groups/_form.html.erb's Device <select> (flex-1, no
-#   min-w-0) was overflowing the container's right edge because Session
-#   78's own Owner-Part-Number-label lengthening pushed its intrinsic
-#   content width past the row's available space. Fixed by adding min-w-0
-#   to both copies of the select. New MANDATORY RAILS_SPECIFICS.md v3.15
-#   section added. Ulli confirmed at session end: ALL outstanding items
-#   from Sessions 77, 78, and 79 tested and deployed — see the updated
-#   Date/Branch/Status block below.
+# Session 79: Storage Locations feature — full design consultation (7
+#   open questions raised, all answered by Ulli), a 6-session implementation
+#   plan (A–F) agreed, then Session A (migration + model + fixtures + model
+#   tests) implemented, tested, lint/security-scanned, committed, merged,
+#   and DEPLOYED — all in this one session. owner.rb bumped v1.6 → v1.7
+#   (has_many :storage_locations, dependent: :destroy — added when it became
+#   clear it was needed, not originally itemised). StorageLocation model
+#   deliberately has no has_many :computers/:components/:software_items yet
+#   — deferred to Session C once those tables have the FK column. Full
+#   design (confirmed answers, file lists for all 6 sessions, dependency
+#   graph) lives in DECOR_PROJECT.md "Storage Locations Feature — Session
+#   Plan." See "Session 79 Summary" below for full detail.
 # Session 78: Picked up the Session 77 open item (admin dropdowns not
 #   closing siblings) — diagnosed via the two requested files
 #   (dropdown_controller.js, admin.html.erb) and fixed with a shared
@@ -160,19 +159,26 @@
 #   below for confirmed requirements going into next session.
 # Session 65: Component order_number bulk maintenance (admin Components dropdown).
 
-**Date:** July 26, 2026 (Session 79 — fixed a flex-1/min-w-0 overflow bug
-  in connection_groups/_form.html.erb, a regression from Session 78's own
-  Owner-Part-Number label change, that was still making the New Connection
-  Group page look off-center)
-**Branch:** main. **Sessions 1–79 ALL committed, pushed, merged, and
-  deployed** — Ulli confirmed at the end of Session 79 that every
-  outstanding item from Sessions 77, 78, and 79 passed the full pre-commit
-  checklist (bin/rails test, rubocop, brakeman, bundle-audit, manual
-  browser check) and is now live on `main`.
-**Status:** Sessions 1–79 fully closed out and deployed. No open bugs or
-  uncommitted work remain as of this writing. The GAP NOTICE below
-  (Session 68's missing formal summary) remains open and unaffected by any
-  of this — it is a documentation paper-trail gap only, not a code issue.
+**Date:** July 27, 2026 (Session 79 — Storage Locations feature design
+  consultation + Session A implemented, tested, and DEPLOYED)
+**Branch:** main (Sessions 1–76 all committed, pushed, merged, and
+  deployed, per Ulli's confirmation at the start of Session 76). Sessions
+  77 and 78's own work (11 files — see "Session 77 Summary" and "Session 78
+  Summary" below) status is UNCHANGED from the end of Session 78 — no
+  confirmation of placement/testing/commit was given during Session 79,
+  which was a separate, unrelated feature (Storage Locations). Session 79's
+  OWN work (Storage Locations Session A — 5 files: migration, model,
+  owner.rb, fixtures, model test) IS committed, pushed, merged, and
+  deployed — confirmed by Ulli this same session, independently of 77/78's
+  status.
+**Status:** Sessions 1–76 fully closed out and deployed. Sessions 77 and
+  78's combined checklist (see both summaries below) remains the open item
+  it was at the end of Session 78 — not addressed this session. Storage
+  Locations Session A (Session 79) is fully closed out and deployed on its
+  own branch. Storage Locations Sessions B–F are designed but NOT STARTED
+  — see DECOR_PROJECT.md "Storage Locations Feature — Session Plan" for
+  the full file-by-file breakdown of each. The GAP NOTICE below (Session
+  68's missing formal summary) remains open and unaffected by any of this.
 
 ---
 
@@ -496,19 +502,6 @@ See SESSION_HANDOVER v64.0 for the full rule.
 
 ---
 
-## !! FLEX ITEM OVERFLOW — flex-1 does not override min-width:auto (learned Session 79) !!
-
-A flex item with `flex-1` still defaults to `min-width: auto` — the
-browser won't shrink it below its own content's intrinsic width (e.g. a
-`<select>`'s widest `<option>` text). If that content is wide enough, the
-item overflows its row instead of shrinking, which can make an otherwise
-correctly-centered container look like it's positioned wrong (asymmetric
-margins: one side matches expectation, the other is squeezed by the
-overflow). Fix: add `min-w-0` to the flex item. See RAILS_SPECIFICS.md
-v3.15 for the full rule and the real example.
-
----
-
 ## !! NAV LOGO CENTERING — a 1fr middle column centers on leftover space, not the viewport (learned Session 78) !!
 
 If a nav bar has no max-width wrapper and centers its logo via a middle
@@ -566,134 +559,6 @@ one batch: `loofah` (→ >= 2.25.2), `rails-html-sanitizer` (→ >= 1.7.1),
 `sqlite3` (→ >= 2.9.5), `websocket-driver` (→ >= 0.8.2). Fixed with
 `bundle update <the four>`, confirmed clean with `bundle-audit check
 --update` before re-pushing. Full incident: "Session 72 Summary" below.
-
----
-
-## Session 79 Summary — Flex item overflow fix: New Connection Group page still off-center after Session 78 (RESOLVED this session)
-
-**All items from Sessions 77, 78, and 79 confirmed placed, tested, linted,
-security-scanned, committed, and deployed by Ulli at the end of this
-session.**
-
-### The report and the diagnostic approach
-
-Reported again: "the New connection group page content is not properly
-centered" — the same-sounding report Session 78 had already investigated
-and fixed with a real, different bug (the nav logo not being centered on
-the viewport). Rather than assume Session 78's fix was incomplete or
-guess at a new cause, the actual screenshot was measured pixel-by-pixel
-(via a small Python/Pillow script, not eyeballing):
-
-    Element                          Left edge   Right edge   Width    Center
-    Nav logo box                     801         883          82       842
-    Ports row (Port ID → × button)   452         1489         1037     970.5
-    (viewport width 1602px, true center 800.5)
-
-This confirmed two separate things:
-1. The nav logo's ~41px offset is small and most likely just asymmetric
-   whitespace baked into `logo.png` itself — the wrapper markup
-   (`absolute left-1/2 -translate-x-1/2` on a `relative <nav>`) is
-   correctly written and was not the cause of the reported complaint.
-2. The Ports row was **1037px wide** — far more than `max-w-2xl` (672px
-   box, ~640px inner content) should allow — with sharply asymmetric
-   margins (452px left vs. 113px right). That asymmetry, not a uniform
-   shift, is the signature of a **child overflowing the container's right
-   edge** while the container itself remains correctly centered.
-
-### Root cause
-
-`connection_groups/_form.html.erb`'s Device `<select>` (both the
-`mf.select` in the `f.fields_for` loop and its `<template>` twin) used
-`class="flex-1 ..."` with no `min-w-0`. Every flex item defaults to
-`min-width: auto`, so `flex-1` alone does not let the select shrink below
-its own widest `<option>` text's intrinsic content width. **Session 78's
-own change to this exact file** — adding `– Owner P/N
-#{c.owner_part_number}` to every option label — lengthened that intrinsic
-width enough to push the select past the row's available space, causing
-it to overflow the page's `max-w-2xl` container instead of shrinking. A
-genuine regression from Session 78's own fix, surfacing one session later
-once real (long) option text was rendered against it.
-
-### Fix
-
-Added `min-w-0` to both copies of the select — the standard Tailwind/CSS
-override that lets a flex item shrink below its content's intrinsic width.
-New MANDATORY RAILS_SPECIFICS.md v3.15 section added: "Flex Item Overflow
-— flex-1 Does Not Override min-width: auto," including the diagnostic
-pattern (asymmetric container margins → suspect an overflowing child, not
-a centering bug) for future reports of this shape.
-
-    decor/app/views/connection_groups/_form.html.erb    v1.3 → v1.4
-
-No automated test — CSS class change only, no server-side logic (per
-PROGRAMMING_GENERAL.md's Test Coverage Check, offered and confirmed
-not needed).
-
-### Process notes this session
-
-1. **File Transfer Protocol miss (export script), caught by Ulli:** the
-   initial 4-file diagnostic request (`layouts/application.html.erb`,
-   `connection_groups/new.html.erb`, `connection_groups/_form.html.erb`,
-   `common/_navigation.html.erb`) was correctly generated as an export
-   script — but the script itself violated the protocol's own directory
-   convention: it assumed it was run from the project root with
-   `app/views/...`-relative source paths and a `mkdir -p export` step,
-   instead of the documented convention (script runs from INSIDE
-   `decor/export/`, source paths relative as `../app/views/...`). Ulli
-   fixed it manually. No new rule needed — this is a plain miss of an
-   existing, already-documented convention.
-2. **File-not-presented-for-download miss:** the export script was
-   initially only shown in a code block in prose, not created and
-   presented via `present_files` — a direct violation of
-   COMMON_BEHAVIOR.md's File Delivery rule ("NEVER just show file contents
-   in a code block without also presenting the download"). Caught by
-   Ulli, corrected immediately by creating and presenting the actual file.
-3. **@-encoding a single-file delivery — SECOND recurrence.** The fixed
-   `connection_groups/_form.html.erb` (one file, delivered alone) was
-   named `app@views@connection_groups@_form@html.erb` despite
-   COMMON_BEHAVIOR.md's File Transfer Protocol explicitly exempting
-   single ad-hoc file transfers from @-encoding ("just name the one file
-   normally"). This is the same mistake Session 75 made with rule/skill
-   document deliveries — now recurring with an ordinary project file.
-   Caught by Ulli, not self-caught. Reinforced in COMMON_BEHAVIOR.md
-   rather than adding a third copy of the same rule (see that file's own
-   changelog).
-
-None of these were new rule gaps — all three were misses of rules that
-already existed. Flagged here as a pattern worth Ulli's attention: three
-process misses in one session, all on the mechanical/procedural side
-rather than the technical diagnosis, which was correct throughout.
-
-### Rule/skill document updates this session (session wrap-up, per Ulli's explicit "wrap up now")
-
-    decor/docs/claude/RAILS_SPECIFICS.md     v3.14 → v3.15 (new MANDATORY section:
-                                                             flex item overflow / min-w-0)
-    decor/docs/claude/SESSION_HANDOVER.md    v79.0 → v80.0 (this summary + status
-                                                             update + one new banner)
-    decor/docs/claude/DECOR_PROJECT.md       v2.69 → v2.70 (this session's changelog +
-                                                             new Session 79 section +
-                                                             Key file versions entries +
-                                                             Sessions 77/78 marked resolved)
-    decor/docs/claude/COMMON_BEHAVIOR.md     reinforcement note added to the existing
-                                              File Transfer Protocol section (second
-                                              recurrence of the single-file @-encoding
-                                              miss) — no new rule, no version bump
-                                              beyond the reinforcement itself; see that
-                                              file's own changelog for the exact wording
-                                              and the noted version-number discrepancy
-                                              flagged for Ulli to reconcile.
-
-### NOT YET DONE — NONE. Confirmed complete.
-
-Ulli confirmed at the end of this session: all outstanding items from
-Sessions 77, 78, and 79 (dropdown_controller.js, connection_groups/
-_form.html.erb through both its Session 78 and 79 changes,
-common/_navigation.html.erb, computers/_form.html.erb,
-owners/peripherals.html.erb, computers/show.html.erb,
-components/_filters.html.erb, component.rb, component_test.rb,
-components/_form.html.erb) have passed `bin/rails test`, rubocop,
-brakeman, bundle-audit, manual browser checks, and the full git workflow,
-and are live on `main`.
 
 ---
 
@@ -866,27 +731,145 @@ No COMMON_BEHAVIOR.md or PROGRAMMING_GENERAL.md changes this session — no
 new workflow/behavioral lessons, only Rails/CSS-technical ones (and one
 still-open JS/Stimulus question for next session).
 
-### NOT YET DONE — RESOLVED Session 79
+### NOT YET DONE — required before Session 77's work is fully closed out
 
-All items below were confirmed complete by Ulli at the end of Session 79
-(placed, tested, linted, security-scanned, committed, merged, deployed
-together with Sessions 78 and 79's own work). Preserved as historical
-record of what the checklist originally required:
-
-    [x] Run the two export scripts' delivered files through placement
+    [ ] Run the two export scripts' delivered files through placement
         (all 7 files: computers/_form.html.erb, owners/peripherals.html.erb,
         computers/show.html.erb, components/_filters.html.erb, component.rb,
         component_test.rb, components/_form.html.erb — NOTE: computers/_form.html.erb
         and components/_form.html.erb are DIFFERENT files, both touched this session)
-    [x] common/_navigation.html.erb placement (8th file, delivered separately)
-    [x] bin/rails test (including the 3 new component_test.rb search-scope tests)
+    [ ] common/_navigation.html.erb placement (8th file, delivered separately)
+    [ ] bin/rails test (including the 3 new component_test.rb search-scope tests)
+    [ ] bundle exec rubocop -A / bundle exec rubocop
+    [ ] bin/brakeman --no-pager
+    [ ] bundle exec bundle-audit check --update
+    [ ] Manual browser check — in particular, confirm the Info dropdown
+        fix (z-10 → z-20) actually resolves the obscured-first-item bug on
+        ALL FIVE affected pages (Owners, Computers, Peripherals, Components,
+        Software), not just Owners where it was directly observed
+    [ ] git workflow: branch → commit → push → PR → CI → merge → deploy
+    [ ] Next session: diagnose and fix the admin-dropdowns-don't-close-each-other
+        bug (files requested, not yet uploaded — see "Open item" above)
+
+---
+
+## Session 79 Summary — Storage Locations feature: design consultation + Session A implemented and deployed
+
+### Design consultation
+
+Ulli proposed a new feature: owners define private physical storage
+locations for their collection items. Seven open questions were raised
+before any code was written (FK vs. free text, column length/description,
+flat vs. hierarchical, dedicated CRUD vs. inline creation, delete
+behaviour, admin visibility, filter-sidebar scope) — all answered by Ulli
+over the course of the discussion, plus two follow-ups (import auto-create
+behaviour for an unrecognised name; nav placement, resolved cleanly by
+Session 78's earlier logo-decoupling fix meaning the new link could go in
+the right-side flex group without reopening the old grid-overflow bug).
+
+Implementation was split into 6 independent, individually-committable
+sessions (A–F) — same reasoning as the Software feature (Sessions 43–48)
+and Component Suggestions (Phases 1–4): each session ships something
+deployable on its own, with an explicit dependency graph so future
+sessions know what must precede what. Full confirmed design and all 6
+sessions' file lists: **DECOR_PROJECT.md, "Storage Locations Feature —
+Session Plan."**
+
+### Session A — implemented, tested, and deployed this same session
+
+    decor/db/migrate/20260727000100_create_storage_locations.rb   NEW (v1.0)
+    decor/app/models/storage_location.rb                          NEW (v1.0)
+    decor/app/models/owner.rb                                     v1.6 → v1.7
+    decor/test/fixtures/storage_locations.yml                     NEW (v1.0)
+    decor/test/models/storage_location_test.rb                    NEW (v1.0)
+
+Pre-Implementation Verification was done before writing any of these:
+`owner.rb`, `connection_group.rb` (closest existing precedent for an
+owner-scoped model with per-owner uniqueness), the actual
+`create_component_suggestions` migration (to match this project's real
+`create_table` conventions rather than generic Rails ones), `owners.yml`,
+`connection_groups.yml`, `connection_group_test.rb`, and `test_helper.rb`
+were all requested and read first, via the File Transfer Protocol export
+script (multi-file request — correctly used the script this time, no
+repeat of the Session 78 process miss).
+
+**One real finding from reading the actual migration:** the
+`component_suggestions` migration does NOT add a CHECK constraint
+alongside its `VARCHAR`/`limit:` column — length is enforced at the Rails
+model-validation level only. This is followed for `storage_locations.name`
+too, in preference to the more general SQLite CHECK-constraint guidance
+elsewhere in RAILS_SPECIFICS.md — the actual precedent in the codebase
+takes priority over the general rule, per Never-Guess.
+
+**`owner.rb` bump not originally itemised:** the Session A file list (as
+first proposed) was migration + model + fixtures + test only. Adding
+`has_many :storage_locations, dependent: :destroy` to `owner.rb` was
+recognised as necessary once actually writing the model — `owner.
+storage_locations` wouldn't otherwise exist — and added to the delivery
+rather than left as a gap.
+
+**`StorageLocation` deliberately incomplete for now:** no
+`has_many :computers/:components/:software_items` yet — those FK columns
+don't exist on the referencing tables until Session C's migration runs.
+Adding the associations early would generate SQL against nonexistent
+columns. Documented in the model's own header comment so this isn't
+mistaken for an oversight in a future session.
+
+### Process note this session
+
+A file-delivery-protocol miss, caught by Ulli rather than self-caught: the
+File Transfer Protocol's export script for the Pre-Implementation
+Verification files was correctly generated, but the very first
+multi-file *delivery* of this session (the export script itself) was
+initially just shown in a code block instead of being created as an actual
+file and presented via `present_files`, violating the existing "Always
+Present Files for Download" rule. Corrected immediately once flagged — no
+new rule needed, this was a plain miss of an existing rule.
+
+### Test Coverage Check (per PROGRAMMING_GENERAL.md)
+
+    New server-side logic this session:
+      StorageLocation model (validations)   — yes, tested: presence, length
+                                               boundary (50/51), per-owner
+                                               uniqueness, belongs_to owner
+      Owner#storage_locations association   — covered implicitly by the
+                                               belongs_to test
+      Migration                              — no logic to unit test;
+                                               verified by running it
+
+### Pre-commit checklist and deployment — all confirmed complete by Ulli
+
+    [x] bin/rails db:migrate
+    [x] bin/rails test (full suite)
     [x] bundle exec rubocop -A / bundle exec rubocop
     [x] bin/brakeman --no-pager
     [x] bundle exec bundle-audit check --update
-    [x] Manual browser check — Info dropdown fix confirmed on all five pages
-    [x] git workflow: branch → commit → push → PR → CI → merge → deploy
-    [x] Admin-dropdowns-don't-close-each-other bug — diagnosed and fixed
-        Session 78 (Item 1); see that session's summary
+    [x] git workflow: branch → commit → push → PR → CI → merge
+    [x] Deployed
+
+### Rule/skill document updates this session (session wrap-up, per Ulli's explicit "wrap up")
+
+    decor/docs/claude/DECOR_PROJECT.md       v2.69 → v2.70 (this session's changelog +
+                                                             new "Storage Locations Feature
+                                                             — Session Plan" section +
+                                                             StorageLocation added to Data
+                                                             Model Overview + Key file
+                                                             versions entries)
+    decor/docs/claude/SESSION_HANDOVER.md    v79.0 → v80.0 (this summary + status update +
+                                                             one new banner entry)
+
+No COMMON_BEHAVIOR.md, RAILS_SPECIFICS.md, or PROGRAMMING_GENERAL.md
+changes this session — the file-presentation miss above was a violation of
+an existing rule, not a gap needing a new one, and every technical decision
+made (CHECK-constraint precedent, association deferral, delete/nullify
+design) followed patterns already documented rather than surfacing a new
+one.
+
+### NOT YET DONE — Sessions B–F
+
+Storage Locations Sessions B (owner CRUD), C (FK + forms), D (privacy
+audit), E (filters), F (export/import) are fully designed (see
+DECOR_PROJECT.md) but not started. Pick up with Session B next.
 
 ---
 
@@ -995,25 +978,24 @@ No COMMON_BEHAVIOR.md or PROGRAMMING_GENERAL.md rule changes this session
 — the file-transfer-protocol miss above was a violation of an existing
 rule, not a gap needing a new one.
 
-### NOT YET DONE — RESOLVED Session 79
+### NOT YET DONE — required before Session 78's work is fully closed out
 
-All items below were confirmed complete by Ulli at the end of Session 79.
-Note: the manual browser check surfaced the flex-1/min-w-0 overflow
-regression on the Connection form (item (b) below revealed the New
-Connection Group page still looked off-center) — that follow-on fix is
-documented in "Session 79 Summary" above, and is now ALSO confirmed
-deployed. Preserved as historical record:
-
-    [x] Place all 3 files: dropdown_controller.js, connection_groups/_form.html.erb,
+    [ ] Place all 3 files: dropdown_controller.js, connection_groups/_form.html.erb,
         common/_navigation.html.erb
-    [x] bin/rails test
-    [x] bundle exec rubocop -A / bundle exec rubocop
-    [x] bin/brakeman --no-pager
-    [x] bundle exec bundle-audit check --update
-    [x] Manual browser check — surfaced the Session 79 min-w-0 regression,
-        which was diagnosed and fixed in the same closeout
-    [x] git workflow: branch → commit → push → PR → CI → merge → deploy
-    [x] Committed together with Session 77's files and Session 79's own fix
+    [ ] bin/rails test
+    [ ] bundle exec rubocop -A / bundle exec rubocop
+    [ ] bin/brakeman --no-pager
+    [ ] bundle exec bundle-audit check --update
+    [ ] Manual browser check: (a) admin dropdowns close their siblings when a
+        new one opens, across several pairs; (b) Connection form Device
+        dropdown shows Owner Part Number for both existing and newly-added
+        (+ Add port) rows; (c) nav logo now sits at true page-center on
+        every page, and left/right nav groups still render correctly at
+        normal and narrow widths
+    [ ] git workflow: branch → commit → push → PR → CI → merge → deploy
+    [ ] This session's items should be committed together with Session 77's
+        still-open 8 files (see "Session 77 Summary" below) if not already
+        done separately
 
 ---
 

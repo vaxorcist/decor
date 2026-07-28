@@ -1,17 +1,20 @@
 # decor/docs/claude/DECOR_PROJECT.md
 # version 2.70
-# Session 79: One item — connection_groups/_form.html.erb v1.3 -> v1.4.
-#   Reported: the New Connection Group page STILL looked "not centered"
-#   after Session 78's nav-logo fix. Diagnosed via pixel measurement of the
-#   actual screenshot (not assumption): the page's max-w-2xl mx-auto
-#   container was correctly positioned; a NEW, different bug — the Device
-#   <select>'s flex-1 with no min-w-0 letting Session 78's own lengthened
-#   option text (Owner Part Number added) overflow the container's right
-#   edge. Fixed by adding min-w-0 to both copies of the select (mf.select
-#   + <template>). New MANDATORY RAILS_SPECIFICS.md v3.15 section added.
-#   Ulli confirmed at session end: ALL outstanding items (Sessions 77, 78,
-#   and this session's fix) tested and deployed — see updated Current
-#   Status below.
+# Session 79: Storage Locations feature — design consultation (full 7-session
+#   plan: A–F, agreed with Ulli) then Session A implemented, tested, lint/
+#   security-scanned, committed, merged, and DEPLOYED, all in this same
+#   session. New storage_locations table (owner-scoped, private — see new
+#   "Storage Locations Feature — Session Plan" section below for the full
+#   design and the confirmed answers: FK not free-text, name VARCHAR(50) no
+#   description, flat (no hierarchy), dedicated owner CRUD (Session B),
+#   nullify-with-warning on delete, private from other owners/visitors but
+#   included in admin-wide export, filter-sidebar support in scope, auto-
+#   create on import for a referenced name that doesn't exist yet). Owner.rb
+#   bumped v1.6 → v1.7 to add has_many :storage_locations, dependent: :destroy
+#   — not originally itemised in the Session A file list, added when it
+#   became clear it was required for owner.storage_locations to work at all.
+#   Sessions B–F (owner CRUD, FK+forms on Computer/Component/SoftwareItem,
+#   privacy audit, filters, export/import) remain to be implemented.
 # Session 78: Three independent items, all code-complete, NOT YET placed/
 #   tested/committed: (1) dropdown_controller.js v1.0->v1.1 — fixed Session
 #   77's carried-over open item (admin dropdowns not closing siblings) via
@@ -230,17 +233,22 @@
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** July 26, 2026 (Session 79 — fixed a flex-1/min-w-0
-  overflow bug in connection_groups/_form.html.erb that was still making
-  the New Connection Group page look off-center after Session 78's
-  nav-logo fix; v2.70)
-**Current Status:** Sessions 1–79 ALL committed, pushed, merged, and
-  deployed to main — Ulli confirmed at the end of Session 79 that every
-  outstanding item from Sessions 77, 78, and 79 passed the full pre-commit
-  checklist and is now deployed. No open bugs remain undiagnosed or
-  uncommitted as of this writing. (The Session 68 documentation-gap GAP
-  NOTICE — a missing formal summary, not a code issue — remains open; see
-  SESSION_HANDOVER.md.)
+**Last Updated:** July 27, 2026 (Session 79 — Storage Locations feature
+  Session A: table/model/fixtures/tests, implemented and deployed; v2.70)
+**Current Status:** Sessions 1–76 all committed, pushed, merged, and
+  deployed to main (per Ulli's confirmation at the start of Session 76).
+  Sessions 77 and 78's own work (11 files — see SESSION_HANDOVER.md
+  "Session 77 Summary" and "Session 78 Summary") status is UNCHANGED from
+  the end of Session 78 — Session 79 was a separate, unrelated feature
+  (Storage Locations) and did not touch or confirm 77/78's placement.
+  Session 79's own work (Storage Locations Session A — 5 files: migration,
+  model, fixtures, model tests, plus the `owner.rb` association addition)
+  IS tested, linted, security-scanned, committed, merged, and DEPLOYED —
+  confirmed by Ulli this same session, on its own branch, independently of
+  77/78. **Open, not started:** Storage Locations Sessions B–F (owner CRUD,
+  FK+forms on Computer/Component/SoftwareItem, privacy audit, filter-
+  sidebar support, export/import) — see "Storage Locations Feature —
+  Session Plan" below.
 
 ---
 
@@ -453,8 +461,11 @@ is excluded).
 
     decor/docs/claude/DECOR_PROJECT.md                                                  v2.70 ← Session 79
     decor/docs/claude/SESSION_HANDOVER.md                                               v80.0 ← Session 79
-    decor/docs/claude/RAILS_SPECIFICS.md                                                v3.15 ← Session 79
-    decor/app/views/connection_groups/_form.html.erb                                     v1.4  ← Session 79
+    decor/db/migrate/20260727000100_create_storage_locations.rb                         v1.0  ← Session 79 NEW
+    decor/app/models/storage_location.rb                                                v1.0  ← Session 79 NEW
+    decor/app/models/owner.rb                                                           v1.7  ← Session 79
+    decor/test/fixtures/storage_locations.yml                                           v1.0  ← Session 79 NEW
+    decor/test/models/storage_location_test.rb                                          v1.0  ← Session 79 NEW
     decor/docs/claude/DECOR_PROJECT.md                                                  v2.69 ← Session 78
     decor/docs/claude/SESSION_HANDOVER.md                                               v79.0 ← Session 78
     decor/docs/claude/RAILS_SPECIFICS.md                                                v3.14 ← Session 78
@@ -721,6 +732,7 @@ is excluded).
 - has_many :components, dependent: :destroy
 - has_many :software_items, dependent: :destroy        ← Session 43
 - has_many :connection_groups, dependent: :destroy
+- has_many :storage_locations, dependent: :destroy     ← Session 79
 
 ### Computer
 - belongs_to :owner
@@ -851,6 +863,23 @@ is excluded).
 - belongs_to :computer
 - owner_member_id: integer NOT NULL — per-group port numbering; auto-assigned on create
 - label: VARCHAR(100) nullable
+
+### StorageLocation  ← Session 79 (Storage Locations feature, Session A)
+- belongs_to :owner
+- name VARCHAR(50) NOT NULL, uniqueness scoped to owner_id (not global —
+  two owners may each have a location named "Garage")
+- Private, owner-defined — NOT an admin-managed lookup table (unlike
+  ComponentType/SoftwareName/ComponentSuggestion); same per-owner ownership
+  pattern as ConnectionGroup.
+- NOT YET (deferred to Session C, once the referencing tables have the FK
+  column): has_many :computers/:components/:software_items,
+  dependent: :nullify.
+- Privacy (confirmed in design consultation): visible only to the owning
+  owner — excluded from every owners_controller read-only view of another
+  owner's collection and from all other logged-in owners; included in the
+  admin-wide export only (no dedicated admin UI).
+- See "Storage Locations Feature — Session Plan" below for the full
+  confirmed design and the remaining Sessions B–F.
 
 ---
 
@@ -1322,66 +1351,161 @@ merged, and deployed via `kamal deploy`. See SESSION_HANDOVER.md "Session
 
 ---
 
-## Session 79 — Flex item overflow fix: New Connection Group page still looked off-center after Session 78
+## Storage Locations Feature — Session Plan (Session 79)
 
-**RESOLVED this session** — placed, tested, linted, security-scanned,
-committed, and deployed; confirmed by Ulli at session end. See
-SESSION_HANDOVER.md "Session 79 Summary" for full detail.
+Owners can define their own private list of physical storage locations
+(e.g. "Attic Shelf 3") and assign one to each of their own Computers,
+Peripherals (device_type on Computer — not a separate table), Components,
+and SoftwareItems. Design consultation happened this session (Session 79)
+and confirmed the following, before splitting implementation across six
+independent sessions:
 
-Reported again: the New Connection Group page "is not properly centered"
-— after Session 78 had already investigated and fixed a real, different
-bug (the nav logo not being centered on the viewport). Rather than assume
-Session 78's fix was incomplete, the actual screenshot was measured
-pixel-by-pixel:
+    Q                                          Confirmed answer
+    ─────────────────────────────────────────────────────────────────────
+    FK or free text?                           FK (storage_location_id)
+    name column length / description field?    VARCHAR(50), no description
+    flat or hierarchical?                       Flat
+    dedicated CRUD or inline creation?          Dedicated owner-facing CRUD
+    delete behaviour?                           Nullify (with a warning
+                                                 showing affected counts,
+                                                 before destroy)
+    admin visibility?                           Private from other owners
+                                                 AND visitors; included in
+                                                 the admin-wide export;
+                                                 NO dedicated admin browsing
+                                                 UI
+    filter-sidebar support in scope?            Yes
+    import: unknown referenced name?            Auto-create
+    nav placement (new right-group problem)?    Right of the logo, in the
+                                                 existing right-side flex
+                                                 group (Admin / username /
+                                                 Sign out) — safe to do
+                                                 without re-triggering the
+                                                 old grid-overflow bug,
+                                                 since Session 78 already
+                                                 took the logo out of the
+                                                 grid/flex flow entirely
 
-    Element                          Left edge   Right edge   Width    Center
-    Nav logo box                     801         883          82       842
-    Ports row (Port ID → × button)   452         1489         1037     970.5
-    (viewport width 1602, true center 800.5)
+### Session A — Migration + Model + Fixtures + Model Tests — DONE ✓ (Session 79)
 
-The page's `max-w-2xl mx-auto` container (`connection_groups/new.html.erb`)
-was confirmed still correctly centered — its left margin was close to
-expectation. The right margin, however, was far smaller than expected:
-asymmetric in a way that doesn't fit "wrong centering" but exactly fits "a
-child is overflowing the container's right edge."
+Implemented, tested, lint/security-scanned, committed, merged, and
+DEPLOYED, all in this same session.
 
-**Root cause:** the Device `<select>` in `connection_groups/_form.html.erb`
-(both the `mf.select` and its `<template>` twin) used `class="flex-1 ..."`
-with no `min-w-0`. Every flex item defaults to `min-width: auto`, so
-`flex-1` alone does not let a `<select>` shrink below its own widest
-`<option>` text's intrinsic width. Session 78's own change to this exact
-file — adding `– Owner P/N #{c.owner_part_number}` to every option label —
-lengthened that intrinsic width enough to overflow the row past the page's
-`max-w-2xl` boundary, eating into the right margin and making the whole
-page look shifted right. **A genuine regression introduced by Session 78's
-own fix, surfacing one session later.**
+    decor/db/migrate/20260727000100_create_storage_locations.rb   NEW (v1.0)
+    decor/app/models/storage_location.rb                          NEW (v1.0)
+    decor/app/models/owner.rb                                     v1.6 → v1.7
+      (added has_many :storage_locations, dependent: :destroy — not in the
+      original file list, added when it became clear it was required for
+      owner.storage_locations to work at all)
+    decor/test/fixtures/storage_locations.yml                     NEW (v1.0)
+    decor/test/models/storage_location_test.rb                    NEW (v1.0)
 
-**Fix:** added `min-w-0` to both copies of the select. New MANDATORY
-RAILS_SPECIFICS.md v3.15 section added: "Flex Item Overflow — flex-1 Does
-Not Override min-width: auto."
+Schema: `storage_locations` — `owner_id` (FK, NOT NULL), `name`
+VARCHAR(50) NOT NULL, unique index on `(owner_id, name)`. No CHECK
+constraint added (matching the actual `component_suggestions` migration
+precedent — length enforced at the Rails model level only, not the more
+general SQLite CHECK-constraint rule elsewhere in RAILS_SPECIFICS.md).
 
-    decor/app/views/connection_groups/_form.html.erb    v1.3 → v1.4
+**Deliberately NOT included in Session A:** `has_many :computers` /
+`:components` / `:software_items` on `StorageLocation` — those FK columns
+don't exist on the referencing tables until Session C's migration runs.
+Adding the associations early would generate SQL against nonexistent
+columns.
 
-No automated test — CSS class change only, no server-side logic (per
-PROGRAMMING_GENERAL.md's Test Coverage Check).
+### Session B — Owner-Facing CRUD (dedicated page) — NOT STARTED
 
-**Process note:** the single-file delivery of this fix was initially
-@-encoded (`app@views@connection_groups@_form@html.erb`) despite
-COMMON_BEHAVIOR.md's own File Transfer Protocol explicitly exempting
-single ad-hoc file transfers from that scheme — the same mistake as
-Session 75's recurrence, now a second recurrence. Caught by Ulli, not
-self-caught. No new rule needed; reinforced in COMMON_BEHAVIOR.md instead
-of adding a third copy of an existing rule.
+Depends on Session A.
+
+    decor/config/routes.rb                                        (resources :storage_locations)
+    decor/app/controllers/storage_locations_controller.rb        NEW
+    decor/app/views/storage_locations/{index,new,edit,_form,_storage_location}.html.erb   NEW
+    decor/app/views/storage_locations/delete_confirm.html.erb    NEW — nullify-warning UX,
+      showing affected computer/component/software-item counts before destroy (same
+      pattern as admin/site_texts/delete_confirm.html.erb, reused for a different model)
+    decor/app/views/common/_navigation.html.erb                  — new link in the
+      RIGHT-side flex group (not left), placed among Admin/username dropdown/Sign out;
+      confirmed safe post-Session-78 since the logo no longer constrains either group's width
+    decor/test/controllers/storage_locations_controller_test.rb  NEW
+
+### Session C — FK on Computer, Component, SoftwareItem + Forms + Show Pages — NOT STARTED
+
+Depends on A and B. Same shape as the Owner Part Number feature (Sessions 69–72).
+
+    decor/db/migrate/YYYYMMDDHHMMSS_add_storage_location_to_computers_components_software_items.rb  NEW
+      (SQLite table recreation pattern — three ALTER-equivalents)
+    decor/app/models/computer.rb / component.rb / software_item.rb
+      (belongs_to :storage_location, optional: true, each)
+    decor/app/models/storage_location.rb
+      (add has_many :computers/:components/:software_items, dependent: :nullify — the
+      piece deliberately deferred from Session A)
+    decor/app/views/computers/_form.html.erb / components/_form.html.erb /
+      software_items/_form.html.erb   (dropdown, Current.owner.storage_locations)
+    decor/app/views/computers/show.html.erb / components/show.html.erb /
+      software_items/show.html.erb    (display field)
+    decor/app/views/computers/index.html.erb / _computer.html.erb,
+      components/index.html.erb / components_helper.rb,
+      software_items/index.html.erb / _software_item.html.erb   (column, own-view only)
+    + fixture and test updates across all three models
+
+### Session D — Privacy Audit (dedicated, deliberately separate from Session C) — NOT STARTED
+
+Depends on C. A dedicated pass, not assumed to fall out correctly from
+Session C — this project has hit exactly this class of bug repeatedly
+(Session 73/75 form-vs-show drift). Explicit read-through + confirmation
+that `storage_location` does NOT appear in any of:
+
+    decor/app/views/owners/computers.html.erb
+    decor/app/views/owners/peripherals.html.erb
+    decor/app/views/owners/components.html.erb
+    decor/app/views/owners/software.html.erb
+    decor/app/views/owners/show.html.erb
+    decor/app/views/owners/_owner.html.erb
+
+Also check whether any partial is shared between the Session B/C owner-CRUD
+views and these read-only views — if so, the shared partial itself needs
+conditional logic (or splitting), not just "don't add it here."
+
+### Session E — Filter Sidebar Support — NOT STARTED
+
+Depends on C. Independent of D.
+
+    decor/app/views/computers/_filters.html.erb / components/_filters.html.erb /
+      software_items/_filters.html.erb    (Storage Location filter)
+    decor/app/controllers/computers_controller.rb / components_controller.rb /
+      software_items_controller.rb        (filter param handling)
+    decor/app/helpers/computers_helper.rb / components_helper.rb / software_items_helper.rb
+    + filter test coverage in each controller test file
+
+### Session F — Export/Import (owner-level and admin-level) — NOT STARTED
+
+Depends on A and C. Last, since it's the most cross-cutting piece.
+
+    decor/app/services/owner_export_service.rb
+      new storage_locations CSV section, referenced BY NAME (no synthetic key
+      needed — (owner_id, name) uniqueness is already the natural key);
+      storage_location column added to Computer/Component/SoftwareItem sections
+    decor/app/services/owner_import_service.rb
+      storage_locations section imported BEFORE the Computer/Component/SoftwareItem
+      sections (dependency ordering, same shape as computer_models needing to exist
+      before computers); a referenced name not yet present for that owner is
+      AUTO-CREATED (confirmed design decision) rather than skipped/rejected
+    decor/app/services/all_owners_export_service.rb
+      storage_location included (confirmed: not private from admins — this file
+      is exempt from the Session D privacy audit)
+    decor/app/views/data_transfers/show.html.erb   (mention new CSV section)
+    + test updates: owner_export_service_test.rb, owner_import_service_test.rb
+
+### Dependency summary
+
+```
+A (model) ──> B (CRUD) ──> C (FK + forms) ──┬──> D (privacy audit)
+                                              └──> E (filters)
+                              A + C ─────────────> F (export/import)
+```
 
 ---
 
 ## Session 78 — Admin dropdown siblings fix, Owner Part Number on Connection form, real nav-centering fix
-
-**RESOLVED Session 79** (placed, tested, linted, security-scanned,
-committed, deployed — see "Session 79" above for that session's own
-follow-on fix, and SESSION_HANDOVER.md "Session 79 Summary" for the full
-closeout). Original session narrative preserved below as historical
-record.
 
 All items below are code-complete but **NOT YET** placed into the real
 project, tested, linted, security-scanned, or committed — see
@@ -1413,11 +1537,6 @@ DONE checklist.
 ---
 
 ## Session 77 — Six small UI/search bug fixes + a real nav-dropdown z-index fix
-
-**RESOLVED Session 79** (placed, tested, linted, security-scanned,
-committed, deployed, together with Sessions 78 and 79 — see
-SESSION_HANDOVER.md "Session 79 Summary"). Original session narrative
-preserved below as historical record.
 
 All items below are code-complete but **NOT YET** placed into the real
 project, tested, linted, security-scanned, or committed — see

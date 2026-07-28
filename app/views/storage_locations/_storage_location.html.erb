@@ -1,0 +1,18 @@
+<%# decor/app/views/storage_locations/_storage_location.html.erb - version 1.0 %>
+<%# Session B (Storage Locations feature). %>
+<%# Row partial for the index list. Expects local variable: storage_location. %>
+<%# No "show" link — there is no show page (routes.rb v3.8 excludes it); the %>
+<%# name itself is the only field, so Edit is the only way to see/change it. %>
+<%# Color conventions (DECOR_PROJECT.md Design Patterns): %>
+<%#   Clickable:     text-indigo-600 hover:text-indigo-900 %>
+<%#   Destructive:   text-red-600 hover:text-red-900 %>
+
+<div class="flex items-center justify-between px-4 py-3">
+  <span class="text-stone-900"><%= storage_location.name %></span>
+  <div class="flex gap-4 text-sm">
+    <%= link_to "Edit", edit_storage_location_path(storage_location),
+          class: "text-indigo-600 hover:text-indigo-900" %>
+    <%= link_to "Delete", delete_confirm_storage_location_path(storage_location),
+          class: "text-red-600 hover:text-red-900" %>
+  </div>
+</div>
