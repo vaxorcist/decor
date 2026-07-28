@@ -1,0 +1,30 @@
+<%# decor/app/views/storage_locations/index.html.erb - version 1.0 %>
+<%# Session B (Storage Locations feature). %>
+<%#
+Private, owner-scoped list — @storage_locations is ALWAYS Current.owner's
+own records (see storage_locations_controller.rb#index; require_login is
+enforced there too, so this view never renders for a logged-out visitor).
+
+No pagination: an owner's own storage-location list is expected to stay
+small (a handful of named shelves/boxes/rooms), unlike the sitewide public
+Computer/Component/SoftwareItem indexes that need geared_pagination's
+"Load more" pattern. Revisit with real pagination if that assumption turns
+out wrong for a heavy user.
+%>
+
+<div class="px-4 max-w-2xl mx-auto">
+  <div class="flex items-center justify-between mb-4">
+    <h1 class="text-2xl font-semibold">Storage Locations</h1>
+    <%= link_to "Add Storage Location", new_storage_location_path, class: button_classes(style: :primary) %>
+  </div>
+
+  <% if @storage_locations.any? %>
+    <div class="bg-white border border-stone-200 rounded divide-y divide-stone-200">
+      <% @storage_locations.each do |storage_location| %>
+        <%= render "storage_location", storage_location: storage_location %>
+      <% end %>
+    </div>
+  <% else %>
+    <%= empty_state("No storage locations yet.") %>
+  <% end %>
+</div>

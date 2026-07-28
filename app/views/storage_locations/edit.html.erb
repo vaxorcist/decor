@@ -1,0 +1,19 @@
+<%# decor/app/views/storage_locations/edit.html.erb - version 1.0 %>
+<%# Session B (Storage Locations feature). %>
+<%# Pattern: same structure as software_items/edit.html.erb — Stimulus Back %>
+<%# button (history.back() primary; index page as fallback, since there's no %>
+<%# show page to fall back to here). %>
+
+<div class="max-w-lg mx-auto">
+  <h1 class="text-2xl font-semibold mb-4">Edit Storage Location</h1>
+
+  <%= render "form", storage_location: @storage_location %>
+
+  <div class="mt-4">
+    <a href="#"
+       data-controller="back"
+       data-back-fallback-url-value="<%= storage_locations_path %>"
+       data-action="click->back#go"
+       class="text-sm text-stone-700 hover:text-stone-900">← Back</a>
+  </div>
+</div>

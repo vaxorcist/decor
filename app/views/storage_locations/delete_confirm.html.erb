@@ -1,0 +1,40 @@
+<%# decor/app/views/storage_locations/delete_confirm.html.erb - version 1.0 %>
+<%# Session B (Storage Locations feature). %>
+<%#
+INTERIM — NOT the final design. See storage_locations_controller.rb v1.0's
+class-level comment for the full explanation: storage_location.rb v1.0's own
+header comment calls for this view to "warn with counts" of affected
+computers/components/software_items before destroy, but those associations
+don't exist yet (deferred to Session C). Since nothing can reference a
+StorageLocation until Session C ships, there is nothing real to count —
+this shows a plain, honest confirmation instead of guessing at Session C's
+eventual association/method names.
+
+Session C MUST replace this file's body with a real counts warning (e.g.
+"N computers, N components, and N software items currently use this
+location and will be set to no location") once
+has_many :computers/:components/:software_items exist on StorageLocation.
+
+Delete link pattern matches admin/site_texts/delete_confirm.html.erb v1.1's
+precedent: data: { turbo_method: :delete, turbo_confirm: ... } on a plain
+link, NOT wrapped in any data-turbo="false" ancestor (see RAILS_SPECIFICS.md
+"data-turbo='false' — NEVER wrap Turbo-method links inside it" — this file
+has no such wrapper at all, so that trap doesn't apply here).
+%>
+
+<div class="max-w-lg mx-auto">
+  <h1 class="text-2xl font-semibold mb-6">Delete Storage Location</h1>
+
+  <div class="mb-6 p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-800">
+    Delete "<strong><%= @storage_location.name %></strong>"? This cannot be undone.
+  </div>
+
+  <div class="flex gap-3 items-center">
+    <%= link_to "Delete",
+          storage_location_path(@storage_location),
+          data: { turbo_method: :delete,
+                  turbo_confirm: "Delete this storage location? This cannot be undone." },
+          class: "#{button_classes(style: :primary)} bg-red-600 hover:bg-red-700" %>
+    <%= link_to "Cancel", storage_locations_path, class: button_classes(style: :secondary) %>
+  </div>
+</div>

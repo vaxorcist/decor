@@ -1,5 +1,15 @@
 # decor/config/routes.rb
-# version 3.7
+# version 3.8
+# v3.8 (Session B, Storage Locations feature): Added resources :storage_locations,
+#   except: [:show] (no show page — the index list is the only display surface;
+#   a StorageLocation carries only a `name`, see storage_location.rb v1.0).
+#   delete_confirm is a MEMBER route (get :delete_confirm inside member do),
+#   NOT a collection route like admin/site_texts's delete_confirm — that one
+#   lets the admin PICK which text to delete from a selector with no :id in
+#   the URL; this one confirms deletion of ONE specific record the owner
+#   already selected from their own index list, so it needs the :id.
+#   Fully private/owner-scoped (no owners/:id nesting, no public visibility) —
+#   see storage_locations_controller.rb v1.0 for the access model.
 # v3.7 (Session 73): Category Help Pages feature.
 #   Added 5 new public text-page routes, following the exact same pattern as
 #   the 4 existing ones (readme/news/barter_trade/privacy): all served by
@@ -116,6 +126,21 @@ Rails.application.routes.draw do
 
   # Software items — full CRUD added in Session D.
   resources :software_items
+
+  # Storage Locations — added Session B (Storage Locations feature).
+  # Fully private, owner-scoped (see storage_locations_controller.rb v1.0) —
+  # NOT nested under owners/:id, since there is no public/other-owner view of
+  # this resource at all; the controller scopes every action to Current.owner
+  # internally instead. No :show action — a StorageLocation carries only a
+  # `name`, so the index list is the only display surface needed.
+  # delete_confirm is a MEMBER route (confirms ONE specific record already
+  # selected from the index), unlike admin/site_texts's delete_confirm
+  # (a collection route letting the admin pick which record from a selector).
+  resources :storage_locations, except: [:show] do
+    member do
+      get :delete_confirm
+    end
+  end
 
   # Owner data export / import.
   get  "data_transfer",        to: "data_transfers#show",   as: :data_transfer

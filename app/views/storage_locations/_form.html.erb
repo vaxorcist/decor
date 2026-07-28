@@ -1,0 +1,36 @@
+<%# decor/app/views/storage_locations/_form.html.erb - version 1.0 %>
+<%# Session B (Storage Locations feature). %>
+<%#
+Single-field form: name (VARCHAR(50), unique per owner — see
+storage_location.rb v1.0's uniqueness: { scope: :owner_id } validation). No
+collection_select / Tom Select needed — just one text field.
+
+Submit label is explicit (not the f.submit model-class-name default) per
+DECOR_PROJECT.md Design Patterns ("Primary: descriptive — 'Update Computer',
+'Save Component'") and RAILS_SPECIFICS.md's "UI Renames" caution about
+f.submit's auto-generated label — "Create Storage location" / "Update
+Storage location" (note the lowercase "location") is what Rails would
+generate from the class name; using an explicit string avoids that entirely
+rather than relying on a coincidence of capitalization.
+
+"Done" always returns to the index — there is no show page (routes.rb v3.8
+excludes :show), so persisted? doesn't change the Done target the way it
+does in software_items/_form.html.erb.
+%>
+
+<%= form_with model: storage_location, class: "space-y-4" do |f| %>
+  <%= render "common/record_errors", record: storage_location %>
+
+  <div>
+    <%= f.label :name, "Name", class: "block text-sm font-medium text-stone-700" %>
+    <%= f.text_field :name, maxlength: 50, placeholder: "e.g. Attic Shelf 3", class: field_classes %>
+    <p class="mt-1 text-xs text-stone-500">Maximum 50 characters. Must be unique among your own storage locations.</p>
+  </div>
+
+  <div class="flex gap-3">
+    <%= f.submit(storage_location.persisted? ? "Update Storage Location" : "Add Storage Location",
+          class: button_classes(style: :primary)) %>
+    <%# "Done" — never "Cancel" (project convention: DECOR_PROJECT.md Design Patterns). %>
+    <%= link_to "Done", storage_locations_path, class: button_classes(style: :secondary) %>
+  </div>
+<% end %>
