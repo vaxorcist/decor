@@ -1,13 +1,21 @@
 # RAILS_SPECIFICS.md
 # version 3.15
-# Session 81: One new MANDATORY section added: Migration Timestamps — Never
-#   Invent a Future Date. Real bug: the Storage Locations Session C migration
-#   was first named with an invented future timestamp (20260803000100),
-#   which ActiveRecord::InvalidMigrationTimestampError rejected because
-#   Rails validates migration timestamps against actual real-world
-#   wall-clock time, not any in-project fictional date convention. Corrected
-#   to 20260730120000 (verified against `date +%Y%m%d%H%M%S`) before
-#   db:migrate was retried.
+# Session 79: One new MANDATORY section added: Flex Item Overflow —
+#   flex-1 Does Not Override min-width: auto. Real bug: reported as "the
+#   New connection group page content is not centered" — AGAIN, after
+#   Session 78's nav-logo fix. Pixel measurement of a screenshot showed the
+#   page's max-w-2xl mx-auto container was still correctly centered (left
+#   margin matched expectation), but the right margin was far smaller than
+#   expected — the signature of a child overflowing the container's right
+#   edge, not the container itself being mispositioned. Root cause: the
+#   Device <select> in connection_groups/_form.html.erb (both the mf.select
+#   and its <template> twin) uses class="flex-1 ..." with no min-w-0. Every
+#   flex item defaults to min-width:auto, so flex-1 alone does not let a
+#   <select> shrink below its own widest <option> text's intrinsic width.
+#   Session 78's own change to this same file (adding "– Owner P/N ..." to
+#   every option label) lengthened that intrinsic width enough to overflow
+#   the row past the page's max-w-2xl boundary. Fixed by adding min-w-0 to
+#   both selects.
 # Session 78: One new MANDATORY section added: Nav Logo Centering — a 1fr
 #   Grid/Flex Middle Column Centers On Leftover Space, Not the Viewport.
 #   Real bug: reported as "the New connection group page content is not
@@ -200,8 +208,8 @@
 
 **Ruby on Rails Specific Patterns and Best Practices**
 
-**Last Updated:** July 30, 2026 (v3.15: added migration-timestamp
-  MANDATORY section; Session 81)
+**Last Updated:** July 26, 2026 (v3.15: added flex-item-overflow /
+  min-w-0 MANDATORY section; Session 79)
 
 ---
 
@@ -800,6 +808,91 @@ column, and the logo centered inside it, sat visibly right of true
 viewport-center. Every genuinely-centered page content block then looked
 "off" relative to that miscentered visual anchor. Fixed by switching the
 logo to `absolute left-1/2 -translate-x-1/2` against a `relative` `<nav>`.
+
+---
+
+## Flex Item Overflow — flex-1 Does Not Override min-width: auto (MANDATORY, learned Session 79)
+
+**RULE: A flex item with `flex-1` (or any `flex-grow`/`flex-shrink` combination)
+still defaults to `min-width: auto`. This means the browser will NOT shrink
+that item below its own content's intrinsic minimum width, no matter what
+`flex-shrink` says. If the item's content (a `<select>`'s widest `<option>`
+text, a long unbreakable string, etc.) is wider than the space actually
+available in the row, the item overflows its flex container instead of
+shrinking to fit. Add `min-w-0` explicitly whenever a flex item's content
+could plausibly be wide enough to trigger this.**
+
+**Why this is easy to miss:** `flex-1` reads as "this element takes its
+share of the available space and shrinks/grows to fit" — and for content
+with a small or entirely absent intrinsic width (most `<input>` fields,
+short labels) that's exactly what happens, so the bug can sit invisible
+for a long time. It only appears once something inside the flex item has
+enough content to exceed the row's available space — a long `<select>`
+option, a long word with no break opportunity, a wide inline image, etc.
+
+**Diagnostic symptom to watch for:** a page reported as "not centered" or
+"content is shifted," where the *container* doing the centering
+(`max-w-* mx-auto`) is actually correctly positioned, but a **child**
+inside it is overflowing past the container's edge. The tell is asymmetric
+margins: measure (or inspect in DevTools) the left and right margins of
+the centered container — if one side roughly matches what the CSS should
+produce and the other is much smaller, suspect an overflowing child, not a
+centering bug in the container itself.
+
+**Wrong — flex-1 alone does not prevent overflow:**
+```erb
+<div class="flex items-center gap-2">
+  <input class="w-16 flex-shrink-0 ...">
+  <select class="flex-1 ...">              <%# no min-w-0 — can overflow %>
+    <% long_option_list.each do |o| %>
+      <option><%= o.very_long_label %></option>
+    <% end %>
+  </select>
+  <input class="w-36 flex-shrink-0 ...">
+</div>
+```
+
+**Correct — min-w-0 lets the flex item actually shrink to its allotted space:**
+```erb
+<select class="flex-1 min-w-0 ...">
+  <% long_option_list.each do |o| %>
+    <option><%= o.very_long_label %></option>
+  <% end %>
+</select>
+```
+
+`min-w-0` (Tailwind's `min-width: 0`) overrides the browser's default
+`min-width: auto` on the flex item, so `flex-shrink` can actually take
+effect all the way down to (and including) content narrower than the
+content's own intrinsic width — long option text then wraps/truncates/
+scrolls within the select's rendered box instead of forcing the box wider
+than its flex allocation.
+
+**When to apply this defensively, even without a reported bug:** any time
+a flex item combining `flex-1`/`flex-grow` with a `<select>`, long label,
+or other variable-length text content is added or edited — particularly
+if the option/label source is user data (device names, part numbers,
+serial numbers) with no enforced maximum rendered width. Fixed-width
+siblings (`w-16 flex-shrink-0`, `w-36 flex-shrink-0`) in the same row do
+NOT have this problem, since their width doesn't depend on content.
+
+**Why this rule exists (Session 79, July 2026):**
+Reported: "the New connection group page content is not centered" — the
+SAME report Session 78 had already investigated and fixed (that session's
+fix was a real, separate bug: the nav's logo not being centered on the
+viewport). Rather than re-diagnose by assumption, the actual screenshot
+was measured pixel-by-pixel: the page's `max-w-2xl mx-auto` container
+(`connection_groups/new.html.erb`) had a left margin close to the expected
+value, but a right margin far smaller than expected — asymmetric in a way
+inconsistent with "wrong centering," but exactly consistent with "child
+overflowing the right edge." The child was
+`connection_groups/_form.html.erb`'s Device `<select>`
+(`class="flex-1 ..."`, no `min-w-0`), whose intrinsic content width had
+just been lengthened by Session 78's own addition of Owner Part Number
+text to every option label — the fix that added Owner Part Number
+inadvertently introduced this overflow regression in the same file, one
+session later. Fixed by adding `min-w-0` to both copies of the select
+(the persisted-row `mf.select` and the `<template>`'s raw `<select>`).
 
 ---
 
@@ -2338,46 +2431,6 @@ has_no_text?("Sign out", wait: 5)
 
 **Prerequisite:** the nav partial must render a "Sign out" link/button when
 `logged_in?` is true. See `_navigation.html.erb` v2.3.
-
----
-
-## Migration Timestamps — Never Invent a Future Date (MANDATORY, learned Session 81)
-
-**RULE: A migration's filename timestamp must be <= the actual real-world
-current time the migration will be run at — never a value inferred from
-this project's in-session fictional "current date," and never simply
-incremented by a plausible-looking amount from the last real migration's
-timestamp.**
-
-Rails validates migration timestamps at `db:migrate` time against real
-wall-clock time, not against any date convention the project or session
-uses internally. A timestamp that looks reasonable within this project's
-own numbering (e.g. following shortly after the last real migration) can
-still be rejected outright if it happens to fall after the actual current
-moment.
-
-**Wrong:**
-```
-20260803000100_add_storage_location_to_....rb
-# bin/rails db:migrate raises:
-# ActiveRecord::InvalidMigrationTimestampError: Invalid timestamp
-# 20260803000100 ... must be less than 20260731052902.
-```
-
-**Correct — verify against real time before naming the file:**
-```bash
-date +%Y%m%d%H%M%S
-```
-Use a value at or before that output (and, as always, after the last real
-migration already in `db/migrate/`).
-
-**Why this rule exists (Session 81, July 2026):** The Storage Locations
-Session C migration was first named `20260803000100_...rb` — a plausible
-next-timestamp guess that turned out to be after the actual current
-real-world time. `bin/rails db:migrate` rejected it immediately. Corrected
-to `20260730120000`. No prior session had hit this because migration
-timestamps had previously always been generated close enough to real time
-to pass without checking.
 
 ---
 

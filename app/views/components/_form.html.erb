@@ -1,4 +1,16 @@
-<%# decor/app/views/components/_form.html.erb - version 1.18 %>
+<%# decor/app/views/components/_form.html.erb - version 1.19 %>
+<%# v1.19 (Session C, Storage Locations feature, Part 3 of 6): Added a %>
+<%#   Storage Location dropdown to Row 3 (Trade Status | Storage Location) — %>
+<%#   Row 3's grid-cols-2 already had one empty column since Trade Status %>
+<%#   was its only field; Storage Location now fills it, no grid width %>
+<%#   change needed. Options scoped to Current.owner.storage_locations.order(:name) %>
+<%#   — this form is only reachable by the logged-in owner. Plain %>
+<%#   f.collection_select, no Tom Select, same reasoning as %>
+<%#   computers/_form.html.erb v3.2. include_blank "No location assigned" — %>
+<%#   optional field (belongs_to :storage_location, optional: true — %>
+<%#   component.rb v1.9). :storage_location_id must also be added to %>
+<%#   components_controller.rb's strong params — flagged as a gap this %>
+<%#   session; see chat. %>
 <%# v1.18 (Session 77): Reported: the Computer/Peripheral dropdown on %>
 <%#   /components/new was not ordered alphabetically. Root cause is %>
 <%#   DIFFERENT from Session 76's Tom Select sortField bug — this select %>
@@ -330,6 +342,18 @@
             {},
             class: field_classes %>
       <p class="mt-1 text-xs text-stone-500">Visible to members only.</p>
+    </div>
+
+    <%# Storage Location — Session C. Private field, own list only. %>
+    <%# Optional — belongs_to :storage_location, optional: true (component.rb v1.9). %>
+    <div>
+      <%= f.label :storage_location_id, "Storage Location", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.collection_select :storage_location_id,
+            Current.owner.storage_locations.order(:name),
+            :id, :name,
+            { include_blank: "No location assigned" },
+            class: field_classes %>
+      <p class="mt-1 text-xs text-stone-500">Optional. Manage your list under "My Storage Locations".</p>
     </div>
   </div>
 

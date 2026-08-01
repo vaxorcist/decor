@@ -1,5 +1,14 @@
 # decor/app/models/component.rb
-# version 1.8
+# version 1.9
+# v1.9 (Session C, Storage Locations feature, Part 3 of 6 — see
+#   DECOR_PROJECT.md "Storage Locations Feature — Session Plan"): Added
+#   belongs_to :storage_location, optional: true. New nullable
+#   storage_location_id column (migration 20260803000100). Optional — an
+#   owner is never required to assign a location to every component.
+#   Private data: never displayed to anyone but the owning owner/admin —
+#   see components/show.html.erb and components/index.html.erb's "own-view
+#   only" display guard added this session (components/_component.html.erb
+#   itself deferred — flagged as a pending file this session, see chat).
 # v1.8 (Session 77): Added order_number (DEC Part Number) to the `search`
 #   scope's LIKE clause. Reported: the Components filter's Search box gave
 #   no indication of which fields it queried, and once clarified (v77
@@ -66,6 +75,10 @@ class Component < ApplicationRecord
   belongs_to :computer, optional: true
   belongs_to :component_type
   belongs_to :component_condition, optional: true
+
+  # Storage Locations feature, Session C. Optional, private (see class
+  # header comment above and storage_location.rb v1.1's own privacy note).
+  belongs_to :storage_location, optional: true
 
   # Distinguishes between components that live physically inside a device
   # (integral) and those that connect externally (peripheral).

@@ -1,5 +1,17 @@
 # decor/app/controllers/storage_locations_controller.rb
-# version 1.0
+# version 1.1
+# v1.1 (Session C, Storage Locations feature, Part 3 of 6): delete_confirm
+#   now computes and exposes real affected-record counts, replacing Session
+#   B's interim, count-less confirmation. This is possible now because
+#   StorageLocation gained has_many :computers/:components/:software_items
+#   (dependent: :nullify) this session (storage_location.rb v1.1), once
+#   migration 20260803000100 added the storage_location_id FK columns those
+#   associations depend on. See storage_location.rb v1.1 and
+#   delete_confirm.html.erb v1.1 for the other two halves of this change.
+#   Session B's class-level comment (below, preserved for continuity) is
+#   now resolved — this note documents the resolution rather than deleting
+#   the historical context.
+#
 # Session B (Storage Locations feature, Part 2 of 6 — see DECOR_PROJECT.md
 # "Storage Locations Feature — Session Plan").
 #
@@ -14,20 +26,12 @@
 # `name` (storage_location.rb v1.0), so the index list itself is the only
 # display surface needed; edit is reached directly from the index row.
 #
-# delete_confirm / destroy — INTERIM, NOT the final design:
-# storage_location.rb v1.0's own header comment says the owner-facing delete
-# confirmation "must warn with counts before the destroy happens (see
-# Session B)." That warning cannot actually be built yet: StorageLocation has
-# no has_many :computers / :components / :software_items association until
-# Session C adds the FK columns and those associations (deliberately
-# deferred — see storage_location.rb v1.0's own comment on this). Since
-# nothing can reference a StorageLocation until Session C ships, there is
-# genuinely nothing to count right now. Rather than guess at Session C's
-# eventual association/method names, delete_confirm here shows a plain,
-# honest "are you sure" with no counts. Session C MUST extend both this
-# action and its view to show real affected-record counts once those
-# associations exist — flagged explicitly so this isn't mistaken for a
-# finished delete flow.
+# delete_confirm / destroy — RESOLVED Session C (see v1.1 note above).
+# Session B's original comment here explained that storage_location.rb
+# v1.0's own header comment called for the delete confirmation to "warn
+# with counts before the destroy happens," but that nothing could be
+# counted yet because the has_many associations didn't exist until Session
+# C. That gap is now closed.
 class StorageLocationsController < ApplicationController
   before_action :require_login
   before_action :set_storage_location, only: %i[edit update destroy delete_confirm]
@@ -71,12 +75,22 @@ class StorageLocationsController < ApplicationController
   end
 
   # GET /storage_locations/:id/delete_confirm
-  # Plain confirmation only — see the class-level comment above for why no
-  # affected-record counts are shown yet (Session C must add them).
+  # Session C: computes the real affected-record counts the delete_confirm
+  # view warns with. Simple .count calls — this owner's own storage
+  # location list is expected to stay small (per Session B's rationale for
+  # skipping pagination), and each count is a single indexed COUNT(*) query
+  # against storage_location_id (migration 20260803000100 added the index).
   def delete_confirm
+    @computers_count      = @storage_location.computers.count
+    @components_count     = @storage_location.components.count
+    @software_items_count = @storage_location.software_items.count
   end
 
   # DELETE /storage_locations/:id
+  # StorageLocation's has_many :nullify associations (storage_location.rb
+  # v1.1) handle clearing storage_location_id on every referencing
+  # Computer/Component/SoftwareItem automatically — no explicit nullify
+  # code needed here.
   def destroy
     @storage_location.destroy
     redirect_to storage_locations_path, notice: "Storage location was successfully deleted."
@@ -84,8 +98,9 @@ class StorageLocationsController < ApplicationController
 
   private
 
-  # Simple find — no eager_load needed, unlike SoftwareItemsController#set_software_item,
-  # since StorageLocation has no associations to display yet (Session C adds them).
+  # Simple find — no eager_load needed. The delete_confirm counts above are
+  # cheap, separate COUNT queries rather than a single eager-loaded fetch,
+  # since we only need counts, not the actual associated records.
   def set_storage_location
     @storage_location = StorageLocation.find(params[:id])
   end

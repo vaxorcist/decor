@@ -1,5 +1,10 @@
 # decor/app/controllers/software_items_controller.rb
-# version 1.3
+# version 1.4
+# v1.4 (Session 81, gap-closing follow-up): Storage Locations feature
+#   Session C. Added :storage_location_id to software_item_params — a
+#   flagged Session C gap (the dropdown shipped in _form.html.erb v1.2 the
+#   same session this permit was needed, but the permit itself was
+#   missed, same shape as the identical fix on the other two controllers).
 # v1.3 (Session 50): Added search, sort, and filter logic to index action.
 #   - Search: params[:query] — LIKE match against software name, version, description.
 #   - Sort: params[:sort] — 6 options; default is name_asc_version_asc.
@@ -185,7 +190,11 @@ class SoftwareItemsController < ApplicationController
       :version,
       :description,
       :history,
-      :barter_status
+      :barter_status,
+      :storage_location_id  # Storage Locations feature Session C — flagged
+      # gap, closed as a follow-up. Without this
+      # permit, the dropdown added to _form.html.erb
+      # v1.2 the same session silently no-ops on save.
     )
   end
 end

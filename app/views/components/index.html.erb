@@ -1,4 +1,10 @@
-<%# decor/app/views/components/index.html.erb - version 1.8 %>
+<%# decor/app/views/components/index.html.erb - version 1.9 %>
+<%# v1.9 (Session 81, gap-closing follow-up): Storage Locations feature %>
+<%#   Session C — added the "Storage Location" <th>, closing the flagged %>
+<%#   gap (this file was never in Session 81's original file list). Placed %>
+<%#   after Owner, before Barter — own-view-only, same pattern as the %>
+<%#   Computers/Software Items index pages already updated the same %>
+<%#   session. Matching <td> added to _component.html.erb v1.8. %>
 <%# v1.8 (Session 71): Owner Part Number feature — added the missing "Owner %>
 <%#   Part No." column header. Placed between "DEC Part No." and "DEC Serial %>
 <%#   No.", matching the field order established in components/_form.html.erb %>
@@ -47,6 +53,18 @@
                 <%# Component's own DEC serial number %>
                 <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">DEC Serial No.</th>
                 <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Owner</th>
+                <%# Storage Location header — Session 81 (Storage Locations Session C). %>
+                <%# Own-view-only, same pattern as Computers/Software Items index pages %>
+                <%# delivered the same session: header visible to logged-in members only %>
+                <%# (guard matches Barter's), but the cell itself only reveals the real %>
+                <%# value for the CURRENT owner's own components (see _component.html.erb %>
+                <%# v1.8) — every other owner's row shows a plain em-dash regardless of %>
+                <%# login state. Keeps Storage Location private per the Session 79 design %>
+                <%# consultation's confirmed answer, without hiding the column's existence %>
+                <%# from other logged-in owners the way Barter's column presence does. %>
+                <% if logged_in? %>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Storage Location</th>
+                <% end %>
                 <%# Barter header — visible to logged-in members only. %>
                 <%# The matching <td> in _component.html.erb v1.7 uses the same guard. %>
                 <% if logged_in? %>

@@ -1,5 +1,11 @@
 # decor/app/controllers/computers_controller.rb
-# version 1.23
+# version 1.24
+# v1.24 (Session 81, gap-closing follow-up): Storage Locations feature
+#   Session C. Added :storage_location_id to computer_params. Same
+#   rationale as owner_part_number in v1.23: this was a flagged Session C
+#   gap — the Storage Location dropdown was added to _form.html.erb v3.2
+#   in the same session but this permit was never added alongside it, so
+#   the field was silently no-op-ing on save until now.
 # v1.23 (Session 70): Owner Part Number feature.
 #   Added :owner_part_number to computer_params. Without this permit, the new
 #   form field (computers/_form.html.erb v2.7) would submit the value but
@@ -225,7 +231,11 @@ class ComputersController < ApplicationController
       :order_number,
       :history,
       :device_type,
-      :barter_status
+      :barter_status,
+      :storage_location_id  # Storage Locations feature Session C — without
+      # this permit, the new dropdown in _form.html.erb
+      # v3.2 submits the value but Rails silently
+      # strips it before it reaches Computer#save.
     )
   end
 end

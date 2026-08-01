@@ -1,5 +1,13 @@
 # decor/test/models/component_test.rb
-# version 1.8
+# version 1.9
+# v1.9 (Session C, Storage Locations feature, Part 3 of 6): Added tests for
+#   the new belongs_to :storage_location, optional: true (component.rb
+#   v1.9) and the nullify-on-destroy behaviour it depends on (StorageLocation
+#   has_many :components, dependent: :nullify — storage_location.rb v1.1).
+#   Kept narrow, same rationale as computer_test.rb v1.8's equivalent
+#   addition — the reverse-direction test belongs in
+#   test/models/storage_location_test.rb, not available to read this
+#   session.
 # v1.8 (Session 77): Added tests for the `search` scope (component.rb v1.8)
 #   — this scope had NO test coverage at all before this session. Added
 #   three tests: matching by order_number (the new field added this
@@ -405,5 +413,44 @@ class ComponentTest < ActiveSupport::TestCase
     # "Derive Test Assertions from Data, Not Constants."
     assert_equal Component.count, Component.search("").count,
                  "A blank query must short-circuit to all records (scope's own documented behaviour)"
+  end
+
+  # --- storage_location association tests (Session C) ---
+
+  test "storage_location is optional" do
+    component = Component.new(
+      owner: owners(:one),
+      component_type: component_types(:memory_board),
+      serial_number: "MB-STORLOC-001"
+    )
+    assert component.valid?
+    assert_nil component.storage_location
+  end
+
+  test "can be assigned a storage_location belonging to the same owner" do
+    component = Component.new(
+      owner: owners(:one),
+      component_type: component_types(:memory_board),
+      serial_number: "MB-STORLOC-002",
+      storage_location: storage_locations(:alice_attic)
+    )
+    assert component.valid?
+    assert_equal storage_locations(:alice_attic), component.storage_location
+  end
+
+  test "storage_location_id is nullified when the storage_location is destroyed" do
+    location = StorageLocation.create!(owner: owners(:one), name: "Temp Test Bin")
+    component = Component.create!(
+      owner: owners(:one),
+      component_type: component_types(:memory_board),
+      serial_number: "MB-STORLOC-003",
+      storage_location: location
+    )
+
+    location.destroy
+
+    assert Component.exists?(component.id), "Component must survive the storage_location's destruction"
+    assert_nil component.reload.storage_location_id,
+               "storage_location_id must be nullified, not left dangling"
   end
 end

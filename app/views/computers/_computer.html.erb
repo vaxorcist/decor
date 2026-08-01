@@ -1,4 +1,17 @@
-<%# decor/app/views/computers/_computer.html.erb - version 1.12 %>
+<%# decor/app/views/computers/_computer.html.erb - version 1.13 %>
+<%# v1.13 (Session C, Storage Locations feature, Part 3 of 6): Added the %>
+<%#   "Storage Location" cell matching the header added in index.html.erb %>
+<%#   v1.12. PRIVACY: this partial is shared across every row on a PUBLIC %>
+<%#   index (any visitor, any other owner). The cell only reveals the real %>
+<%#   storage_location name when Current.owner == computer.owner (the %>
+<%#   viewer is looking at their OWN device) — every other row shows a %>
+<%#   plain em-dash, regardless of whether that computer actually has a %>
+<%#   location assigned. This is deliberately stricter than the Barter %>
+<%#   column's "if logged_in?" guard, which shows real barter data to ANY %>
+<%#   logged-in member for ANY row — Storage Location must never leak %>
+<%#   another owner's value even to other logged-in members. First pass %>
+<%#   consistent with the Session 79 privacy design; DECOR_PROJECT.md %>
+<%#   Session D still owns the dedicated audit. %>
 <%# v1.12 (Session 71): Owner Part Number feature — added the missing "Owner %>
 <%#   Part Number" cell, matching the header added in index.html.erb v1.11. %>
 <%#   This partial is shared by both /computers and /peripherals (same %>
@@ -67,6 +80,18 @@
         <span class="text-green-700">Offered</span>
       <% elsif computer.barter_status_wanted? %>
         <span class="text-amber-600">Wanted</span>
+      <% else %>
+        <span class="text-stone-400">—</span>
+      <% end %>
+    </td>
+  <% end %>
+
+  <%# Storage Location — Session C. Own-row-only: never reveals another %>
+  <%# owner's value, even to a logged-in viewer. See v1.13 header comment. %>
+  <% if logged_in? %>
+    <td class="px-4 py-3 whitespace-nowrap text-stone-600">
+      <% if Current.owner == computer.owner %>
+        <%= computer.storage_location&.name || "—" %>
       <% else %>
         <span class="text-stone-400">—</span>
       <% end %>

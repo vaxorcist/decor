@@ -1,6 +1,17 @@
 # decor/app/models/software_item.rb
-# version 1.0
-# Session 43: Part of the Software feature (Option C — full separation).
+# version 1.1
+# v1.1 (Session C, Storage Locations feature, Part 3 of 6 — see
+#   DECOR_PROJECT.md "Storage Locations Feature — Session Plan"): Added
+#   belongs_to :storage_location, optional: true. New nullable
+#   storage_location_id column (migration 20260803000100). Optional — an
+#   owner is never required to assign a physical location to a software
+#   item (arguably less physically meaningful for software than hardware,
+#   but included for consistency with Computer/Component per the confirmed
+#   design). Private data: never displayed to anyone but the owning
+#   owner/admin — see software_items/show.html.erb and
+#   software_items/index.html.erb / _software_item.html.erb's "own-view
+#   only" display guards added this session.
+# v1.0 (Session 43): Part of the Software feature (Option C — full separation).
 #   Represents a software title owned by an owner, optionally installed on
 #   a computer or peripheral.
 #
@@ -25,6 +36,10 @@ class SoftwareItem < ApplicationRecord
   belongs_to :computer,          optional: true
   belongs_to :software_name
   belongs_to :software_condition, optional: true
+
+  # Storage Locations feature, Session C. Optional, private (see class
+  # header comment above).
+  belongs_to :storage_location, optional: true
 
   # Barter trade status — identical enum definition to Computer and Component.
   # All barter values are only displayed to logged-in members.
