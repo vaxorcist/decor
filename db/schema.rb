@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_27_000100) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_30_120000) do
   create_table "component_conditions", force: :cascade do |t|
     t.string "condition", limit: 40, null: false
     t.datetime "created_at", precision: nil, null: false
@@ -49,6 +49,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_27_000100) do
     t.integer "owner_id", null: false
     t.string "owner_part_number", limit: 20, null: false
     t.string "serial_number", limit: 20, null: false
+    t.integer "storage_location_id"
     t.datetime "updated_at", null: false
     t.index ["barter_status"], name: "index_components_on_barter_status"
     t.index ["component_category"], name: "index_components_on_component_category"
@@ -57,6 +58,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_27_000100) do
     t.index ["computer_id"], name: "index_components_on_computer_id"
     t.index ["owner_id", "component_type_id", "owner_part_number", "serial_number"], name: "index_components_on_owner_type_opn_and_serial_number", unique: true
     t.index ["owner_id"], name: "index_components_on_owner_id"
+    t.index ["storage_location_id"], name: "index_components_on_storage_location_id"
   end
 
   create_table "computer_conditions", force: :cascade do |t|
@@ -87,6 +89,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_27_000100) do
     t.string "owner_part_number", limit: 20, null: false
     t.integer "run_status_id"
     t.string "serial_number", limit: 20, null: false
+    t.integer "storage_location_id"
     t.datetime "updated_at", null: false
     t.index ["barter_status"], name: "index_computers_on_barter_status"
     t.index ["computer_condition_id"], name: "index_computers_on_computer_condition_id"
@@ -95,6 +98,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_27_000100) do
     t.index ["owner_id", "computer_model_id", "owner_part_number", "serial_number"], name: "index_computers_on_owner_model_opn_and_serial_number", unique: true
     t.index ["owner_id"], name: "index_computers_on_owner_id"
     t.index ["run_status_id"], name: "index_computers_on_run_status_id"
+    t.index ["storage_location_id"], name: "index_computers_on_storage_location_id"
   end
 
   create_table "connection_groups", force: :cascade do |t|
@@ -207,6 +211,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_27_000100) do
     t.integer "owner_id", null: false
     t.integer "software_condition_id"
     t.integer "software_name_id", null: false
+    t.integer "storage_location_id"
     t.datetime "updated_at", precision: nil, null: false
     t.string "version", limit: 20
     t.index ["barter_status"], name: "index_software_items_on_barter_status"
@@ -214,6 +219,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_27_000100) do
     t.index ["owner_id"], name: "index_software_items_on_owner_id"
     t.index ["software_condition_id"], name: "index_software_items_on_software_condition_id"
     t.index ["software_name_id"], name: "index_software_items_on_software_name_id"
+    t.index ["storage_location_id"], name: "index_software_items_on_storage_location_id"
   end
 
   create_table "software_names", force: :cascade do |t|
@@ -237,10 +243,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_27_000100) do
   add_foreign_key "components", "component_types"
   add_foreign_key "components", "computers", on_delete: :cascade
   add_foreign_key "components", "owners"
+  add_foreign_key "components", "storage_locations"
   add_foreign_key "computers", "computer_conditions"
   add_foreign_key "computers", "computer_models"
   add_foreign_key "computers", "owners"
   add_foreign_key "computers", "run_statuses"
+  add_foreign_key "computers", "storage_locations"
   add_foreign_key "connection_groups", "connection_types"
   add_foreign_key "connection_groups", "owners"
   add_foreign_key "connection_members", "computers"
@@ -249,5 +257,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_27_000100) do
   add_foreign_key "software_items", "owners"
   add_foreign_key "software_items", "software_conditions"
   add_foreign_key "software_items", "software_names"
+  add_foreign_key "software_items", "storage_locations"
   add_foreign_key "storage_locations", "owners"
 end

@@ -1,4 +1,11 @@
-<%# decor/app/views/components/_component.html.erb - version 1.7 %>
+<%# decor/app/views/components/_component.html.erb - version 1.8 %>
+<%# v1.8 (Session 81, gap-closing follow-up): Storage Locations feature %>
+<%#   Session C — added the "Storage Location" <td>, closing the flagged %>
+<%#   gap (this file was never in Session 81's original file list). %>
+<%#   Placed after Owner, before Trade. Own-view-only: reveals the real %>
+<%#   value only when Current.owner == component.owner; every other row %>
+<%#   shows a plain em-dash regardless of login state, matching the %>
+<%#   privacy requirement confirmed in the Session 79 design consultation. %>
 <%# v1.7 (Session 71): Owner Part Number feature — added the missing "Owner %>
 <%#   Part No." cell, matching the header added in index.html.erb v1.8. Placed %>
 <%#   between "DEC Part No." and "DEC Serial No.", matching the field order %>
@@ -56,6 +63,27 @@
   <td class="px-4 py-3 whitespace-nowrap text-stone-600">
     <%= link_to component.owner.user_name, component.owner, class: "text-indigo-600 hover:text-indigo-900" %>
   </td>
+
+  <%# Storage Location — Session 81 (Storage Locations Session C). %>
+  <%# Own-view-only: the column header (index.html.erb v1.9) is already gated %>
+  <%# to logged-in members only, same as Barter — but that alone would let any %>
+  <%# logged-in member see every OTHER owner's storage location too, which %>
+  <%# violates the Session 79 design consultation's confirmed privacy answer %>
+  <%# ("Private from other owners AND visitors"). So the cell itself applies a %>
+  <%# second, narrower guard: only reveal the real value when the current %>
+  <%# owner IS this row's owner. Every other row (including other logged-in %>
+  <%# owners' own rows) shows a plain em-dash — same visual as "no location %>
+  <%# assigned", which is intentional: this column must not let one owner %>
+  <%# infer whether another owner uses Storage Locations at all. %>
+  <% if logged_in? %>
+    <td class="px-4 py-3 whitespace-nowrap text-stone-600">
+      <% if Current.owner == component.owner %>
+        <%= component.storage_location&.name.presence || "—" %>
+      <% else %>
+        <span class="text-stone-400">—</span>
+      <% end %>
+    </td>
+  <% end %>
 
   <%# Trade (barter_status) — members only; column absent entirely for visitors. %>
   <% if logged_in? %>

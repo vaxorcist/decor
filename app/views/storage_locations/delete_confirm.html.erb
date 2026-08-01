@@ -1,32 +1,46 @@
-<%# decor/app/views/storage_locations/delete_confirm.html.erb - version 1.0 %>
-<%# Session B (Storage Locations feature). %>
-<%#
-INTERIM — NOT the final design. See storage_locations_controller.rb v1.0's
-class-level comment for the full explanation: storage_location.rb v1.0's own
-header comment calls for this view to "warn with counts" of affected
-computers/components/software_items before destroy, but those associations
-don't exist yet (deferred to Session C). Since nothing can reference a
-StorageLocation until Session C ships, there is nothing real to count —
-this shows a plain, honest confirmation instead of guessing at Session C's
-eventual association/method names.
+<%# decor/app/views/storage_locations/delete_confirm.html.erb - version 1.1 %>
+<%# Session C (Storage Locations feature, Part 3 of 6): replaces Session %>
+<%# B's interim, count-less confirmation with a real affected-record %>
+<%# counts warning, now that @computers_count / @components_count / %>
+<%# @software_items_count are set by the controller (storage_locations_controller.rb %>
+<%# v1.1#delete_confirm), backed by StorageLocation's new has_many :nullify %>
+<%# associations (storage_location.rb v1.1). Only shows a warning line for %>
+<%# a category that actually has a nonzero count — an owner with a never- %>
+<%# used location shouldn't see three "0 items" lines cluttering the page. %>
+<%# %>
+<%# Delete link pattern unchanged from v1.0, matches %>
+<%# admin/site_texts/delete_confirm.html.erb v1.1's precedent: data: %>
+<%# { turbo_method: :delete, turbo_confirm: ... } on a plain link, NOT %>
+<%# wrapped in any data-turbo="false" ancestor (RAILS_SPECIFICS.md %>
+<%# "data-turbo='false' — NEVER wrap Turbo-method links inside it" — this %>
+<%# file has no such wrapper, so that trap doesn't apply here). %>
 
-Session C MUST replace this file's body with a real counts warning (e.g.
-"N computers, N components, and N software items currently use this
-location and will be set to no location") once
-has_many :computers/:components/:software_items exist on StorageLocation.
-
-Delete link pattern matches admin/site_texts/delete_confirm.html.erb v1.1's
-precedent: data: { turbo_method: :delete, turbo_confirm: ... } on a plain
-link, NOT wrapped in any data-turbo="false" ancestor (see RAILS_SPECIFICS.md
-"data-turbo='false' — NEVER wrap Turbo-method links inside it" — this file
-has no such wrapper at all, so that trap doesn't apply here).
-%>
+<% affected_total = @computers_count + @components_count + @software_items_count %>
 
 <div class="max-w-lg mx-auto">
   <h1 class="text-2xl font-semibold mb-6">Delete Storage Location</h1>
 
   <div class="mb-6 p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-800">
-    Delete "<strong><%= @storage_location.name %></strong>"? This cannot be undone.
+    <p class="mb-2">
+      Delete "<strong><%= @storage_location.name %></strong>"? This cannot be undone.
+    </p>
+
+    <% if affected_total > 0 %>
+      <p class="mb-1">The following will be set to no location (they will NOT be deleted):</p>
+      <ul class="list-disc list-inside">
+        <% if @computers_count > 0 %>
+          <li><%= pluralize(@computers_count, "computer/peripheral", plural: "computers/peripherals") %></li>
+        <% end %>
+        <% if @components_count > 0 %>
+          <li><%= pluralize(@components_count, "component") %></li>
+        <% end %>
+        <% if @software_items_count > 0 %>
+          <li><%= pluralize(@software_items_count, "software item") %></li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p>Nothing currently uses this storage location — it can be deleted freely.</p>
+    <% end %>
   </div>
 
   <div class="flex gap-3 items-center">

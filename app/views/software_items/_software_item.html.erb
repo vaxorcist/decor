@@ -1,4 +1,10 @@
-<%# decor/app/views/software_items/_software_item.html.erb - version 1.0 %>
+<%# decor/app/views/software_items/_software_item.html.erb - version 1.1 %>
+<%# v1.1 (Session C, Storage Locations feature, Part 3 of 6): Added the %>
+<%#   "Storage Location" cell matching the header added in index.html.erb %>
+<%#   v1.2. PRIVACY: same own-row-only guard as computers/_computer.html.erb %>
+<%#   v1.13 — only reveals the real value when %>
+<%#   Current.owner == software_item.owner; every other row shows a plain %>
+<%#   em-dash regardless of the item's actual storage_location. %>
 <%# v1.0 (Session 48): Software feature Session F — row partial for the public index. %>
 <%# %>
 <%# Rendered by both index.html.erb and index.turbo_stream.erb. %>
@@ -55,6 +61,17 @@
         <span class="text-green-700">Offered</span>
       <% elsif software_item.barter_status_wanted? %>
         <span class="text-amber-600">Wanted</span>
+      <% else %>
+        <span class="text-stone-400">—</span>
+      <% end %>
+    </td>
+  <% end %>
+
+  <%# Storage Location — Session C. Own-row-only, see v1.1 header comment. %>
+  <% if logged_in? %>
+    <td class="px-4 py-3 whitespace-nowrap text-stone-600">
+      <% if Current.owner == software_item.owner %>
+        <%= software_item.storage_location&.name || "—" %>
       <% else %>
         <span class="text-stone-400">—</span>
       <% end %>

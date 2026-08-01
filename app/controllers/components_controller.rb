@@ -1,5 +1,9 @@
 # decor/app/controllers/components_controller.rb
-# version 2.1
+# version 2.2
+# v2.2 (Session 81, gap-closing follow-up): Storage Locations feature
+#   Session C. Added :storage_location_id to component_params — a flagged
+#   Session C gap (the dropdown shipped in _form.html.erb v1.19 the same
+#   session this permit was needed, but the permit itself was missed).
 # v2.1 (Session 70): Owner Part Number feature.
 #   Added :owner_part_number to component_params. Same rationale as
 #   computers_controller.rb v1.23 — without this permit the new form field
@@ -176,7 +180,11 @@ class ComponentsController < ApplicationController
       :order_number,
       :order_number_verified,  # set via hidden field by component_suggestion Stimulus controller
       :description,
-      :barter_status       # select on new/edit forms; members only
+      :barter_status,      # select on new/edit forms; members only
+      :storage_location_id # Storage Locations feature Session C — flagged
+      # gap, closed as a follow-up. Without this permit,
+      # the dropdown added to _form.html.erb v1.19 in
+      # the same session silently no-ops on save.
     )
   end
 end

@@ -1,5 +1,15 @@
 # decor/app/models/computer.rb
-# version 2.3
+# version 2.4
+# v2.4 (Session C, Storage Locations feature, Part 3 of 6 — see
+#   DECOR_PROJECT.md "Storage Locations Feature — Session Plan"): Added
+#   belongs_to :storage_location, optional: true. New nullable
+#   storage_location_id column (migration 20260803000100). Optional because
+#   an owner is never required to assign a location to every device — the
+#   dropdown on the form (_form.html.erb, this session) includes a blank
+#   "No location assigned" option. When a StorageLocation is destroyed,
+#   storage_location_id here is nullified automatically (StorageLocation
+#   has_many :computers, dependent: :nullify — storage_location.rb v1.1),
+#   not this model's own behaviour.
 # v2.3 (Session 74): History-length limit feature. history was an
 #   unqualified TEXT column (unbounded) — a violation of
 #   PROGRAMMING_GENERAL.md's VARCHAR-length rule that had gone unnoticed.
@@ -59,6 +69,14 @@ class Computer < ApplicationRecord
   belongs_to :computer_model
   belongs_to :computer_condition, optional: true
   belongs_to :run_status, optional: true
+
+  # Storage Locations feature, Session C. Optional — an owner is never
+  # required to assign a physical location to a device. Private data: never
+  # displayed to anyone but the owning owner/admin — see computers/show.html.erb
+  # and computers/index.html.erb / _computer.html.erb for the "own-view only"
+  # display guards added this session.
+  belongs_to :storage_location, optional: true
+
   has_many :components, dependent: :destroy
 
   # Software items installed on this computer or peripheral.

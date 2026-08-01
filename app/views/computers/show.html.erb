@@ -1,4 +1,19 @@
-<%# decor/app/views/computers/show.html.erb - version 2.4 %>
+<%# decor/app/views/computers/show.html.erb - version 2.5 %>
+<%# v2.5 (Session C, Storage Locations feature, Part 3 of 6): Added a %>
+<%#   Storage Location field. This page is PUBLIC (visitors and other %>
+<%#   owners can view any computer's show page), but Storage Location is %>
+<%#   private data (storage_location.rb v1.1's own header comment) — so, %>
+<%#   unlike Trade Status (which uses "if logged_in?"), this field is %>
+<%#   wrapped in the STRICTER "if Current.owner == @computer.owner || %>
+<%#   admin?" guard already used for the Edit/Delete links at the top of %>
+<%#   this page. Placed as its own standalone single-field row (like %>
+<%#   History) rather than folded into the existing Line 2 grid, since %>
+<%#   Line 2's column count already depends on logged_in? (3 vs 2 cols for %>
+<%#   Trade Status) and adding a second, DIFFERENT conditional (owner-only) %>
+<%#   into that same grid would make the column count logic depend on two %>
+<%#   independent booleans at once. This is a first pass consistent with %>
+<%#   the Session 79 design consultation's privacy answer, not a %>
+<%#   substitute for DECOR_PROJECT.md Session D's dedicated privacy audit. %>
 <%# v2.4 (Session 77): Same "single source of truth / touch N places, miss %>
 <%#   one" shape as v2.3 below and RAILS_SPECIFICS.md's Session 73 rule — %>
 <%#   the Components sub-table on THIS page (further down, a separate %>
@@ -114,6 +129,16 @@
         </div>
       <% end %>
     </div>
+
+    <%# Storage Location — Session C. Private field: only the owning owner %>
+    <%# or an admin may see it, since this page itself is public. Standalone %>
+    <%# row (not part of the Line 2 grid — see v2.5 header comment above). %>
+    <% if Current.owner == @computer.owner || admin? %>
+      <div>
+        <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider mb-1">Storage Location</dt>
+        <dd class="flex items-center w-full h-10 p-3 rounded border border-stone-300 bg-white text-sm"><%= @computer.storage_location&.name || "—" %></dd>
+      </div>
+    <% end %>
 
     <%# Line 3 (full): History %>
     <div>

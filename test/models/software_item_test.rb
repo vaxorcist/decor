@@ -1,5 +1,13 @@
 # decor/test/models/software_item_test.rb
-# version 1.0
+# version 1.1
+# v1.1 (Session C, Storage Locations feature, Part 3 of 6): Added tests for
+#   the new belongs_to :storage_location, optional: true (software_item.rb
+#   v1.1) and the nullify-on-destroy behaviour it depends on (StorageLocation
+#   has_many :software_items, dependent: :nullify — storage_location.rb
+#   v1.1). Kept narrow, same rationale as computer_test.rb v1.8's and
+#   component_test.rb v1.9's equivalent additions — the reverse-direction
+#   test belongs in test/models/storage_location_test.rb, not available to
+#   read this session.
 # Session 43: Model tests for SoftwareItem.
 #   Covers: fixture validity, required/optional associations, field length
 #   validations, barter_status enum values and default, and the cascade
@@ -173,5 +181,41 @@ class SoftwareItemTest < ActiveSupport::TestCase
       software_name: software_names(:vms)
     )
     assert item.valid?
+  end
+
+  # --- storage_location association tests (Session C) ---
+
+  test "storage_location is optional" do
+    item = SoftwareItem.new(
+      owner: owners(:one),
+      software_name: software_names(:vms)
+    )
+    assert item.valid?
+    assert_nil item.storage_location
+  end
+
+  test "can be assigned a storage_location belonging to the same owner" do
+    item = SoftwareItem.new(
+      owner: owners(:one),
+      software_name: software_names(:vms),
+      storage_location: storage_locations(:alice_attic)
+    )
+    assert item.valid?
+    assert_equal storage_locations(:alice_attic), item.storage_location
+  end
+
+  test "storage_location_id is nullified when the storage_location is destroyed" do
+    location = StorageLocation.create!(owner: owners(:one), name: "Temp Test Cabinet")
+    item = SoftwareItem.create!(
+      owner: owners(:one),
+      software_name: software_names(:vms),
+      storage_location: location
+    )
+
+    location.destroy
+
+    assert SoftwareItem.exists?(item.id), "SoftwareItem must survive the storage_location's destruction"
+    assert_nil item.reload.storage_location_id,
+               "storage_location_id must be nullified, not left dangling"
   end
 end

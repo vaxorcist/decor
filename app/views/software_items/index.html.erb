@@ -1,4 +1,10 @@
-<%# decor/app/views/software_items/index.html.erb - version 1.1 %>
+<%# decor/app/views/software_items/index.html.erb - version 1.2 %>
+<%# v1.2 (Session C, Storage Locations feature, Part 3 of 6): Added a %>
+<%#   "Storage Location" column, same own-view-only privacy pattern as %>
+<%#   computers/index.html.erb v1.12 / _computer.html.erb v1.13 — header %>
+<%#   guarded by "if logged_in?" (matching the existing Barter column %>
+<%#   convention), matching <td> in _software_item.html.erb v1.1 only %>
+<%#   reveals the real value on the viewing owner's own rows. %>
 <%# v1.1 (Session 50): Added filter sidebar. %>
 <%#   - Wrapped content in a grid grid-cols-4 layout: _filters partial takes %>
 <%#     col-span-1 (leftmost column); table takes col-span-3. %>
@@ -42,6 +48,10 @@
                 <%# Matching <td> in _software_item.html.erb uses the same guard. %>
                 <% if logged_in? %>
                   <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Barter</th>
+                <% end %>
+                <%# Storage Location — Session C. Own-view-only, see v1.2 header comment. %>
+                <% if logged_in? %>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Storage Location</th>
                 <% end %>
               </tr>
             </thead>

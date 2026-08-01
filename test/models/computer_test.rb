@@ -1,5 +1,16 @@
 # decor/test/models/computer_test.rb
-# version 1.7
+# version 1.8
+# v1.8 (Session C, Storage Locations feature, Part 3 of 6): Added tests for
+#   the new belongs_to :storage_location, optional: true (computer.rb v2.4)
+#   and the nullify-on-destroy behaviour it depends on (StorageLocation
+#   has_many :computers, dependent: :nullify — storage_location.rb v1.1).
+#   Kept narrow — these three tests only, per the pattern already
+#   established for other optional belongs_to associations in this file
+#   (e.g. "valid without condition" / "valid without run_status" above).
+#   The reverse-direction test (StorageLocation's own has_many :nullify
+#   behaviour, tested from that model's side) belongs in
+#   test/models/storage_location_test.rb, which was not available to read
+#   this session — flagged as a follow-up rather than guessed at.
 # v1.7 (Session 41): Appliances → Peripherals merger Phase 1.
 #   Removed all device_type_appliance? tests (enum value no longer exists).
 #   Rewrote device_type scope and predicate tests to use peripheral:
@@ -309,5 +320,47 @@ class ComputerTest < ActiveSupport::TestCase
     pdp11 = computers(:alice_pdp11)
     assert_equal "no_barter", pdp11.barter_status
     assert pdp11.barter_status_no_barter?
+  end
+
+  # --- storage_location association tests (Session C) ---
+
+  test "storage_location is optional" do
+    computer = Computer.new(
+      owner: owners(:one),
+      computer_model: computer_models(:pdp11_70),
+      serial_number: "TEST-SN-STORLOC-001"
+    )
+    assert computer.valid?
+    assert_nil computer.storage_location
+  end
+
+  test "can be assigned a storage_location belonging to the same owner" do
+    computer = Computer.new(
+      owner: owners(:one),
+      computer_model: computer_models(:pdp11_70),
+      serial_number: "TEST-SN-STORLOC-002",
+      storage_location: storage_locations(:alice_attic)
+    )
+    assert computer.valid?
+    assert_equal storage_locations(:alice_attic), computer.storage_location
+  end
+
+  test "storage_location_id is nullified when the storage_location is destroyed" do
+    # StorageLocation has_many :computers, dependent: :nullify
+    # (storage_location.rb v1.1) — destroying the location must clear this
+    # computer's storage_location_id, not destroy the computer itself.
+    location = StorageLocation.create!(owner: owners(:one), name: "Temp Test Shelf")
+    computer = Computer.create!(
+      owner: owners(:one),
+      computer_model: computer_models(:pdp11_70),
+      serial_number: "TEST-SN-STORLOC-003",
+      storage_location: location
+    )
+
+    location.destroy
+
+    assert Computer.exists?(computer.id), "Computer must survive the storage_location's destruction"
+    assert_nil computer.reload.storage_location_id,
+               "storage_location_id must be nullified, not left dangling"
   end
 end

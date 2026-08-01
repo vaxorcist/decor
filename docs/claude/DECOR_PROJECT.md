@@ -1,5 +1,46 @@
 # decor/docs/claude/DECOR_PROJECT.md
-# version 2.70
+# version 2.72
+# Session 81: Storage Locations Session C — FK on Computer/Component/
+#   SoftwareItem + forms/show/index pages + delete_confirm real-counts
+#   upgrade. 20 of an eventual ~24 files delivered, PARTIALLY IMPLEMENTED —
+#   NOT tested, NOT committed, NOT deployed, NOT even migrated locally yet.
+#   Two gaps found mid-session and flagged rather than guessed through:
+#   components/_component.html.erb (the row partial for components/index's
+#   own-view-only Storage Location column) was never in the original
+#   Session Plan file list; neither were the three controllers'
+#   (computers/components/software_items) strong-params updates needed to
+#   actually persist :storage_location_id from the new form dropdowns. A
+#   migration-timestamp bug was hit and fixed: an invented future date
+#   (20260803000100) was rejected by
+#   ActiveRecord::InvalidMigrationTimestampError; corrected to
+#   20260730120000. New MANDATORY RAILS_SPECIFICS.md v3.15 section added.
+#   See SESSION_HANDOVER.md "Session 81 Summary" for the full file list and
+#   NOT YET DONE checklist.
+# Session 80: Storage Locations Session B — Owner-Facing CRUD (dedicated
+#   page) — IMPLEMENTED, tested, lint/security-scanned, committed, merged,
+#   and DEPLOYED, all in this same session. 10 files: routes.rb (v3.7 ->
+#   v3.8, resources :storage_locations except: [:show], plus a member
+#   delete_confirm route), storage_locations_controller.rb (NEW, v1.0 —
+#   fully private/owner-scoped: every action requires login AND is scoped
+#   to Current.owner, no public view of any kind), 6 new views (index,
+#   _storage_location, new, edit, _form, delete_confirm — no show.html.erb,
+#   since a StorageLocation carries only a name), _navigation.html.erb
+#   (v2.7 -> v2.8, "My Storage Locations" link added to the right-side
+#   username dropdown per the Session 79 design consultation's confirmed nav
+#   placement), and a new controller test file (v1.0). No model changes —
+#   storage_location.rb is untouched from Session A.
+#   delete_confirm decision: storage_location.rb v1.0's own header comment
+#   calls for a nullify-warning view showing affected computer/component/
+#   software-item counts, but those associations don't exist until Session C
+#   — flagged to Ulli mid-session rather than guessed through; Ulli's
+#   instruction was "do what you think is appropriate." Kept the interim,
+#   honest no-counts confirmation built this session (there is genuinely
+#   nothing to count yet) rather than fabricating count logic against
+#   associations that don't exist. Both the controller and the view carry
+#   explicit comments that Session C must upgrade this once
+#   has_many :computers/:components/:software_items exist on StorageLocation.
+#   See "Storage Locations Feature — Session Plan" below, Session B entry,
+#   for the full file list.
 # Session 79: Storage Locations feature — design consultation (full 7-session
 #   plan: A–F, agreed with Ulli) then Session A implemented, tested, lint/
 #   security-scanned, committed, merged, and DEPLOYED, all in this same
@@ -52,8 +93,7 @@
 #   <h1> broken by DOM order (see RAILS_SPECIFICS.md v3.13 new MANDATORY
 #   section for the full mechanism). One NEW bug reported this session, NOT
 #   yet diagnosed or fixed: admin interface dropdowns don't close each other
-#   when a new one is opened, so multiple stay open and later ones cover
-#   earlier ones. Files were requested (dropdown_controller.js,
+#   when a new one is opened. Files were requested (dropdown_controller.js,
 #   layouts/admin.html.erb) but not uploaded before Ulli ended the session —
 #   carried over as an open item for next session.
 # Session 76: Ulli confirmed Sessions 73 and 75 are both now checked and
@@ -233,22 +273,34 @@
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** July 27, 2026 (Session 79 — Storage Locations feature
-  Session A: table/model/fixtures/tests, implemented and deployed; v2.70)
+**Last Updated:** July 30, 2026 (Session 81 — Storage Locations Session C:
+  FK/forms/show/index pages PARTIALLY implemented, NOT tested/committed/
+  deployed; v2.72)
 **Current Status:** Sessions 1–76 all committed, pushed, merged, and
   deployed to main (per Ulli's confirmation at the start of Session 76).
   Sessions 77 and 78's own work (11 files — see SESSION_HANDOVER.md
-  "Session 77 Summary" and "Session 78 Summary") status is UNCHANGED from
-  the end of Session 78 — Session 79 was a separate, unrelated feature
-  (Storage Locations) and did not touch or confirm 77/78's placement.
-  Session 79's own work (Storage Locations Session A — 5 files: migration,
-  model, fixtures, model tests, plus the `owner.rb` association addition)
-  IS tested, linted, security-scanned, committed, merged, and DEPLOYED —
-  confirmed by Ulli this same session, on its own branch, independently of
-  77/78. **Open, not started:** Storage Locations Sessions B–F (owner CRUD,
-  FK+forms on Computer/Component/SoftwareItem, privacy audit, filter-
-  sidebar support, export/import) — see "Storage Locations Feature —
-  Session Plan" below.
+  "Session 77 Summary" and "Session 78 Summary") status is UNCHANGED —
+  no session since has touched or confirmed 77/78's placement; both remain
+  a separate open item. Storage Locations Session A (Session 79) and
+  Session B (Session 80) are BOTH fully committed, tested, lint/security-
+  scanned, and DEPLOYED — confirmed by Ulli. **Storage Locations Session C
+  is IN PROGRESS (Session 81):** 20 of an eventual ~24 files code-complete
+  but NOT yet placed, migrated, tested, linted, security-scanned, or
+  committed. Two gaps flagged mid-session, not yet closed: (1)
+  `components/_component.html.erb` (row partial needed for the Storage
+  Location own-view-only column on `components/index.html.erb`) was never
+  requested; (2) `:storage_location_id` is not yet permitted in strong
+  params on `computers_controller.rb` / `components_controller.rb` /
+  `software_items_controller.rb`, so the three new form dropdowns
+  currently silently no-op on save. A migration-timestamp bug was also hit
+  and fixed this session (see RAILS_SPECIFICS.md v3.15). Session B's
+  delete_confirm counts-warning has been upgraded from the Session B
+  interim to real counts as part of this session's delivery — see
+  SESSION_HANDOVER.md "Session 81 Summary" for the full file list and NOT
+  YET DONE checklist. **Open, not started:** Storage Locations Sessions
+  D–F (privacy audit, filter-sidebar support, export/import) — Session D
+  explicitly depends on Session C's completion; see "Storage Locations
+  Feature — Session Plan" below.
 
 ---
 
@@ -296,7 +348,8 @@ decor//
 │   │   ├── password_resets_controller.rb
 │   │   ├── sessions_controller.rb
 │   │   ├── site_texts_controller.rb
-│   │   └── software_items_controller.rb                ← Session 50 (v1.3)
+│   │   ├── software_items_controller.rb                ← Session 50 (v1.3)
+│   │   └── storage_locations_controller.rb             ← Session 80 (v1.0) NEW
 │   ├── helpers/
 │   │   ├── computers_helper.rb                        ← Session 52 (v1.8)
 │   │   ├── components_helper.rb                       ← Session 52 (v1.4)
@@ -307,10 +360,11 @@ decor//
 │   │   ├── computer_model.rb                          ← Session 41 (v1.3)
 │   │   ├── component.rb                                ← Session 70 (v1.6)
 │   │   ├── newsletter.rb
-│   │   ├── owner.rb                                   ← Session 43 (v1.5)
+│   │   ├── owner.rb                                   ← Session 79 (v1.7)
 │   │   ├── software_condition.rb                      ← Session 43 (v1.0) NEW
 │   │   ├── software_item.rb                           ← Session 43 (v1.0) NEW
-│   │   └── software_name.rb                           ← Session 43 (v1.0) NEW
+│   │   ├── software_name.rb                           ← Session 43 (v1.0) NEW
+│   │   └── storage_location.rb                        ← Session 79 (v1.0) NEW
 │   ├── services/
 │   │   ├── all_owners_export_service.rb               ← Session 50 (v1.1)
 │   │   ├── component_suggestion_export_service.rb     ← Session 63 (v1.0) NEW
@@ -345,7 +399,7 @@ decor//
 │       │   ├── software_conditions/
 │       │   └── software_names/
 │       ├── common/
-│       │   └── _navigation.html.erb                   ← Session 61 (v2.4)
+│       │   └── _navigation.html.erb                   ← Session 80 (v2.8)
 │       ├── data_transfers/
 │       │   └── show.html.erb                          ← Session 49 (v1.9)
 │       ├── home/
@@ -359,7 +413,7 @@ decor//
 │       │   ├── _owner.html.erb                        ← Session 41 (v3.5)
 │       │   ├── computers.html.erb                     ← Session 71 (display fix)
 │       │   ├── components.html.erb                    ← Session 71 (display fix)
-│       │   ├── connections.html.erb                   ← Session 45 (v1.2)
+│       │   ├── connections.html.erb                    ← Session 45 (v1.2)
 │       │   ├── peripherals.html.erb                   ← Session 71 (display fix)
 │       │   ├── show.html.erb                          ← Session 46 (v2.4)
 │       │   └── software.html.erb                      ← Session 46 (v1.1)
@@ -372,8 +426,15 @@ decor//
 │           ├── index.turbo_stream.erb                 ← Session 48 (v1.0) NEW
 │           ├── new.html.erb                           ← Session 46 (v1.0) NEW
 │           └── show.html.erb                          ← Session 46 (v1.1)
+│       └── storage_locations/                         ← Session 80 NEW
+│           ├── _form.html.erb                         ← Session 80 (v1.0) NEW
+│           ├── _storage_location.html.erb              ← Session 80 (v1.0) NEW
+│           ├── delete_confirm.html.erb                 ← Session 80 (v1.0) NEW
+│           ├── edit.html.erb                           ← Session 80 (v1.0) NEW
+│           ├── index.html.erb                          ← Session 80 (v1.0) NEW
+│           └── new.html.erb                            ← Session 80 (v1.0) NEW
 ├── config/
-│   └── routes.rb                                      ← Session 67 (v3.6)
+│   └── routes.rb                                      ← Session 80 (v3.8)
 ├── db/
 │   └── migrate/
 │       ├── 20260401000000_create_software_names.rb    ← Session 43 (v1.0) NEW
@@ -417,11 +478,11 @@ decor//
     ├── models/
     │   ├── computer_model_test.rb                     ← Session 41 (v1.3)
     │   ├── computer_test.rb                           ← Session 70 (updated)
-    │   ├── component_test.rb                          ← Session 70 (updated)
-    │   ├── newsletter_test.rb                         ← Session 58 (v1.1) NEW
-    │   ├── owner_test.rb                              ← Session 58 (v1.5)
-    │   ├── software_condition_test.rb                 ← Session 43 (v1.0) NEW
-    │   ├── software_item_test.rb                      ← Session 43 (v1.0) NEW
+    │   ├── component_test.rb                           ← Session 70 (updated)
+    │   ├── newsletter_test.rb                          ← Session 58 (v1.1) NEW
+    │   ├── owner_test.rb                               ← Session 58 (v1.5)
+    │   ├── software_condition_test.rb                  ← Session 43 (v1.0) NEW
+    │   ├── software_item_test.rb                       ← Session 43 (v1.0) NEW
     │   ├── component_suggestion_test.rb                ← Session 67 (v1.1)
     │   └── software_name_test.rb                      ← Session 43 (v1.0) NEW
     ├── services/
@@ -459,6 +520,41 @@ is excluded).
 
 **Key file versions** (updated each session):
 
+    decor/docs/claude/DECOR_PROJECT.md                                                  v2.72 ← Session 81
+    decor/docs/claude/SESSION_HANDOVER.md                                               v82.0 ← Session 81
+    decor/docs/claude/RAILS_SPECIFICS.md                                                v3.15 ← Session 81
+    decor/db/migrate/20260730120000_add_storage_location_to_computers_components_software_items.rb v1.1 ← Session 81 NEW (NOT YET RUN)
+    decor/app/models/storage_location.rb                                                v1.1  ← Session 81
+    decor/app/models/computer.rb                                                        v2.4  ← Session 81
+    decor/app/models/component.rb                                                       v1.9  ← Session 81
+    decor/app/models/software_item.rb                                                    v1.1  ← Session 81
+    decor/app/controllers/storage_locations_controller.rb                               v1.1  ← Session 81
+    decor/app/views/storage_locations/delete_confirm.html.erb                           v1.1  ← Session 81
+    decor/app/views/computers/_form.html.erb                                            v3.2  ← Session 81 (strong params gap open)
+    decor/app/views/components/_form.html.erb                                           v1.19 ← Session 81 (strong params gap open)
+    decor/app/views/software_items/_form.html.erb                                        v1.2  ← Session 81 (strong params gap open)
+    decor/app/views/computers/show.html.erb                                              v2.5  ← Session 81
+    decor/app/views/components/show.html.erb                                            v1.9  ← Session 81
+    decor/app/views/software_items/show.html.erb                                         v1.2  ← Session 81
+    decor/app/views/computers/index.html.erb                                             v1.12 ← Session 81
+    decor/app/views/computers/_computer.html.erb                                         v1.13 ← Session 81
+    decor/app/views/software_items/index.html.erb                                       v1.2  ← Session 81
+    decor/app/views/software_items/_software_item.html.erb                              v1.1  ← Session 81
+    decor/test/models/computer_test.rb                                                   v1.8  ← Session 81
+    decor/test/models/component_test.rb                                                  v1.9  ← Session 81
+    decor/test/models/software_item_test.rb                                              v1.1  ← Session 81
+    decor/docs/claude/DECOR_PROJECT.md                                                  v2.71 ← Session 80
+    decor/docs/claude/SESSION_HANDOVER.md                                               v81.0 ← Session 80
+    decor/config/routes.rb                                                              v3.8  ← Session 80
+    decor/app/controllers/storage_locations_controller.rb                               v1.0  ← Session 80 NEW
+    decor/app/views/storage_locations/index.html.erb                                    v1.0  ← Session 80 NEW
+    decor/app/views/storage_locations/_storage_location.html.erb                        v1.0  ← Session 80 NEW
+    decor/app/views/storage_locations/new.html.erb                                      v1.0  ← Session 80 NEW
+    decor/app/views/storage_locations/edit.html.erb                                     v1.0  ← Session 80 NEW
+    decor/app/views/storage_locations/_form.html.erb                                    v1.0  ← Session 80 NEW
+    decor/app/views/storage_locations/delete_confirm.html.erb                           v1.0  ← Session 80 NEW
+    decor/app/views/common/_navigation.html.erb                                          v2.8  ← Session 80
+    decor/test/controllers/storage_locations_controller_test.rb                         v1.0  ← Session 80 NEW
     decor/docs/claude/DECOR_PROJECT.md                                                  v2.70 ← Session 79
     decor/docs/claude/SESSION_HANDOVER.md                                               v80.0 ← Session 79
     decor/db/migrate/20260727000100_create_storage_locations.rb                         v1.0  ← Session 79 NEW
@@ -536,7 +632,7 @@ is excluded).
     decor/app/views/computers/_computer.html.erb                                        v1.11 ← Session 69
     decor/app/views/components/_form.html.erb                                           v1.11 ← Session 69
     decor/app/views/components/show.html.erb                                            v1.8  ← Session 69
-    decor/app/views/components/index.html.erb                                           v1.7  ← Session 69
+    decor/app/views/components/index.html.erb                                          v1.7  ← Session 69
     decor/app/views/computer_statistics/index.html.erb                                  v1.2  ← Session 69
     decor/app/views/owners/computers.html.erb                                           v1.5  ← Session 69
     decor/app/views/owners/peripherals.html.erb                                         v1.4  ← Session 69
@@ -714,7 +810,7 @@ is excluded).
     decor/test/models/connection_member_test.rb                                         v1.1  ← Session 39
     decor/test/controllers/connection_groups_controller_test.rb                         v1.1  ← Session 38
     decor/app/models/connection_group.rb                                                v1.2  ← Session 38
-    decor/app/models/connection_member.rb                                               v1.1  ← Session 38
+    decor/app/models/connection_member.rb                                                v1.1  ← Session 38
     decor/app/controllers/connection_groups_controller.rb                               v1.1  ← Session 38
     decor/app/views/connection_groups/_form.html.erb                                    v1.2  ← Session 38
     decor/app/javascript/controllers/connection_members_controller.js                   v1.1  ← Session 38
@@ -864,22 +960,47 @@ is excluded).
 - owner_member_id: integer NOT NULL — per-group port numbering; auto-assigned on create
 - label: VARCHAR(100) nullable
 
-### StorageLocation  ← Session 79 (Storage Locations feature, Session A)
+### StorageLocation  ← Session 79 (model), Session 80 (owner-facing CRUD), Session 81 (FK associations, IN PROGRESS)
 - belongs_to :owner
 - name VARCHAR(50) NOT NULL, uniqueness scoped to owner_id (not global —
   two owners may each have a location named "Garage")
 - Private, owner-defined — NOT an admin-managed lookup table (unlike
   ComponentType/SoftwareName/ComponentSuggestion); same per-owner ownership
   pattern as ConnectionGroup.
-- NOT YET (deferred to Session C, once the referencing tables have the FK
-  column): has_many :computers/:components/:software_items,
-  dependent: :nullify.
+- Owner-facing CRUD (Session 80): `StorageLocationsController` — index, new,
+  create, edit, update, destroy, delete_confirm. EVERY action requires login
+  AND is scoped to Current.owner (no public or other-owner-visible view at
+  all — stricter than SoftwareItem's public-index model). No :show action —
+  the index list is the only display surface needed for a name-only record.
+  Reachable via "My Storage Locations" in the username dropdown
+  (common/_navigation.html.erb v2.8).
+- delete_confirm (Session 81, v1.1): upgraded from Session B's plain
+  count-less interim to a real affected-record counts warning
+  (@computers_count / @components_count / @software_items_count), now that
+  the has_many associations below exist. Code-complete but NOT YET tested
+  or confirmed working against a migrated database.
+- has_many :computers/:components/:software_items, dependent: :nullify
+  (Session 81, storage_location.rb v1.1 — the piece deliberately deferred
+  from Session A). **The referencing FK columns exist only in a migration
+  that has NOT YET been run** (`bin/rails db:migrate` still pending) —
+  treat this association as not-yet-live until that's confirmed.
+- **Session C (Session 81) is IN PROGRESS, not complete** — two flagged
+  gaps remain open: (1) `components/index.html.erb` +
+  `components/_component.html.erb` don't yet show the Storage Location
+  column that Computers/SoftwareItems already got this session; (2)
+  `:storage_location_id` is not yet permitted in strong params on any of
+  `computers_controller.rb` / `components_controller.rb` /
+  `software_items_controller.rb`, so the new form dropdowns currently
+  silently no-op on save. See SESSION_HANDOVER.md "Session 81 Summary" and
+  "Storage Locations Feature — Session Plan" below (Session C entry) for
+  the complete file list and NOT YET DONE checklist.
 - Privacy (confirmed in design consultation): visible only to the owning
   owner — excluded from every owners_controller read-only view of another
   owner's collection and from all other logged-in owners; included in the
-  admin-wide export only (no dedicated admin UI).
+  admin-wide export only (no dedicated admin UI). **Not yet audited** —
+  that's Session D, which is blocked on Session C's completion (see below).
 - See "Storage Locations Feature — Session Plan" below for the full
-  confirmed design and the remaining Sessions B–F.
+  confirmed design and the remaining Sessions C (in progress) through F.
 
 ---
 
@@ -1351,7 +1472,7 @@ merged, and deployed via `kamal deploy`. See SESSION_HANDOVER.md "Session
 
 ---
 
-## Storage Locations Feature — Session Plan (Session 79)
+## Storage Locations Feature — Session Plan (Session 79, updated Session 80)
 
 Owners can define their own private list of physical storage locations
 (e.g. "Attic Shelf 3") and assign one to each of their own Computers,
@@ -1412,44 +1533,129 @@ don't exist on the referencing tables until Session C's migration runs.
 Adding the associations early would generate SQL against nonexistent
 columns.
 
-### Session B — Owner-Facing CRUD (dedicated page) — NOT STARTED
+### Session B — Owner-Facing CRUD (dedicated page) — DONE ✓ (Session 80)
 
-Depends on Session A.
+Implemented, tested, lint/security-scanned, committed, merged, and
+DEPLOYED, all in this same session.
 
-    decor/config/routes.rb                                        (resources :storage_locations)
-    decor/app/controllers/storage_locations_controller.rb        NEW
-    decor/app/views/storage_locations/{index,new,edit,_form,_storage_location}.html.erb   NEW
-    decor/app/views/storage_locations/delete_confirm.html.erb    NEW — nullify-warning UX,
-      showing affected computer/component/software-item counts before destroy (same
-      pattern as admin/site_texts/delete_confirm.html.erb, reused for a different model)
-    decor/app/views/common/_navigation.html.erb                  — new link in the
-      RIGHT-side flex group (not left), placed among Admin/username dropdown/Sign out;
-      confirmed safe post-Session-78 since the logo no longer constrains either group's width
-    decor/test/controllers/storage_locations_controller_test.rb  NEW
+    decor/config/routes.rb                                            v3.7 → v3.8
+    decor/app/controllers/storage_locations_controller.rb            NEW (v1.0)
+    decor/app/views/storage_locations/index.html.erb                  NEW (v1.0)
+    decor/app/views/storage_locations/_storage_location.html.erb     NEW (v1.0)
+    decor/app/views/storage_locations/new.html.erb                    NEW (v1.0)
+    decor/app/views/storage_locations/edit.html.erb                   NEW (v1.0)
+    decor/app/views/storage_locations/_form.html.erb                  NEW (v1.0)
+    decor/app/views/storage_locations/delete_confirm.html.erb         NEW (v1.0)
+    decor/app/views/common/_navigation.html.erb                       v2.7 → v2.8
+    decor/test/controllers/storage_locations_controller_test.rb      NEW (v1.0)
 
-### Session C — FK on Computer, Component, SoftwareItem + Forms + Show Pages — NOT STARTED
+**Access model — stricter than the SoftwareItem precedent it otherwise
+follows:** SoftwareItemsController has a public index/show with
+owner-scoped mutations only. StorageLocationsController requires login on
+EVERY action (including index), matching the Session 79 design
+consultation's "Private from other owners AND visitors" answer. No
+:show action — a StorageLocation carries only a `name`
+(storage_location.rb v1.0), so the index list is the only display surface
+needed; editing is reached directly from the index row. No pagination —
+an owner's own storage-location list is expected to stay small, unlike the
+sitewide public Computer/Component/SoftwareItem indexes.
 
-Depends on A and B. Same shape as the Owner Part Number feature (Sessions 69–72).
+**delete_confirm — a genuine, flagged mismatch discovered during
+Pre-Implementation Verification, resolved by Ulli mid-session:**
+`storage_location.rb` v1.0's own header comment (written in Session 79)
+says the owner-facing delete confirmation "must warn with counts before
+the destroy happens (see Session B)." But the counting associations
+(`has_many :computers/:components/:software_items`) are explicitly deferred
+to Session C — they don't exist yet, and nothing can reference a
+StorageLocation until Session C's FK columns land. There is genuinely
+nothing to count in Session B. This was flagged to Ulli rather than guessed
+through (fabricating count logic against nonexistent associations would
+have been a Never-Guess violation in spirit, even without a literal
+unverified file in play). Ulli's instruction: **"Do what you think is
+appropriate."** Decision made: `delete_confirm.html.erb` (Session B) shows
+a plain, honest "are you sure" with no counts — both the controller and the
+view carry explicit comments flagging this as interim, and stating that
+Session C MUST replace it with a real counts warning once the associations
+exist. This keeps Session B's shipped code honest (it claims nothing it
+can't back up) rather than pre-building UI structure for data that can't
+exist yet.
 
-    decor/db/migrate/YYYYMMDDHHMMSS_add_storage_location_to_computers_components_software_items.rb  NEW
-      (SQLite table recreation pattern — three ALTER-equivalents)
+**Nav placement:** "My Storage Locations" added to the existing right-side
+username dropdown (`common/_navigation.html.erb`, after "My Software",
+before the Profile divider) — plain `storage_locations_path` with no
+argument, since (unlike the other "My X" links) this resource is not
+nested under `owners/:id`; the controller scopes to `Current.owner`
+internally instead.
+
+**No model changes this session** — `storage_location.rb` remains
+untouched at v1.0 from Session A.
+
+### Session C — FK on Computer, Component, SoftwareItem + Forms + Show Pages — IN PROGRESS (Session 81)
+
+Depends on A and B (both done). Same shape as the Owner Part Number
+feature (Sessions 69–72). 20 of an eventual ~24 files delivered this
+session (code-complete, pending placement/test/commit) — full file list,
+the two flagged gaps, and the migration-timestamp bug: see
+SESSION_HANDOVER.md "Session 81 Summary."
+
+    decor/db/migrate/20260730120000_add_storage_location_to_computers_components_software_items.rb  NEW (v1.1)
+      DONE this session (SQLite table recreation pattern — three
+      ALTER-equivalents); NOT yet run against a real database.
     decor/app/models/computer.rb / component.rb / software_item.rb
-      (belongs_to :storage_location, optional: true, each)
+      DONE this session (belongs_to :storage_location, optional: true, each)
     decor/app/models/storage_location.rb
-      (add has_many :computers/:components/:software_items, dependent: :nullify — the
-      piece deliberately deferred from Session A)
+      DONE this session (added has_many :computers/:components/:software_items,
+      dependent: :nullify — the piece deliberately deferred from Session A)
+    decor/app/controllers/storage_locations_controller.rb
+      DONE this session (delete_confirm action now computes and displays
+      real affected-record counts, upgrading Session B's interim
+      count-less confirmation)
+    decor/app/views/storage_locations/delete_confirm.html.erb
+      DONE this session (real counts warning, replacing the Session 80
+      interim plain confirmation)
     decor/app/views/computers/_form.html.erb / components/_form.html.erb /
-      software_items/_form.html.erb   (dropdown, Current.owner.storage_locations)
+      software_items/_form.html.erb   DONE this session (dropdown,
+      Current.owner.storage_locations.order(:name)) — **but the
+      corresponding strong-params permit is NOT yet added on any of the
+      three controllers, so the submitted value currently silently no-ops
+      on save. This is the more serious of the two gaps flagged this
+      session — closing it is a Session C completion blocker, not a
+      Session D item.**
     decor/app/views/computers/show.html.erb / components/show.html.erb /
-      software_items/show.html.erb    (display field)
+      software_items/show.html.erb    DONE this session (display field,
+      gated to Current.owner == record.owner || admin?)
     decor/app/views/computers/index.html.erb / _computer.html.erb,
-      components/index.html.erb / components_helper.rb,
-      software_items/index.html.erb / _software_item.html.erb   (column, own-view only)
-    + fixture and test updates across all three models
+      software_items/index.html.erb / _software_item.html.erb   DONE this
+      session (own-view-only column)
+    decor/app/views/components/index.html.erb / components_helper.rb,
+      decor/app/views/components/_component.html.erb   **NOT DONE** — the
+      row partial was never itemised in this file list originally and was
+      never requested; flagged mid-Session-81 rather than guessed. Needed
+      to bring Components to parity with the Computers/SoftwareItems
+      column already delivered.
+    + fixture and test updates across all three models — model-level tests
+      (computer_test.rb, component_test.rb, software_item_test.rb) DONE
+      this session (9 new tests, forward-direction only); controller test
+      updates for the three strong-params changes and for
+      storage_locations_controller_test.rb's new real-counts assertions —
+      NOT YET DONE, blocked on the same two gaps above.
 
-### Session D — Privacy Audit (dedicated, deliberately separate from Session C) — NOT STARTED
+**Session C completion checklist (must close before Session D starts):**
+    [ ] components/_component.html.erb (new) + components/index.html.erb column
+    [ ] :storage_location_id in strong params on all three controllers
+    [ ] bin/rails db:migrate actually run
+    [ ] Full test/lint/Brakeman/bundle-audit/manual-browser/git-workflow/deploy
+See SESSION_HANDOVER.md "Session 81 Summary" for the complete NOT YET DONE list.
 
-Depends on C. A dedicated pass, not assumed to fall out correctly from
+### Session D — Privacy Audit (dedicated, deliberately separate from Session C) — NOT STARTED (blocked on Session C completion)
+
+Depends on C, which is IN PROGRESS as of Session 81 (see above) — not yet
+migrated, tested, committed, or fully feature-complete (two flagged gaps
+still open). Do not start this audit until Session C's completion
+checklist above is fully checked off — auditing display logic that isn't
+finished yet (missing Components column, non-persisting form fields) risks
+false confidence or wasted rework. A dedicated pass, not assumed to fall
+out correctly from
 Session C — this project has hit exactly this class of bug repeatedly
 (Session 73/75 form-vs-show drift). Explicit read-through + confirmation
 that `storage_location` does NOT appear in any of:
@@ -1499,7 +1705,7 @@ Depends on A and C. Last, since it's the most cross-cutting piece.
 
 ```
 A (model) ──> B (CRUD) ──> C (FK + forms) ──┬──> D (privacy audit)
-                                              └──> E (filters)
+   DONE         DONE                         └──> E (filters)
                               A + C ─────────────> F (export/import)
 ```
 
@@ -1662,7 +1868,7 @@ Full turn-by-turn detail: SESSION_HANDOVER.md "Session 76 Summary."
 controller's creation in Session 54) is not a valid Tom Select option
 value. Tom Select silently fell back to enumerating options by internal
 object key — and since `collection_select` option values are numeric ids,
-JavaScript always enumerates integer-like object keys in ascending numeric
+JavaScript always enumerates integer-like keys in ascending numeric
 order, regardless of the Rails-side `ORDER BY name`. Every Tom Select
 dropdown (Computer Model, Condition, Run Status) was actually sorted by
 database id, not name, both before and after typing to filter. Fixed with

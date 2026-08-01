@@ -1,4 +1,14 @@
-<%# decor/app/views/software_items/_form.html.erb - version 1.1 %>
+<%# decor/app/views/software_items/_form.html.erb - version 1.2 %>
+<%# v1.2 (Session C, Storage Locations feature, Part 3 of 6): Added a %>
+<%#   Storage Location dropdown to Row 2, widened from grid-cols-2 to %>
+<%#   grid-cols-3. Options scoped to Current.owner.storage_locations.order(:name) %>
+<%#   — this form is only reachable by the logged-in owner. Plain %>
+<%#   f.collection_select, no Tom Select, same reasoning as %>
+<%#   computers/_form.html.erb v3.2. include_blank "No location assigned" — %>
+<%#   optional field (belongs_to :storage_location, optional: true — %>
+<%#   software_item.rb v1.1). :storage_location_id must also be added to %>
+<%#   software_items_controller.rb's strong params — flagged as a gap this %>
+<%#   session; see chat. %>
 <%# v1.1 (Session 54): Added data-controller="tom-select" to three selects. %>
 <%#   software_name_id  — admin-managed title list; searchable for fast selection. %>
 <%#   software_condition_id — small list but consistent UX. %>
@@ -72,8 +82,9 @@
     </div>
   </div>
 
-  <%# ─── Row 2: Installed On | Trade Status ─── %>
-  <div class="grid grid-cols-2 gap-4">
+  <%# ─── Row 2: Installed On | Trade Status | Storage Location ─── %>
+  <%# Widened Session C (Storage Locations feature) from grid-cols-2 to grid-cols-3. %>
+  <div class="grid grid-cols-3 gap-4">
     <div>
       <%= f.label :computer_id, "Installed On", class: "block text-sm font-medium text-stone-700" %>
       <%# Optional — blank means "not currently installed on any hardware". %>
@@ -96,6 +107,18 @@
             {},
             class: field_classes %>
       <p class="mt-1 text-xs text-stone-500">Visible to members only.</p>
+    </div>
+
+    <%# Storage Location — Session C. Private field, own list only. %>
+    <%# Optional — belongs_to :storage_location, optional: true (software_item.rb v1.1). %>
+    <div>
+      <%= f.label :storage_location_id, "Storage Location", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.collection_select :storage_location_id,
+            Current.owner.storage_locations.order(:name),
+            :id, :name,
+            { include_blank: "No location assigned" },
+            class: field_classes %>
+      <p class="mt-1 text-xs text-stone-500">Optional. Manage your list under "My Storage Locations".</p>
     </div>
   </div>
 

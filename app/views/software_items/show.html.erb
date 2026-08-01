@@ -1,4 +1,13 @@
-<%# decor/app/views/software_items/show.html.erb - version 1.1 %>
+<%# decor/app/views/software_items/show.html.erb - version 1.2 %>
+<%# v1.2 (Session C, Storage Locations feature, Part 3 of 6): Added a %>
+<%#   Storage Location field, same reasoning as computers/show.html.erb %>
+<%#   v2.5 and components/show.html.erb v1.9 — this page is public (any %>
+<%#   visitor can view any software item's show page — no logged_in? or %>
+<%#   ownership guard on the page itself), so Storage Location (private %>
+<%#   data) is wrapped in "if Current.owner == @software_item.owner" — the %>
+<%#   same condition already used for the Edit/Delete links above — NOT %>
+<%#   the "if logged_in?" guard Trade Status uses. Placed as a standalone %>
+<%#   row after Installed On and before Description. %>
 <%# v1.1 (Session 46): Software feature Session D. %>
 <%#   Added Edit and Delete action links in the page header (right side). %>
 <%#   Visible only when the logged-in owner is the record's owner. %>
@@ -64,6 +73,15 @@
         <% end %>
       </dd>
     </div>
+
+    <%# Storage Location — Session C. Private field: only the owning owner %>
+    <%# may see it, since this page itself is public. %>
+    <% if Current.owner == @software_item.owner %>
+      <div class="px-5 py-3 flex gap-4">
+        <dt class="w-36 flex-shrink-0 text-xs font-medium text-stone-500 uppercase tracking-wider pt-0.5">Storage Location</dt>
+        <dd class="text-sm text-stone-700"><%= @software_item.storage_location&.name || "—" %></dd>
+      </div>
+    <% end %>
 
     <%# Description — whitespace-pre-wrap; ERB on same line as tag to prevent %>
     <%# indentation rendering as visible leading space (RAILS_SPECIFICS.md). %>

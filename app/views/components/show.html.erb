@@ -1,4 +1,12 @@
-<%# decor/app/views/components/show.html.erb - version 1.8 %>
+<%# decor/app/views/components/show.html.erb - version 1.9 %>
+<%# v1.9 (Session C, Storage Locations feature, Part 3 of 6): Added a %>
+<%#   Storage Location field, same reasoning as computers/show.html.erb %>
+<%#   v2.5 — this page is public, Storage Location is private data, so the %>
+<%#   field is wrapped in "if Current.owner == @component.owner || admin?" %>
+<%#   (the same guard already used for Edit/Delete above), NOT the %>
+<%#   "if logged_in?" guard Trade Status uses. Placed as a standalone row %>
+<%#   after Trade Status and before Description, same placement logic as %>
+<%#   the computers show page. %>
 <%# v1.8: UI rename — "Order Number" -> "DEC Part Number", "Serial Number" -> %>
 <%#   "DEC Serial Number", for both the Computer* and Component* fields. %>
 <%#   Attribute names (order_number, serial_number) unchanged. %>
@@ -107,6 +115,15 @@
             <span class="text-stone-400">—</span>
           <% end %>
         </dd>
+      </div>
+    <% end %>
+
+    <%# Storage Location — Session C. Private field: only the owning owner %>
+    <%# or an admin may see it, since this page itself is public. %>
+    <% if Current.owner == @component.owner || admin? %>
+      <div>
+        <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider mb-1">Storage Location</dt>
+        <dd class="flex items-center w-full h-10 p-3 rounded border border-stone-300 bg-white text-sm text-stone-600"><%= @component.storage_location&.name || "—" %></dd>
       </div>
     <% end %>
 

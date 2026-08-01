@@ -1,4 +1,20 @@
-<%# decor/app/views/computers/_form.html.erb - version 3.1 %>
+<%# decor/app/views/computers/_form.html.erb - version 3.2 %>
+<%# v3.2 (Session C, Storage Locations feature, Part 3 of 6): Added a %>
+<%#   Storage Location dropdown to Line 2, widened from grid-cols-3 to %>
+<%#   grid-cols-4. Options scoped to Current.owner.storage_locations.order(:name) %>
+<%#   — this form is only reachable by the logged-in owner (no logged_in?/ %>
+<%#   ownership guard needed here the way show/index pages need one), so %>
+<%#   Current.owner is always the right scope. Plain f.collection_select, %>
+<%#   no Tom Select — an owner's own storage-location list is expected to %>
+<%#   stay small (per storage_locations_controller.rb's own rationale for %>
+<%#   skipping pagination on that index), same reasoning already applied to %>
+<%#   software_items/_form.html.erb's software_condition_id-sized selects. %>
+<%#   include_blank "No location assigned" — optional field %>
+<%#   (belongs_to :storage_location, optional: true — computer.rb v2.4). %>
+<%#   :storage_location_id must also be added to computers_controller.rb's %>
+<%#   strong params for this to actually save — flagged separately as a %>
+<%#   file this session's Pre-Implementation Verification did not originally %>
+<%#   request; see chat for the flagged gap. %>
 <%# v3.1 (Session 77): Fixed a hardcoded "Select a computer model" prompt on %>
 <%#   the Model collection_select — showed the wrong text on %>
 <%#   /computers/new?device_type=peripheral (still said "computer" even for %>
@@ -114,10 +130,12 @@
     </div>
   </div>
 
-  <!-- Line 2: Condition | Run Status | Trade Status -->
-  <%# Expanded from grid-cols-2 to grid-cols-3 to accommodate barter_status. %>
-  <%# The form is only accessible to logged-in owners so no logged_in? guard is needed. %>
-  <div class="grid grid-cols-3 gap-4">
+  <!-- Line 2: Condition | Run Status | Trade Status | Storage Location -->
+  <%# Expanded from grid-cols-2 to grid-cols-3 (Session 21) to grid-cols-4 %>
+  <%# (Session C, Storage Locations feature) to accommodate barter_status %>
+  <%# then storage_location_id. The form is only accessible to logged-in %>
+  <%# owners so no logged_in?/ownership guard is needed for either field. %>
+  <div class="grid grid-cols-4 gap-4">
     <div>
       <%= f.label :computer_condition_id, "Condition", class: "block text-sm font-medium text-stone-700" %>
       <%# Tom Select applied: searchable, consistent UX with the model selector above. %>
@@ -150,6 +168,19 @@
             {},
             class: field_classes %>
       <p class="mt-1 text-xs text-stone-500">Visible to members only.</p>
+    </div>
+
+    <%# Storage Location — Session C. Private field, own list only %>
+    <%# (Current.owner, not any other owner's locations). Optional — %>
+    <%# belongs_to :storage_location, optional: true (computer.rb v2.4). %>
+    <div>
+      <%= f.label :storage_location_id, "Storage Location", class: "block text-sm font-medium text-stone-700" %>
+      <%= f.collection_select :storage_location_id,
+            Current.owner.storage_locations.order(:name),
+            :id, :name,
+            { include_blank: "No location assigned" },
+            class: field_classes %>
+      <p class="mt-1 text-xs text-stone-500">Optional. Manage your list under "My Storage Locations".</p>
     </div>
   </div>
 
