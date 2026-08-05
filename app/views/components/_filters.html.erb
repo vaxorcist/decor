@@ -1,4 +1,13 @@
-<%# decor/app/views/components/_filters.html.erb - version 1.4 %>
+<%# decor/app/views/components/_filters.html.erb - version 1.5 %>
+<%# v1.5 (Session 88, Storage Locations feature Session E — see %>
+<%#   DECOR_PROJECT.md "Storage Locations Feature — Session Plan"): Added %>
+<%#   the Storage Location filter select, gated by if logged_in? — same %>
+<%#   guard as the Trade block above it, and for the same reason: storage %>
+<%#   locations are private per-owner data (Session D privacy audit passed %>
+<%#   with no code changes needed), so this filter must not appear at all %>
+<%#   for logged-out visitors. Positioned after Trade, matching the exact %>
+<%#   pattern established and pre-commit-verified in %>
+<%#   computers/_filters.html.erb v1.8. %>
 <%# v1.4 (Session 77): Follow-up to v1.3 — the user asked that DEC Part %>
 <%#   Number (order_number) also be searchable, since it wasn't in the %>
 <%#   field list v1.3 had just clarified. Added to component.rb's `search` %>
@@ -64,6 +73,19 @@
     <div class="flex flex-col">
       <%= form.label :barter_status, "Trade", class: "text-sm text-stone-600 font-medium" %>
       <%= form.select :barter_status, component_filter_barter_status_options, { selected: component_filter_barter_status_selected }, { class: field_classes } %>
+    </div>
+  <% end %>
+
+  <%# Storage Location filter — visible to logged-in members only. %>
+  <%# Storage locations are private per-owner data (Storage Locations feature, %>
+  <%# Session D privacy audit) — this block, like Trade above, must be %>
+  <%# completely absent (not just greyed out) for unauthenticated requests. %>
+  <%# The options list is always Current.owner's OWN storage locations only — %>
+  <%# see ComponentsHelper#component_filter_storage_locations_options. %>
+  <% if logged_in? %>
+    <div class="flex flex-col">
+      <%= form.label :storage_location_id, "Storage Location", class: "text-sm text-stone-600 font-medium" %>
+      <%= form.select :storage_location_id, component_filter_storage_locations_options, { selected: component_filter_storage_locations_selected, include_blank: "Any" }, { class: field_classes } %>
     </div>
   <% end %>
 

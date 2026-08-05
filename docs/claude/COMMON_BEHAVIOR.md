@@ -1,86 +1,22 @@
-# COMMON_BEHAVIOR.md
-# version 3.2
-# Session 79: Reinforcement, not a new rule — the File Transfer Protocol's
-#   existing single-ad-hoc-file exception ("just name the one file
-#   normally... a script is unnecessary ceremony") was violated a SECOND
-#   time: a single-file delivery (connection_groups/_form.html.erb) was
-#   @-encoded despite being delivered alone. The first recurrence
-#   (rule/skill documents, Session 75) was supposedly fixed by two new
-#   rules that session's SESSION_HANDOVER.md summary describes as landing
-#   in "COMMON_BEHAVIOR.md v3.2" — but this document, as uploaded to the
-#   project, was still v3.1 with no trace of either rule when Session 79
-#   started. !! GAP FLAGGED FOR ULLI, same shape as the existing Session 68
-#   GAP NOTICE in SESSION_HANDOVER.md: either a newer copy of this file
-#   (containing the real Session 75 v3.2 content) exists outside this
-#   project and wasn't the version uploaded here, or that update was
-#   described as done but never actually produced. Not reconstructed from
-#   guesswork — only this session's own reinforcement note is added below;
-#   the two rules Session 75 described are NOT fabricated here since their
-#   exact original wording is unknown.
-# Session 74: Reinforced the existing Token Usage Reporting rule with a
-#   second real example — the same miss from Session 69 (separator lines
-#   and token estimate omitted from a response's closing block) recurred.
-#   No new rule; added as a reinforcement note documenting the recurrence.
-# Session 71: File Transfer Protocol — replaced three separate workaround rules
-#   (Download File Naming's bare-name/#-prefix-on-collision convention, Output
-#   Path Collision's short-prefix-plus-underscore convention, and Upload File
-#   Naming's one-file-per-message convention) with a single unified scheme:
-#   Claude generates a shell script to export needed files (from the real repo)
-#   into decor/export/ using @-encoded flat names (full path, / → @, all dots
-#   except the true extension → @), and generates a companion placement script
-#   for delivered files staged in decor/import/. Both directories are gitignored.
-#   This was the user's idea, proposed to solve the repeated-basename collision
-#   problem and the browser dot-mangling problem structurally rather than by
-#   naming convention. The three superseded rules are removed rather than kept
-#   alongside the new one, to avoid running two systems in parallel.
-# Session 69: Added a real example to the existing "Token Usage Reporting"
-#   rule (rule already existed — this was a violation of it, not a new rule).
-#   A response that followed a 15-file delivery omitted the token estimate
-#   entirely. Caught by the user asking "Where is the estimated Token Usage??"
-#   rather than self-caught.
-# Session 67: Added "Flagging a Guess Does Not Satisfy Never-Guess" rule.
-#   Real example: index.turbo_stream.erb was written from the general Rails/
-#   Turbo convention (not an unseen project file), explicitly labeled as
-#   inferred, and handed over for the user to verify. The labeling doesn't
-#   change what it is — a guess — and shifts the verification burden onto
-#   the user instead of asking for the real file. The correct move was to
-#   request the actual precedent file, which is what happened only after
-#   the user pointed this out directly.
-# Session 55: Output Path Collision — added rule: when two or more files in the
-#   same session share the same base filename, write them to /mnt/user-data/outputs/
-#   using a short prefix + underscore to prevent silent overwriting.
-#   Real example: home index.html.erb overwrote admin owners index.html.erb
-#   (or vice versa) because both were written to outputs/index.html.erb.
-# Session 54: Output File Naming — added rule: never substitute underscores for dots in
-#   filenames created with create_file. Browser upload substitution is upload-only;
-#   Claude controls output filenames entirely and must use the correct dots.
-#   Real example: application.html.erb delivered as application_html.erb.
-# Session 36: Reading Rule Documents — clarified that bash cat applies to skill files too.
-#   Real example: decor-session-rules skill read with view tool at Session 36 start.
-# decor/docs/claude/COMMON_BEHAVIOR.md
-# Session 14: Major reliability update.
-#   - Added "Reading Rule Documents" section — MANDATORY use of bash cat, never view tool.
-#     view tool truncates files silently above ~16,000 characters. cat always returns complete content.
-#   - Added "AI Forgetfulness — Why It Happens and How to Prevent It" section.
-#   - Token estimate floor raised: 5+ large documents at session start → minimum 40% estimate.
-#   - Added rule: always specify full paths when referring to or requesting files.
-# Session 16: Added "Tool Availability — Never Infer, Always Test" rule.
-#   - Documented failure mode: bash_tool available but unused due to false inference
-#     from environment context description. One sanity-check command prevents this.
-# Session 16: Added "Skill and Rule Document Changes" rule.
-#   - Must propose before modifying; present result as downloadable file; never modify silently.
-# Session 18: Reinforced Response Formatting rules with real examples from Session 18.
-#   - Four formatting violations in one response: missing separators, missing token estimate,
-#     unnecessary directory prefix, and wrong separator character. Rules already existed.
-#     Real examples added to each rule to reinforce them.
-# Session 20: Download File Naming — added explicit "NEVER prefix when filename is unique"
-#   rule with real example of violation (admin_site_texts_controller.rb prefixed needlessly).
+# decor/docs/claude/COMMON_BEHAVIOR.md - version 4.0
+# Session 85 (Reorg 4 of 4, plan agreed Session 83, concludes the reorg):
+#   Trimmed this file per the agreed plan (see SESSION_HANDOVER.md
+#   "Documentation Reorganization — Status"). Every rule's "Real example" /
+#   "Why this rule exists" narrative paragraph was condensed to one line —
+#   rule statements, checklists, and code/format examples (load-bearing for
+#   Pre-Implementation Verification and Response Formatting) are unchanged.
+#   The "AI Forgetfulness" section (pure rationale, no rule/example content)
+#   was tightened but not gutted — it explains why the mechanical rules
+#   below it exist. Full original narrative for every trimmed item remains
+#   recoverable via git history of this file prior to Session 85.
+# Sessions prior to 85: see git history of this file for the full
+#   per-session changelog (Sessions 14, 16, 18, 20, 36, 54, 55, 67, 69, 71,
+#   74 each added or reinforced a rule below).
 
 **Universal Rules for All Interactions with This User**
 
-**Last Updated:** July 26, 2026 (v3.2: reinforced the File Transfer
-  Protocol's single-ad-hoc-file exception after a second recurrence of the
-  same miss; also flags a version-history gap for Ulli — see changelog)
+**Last Updated:** July 30, 2026 (v4.0: Reorg 4 — narratives condensed to
+  one-liners across the file; no rule content changed)
 
 ---
 
@@ -96,11 +32,9 @@
 - ✅ The user cannot inspect skill files directly in the web UI — a download is the only way they can review what changed
 - ❌ NEVER assume the user can see the change without a download link
 
-**Real example (Session 16, March 4, 2026):**
-The `decor-session-rules` skill was modified twice in one session without prior
-approval. The user could not see the changes in the web UI and had to explicitly
-ask for a downloadable file. Both the approval step and the download step were
-missing. This rule exists to prevent both failures.
+**Real example (Session 16):** the `decor-session-rules` skill was modified
+twice without prior approval or a download link, and the user had to ask
+for both explicitly.
 
 ---
 
@@ -113,11 +47,10 @@ the user-facing product — they say nothing about which tools are available to
 Claude internally. Inferring tool availability from these descriptions is wrong
 and causes silent fallback to incorrect alternatives.
 
-**The failure mode (Session 16, March 4, 2026):**
-The system context said "web or mobile chat interface." Claude inferred (incorrectly)
-that `bash_tool` was unavailable and attempted `web_fetch` with `file://` URLs instead.
-`web_fetch` cannot access local filesystem paths. The correct tool — `bash_tool` —
-was available and working the entire time. It was simply never attempted.
+**Real example (Session 16):** environment context said "web or mobile chat
+interface"; Claude wrongly inferred `bash_tool` was unavailable and used
+`web_fetch` with `file://` URLs instead — `bash_tool` was available the
+whole time and simply never tried.
 
 **The fix: test, don't reason.**
 
@@ -169,16 +102,11 @@ cat /mnt/skills/user/decor-session-rules/SKILL.md
 `view` MAY be used for directory listings only — never for reading file content
 that feeds into rule compliance or implementation decisions.
 
-**Real example (Session 14, March 3, 2026):**
-DECOR_PROJECT.md (636 lines) was read with the `view` tool. Lines 215–422 were
-silently truncated. Claude completed a partial read and proceeded without noticing.
-This is unacceptable — the rules set exists precisely to be read completely.
-
-**Real example (Session 36, March 19, 2026):**
-The `decor-session-rules` skill at `/mnt/skills/user/decor-session-rules/SKILL.md`
-was read with the `view` tool at session start. The file happened to be short enough
-that no truncation occurred — but the rule was still violated. The tool choice is
-wrong regardless of file length. `bash cat` is always the correct tool.
+**Real examples:** DECOR_PROJECT.md was once read with `view` and silently
+truncated mid-file without Claude noticing (Session 14); the
+`decor-session-rules` skill was separately read with `view` instead of
+`bash cat` even though it happened to be short enough not to truncate
+(Session 36) — the tool choice is wrong regardless of file length.
 
 ---
 
@@ -194,30 +122,28 @@ This is a common and reasonable assumption — but it is only partially true.
 - Consistent application of explicit rules when they are actively in focus
 
 **What AIs do poorly — and why:**
-- **Attention is not uniform across the context window.** Transformer-based models
-  like Claude do not read a 600-line document the way a human reads sequentially.
-  Content from the middle or end of a long document competes with content from
-  hundreds of thousands of tokens of conversation history. Recent content and
-  content near task instructions tends to dominate attention.
-- **Rules read at session start decay in influence as the session grows.** By the
-  time a test is being written at turn 20, the rule document read at turn 1 is
-  competing with everything that followed. It is still in the context window —
-  but its influence on generation is diluted.
-- **Rules are not automatically cross-referenced at task time.** Claude does not
-  automatically ask "what rule applies here?" before every action. Unless a rule
-  is actively triggered by a task keyword or checklist step, it can be bypassed.
-- **Truncated reads compound the problem.** If a rule was never fully read, it
-  cannot be applied — regardless of attention.
+- **Attention is not uniform across the context window.** Content from the
+  middle or end of a long document competes with everything else in the
+  conversation; recent content and content near task instructions tends to
+  dominate.
+- **Rules read at session start decay in influence as the session grows.**
+  The rule document read at turn 1 is still in context at turn 20 but its
+  influence on generation is diluted by everything that followed.
+- **Rules are not automatically cross-referenced at task time.** Unless a
+  rule is actively triggered by a task keyword or checklist step, it can be
+  bypassed.
+- **Truncated reads compound the problem.** If a rule was never fully read,
+  it cannot be applied — regardless of attention.
 
-**What this means in practice:**
-The rules set is not self-enforcing. It requires:
+**What this means in practice:** the rules set is not self-enforcing. It requires:
 1. Complete reads (bash cat, not view)
 2. Explicit checklists that force rule recall at task time
 3. The user's active intervention when rules are violated
 
 **Claude's commitment:**
 - Read all rule documents completely at session start (bash cat)
-- Re-read the relevant sections of RAILS_SPECIFICS.md before writing tests
+- Re-read the relevant sections of RAILS_SPECIFICS.md (or its topic files)
+  before writing tests / view / mailer code
 - Apply the Pre-Implementation Verification checklist without skipping steps
 - When a rule failure occurs: acknowledge it specifically, correct it, and add it
   to the rule documents before end of session
@@ -253,18 +179,12 @@ you upload it? I'll write the new file from that rather than from the
 general convention."
 ```
 
-**Why this rule exists (Session 67, July 2026):**
-`admin/component_suggestions/index.turbo_stream.erb` was written from the
-standard Rails/Turbo "append new rows, replace the load-more control" idiom,
-clearly labeled in its own header comment as inferred rather than copied
-from an existing file, and delivered as a numbered file in the same batch
-as several genuinely file-verified deliverables. The user pointed out that
-this was a Never-Guess violation regardless of the disclosure — the
-labeling doesn't change what the artifact is, and it puts verification work
-on the user that should have been resolved by asking for the real file
-before writing anything. (In this instance the guess turned out to match
-the real file once uploaded — but that was luck, not a justification for
-the approach.)
+**Real example (Session 67):** `admin/component_suggestions/index.turbo_stream.erb`
+was written from the standard Rails/Turbo convention, labeled as inferred
+in its own header comment, and delivered alongside genuinely file-verified
+files. The labeling didn't change what it was — a guess that put
+verification work on the user instead of Claude asking for the real file
+first. (It happened to match once uploaded — that was luck, not justification.)
 
 ---
 
@@ -279,9 +199,9 @@ the approach.)
 - ❌ NEVER just show file contents in a code block without also presenting the download
 - ❌ NEVER ask the user to copy/paste from a code block as a substitute for a download link
 
-**Why this matters:**
-The user needs to place files directly into the project. A download link is faster,
-safer, and less error-prone than manual copy/paste from a code block.
+**Why this matters:** the user needs to place files directly into the
+project. A download link is faster, safer, and less error-prone than
+manual copy/paste from a code block.
 
 ### Always Specify Complete Paths
 
@@ -295,21 +215,18 @@ Rails projects have many files with identical names in different directories
 (`show.html.erb`, `_form.html.erb`, `index.html.erb`, etc.). Bare filenames
 cause placement errors. Always give the full path.
 
-**Real example (Session 14, March 3, 2026):**
-After delivering 11 files, the placement instructions listed bare filenames only.
-User had to ask for the full paths explicitly.
+**Real example (Session 14):** placement instructions for 11 delivered
+files listed bare filenames only; the user had to ask for full paths.
 
 ### File Transfer Protocol — Export/Import Scripts (Session 71)
 
 Replaces the old bare-filename/prefix-on-collision download rule, the old
 per-file output-path-collision rule, and the old one-file-per-message upload
-rule (all three previously lived in this section; see the changelog at the
-top of this file for their history). All three existed to work around the
-same underlying problem — Rails' repeated basenames (`_form.html.erb`,
-`index.html.erb`, etc.) across many directories, plus the browser's
-dot-to-underscore mangling on upload. The export/import script approach
-solves both problems structurally instead of by naming convention, so the
-older workaround rules no longer apply.
+rule. All three existed to work around the same underlying problem — Rails'
+repeated basenames (`_form.html.erb`, `index.html.erb`, etc.) across many
+directories, plus the browser's dot-to-underscore mangling on upload. The
+export/import script approach solves both problems structurally instead of
+by naming convention, so the older workaround rules no longer apply.
 
 **Encoding scheme:** flatten the full relative path (from the `decor/` root),
 replacing `/` with `@`, and replacing every dot except the true file
@@ -354,8 +271,8 @@ config/routes.rb
   structurally impossible under @-encoding (the full path is in the name),
   but stay alert regardless
 
-**`decor/export/` and `decor/import/` are both `.gitignore`d** (Session 71) —
-both are transient staging directories and are never committed.
+**`decor/export/` and `decor/import/` are both `.gitignore`d** — both are
+transient staging directories and are never committed.
 
 **Single ad-hoc file exchanges don't need a script.** If only one file is
 being requested or delivered in a response, a script is unnecessary ceremony —
@@ -363,26 +280,10 @@ just name the one file normally (full path stated in prose, correct dots per
 the rule below). The script protocol is for **multi-file** transfers, which
 is where the old rules were actually failing.
 
-**Reinforced (Session 78):** a 2-file request was initially made as a plain
-prose "please upload these two files" ask instead of generating the
-mandatory export script. Caught by the user, not self-caught. No new rule
-needed — this was a plain miss of the existing rule above, not a gap in
-it. Worth a deliberate check at request time: "is this more than one file?
-If so, generate the script — don't just list filenames in prose."
-
-**Reinforced again (Session 79) — the opposite-direction miss:** a
-single-file delivery (`connection_groups/_form.html.erb`, delivered alone)
-was @-encoded anyway, even though the rule immediately above ("Single
-ad-hoc file exchanges don't need a script") already says plainly that a
-lone file should use its normal name, no script, no encoding. This is the
-second time this exact miss has happened (the first was Session 75, with
-rule/skill documents specifically — see that session's own note elsewhere
-in this file). No new rule needed — both directions of this mistake
-(multi-file requests made in plain prose; single-file deliveries
-needlessly @-encoded) are already covered by the existing rule text
-above. The check that would have caught this: before naming an output
-file, ask "is this the ONLY file in this delivery? If so, use its plain
-path — the @-encoding scheme is for multi-file transfers only."
+**Reinforced (Session 78):** a 2-file request was made as plain prose
+instead of the mandatory export script — no new rule needed, just a plain
+miss. Worth a deliberate check at request time: "is this more than one
+file? If so, generate the script — don't just list filenames in prose."
 
 ### Output File Naming — Never Substitute Underscores for Dots
 
@@ -390,18 +291,14 @@ path — the @-encoding scheme is for multi-file transfers only."
   including all dots** (e.g. `application.html.erb`, not `application_html.erb`)
 - ❌ NEVER substitute underscores for dots in output filenames
 
-**Why this matters:**
-Browsers substitute underscores for dots when the user *uploads* a multi-dot file
-(e.g. `application.html.erb` arrives as `application_html.erb`). That constraint
-is a browser upload limitation — it applies to uploads only. When Claude *creates*
-a file with `create_file`, it controls the filename entirely and must use the
-correct name with dots.
+**Why this matters:** browsers substitute underscores for dots when the
+user *uploads* a multi-dot file — that constraint is an upload-only
+limitation. When Claude *creates* a file with `create_file`, it controls
+the filename entirely and must use the correct name with dots.
 
-**Real example (Session 54, April 17, 2026):**
-`application.html.erb` was created as `application_html.erb` in the output. The
-user correctly flagged this: "You sent me a file named application_html.erb, but
-it had to be named application.html.erb — That should not have happened!"
-The upload/download constraint was confused and applied in the wrong direction.
+**Real example (Session 54):** `application.html.erb` was created as
+`application_html.erb` — the upload/download constraint was confused and
+applied in the wrong direction.
 
 ---
 
@@ -413,12 +310,10 @@ The upload/download constraint was confused and applied in the wrong direction.
 - Format: `================================================================================`
 - ❌ NEVER omit the separators — not for short responses, not for wrap-up responses
 
-**Real example (Session 18, March 6, 2026):**
-The first substantive response of the session (delivering 11 files) omitted both
-the leading and trailing separator lines. The response was not short. The rule
-simply was not checked before writing. Four formatting rules were violated in
-the same response — the separator rule, the token estimate rule, the prefix rule,
-and the separator character rule. All four rules already existed.
+**Real example (Session 18):** the first substantive response of the
+session (delivering 11 files) omitted both separators along with the
+token estimate and misapplied two other formatting rules — none of the
+four rules were new, the checklist simply wasn't checked.
 
 ### Token Usage Reporting
 
@@ -433,16 +328,14 @@ Claude cannot see or measure:
 - How uploaded files actually tokenize on the server side
 
 This invisible fixed base cost means Claude's naive count of visible content
-will always be a significant undercount. In Session 10 (February 27, 2026),
-Claude estimated ~50% when the UI showed 90% — a gap large enough to cause
-poor planning decisions.
+will always be a significant undercount (Session 10: Claude estimated ~50%
+when the UI showed 90%).
 
 **Session-start floor rule:**
 When 5 or more large rule/project documents are uploaded at session start,
 the token estimate must NEVER be below 50% — the fixed base cost alone
 justifies this floor before any conversation content is counted.
-(Floor was 40% through Session 54; raised to 50% in Session 55 after the user
-confirmed estimates were consistently too optimistic.)
+(Floor was 40% through Session 54; raised to 50% in Session 55.)
 
 **Rules:**
 
@@ -486,29 +379,14 @@ No system warning, 5 large docs loaded:
   WRONG:   **Token Usage (estimate):** ~8,000 / 200,000 (~4% used) ← ignores base cost
 ```
 
-**Real example (Session 69, July 16, 2026):**
-A response that delivered 15 renamed files (a large multi-file UI rename task)
-ended with a closing summary and separator but no token estimate at all —
-not even the "omit it and get called out" fallback; it was simply missing.
-The rule ("NEVER omit the token estimate on a response that follows a file
-delivery") already existed and was not new — this was a plain miss, caught
-only because the user asked "Where is the estimated Token Usage??" in the
-next message. No new mechanism is needed here beyond re-emphasizing: the
-token estimate line is part of every substantive response's closing block,
-the same as the separator lines — check for it the same way.
-
-**Reinforced (Session 74, July 21, 2026):** the identical miss recurred —
-both the separator lines and the token estimate were omitted from a response
-that presented multiple file downloads and asked a follow-up question. Same
-root cause as Session 69: a response that ends on a tool call or a
-substantive question doesn't automatically get the closing checklist
-applied unless it's checked explicitly. Two recurrences of the same
-mechanical miss (Sessions 69 and 74) suggests the failure mode isn't
-content-length-dependent — it happens on any response, long or short,
-where the closing block isn't treated as a fixed, separate checklist step
-distinct from writing the substantive content. Still no new mechanism
-proposed beyond continuing to check for it explicitly at the end of every
-response.
+**Real example, recurred twice (Sessions 69 and 74):** a response
+following a large multi-file delivery ended with a closing summary and
+separator but no token estimate at all, both times caught only because
+the user asked for it. Root cause both times: the closing block (both
+separators AND the token line) isn't automatically applied to a response
+that ends on a tool call or a follow-up question unless checked
+explicitly as its own fixed step, separate from writing the substantive
+content — this applies regardless of response length.
 
 ---
 
@@ -701,14 +579,10 @@ asking whether the findings change what the right approach actually is.
       is already solved (e.g. "upgrade Rails first" when you're already on
       the version that has the fix)
 
-**Real example (Session 8, February 26, 2026):**
-Research revealed that Rails 8.1.2 already fixes the minitest 6 incompatibility.
-The correct conclusion was: "check if we're already on 8.1.2 — if so, just merge
-the Dependabot PR." Instead, a multi-step plan was proposed (upgrade Rails, then
-merge PR) without first checking the current Rails version. The user was already
-on 8.1.2, making the Rails upgrade step unnecessary. The reframe question —
-"what does this tell me about the whole situation?" — would have surfaced this
-immediately.
+**Real example (Session 8):** research showed Rails 8.1.2 already fixed a
+minitest 6 incompatibility, but a multi-step plan (upgrade Rails, then
+merge the Dependabot PR) was proposed without first checking the current
+version — which was already 8.1.2, making the upgrade step unnecessary.
 
 ### When Uncertain
 - ✅ Ask clarifying questions

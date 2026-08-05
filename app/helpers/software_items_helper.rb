@@ -1,5 +1,25 @@
 # decor/app/helpers/software_items_helper.rb
-# version 1.0
+# version 1.1
+# v1.1 (Session 88, Storage Locations feature Session E — see
+#   DECOR_PROJECT.md "Storage Locations Feature — Session Plan"): Added the
+#   Storage Location filter helper methods, following the exact pattern
+#   established and pre-commit-verified for ComputersHelper v1.9:
+#   software_item_filter_storage_locations_options — returns [[name, id], ...]
+#     for Current.owner's OWN storage locations only, sorted by name.
+#     Returns [] when not logged in (defensive — the filter block in
+#     software_items/_filters.html.erb v1.1 is already gated by
+#     `if logged_in?`, so this branch should never actually be exercised
+#     while logged out, but the method stays safe to call regardless).
+#   software_item_filter_storage_locations_selected — returns the current
+#     storage_location_id param, or nil ("Any").
+#   Storage locations are private per-owner data (confirmed design,
+#   DECOR_PROJECT.md "Storage Locations Feature — Session Plan," privacy
+#   audit passed Session D) — this is why the options list is always scoped
+#   to Current.owner.storage_locations, never StorageLocation.all.
+#   A crafted storage_location_id param belonging to a different owner is
+#   NOT filtered out here (this helper only builds the dropdown) — that
+#   defensive check lives in SoftwareItemsController#index, matching the
+#   Computers precedent exactly.
 # v1.0 (Session 50): New file — sort options and filter helpers for the
 #   public /software_items index page (added in this session alongside the
 #   _filters.html.erb partial and controller v1.3).
@@ -15,7 +35,7 @@
 #   software_item_filter_barter_status_options — barter status filter (logged-in
 #     members only); options identical to those on computers and components pages.
 #
-# Follows the pattern established in ComputersHelper (v1.6).
+# Follows the pattern established in ComputersHelper (v1.9).
 
 module SoftwareItemsHelper
   # Sort options keyed by the param string the controller receives in params[:sort].
@@ -90,5 +110,23 @@ module SoftwareItemsHelper
   # controller for logged-in users (hides "wanted" items from the default view).
   def software_item_filter_barter_status_selected
     params[:barter_status].presence || "0+1"
+  end
+
+  # Returns [[name, id], ...] for Current.owner's OWN storage locations only,
+  # sorted alphabetically by name. Used for the "Storage Location" filter
+  # dropdown — see DECOR_PROJECT.md "Storage Locations Feature — Session Plan,"
+  # Session E. Never returns another owner's storage locations: this is a
+  # private, per-owner list (see storage_location.rb's own header comment and
+  # the Session D privacy audit). Mirrors
+  # ComputersHelper#computer_filter_storage_locations_options exactly.
+  def software_item_filter_storage_locations_options
+    return [] unless logged_in?
+
+    Current.owner.storage_locations.order(:name).pluck(:name, :id)
+  end
+
+  # Returns the currently selected storage_location_id param, or nil ("Any").
+  def software_item_filter_storage_locations_selected
+    params[:storage_location_id]
   end
 end

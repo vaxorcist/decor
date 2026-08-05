@@ -1,5 +1,31 @@
 # decor/app/controllers/computers_controller.rb
-# version 1.24
+# version 1.25
+# v1.25 (Session E, Storage Locations feature — see DECOR_PROJECT.md
+#   "Storage Locations Feature — Session Plan"): Added the Storage
+#   Location filter to the index action.
+#     if logged_in? && params[:storage_location_id].present?
+#       if Current.owner.storage_locations.exists?(id: params[:storage_location_id])
+#         computers = computers.where(storage_location_id: params[:storage_location_id])
+#       end
+#     end
+#   Two deliberate guards, both required by the confirmed privacy design
+#   (storage locations are private per-owner data — Session D privacy
+#   audit passed with no code changes needed):
+#     1. `if logged_in?` — mirrors the existing barter_status guard exactly;
+#        logged-out visitors get no storage-location filtering at all, same
+#        as they get no barter filtering.
+#     2. The `Current.owner.storage_locations.exists?(id: ...)` check —
+#        the filter dropdown (ComputersHelper#computer_filter_storage_locations_options)
+#        only ever offers Current.owner's OWN storage locations, so a
+#        legitimate request can never submit another owner's id. But a
+#        crafted URL param COULD try one anyway. Without this guard, a
+#        `WHERE storage_location_id = X` filter would still silently work
+#        for any X — letting a logged-in user enumerate which computers
+#        share a storage_location_id belonging to a DIFFERENT owner, even
+#        without ever seeing that owner's location name. Silently ignoring
+#        an unowned id (falling through to "no storage-location filter
+#        applied" rather than raising or trusting the raw param) closes
+#        that probe without adding any new visible error state.
 # v1.24 (Session 81, gap-closing follow-up): Storage Locations feature
 #   Session C. Added :storage_location_id to computer_params. Same
 #   rationale as owner_part_number in v1.23: this was a flagged Session C
@@ -92,6 +118,15 @@ class ComputersController < ApplicationController
       when "1"   then computers.where(barter_status: 1)
       when "2"   then computers.where(barter_status: 2)
       else            computers.where(barter_status: [0, 1])
+      end
+    end
+
+    # Storage Location filter — members only, and only honors a
+    # storage_location_id that actually belongs to Current.owner. See the
+    # header comment above (Session E) for the full rationale on both guards.
+    if logged_in? && params[:storage_location_id].present?
+      if Current.owner.storage_locations.exists?(id: params[:storage_location_id])
+        computers = computers.where(storage_location_id: params[:storage_location_id])
       end
     end
 
