@@ -1,13 +1,12 @@
-# PROGRAMMING_GENERAL.md
-# version 2.0
-# Session 49: Added "Export / Import — Always Include a Stable Unique Key" rule.
-#   Root cause: connection group duplicate detection used member-set comparison,
-#   which broke when a port was added. Fix: use owner_group_id (stable unique key).
-#   Rule generalised: every exported record type must carry a stable unique key.
+# decor/docs/claude/PROGRAMMING_GENERAL.md - version 3.0
+# Session 85 (Reorg 4 of 4, concludes the plan agreed Session 83): trimmed
+#   narrative paragraphs (Export/Import stable key; End-of-Task Test
+#   Coverage Check) to one line each; rules/checklists/code unchanged.
+#   Full prior narrative: git history of this file before Session 85.
 
 **General Programming Rules for All Technical Projects**
 
-**Last Updated:** March 3, 2026 (v1.8: derive-assertions-from-data rule added)
+**Last Updated:** July 30, 2026 (v3.0: Reorg 4 — narratives condensed)
 
 ---
 
@@ -281,13 +280,13 @@ as soon as the data changes — causing duplicates on re-import.
 - software items: (software_name, computer, version) — already present
 - connection groups: owner_group_id — added Session 49 after the member-set
   approach failed
+- storage locations: (owner_id, name) — the natural key, no synthetic ID
+  needed (DECOR_PROJECT.md "Storage Locations Feature," Session F)
 
-**Real example (Session 49, April 2026):**
-Connection groups had no unique key in the export. The importer used the set
-of member computer IDs as a proxy. Adding a new port changed the set, so the
-group was no longer recognised as a duplicate and was saved a second time.
-Fix: export owner_group_id (UNIQUE INDEX on owner_id + owner_group_id) and
-check exists?(owner_group_id:) — one line, always correct.
+**Real example (Session 49):** connection groups had no unique key in the
+export; the importer used the member computer ID set as a proxy, so adding
+a port caused a duplicate save. Fixed via `owner_group_id` +
+`exists?(owner_group_id:)`.
 
 ---
 
@@ -490,16 +489,11 @@ Then either:
 - ✅ Ask for fixture files if they are needed but not yet in context
 - ✅ Note the tests as pending if the user defers them
 
-**Why this rule exists (Session 10, February 28, 2026):**
-After implementing OwnerExportService, OwnerImportService, and DataTransfersController,
-no tests were produced and no check was offered — the user had to ask explicitly.
-This is a recurring failure pattern: implementation work is complete and the session
-moves on without anyone asking whether tests should follow.
-
-**Reinforced (Session 20, March 8, 2026):**
-The rule existed but Claude still waited to be asked after delivering the
-Admin::SiteTextsController generalisation. The check must be proactive — always
-offered by Claude, never prompted by the user.
+**Real example, recurred once (Sessions 10, 20):** after implementing
+OwnerExportService/OwnerImportService/DataTransfersController and again
+after the Admin::SiteTextsController generalisation, no test-coverage
+check was offered — the user had to ask both times. Must be proactive,
+never prompted by the user.
 
 ---
 

@@ -1,4 +1,13 @@
-<%# decor/app/views/computers/_filters.html.erb - version 1.7 %>
+<%# decor/app/views/computers/_filters.html.erb - version 1.8 %>
+<%# v1.8 (Session E, Storage Locations feature — see DECOR_PROJECT.md %>
+<%#   "Storage Locations Feature — Session Plan"): Added the Storage %>
+<%#   Location filter select, gated by if logged_in? — same guard as the %>
+<%#   Trade block below it, and for the same reason: storage locations %>
+<%#   are private per-owner data (Session D privacy audit passed with no %>
+<%#   code changes needed), so this filter must not appear at all for %>
+<%#   logged-out visitors. Positioned after Trade rather than before it, %>
+<%#   matching the order features were actually added in (Trade: Session %>
+<%#   22; Storage Location: this session). %>
 <%# v1.7: UI rename — filter label "Model" -> "Computer Model" for clarity, %>
 <%#   matching the "Computer Model" wording already used on the show page and %>
 <%#   the components filters sidebar. Field name/values (:model) unchanged. %>
@@ -59,6 +68,19 @@
     <div class="flex flex-col">
       <%= form.label :barter_status, "Trade", class: "text-sm text-stone-600 font-medium" %>
       <%= form.select :barter_status, computer_filter_barter_status_options, { selected: computer_filter_barter_status_selected }, { class: field_classes } %>
+    </div>
+  <% end %>
+
+  <%# Storage Location filter — visible to logged-in members only. %>
+  <%# Storage locations are private per-owner data (Storage Locations feature, %>
+  <%# Session D privacy audit) — this block, like Trade above, must be %>
+  <%# completely absent (not just greyed out) for unauthenticated requests. %>
+  <%# The options list is always Current.owner's OWN storage locations only — %>
+  <%# see ComputersHelper#computer_filter_storage_locations_options. %>
+  <% if logged_in? %>
+    <div class="flex flex-col">
+      <%= form.label :storage_location_id, "Storage Location", class: "text-sm text-stone-600 font-medium" %>
+      <%= form.select :storage_location_id, computer_filter_storage_locations_options, { selected: computer_filter_storage_locations_selected, include_blank: "Any" }, { class: field_classes } %>
     </div>
   <% end %>
 

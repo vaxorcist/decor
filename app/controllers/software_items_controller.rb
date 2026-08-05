@@ -1,5 +1,33 @@
 # decor/app/controllers/software_items_controller.rb
-# version 1.4
+# version 1.5
+# v1.5 (Session 88, Storage Locations feature Session E — see
+#   DECOR_PROJECT.md "Storage Locations Feature — Session Plan"): Added the
+#   Storage Location filter to the index action, mirroring
+#   ComputersController#index v1.25 exactly:
+#     if logged_in? && params[:storage_location_id].present?
+#       if Current.owner.storage_locations.exists?(id: params[:storage_location_id])
+#         scope = scope.where(storage_location_id: params[:storage_location_id])
+#       end
+#     end
+#   Same two deliberate guards as the Computers precedent, both required by
+#   the confirmed privacy design (storage locations are private per-owner
+#   data — Session D privacy audit passed with no code changes needed):
+#     1. `if logged_in?` — mirrors the existing barter_status guard exactly;
+#        logged-out visitors get no storage-location filtering at all.
+#     2. The `Current.owner.storage_locations.exists?(id: ...)` check — the
+#        filter dropdown (SoftwareItemsHelper#software_item_filter_storage_locations_options)
+#        only ever offers Current.owner's OWN storage locations, so a
+#        legitimate request can never submit another owner's id. But a
+#        crafted URL param COULD try one anyway. Without this guard, a
+#        `WHERE storage_location_id = X` filter would still silently work
+#        for any X — letting a logged-in user enumerate which software items
+#        share a storage_location_id belonging to a DIFFERENT owner, even
+#        without ever seeing that owner's location name. Silently ignoring
+#        an unowned id (falling through to "no storage-location filter
+#        applied" rather than raising or trusting the raw param) closes
+#        that probe without adding any new visible error state.
+#   Positioned after the barter status filter block, before Sort — same
+#   ordering as ComputersController#index and ComponentsController#index.
 # v1.4 (Session 81, gap-closing follow-up): Storage Locations feature
 #   Session C. Added :storage_location_id to software_item_params — a
 #   flagged Session C gap (the dropdown shipped in _form.html.erb v1.2 the
@@ -76,6 +104,16 @@ class SoftwareItemsController < ApplicationController
       when "1"   then scope.where(barter_status: 1)
       when "2"   then scope.where(barter_status: 2)
       else            scope.where(barter_status: [0, 1])  # "0+1" and any unknown value
+      end
+    end
+
+    # ── Storage Location filter (logged-in members only) ──────────────────────
+    # Only honors a storage_location_id that actually belongs to Current.owner.
+    # Mirrors ComputersController#index v1.25 exactly — see the header comment
+    # above (Session E) for the full rationale on both guards.
+    if logged_in? && params[:storage_location_id].present?
+      if Current.owner.storage_locations.exists?(id: params[:storage_location_id])
+        scope = scope.where(storage_location_id: params[:storage_location_id])
       end
     end
 
@@ -192,9 +230,9 @@ class SoftwareItemsController < ApplicationController
       :history,
       :barter_status,
       :storage_location_id  # Storage Locations feature Session C — flagged
-      # gap, closed as a follow-up. Without this
-      # permit, the dropdown added to _form.html.erb
-      # v1.2 the same session silently no-ops on save.
+      # gap, closed as a follow-up. Without this permit,
+      # the dropdown added to _form.html.erb v1.2 the
+      # same session silently no-ops on save.
     )
   end
 end

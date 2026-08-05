@@ -1,5 +1,27 @@
 # decor/test/controllers/software_items_controller_test.rb
-# version 1.5
+# version 1.6
+# v1.6 (Session 88, Storage Locations feature Session E — see
+#   DECOR_PROJECT.md "Storage Locations Feature — Session Plan"): Added 3
+#   tests for the new storage_location_id filter, mirroring
+#   computers_controller_test.rb v1.13 exactly (happy path, the
+#   ownership-guard defensive check, and the logged-out skip), but using
+#   this file's own established assert_body_includes / refute_body_includes
+#   pattern (ResponseHelpers, v1.5) rather than assert_includes/response.body.
+#   Fixtures referenced directly (storage_locations(:alice_attic),
+#   storage_locations(:bob_garage) — both in test/fixtures/storage_locations.yml
+#   v1.0) — no StorageLocation.create! calls, learning applied directly from
+#   the collision bug fixed in computers_controller_test.rb v1.13.
+#   alice_vms (barter_status: 0, no_barter) and alice_rt11_spare
+#   (barter_status: 1, offered) were chosen deliberately: both pass the
+#   default logged-in "0+1" barter filter, so storage_location_id is the
+#   only filter distinguishing which one appears in each test — same
+#   confound-avoidance reasoning as the Components equivalent
+#   (components_controller_test.rb v1.4). alice_vms is matched on its
+#   "Installed On" serial (SN12345, from alice_pdp11) and alice_rt11_spare
+#   on its version (V5.3) — both already-established unique identifiers from
+#   this file's own v1.3/v1.4 tests, since alice_rt11_spare is unattached
+#   (no computer) and has no serial number to match on.
+#
 # v1.5 (Session 50): Migrated all assert_match/refute_match on response.body to
 #   assert_body_includes / refute_body_includes (ResponseHelpers, added in this
 #   session). No logic changes — same assertions, shorter failure messages.
@@ -50,8 +72,8 @@
 #   destroy           — require_login + must own the record
 #
 # Fixtures used:
-#   software_items(:alice_vms)        — owner one (alice), barter no_barter (0)
-#   software_items(:alice_rt11_spare) — owner one (alice), barter offered (1)
+#   software_items(:alice_vms)        — owner one (alice), barter no_barter (0), installed on alice_pdp11 (serial SN12345)
+#   software_items(:alice_rt11_spare) — owner one (alice), barter offered (1), unattached, version V5.3
 #   software_items(:bob_rsts)         — owner two (bob),   barter no_barter (0)
 #   software_items(:charlie_rt11)     — owner three (charlie), barter wanted (2)
 #   software_names(:vms)              — software name unique to alice_vms
@@ -60,6 +82,8 @@
 #   owners(:one)                      — alice
 #   owners(:two)                      — bob
 #   owners(:three)                    — charlie (neutral owner; only has wanted items)
+#   storage_locations(:alice_attic)   — owner: one (alice), name: "Attic Shelf 3"
+#   storage_locations(:bob_garage)    — owner: two (bob),   name: "Garage Box B"
 
 require "test_helper"
 
@@ -195,6 +219,62 @@ class SoftwareItemsControllerTest < ActionDispatch::IntegrationTest
     get software_items_url  # no login
 
     assert_body_includes charlie_name
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # index — Storage Location filter (Session E, Storage Locations feature)
+  # ═══════════════════════════════════════════════════════════════════════════
+  #
+  # Storage locations are private per-owner data (see DECOR_PROJECT.md "Storage
+  # Locations Feature — Session Plan," Session D privacy audit — passed with no
+  # code changes needed). The filter dropdown only ever offers Current.owner's
+  # own storage locations (SoftwareItemsHelper#software_item_filter_storage_locations_options),
+  # so a legitimate request can never submit another owner's id — these tests
+  # cover both the happy path and the defensive ownership check in the
+  # controller (SoftwareItemsController#index v1.5) for a crafted/invalid param.
+  #
+  # alice_vms (no_barter=0) and alice_rt11_spare (offered=1) are both owner one
+  # (alice) and both pass the default logged-in "0+1" barter filter — chosen
+  # deliberately so storage_location_id is the only filter distinguishing which
+  # one appears in each test.
+
+  test "logged-in index filtered by storage_location_id shows only items in that location" do
+    alice_location = storage_locations(:alice_attic)
+    software_items(:alice_vms).update_column(:storage_location_id, alice_location.id)
+    # alice_rt11_spare is left with no storage_location_id (nil) — must be excluded.
+
+    login_as owners(:one)
+    get software_items_url, params: { storage_location_id: alice_location.id }
+
+    assert_body_includes "SN12345"
+    refute_body_includes "V5.3"
+  end
+
+  test "storage_location_id filter is ignored when it belongs to a different owner" do
+    # bob's own storage location — alice must not be able to filter by it,
+    # even though nothing stops her from typing its id directly into the URL.
+    bob_location = storage_locations(:bob_garage)
+
+    login_as owners(:one)
+    get software_items_url, params: { storage_location_id: bob_location.id }
+
+    # The invalid filter must be silently ignored — the default barter filter
+    # (0+1) still applies on top, so alice_vms (no_barter) remains visible,
+    # exactly as it is with no storage_location_id param at all.
+    assert_body_includes "SN12345"
+  end
+
+  test "logged-out index ignores storage_location_id param entirely" do
+    alice_location = storage_locations(:alice_attic)
+    software_items(:alice_vms).update_column(:storage_location_id, alice_location.id)
+
+    get software_items_url, params: { storage_location_id: alice_location.id }
+
+    # No login → the entire storage_location_id block is skipped (guarded by
+    # `if logged_in?`), same as the barter_status filter above. Both alice_vms
+    # and alice_rt11_spare must be visible.
+    assert_body_includes "SN12345"
+    assert_body_includes "V5.3"
   end
 
   # ═══════════════════════════════════════════════════════════════════════════

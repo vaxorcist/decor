@@ -1,5 +1,39 @@
 # decor/test/controllers/computers_controller_test.rb
-# version 1.11
+# version 1.13
+# v1.13 (Session 88, Storage Locations Session E — fixes the 2 test errors
+#   from bin/rails test run at the top of this session):
+#   ROOT CAUSE: two of the three v1.12 Storage Location filter tests called
+#   StorageLocation.create!(owner: owners(:one), name: "Attic Shelf 3") to
+#   build test data in-test. But test/fixtures/storage_locations.yml (v1.0,
+#   Session A) already defines alice_attic: { owner: one, name: "Attic Shelf 3" }
+#   — an identical (owner_id, name) pair. The create! call collided with
+#   that existing fixture under storage_location.rb's own uniqueness
+#   validation, raising ActiveRecord::RecordInvalid ("Name is already used
+#   for another storage location of this owner") in both tests that used it.
+#   The v1.12 comment's own stated reason for creating fresh records —
+#   "storage_locations.yml fixture keys were not reviewed this session" —
+#   no longer holds; the fixture has now been reviewed (Session 88) and its
+#   two keys (alice_attic, bob_garage) are exactly what these tests need.
+#   FIX: all three Storage Location filter tests now reference the
+#   existing fixtures (storage_locations(:alice_attic) and
+#   storage_locations(:bob_garage)) instead of calling
+#   StorageLocation.create!. No StorageLocation records are created in
+#   this file anymore. The "different owner" test was also switched from a
+#   freshly-created charlie location to the existing bob_garage fixture, for
+#   the same reason — no need to create new data once the real fixtures are
+#   known. Section header comment updated to match. Test logic/assertions
+#   are otherwise unchanged from v1.12 — this is a test-data-source fix
+#   only, not a behavior change.
+# v1.12 (Session E, Storage Locations feature — see DECOR_PROJECT.md
+#   "Storage Locations Feature — Session Plan"): Added 3 tests for the new
+#   storage_location_id filter — happy path, the ownership-guard defensive
+#   check (a crafted param referencing a DIFFERENT owner's storage location
+#   must be silently ignored, not applied), and the logged-out skip (mirrors
+#   the existing "logged-out index shows all computers regardless of
+#   barter_status" test below). StorageLocation records are created fresh
+#   in-test rather than added to fixtures — same established pattern as
+#   Session 65's Component records (see RAILS_SPECIFICS.md), since
+#   storage_locations.yml fixture keys were not reviewed this session.
 # v1.11 (Session 59): Replaced two literal "DecorTest2026!" password strings with
 #   TEST_PASSWORD_CHARLIE from AuthenticationHelper (v2.1).
 #   DRY violation: the literal appeared in two charlie login_as calls and was
@@ -52,12 +86,15 @@
 #
 # Fixture notes:
 #   owners(:one)                   = alice (admin)
+#   owners(:two)                   = bob
 #   owners(:three)                 = charlie (neutral owner; no hardcoded count assertions)
 #   computers(:alice_pdp11)        = alice's PDP-11/70, serial SN12345, device_type: computer, barter_status: 0 (no_barter)
 #   computers(:alice_vax)          = alice's VAX,       device_type: computer, barter_status: 2 (wanted)
 #   computers(:dec_unibus_router)  = charlie's router,  device_type: peripheral (formerly appliance), barter_status: 1 (offered)
 #   computers(:unassigned_condition_test) = alice's device, not in any connection group, no software items
 #   software_items(:alice_vms)     = installed on alice_pdp11; software_name: vms
+#   storage_locations(:alice_attic) = owner: one (alice), name: "Attic Shelf 3"
+#   storage_locations(:bob_garage)  = owner: two (bob),   name: "Garage Box B"
 #   Each test runs in a rolled-back transaction.
 
 require "test_helper"
@@ -289,6 +326,73 @@ class ComputersControllerTest < ActionDispatch::IntegrationTest
       "alice_pdp11 should be visible to logged-out visitors (no filter)"
     assert_includes response.body, computers(:alice_vax).serial_number,
       "alice_vax (wanted) should be visible to logged-out visitors (no filter)"
+  end
+
+  # ---------------------------------------------------------------------------
+  # Storage Location filter — Session E (Storage Locations feature)
+  # ---------------------------------------------------------------------------
+  #
+  # Storage locations are private per-owner data (see DECOR_PROJECT.md "Storage
+  # Locations Feature — Session Plan," Session D privacy audit — passed with no
+  # code changes needed). The filter dropdown only ever offers Current.owner's
+  # own storage locations (ComputersHelper#computer_filter_storage_locations_options),
+  # so a legitimate request can never submit another owner's id — these tests
+  # cover both the happy path and the defensive ownership check in the
+  # controller (ComputersController#index v1.25) for a crafted/invalid param.
+  #
+  # v1.13 fix: these tests now use the EXISTING fixtures
+  # (storage_locations(:alice_attic), storage_locations(:bob_garage) — both
+  # defined in test/fixtures/storage_locations.yml v1.0) instead of calling
+  # StorageLocation.create!. The v1.12 version created fresh "Attic Shelf 3"
+  # records for owner one in-test, which collided with the alice_attic
+  # fixture of the same name for the same owner under the (owner_id, name)
+  # uniqueness validation. No StorageLocation records are created by this
+  # file anymore.
+
+  test "logged-in index filtered by storage_location_id shows only computers in that location" do
+    alice_location = storage_locations(:alice_attic)
+    computers(:alice_pdp11).update_column(:storage_location_id, alice_location.id)
+    # alice_vax is left with no storage_location_id (nil) — must be excluded.
+
+    login_as owners(:one)
+    get computers_path(storage_location_id: alice_location.id)
+    assert_response :success
+    assert_includes     response.body, computers(:alice_pdp11).serial_number,
+      "alice_pdp11 should be visible when filtering by its own storage_location_id"
+    assert_not_includes response.body, computers(:alice_vax).serial_number,
+      "alice_vax (no storage_location_id) should be hidden by the storage_location_id filter"
+  end
+
+  test "storage_location_id filter is ignored when it belongs to a different owner" do
+    # bob's own storage location — alice must not be able to filter by it,
+    # even though nothing stops her from typing its id directly into the URL.
+    bob_location = storage_locations(:bob_garage)
+
+    login_as owners(:one)
+    get computers_path(storage_location_id: bob_location.id)
+    assert_response :success
+    # The invalid filter must be silently ignored — the default barter filter
+    # (0+1) still applies on top, so alice_pdp11 (no_barter) remains visible,
+    # exactly as it is with no storage_location_id param at all.
+    assert_includes response.body, computers(:alice_pdp11).serial_number,
+      "alice_pdp11 should still be visible — an unowned storage_location_id must be ignored, not applied"
+  end
+
+  test "logged-out index ignores storage_location_id param entirely" do
+    alice_location = storage_locations(:alice_attic)
+    computers(:alice_pdp11).update_column(:storage_location_id, alice_location.id)
+
+    get computers_path(storage_location_id: alice_location.id)
+    assert_response :success
+    # No login → the entire storage_location_id block is skipped (guarded by
+    # `if logged_in?`), same as the barter_status filter above. Both
+    # alice_pdp11 and alice_vax must be visible, matching the existing
+    # "logged-out index shows all computers regardless of storage_location_id"
+    # scenario shape used by the equivalent barter_status test above.
+    assert_includes response.body, computers(:alice_pdp11).serial_number,
+      "alice_pdp11 should be visible to logged-out visitors regardless of storage_location_id"
+    assert_includes response.body, computers(:alice_vax).serial_number,
+      "alice_vax should be visible to logged-out visitors regardless of storage_location_id"
   end
 
   # ---------------------------------------------------------------------------
