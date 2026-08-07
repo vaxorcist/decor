@@ -1,5 +1,19 @@
 # decor/config/routes.rb
-# version 3.8
+# version 3.9
+# v3.9 (Session 90): Storage Locations show page. Ulli asked for a page at
+#   /storage_locations/:id listing everything stored there (Computers,
+#   Peripherals, Components, Software Items together, regardless of
+#   category), reachable via a link on the location's name on the index
+#   page. This reverses Session B's original "No :show action — a
+#   StorageLocation carries only a name, so the index list is the only
+#   display surface needed" decision (see the v3.8 note below, kept for
+#   historical context) — that decision made sense before Session C added
+#   the has_many :computers/:components/:software_items associations;
+#   now that they exist, a show page is straightforward and useful.
+#   Removed `except: [:show]` so :show becomes a normal RESTful action,
+#   scoped to Current.owner in the controller exactly like every other
+#   action on this resource (see storage_locations_controller.rb v1.2).
+#   delete_confirm's member-route placement is unchanged.
 # v3.8 (Session B, Storage Locations feature): Added resources :storage_locations,
 #   except: [:show] (no show page — the index list is the only display surface;
 #   a StorageLocation carries only a `name`, see storage_location.rb v1.0).
@@ -128,15 +142,19 @@ Rails.application.routes.draw do
   resources :software_items
 
   # Storage Locations — added Session B (Storage Locations feature).
-  # Fully private, owner-scoped (see storage_locations_controller.rb v1.0) —
+  # Fully private, owner-scoped (see storage_locations_controller.rb v1.2) —
   # NOT nested under owners/:id, since there is no public/other-owner view of
   # this resource at all; the controller scopes every action to Current.owner
-  # internally instead. No :show action — a StorageLocation carries only a
-  # `name`, so the index list is the only display surface needed.
+  # internally instead.
+  # :show added Session 90 — lists everything stored at this location
+  # (Computers/Peripherals/Components/Software Items combined, sorted
+  # alphabetically), linked from the name on the index page. Reverses
+  # Session B's original "no show page needed" decision now that Session C's
+  # has_many associations make it easy to build.
   # delete_confirm is a MEMBER route (confirms ONE specific record already
   # selected from the index), unlike admin/site_texts's delete_confirm
   # (a collection route letting the admin pick which record from a selector).
-  resources :storage_locations, except: [:show] do
+  resources :storage_locations do
     member do
       get :delete_confirm
     end

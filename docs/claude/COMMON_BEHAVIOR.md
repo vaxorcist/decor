@@ -1,4 +1,23 @@
-# decor/docs/claude/COMMON_BEHAVIOR.md - version 4.0
+# decor/docs/claude/COMMON_BEHAVIOR.md - version 4.2
+# Session 90 (wrap-up): No new rule content. Reinforcement note added below
+#   confirming the Session 89 single-ad-hoc-file @-encoding rule worked as
+#   intended this session — Claude initially named a delivered file with
+#   the @-encoding out of habit, self-caught it before presenting (no user
+#   prompt needed this time), and redelivered under the plain filename.
+#   Also: this session did view/CSS work (a Tailwind link-color class) and
+#   flagged that RAILS_UI.md was not loaded first, per the topic-index
+#   rule in RAILS_SPECIFICS.md v4.0 — see SESSION_HANDOVER.md's Session 90
+#   entry for the resulting process note (out of scope for this file: no
+#   COMMON_BEHAVIOR.md rule was broken, RAILS_SPECIFICS.md's own topic-load
+#   rule was).
+# Session 89: Merged into the "File Transfer Protocol" section below — see
+#   the "Reinforced (Session 89)" paragraph. Also bumped version 4.1 → 4.2
+#   is skipped in this history note since 4.1 was never itself shipped as
+#   a merged file (delta_session88 was unmerged when delta_session89 was
+#   generated); this file jumps 4.0 → 4.2 directly, folding in both.
+# Session 88: Merged into the "File Transfer Protocol" section below — see
+#   the "Reinforced (Session 88)" paragraph (multi-target export scripts;
+#   splitting into multiple scripts is the exception, not the default).
 # Session 85 (Reorg 4 of 4, plan agreed Session 83, concludes the reorg):
 #   Trimmed this file per the agreed plan (see SESSION_HANDOVER.md
 #   "Documentation Reorganization — Status"). Every rule's "Real example" /
@@ -15,8 +34,9 @@
 
 **Universal Rules for All Interactions with This User**
 
-**Last Updated:** July 30, 2026 (v4.0: Reorg 4 — narratives condensed to
-  one-liners across the file; no rule content changed)
+**Last Updated:** August 5, 2026 (v4.2: Session 88+89 File Transfer
+  Protocol reinforcements merged; Session 90 added a confirming note only,
+  no new rule content)
 
 ---
 
@@ -186,6 +206,19 @@ files. The labeling didn't change what it was — a guess that put
 verification work on the user instead of Claude asking for the real file
 first. (It happened to match once uploaded — that was luck, not justification.)
 
+**Reinforced (Session 90):** applied correctly under pressure — at
+session wrap-up, two of the three uploaded delta files (`SESSION_HANDOVER_
+delta_session89.md`, `DECOR_PROJECT_delta_session89.md`) referenced prior
+"Session 88" delta files as already being in Ulli's possession and
+containing text "not repeated here to save budget." Those Session 88 delta
+files were never actually uploaded to this conversation. Rather than
+reconstruct their content from the summary description (a real
+temptation — the summaries were detailed enough to sound completable),
+Claude flagged the gap explicitly and asked for the missing files instead
+of merging from the description. This is the same shape as the Session 67
+rule above, just applied to a rule-document *delta* file instead of an
+`.erb` file.
+
 ---
 
 ## File Delivery — MANDATORY
@@ -284,6 +317,36 @@ is where the old rules were actually failing.
 instead of the mandatory export script — no new rule needed, just a plain
 miss. Worth a deliberate check at request time: "is this more than one
 file? If so, generate the script — don't just list filenames in prose."
+
+**Reinforced (Session 88):** Ulli asked that future sessions not generate
+more than one export/import/placement script per exchange unless there is
+a specific reason to split them. The protocol above already supports this —
+one export script can pull files for several unrelated targets in a single
+run (see the Session 88 export script, which pulled pattern files plus two
+different target device types' files in one script), and one placement
+script can place any number of delivered files regardless of how many
+distinct features or device types they span. Splitting into multiple
+scripts is the exception, not the default — reserve it for cases with a
+genuine reason (e.g. two completely separate deliveries the user explicitly
+wants to run at different times).
+
+**Reinforced (Session 89):** the @-encoded flat-name scheme was applied to
+a genuinely single-file, ad-hoc delivery (`components/show.html.erb`) with
+no script and no other files in the same batch — caught immediately by
+Ulli. No new rule is needed; the existing line above ("Single ad-hoc file
+exchanges don't need a script... just name the one file normally") already
+covers this exactly. The miss was applying multi-file habit to a
+single-file case rather than checking which situation actually applied.
+Worth an explicit check at delivery time, before naming any output file:
+"is this a script-driven multi-file batch, or one ad-hoc file?" — only the
+former gets @-encoding.
+
+**Reinforced (Session 90) — rule worked as intended:** a single ad-hoc
+file (`storage_locations/_storage_location.html.erb`) was drafted with the
+@-encoded name out of habit, but this time Claude self-caught the mistake
+before presenting it to Ulli — no user correction needed — and redelivered
+under the plain filename. Confirms the Session 89 reinforcement is doing
+its job as an explicit pre-delivery check, not just a one-off fix.
 
 ### Output File Naming — Never Substitute Underscores for Dots
 

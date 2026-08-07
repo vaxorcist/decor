@@ -1,14 +1,25 @@
-<%# decor/app/views/storage_locations/_storage_location.html.erb - version 1.0 %>
-<%# Session B (Storage Locations feature). %>
+<%# decor/app/views/storage_locations/_storage_location.html.erb - version 1.2 %>
+<%# v1.2 (Session 90): Fixed — the name link used %>
+<%#   text-stone-900 hover:text-indigo-600 (indigo only on hover), so it %>
+<%#   was indistinguishable from plain text. Corrected to the standard %>
+<%#   clickable-value convention (DECOR_PROJECT.md "Design Patterns" → %>
+<%#   Color Scheme): text-indigo-600 hover:text-indigo-900, same classes %>
+<%#   already used for the Edit link on this row and for every other %>
+<%#   clickable name across the app (e.g. computers/_computer.html.erb). %>
+<%# v1.1 (Session 90): Name is now a link to the new show page %>
+<%#   (storage_location_path), which lists everything stored at this %>
+<%#   location across all types. Reverses the v1.0 "No show link — there %>
+<%#   is no show page" note below, now that routes.rb v3.9 and %>
+<%#   storage_locations_controller.rb v1.2 add :show. %>
+<%# v1.0 (Session B, Storage Locations feature). %>
 <%# Row partial for the index list. Expects local variable: storage_location. %>
-<%# No "show" link — there is no show page (routes.rb v3.8 excludes it); the %>
-<%# name itself is the only field, so Edit is the only way to see/change it. %>
 <%# Color conventions (DECOR_PROJECT.md Design Patterns): %>
 <%#   Clickable:     text-indigo-600 hover:text-indigo-900 %>
 <%#   Destructive:   text-red-600 hover:text-red-900 %>
 
 <div class="flex items-center justify-between px-4 py-3">
-  <span class="text-stone-900"><%= storage_location.name %></span>
+  <%= link_to storage_location.name, storage_location_path(storage_location),
+        class: "font-medium text-indigo-600 hover:text-indigo-900" %>
   <div class="flex gap-4 text-sm">
     <%= link_to "Edit", edit_storage_location_path(storage_location),
           class: "text-indigo-600 hover:text-indigo-900" %>

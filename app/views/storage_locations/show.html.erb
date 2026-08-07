@@ -1,0 +1,165 @@
+<%# decor/app/views/storage_locations/show.html.erb - version 1.1 %>
+<%# v1.1 (Session 91, ad-hoc follow-up to Session 90): Ulli reported the %>
+<%# v1.0 flat, alphabetical-by-name list wasn't enough to identify an %>
+<%# item. Replaced the single @items list with four fixed category %>
+<%# sections — Computers, Peripherals, Components, Software — each its %>
+<%# own table, shown only when that category has at least one row. Every %>
+<%# row now shows the full identifying-field set Ulli asked for, matching %>
+<%# the established column conventions from computers/show.html.erb's own %>
+<%# Components/Software sub-tables and top field grid: %>
+<%#   Computers/Peripherals: Computer/Peripheral Model | DEC Part Number | %>
+<%#     DEC Serial Number | Owner Part Number %>
+<%#   Components:            Component Type | DEC Part Number | %>
+<%#     DEC Serial Number | Owner Part Number %>
+<%#   Software:               Software Name | Version %>
+<%# Sections appear in this fixed order regardless of item counts; within %>
+<%# each section rows are sorted by Model/Type/Software Name (done in the %>
+<%# controller — see storage_locations_controller.rb v1.3's %>
+<%# build_computer_rows/build_component_rows/build_software_rows). %>
+<%#
+Private/owner-only page, same access model as every other page on this
+controller (see storage_locations_controller.rb v1.3) — no admin exception,
+unlike computers/show.html.erb which is public. @computer_rows/
+@peripheral_rows/@component_rows/@software_rows are arrays of plain hashes
+built and sorted in the controller — see that file's builder methods for
+the exact hash keys used below.
+%>
+
+<div class="px-4 max-w-5xl mx-auto">
+  <div class="flex items-center justify-between mb-4">
+    <h1 class="text-2xl font-semibold"><%= @storage_location.name %></h1>
+    <%= link_to "Edit", edit_storage_location_path(@storage_location), class: button_classes(style: :primary) %>
+  </div>
+
+  <% any_items = @computer_rows.any? || @peripheral_rows.any? || @component_rows.any? || @software_rows.any? %>
+
+  <% if any_items %>
+
+    <%# ── Computers ── %>
+    <% if @computer_rows.any? %>
+      <div class="mb-6">
+        <h2 class="text-lg font-semibold mb-3">Computers (<%= @computer_rows.count %>)</h2>
+        <div class="bg-white border border-stone-200 rounded">
+          <table class="min-w-full divide-y divide-stone-200">
+            <thead class="bg-stone-50">
+              <tr>
+                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Computer Model</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">DEC Part Number</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">DEC Serial Number</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Owner Part Number</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-stone-200 text-sm">
+              <% @computer_rows.each do |row| %>
+                <tr class="hover:bg-stone-50">
+                  <td class="px-4 py-3 whitespace-nowrap font-medium">
+                    <%= link_to row[:model_name], row[:path], class: "text-indigo-600 hover:text-indigo-900" %>
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= row[:order_number].presence || "—" %></td>
+                  <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= row[:serial_number] %></td>
+                  <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= row[:owner_part_number] %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    <% end %>
+
+    <%# ── Peripherals ── %>
+    <% if @peripheral_rows.any? %>
+      <div class="mb-6">
+        <h2 class="text-lg font-semibold mb-3">Peripherals (<%= @peripheral_rows.count %>)</h2>
+        <div class="bg-white border border-stone-200 rounded">
+          <table class="min-w-full divide-y divide-stone-200">
+            <thead class="bg-stone-50">
+              <tr>
+                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Peripheral Model</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">DEC Part Number</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">DEC Serial Number</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Owner Part Number</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-stone-200 text-sm">
+              <% @peripheral_rows.each do |row| %>
+                <tr class="hover:bg-stone-50">
+                  <td class="px-4 py-3 whitespace-nowrap font-medium">
+                    <%= link_to row[:model_name], row[:path], class: "text-indigo-600 hover:text-indigo-900" %>
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= row[:order_number].presence || "—" %></td>
+                  <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= row[:serial_number] %></td>
+                  <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= row[:owner_part_number] %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    <% end %>
+
+    <%# ── Components ── %>
+    <% if @component_rows.any? %>
+      <div class="mb-6">
+        <h2 class="text-lg font-semibold mb-3">Components (<%= @component_rows.count %>)</h2>
+        <div class="bg-white border border-stone-200 rounded">
+          <table class="min-w-full divide-y divide-stone-200">
+            <thead class="bg-stone-50">
+              <tr>
+                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Component Type</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">DEC Part Number</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">DEC Serial Number</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Owner Part Number</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-stone-200 text-sm">
+              <% @component_rows.each do |row| %>
+                <tr class="hover:bg-stone-50">
+                  <td class="px-4 py-3 whitespace-nowrap font-medium">
+                    <%= link_to row[:type_name], row[:path], class: "text-indigo-600 hover:text-indigo-900" %>
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= row[:order_number].presence || "—" %></td>
+                  <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= row[:serial_number] %></td>
+                  <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= row[:owner_part_number] %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    <% end %>
+
+    <%# ── Software ── %>
+    <% if @software_rows.any? %>
+      <div class="mb-6">
+        <h2 class="text-lg font-semibold mb-3">Software (<%= @software_rows.count %>)</h2>
+        <div class="bg-white border border-stone-200 rounded">
+          <table class="min-w-full divide-y divide-stone-200">
+            <thead class="bg-stone-50">
+              <tr>
+                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Software Name</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Version</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-stone-200 text-sm">
+              <% @software_rows.each do |row| %>
+                <tr class="hover:bg-stone-50">
+                  <td class="px-4 py-3 whitespace-nowrap font-medium">
+                    <%= link_to row[:name], row[:path], class: "text-indigo-600 hover:text-indigo-900" %>
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap text-stone-600"><%= row[:version].presence || "—" %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    <% end %>
+
+  <% else %>
+    <%= empty_state("Nothing stored here yet.") %>
+  <% end %>
+
+  <div class="mt-6">
+    <%= link_to "← Back to Storage Locations", storage_locations_path, class: "text-sm text-stone-700 hover:text-stone-900" %>
+  </div>
+</div>
