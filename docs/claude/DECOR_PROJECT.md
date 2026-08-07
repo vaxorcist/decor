@@ -1,5 +1,48 @@
 # decor/docs/claude/DECOR_PROJECT.md
-# version 2.76
+# version 2.80
+# Session 91 (ad-hoc, direct continuation of Session 90's StorageLocation
+#   show page — same feature, not a new A-F letter): Ulli reported the
+#   Session 90 flat, alphabetical-by-name list wasn't sufficient to
+#   identify an item. Reworked into four fixed-order category sections
+#   (Computers, Peripherals, Components, Software), each shown only when
+#   non-empty, with the full identifying-field set per category:
+#   Computer/Peripheral Model or Component Type, DEC Part Number, DEC
+#   Serial Number, and Owner Part Number for Computers/Peripherals/
+#   Components; Software Name and Version for Software. Sort: category
+#   first (fixed order), then case-insensitive alphabetical by
+#   Model/Type/Software Name within each category. See "Storage Locations
+#   Feature — Session Plan" → "Show Page" below for the full updated
+#   write-up. Also added the show action's first automated test coverage
+#   (storage_locations_controller_test.rb v1.1) — the action had none
+#   before this session. Ulli confirmed the full pre-commit checklist
+#   passed for the controller+view code (v1.3/v1.1) before the test file
+#   existed; the test file's own pass/fail status and the git workflow for
+#   all of it are still open at wrap-up. Full narrative:
+#   SESSION_HANDOVER.md, Session 91 changelog entry.
+# Session 90: Ad-hoc feature addition, unrelated to Storage Locations
+#   Sessions D/E/F — added a `show` page to StorageLocation (routes.rb
+#   v3.9, storage_locations_controller.rb v1.2, storage_locations/
+#   show.html.erb v1.0 NEW, storage_locations/_storage_location.html.erb
+#   v1.2), reversing Session B's original "no show page needed" decision
+#   now that Session C's has_many associations make combining and listing
+#   everything at a location straightforward. See "Storage Locations
+#   Feature — Session Plan" below for the new write-up. Not yet placed/
+#   tested/committed/deployed; no automated test written yet (pending
+#   fixture files). Full narrative: SESSION_HANDOVER.md, Session 90
+#   changelog entry. **Superseded in part by Session 91** — the show
+#   action and its view were reworked; routes.rb and
+#   _storage_location.html.erb from this session are unaffected.
+# Session 88: Storage Locations Session E — COMPLETE. Resumed the paused
+#   Session E draft; fixed a test-data collision bug found in the
+#   pre-commit run (computers_controller_test.rb v1.12 → v1.13 — 2 tests
+#   created a StorageLocation with the same name as an existing fixture for
+#   the same owner). Full pre-commit checklist then passed. Wrote the
+#   matching Components and SoftwareItems filter-sidebar support (8 files)
+#   from the verified Computers pattern. All three device types tested,
+#   lint/security-scanned, committed, merged, and DEPLOYED together —
+#   confirmed by Ulli. See "Storage Locations Feature — Session Plan" below
+#   for the updated Session E write-up. Full incident detail:
+#   SESSION_HANDOVER.md, Session 88 changelog entry.
 # Session 87: Resolved the computers_helper.rb anomaly flagged Session 86.
 #   Confirmed via git-diff capture (session_d_uncommitted_diff_report.sh)
 #   that the file's "v1.9" content is a real, sound, UNCOMMITTED local
@@ -7,107 +50,70 @@
 #   code — not phantom history. Storage Locations Session D marked
 #   COMPLETE below. Session E marked IN PROGRESS, PAUSED (Ulli's explicit
 #   choice) — see "Storage Locations Feature — Session Plan" below for the
-#   updated Session D/E write-ups. Full incident detail: SESSION_HANDOVER.md,
+#   updated Session D/E write-ups (later superseded by Session 88's
+#   completion, see above). Full incident detail: SESSION_HANDOVER.md,
 #   Session 86/87 changelog entries. No code written this session.
 # Session 86: Storage Locations Session D (Privacy Audit) — views/partial
 #   audit done and clean (see SESSION_HANDOVER.md for detail). A new
 #   unresolved anomaly in computers_helper.rb (already v1.9, Session
 #   E-shaped code, unrecorded elsewhere) blocked marking Session D fully
-#   complete or trusting Session E's status — resolved Session 87, see above.
+#   complete or trusting Session E's status — resolved Session 87, see
+#   above.
 # Session 84 (Reorg Session 2 of 4, plan agreed Session 83, continued from
 #   Reorg 1 in this same session): Trimmed this file per the agreed reorg
-#   plan (see SESSION_HANDOVER.md "Documentation Reorganization — Status").
-#   Changes made:
-#   1. REMOVED the "## Directory Tree" section entirely (the ASCII tree
-#      block + its regeneration command). It was last regenerated from a
-#      real `tree` command at Session 41 and had been manually annotated
-#      ever since — an increasingly unreliable secondary copy of
-#      information that already lives correctly in each file's own
-#      version-header comment and in `git log`. FLAGGED CROSS-DOC ISSUE
-#      (not fixed this pass — out of scope for a DECOR_PROJECT.md-only
-#      reorg session, and rule-document edits require prior proposal/
-#      approval per COMMON_BEHAVIOR.md): RAILS_SPECIFICS.md's "Directory
-#      Tree Maintenance — MANDATORY" section still instructs future
-#      sessions to keep this now-deleted section current. That rule needs
-#      a corresponding edit (either removed or repointed) — proposed as an
-#      explicit action item for Reorg 3 (RAILS_SPECIFICS.md pass), not
-#      applied silently here.
-#   2. REMOVED the "Key file versions" table (the long flat list of every
-#      file+version+session going back to Session 24). This dataset is
-#      fully redundant with (a) `git log`, and (b) each file's own
-#      mandatory version-header comment (PROGRAMMING_GENERAL.md "File
-#      Version Control") — the table was pure duplication that only grew,
-#      never shrank, every session.
-#   3. COMPRESSED the following fully-DONE, historical feature write-ups
-#      down to short pointers (their live, still-relevant facts — schema/
-#      validation/scope details — already exist in "Data Model Overview"
-#      below, which was NOT touched): "Software Feature — Session Plan",
-#      "Component Suggestions Feature — Session Plan" (all 4 phases),
-#      "Category Help Pages Feature — Session 73", "Owner Part Number
-#      Feature — Sessions 69–72", "Component/Peripheral Dropdown
-#      Enhancements — Session 76", "Tom Select Dropdown Sort Order Bug —
-#      Session 76".
-#   4. REMOVED the full "Session 78" and "Session 77" narrative sections.
-#      Both describe code-complete-but-not-yet-placed work; their content
-#      now lives in SESSION_HISTORY_ARCHIVE.md ("Session 77 Summary",
-#      "Session 78 Summary", moved there in Reorg 1 this same session) and
-#      the still-open combined checklist already lives in
-#      SESSION_HANDOVER.md "Open Checklists". Nothing actionable was lost:
-#      the NOT-YET-DONE checklist is the one live artifact from these two
-#      sections, and it was already present in SESSION_HANDOVER.md before
-#      this edit.
-#   5. KEPT UNCHANGED (live reference content, not narrative duplication):
-#      Data Model Overview, the full "Storage Locations Feature — Session
-#      Plan" (Sessions D–F are still NOT STARTED, so this remains an
-#      active working document, not historical record), "Appliances →
-#      Peripherals Merger", "Connections Feature — Status", "Known Issues
-#      & Solutions", "Design Patterns", "Quick Reference Commands".
-#   Verified before finalizing: every schema/validation/scope fact
-#   referenced by the removed/compressed sections above still exists
-#   somewhere in the kept content (mainly Data Model Overview) — nothing
-#   load-bearing for future Pre-Implementation Verification was deleted,
-#   only session-narrative duplication and the two large historical
-#   tables (tree, key-file-versions).
-#   Full original narrative for every compressed section remains
-#   recoverable via git history of this file and via
-#   SESSION_HISTORY_ARCHIVE.md for the sessions that already moved there.
+#   plan. Removed the "## Directory Tree" section, removed the "Key file
+#   versions" table, compressed six fully-DONE historical feature write-ups
+#   to short pointers, removed the full "Session 78" and "Session 77"
+#   narrative sections (now in SESSION_HISTORY_ARCHIVE.md). Data Model
+#   Overview, the still-active Storage Locations plan, Known Issues,
+#   Design Patterns, and Quick Reference Commands left untouched.
 # Session 82: Storage Locations Session C — CLOSED OUT. Both gaps flagged
-#   in Session 81 fixed: :storage_location_id added to strong params on
-#   computers_controller.rb / components_controller.rb /
-#   software_items_controller.rb; Storage Location own-view-only column
-#   added to components/index.html.erb + components/_component.html.erb
-#   (bringing Components to parity with Computers/Software Items). Full
-#   Session C is now migrated, tested, lint/security-scanned, committed,
-#   merged, and DEPLOYED — confirmed by Ulli. Session D (Privacy Audit)
-#   can now start. See SESSION_HANDOVER.md / SESSION_HISTORY_ARCHIVE.md
-#   "Session 82 Summary" for full detail.
+#   in Session 81 fixed. Full Session C migrated, tested,
+#   lint/security-scanned, committed, merged, and DEPLOYED — confirmed by
+#   Ulli. Session D (Privacy Audit) unblocked.
 # Sessions 41–81: see SESSION_HISTORY_ARCHIVE.md for full per-session
 #   narrative. Compressed pointers to the fully-DONE features from this
 #   era are retained below under their own short headings.
 
 **DEC Owner's Registry Project - Specific Information**
 
-**Last Updated:** August 4, 2026 (Session 87: resolved the Session 86
-  computers_helper.rb anomaly — confirmed uncommitted local Session E
-  draft, not phantom history. Storage Locations Session D marked
-  COMPLETE, Session E marked IN PROGRESS/PAUSED; v2.76)
+**Last Updated:** August 6, 2026 (Session 91: reworked the ad-hoc
+  StorageLocation show page added in Session 90 — grouped into four
+  category sections with the full identifying-field set Ulli asked for,
+  instead of one flat alphabetical list — and added the show action's
+  first automated test coverage. See "Storage Locations Feature — Session
+  Plan" → "Show Page" below. Pre-commit checklist confirmed passing by
+  Ulli for the controller+view code; the new test file's own pass/fail
+  status and git workflow for all of it are still open. Unrelated to the
+  A-F Session Plan and its own D/E/F status, which is otherwise unchanged
+  by this addition. Session 88 completed Storage Locations Session E;
+  Session 89 fixed an unrelated Owner Part Number display gap on the
+  Components show page — see "Owner Part Number Feature" below.)
 **Current Status:** Sessions 1–76 all committed, pushed, merged, and
   deployed to main (per Ulli's confirmation at the start of Session 76).
   Sessions 77 and 78's own work (11 files — see SESSION_HANDOVER.md "Open
   Checklists" / SESSION_HISTORY_ARCHIVE.md "Session 77/78 Summary")
   status is UNCHANGED — no session since has touched or confirmed 77/78's
   placement; both remain a separate open item. **Storage Locations
-  Sessions A, B, and C are ALL fully committed, tested, lint/
-  security-scanned, and DEPLOYED** — confirmed by Ulli. **Storage
-  Locations Session D (Privacy Audit) is now COMPLETE** (Sessions 86–87 —
-  see "Storage Locations Feature — Session Plan" below). **Storage
-  Locations Session E (filter-sidebar support) is IN PROGRESS, PAUSED:** an
-  uncommitted, unreviewed local draft covers Computers/Peripherals only
-  (found Session 86, content confirmed sound Session 87); paused at Ulli's
-  explicit request. **Storage Locations Session F (export/import) remains
-  genuinely NOT STARTED.** The Documentation Reorganization plan (Sessions
-  84–85) is fully complete — see SESSION_HANDOVER.md "Documentation
-  Reorganization — Status."
+  Sessions A through E are ALL fully committed, tested, lint/
+  security-scanned, and DEPLOYED** — confirmed by Ulli (Session D:
+  Sessions 86–87 privacy audit; Session E: Session 88 — Computers/
+  Peripherals draft fixed and verified, Components and SoftwareItems
+  equivalents written from the pattern, all three device types tested and
+  DEPLOYED together). **Storage Locations Session F (export/import)
+  remains genuinely NOT STARTED and is the only piece of that feature
+  still open.** The Documentation Reorganization plan (Sessions 84–85) is
+  fully complete — see SESSION_HANDOVER.md "Documentation Reorganization
+  — Status." **Session 89's Owner Part Number display fix
+  (components/show.html.erb v1.11) is code-complete and delivered but
+  NOT YET placed/tested/committed/deployed.** **The StorageLocation show
+  page (Session 90, reworked Session 91) is code-complete: the controller
+  (v1.3) and view (v1.1) have passed the full pre-commit checklist per
+  Ulli's confirmation, and a full test file (storage_locations_
+  controller_test.rb v1.1) now exists for the `show` action for the first
+  time — but the test file's own pass/fail status is unconfirmed and git
+  workflow has not started for any of it.** Both are ad-hoc additions,
+  independent of Session F and of each other.
 
 **Note on Directory Tree / Key file versions removal (Session 84):** this
 file no longer carries a live directory tree or a running file-version
@@ -259,20 +265,36 @@ head -3 decor/path/to/file.rb   # version-header comment, mandatory per PROGRAMM
 - owner_member_id: integer NOT NULL — per-group port numbering; auto-assigned on create
 - label: VARCHAR(100) nullable
 
-### StorageLocation  ← Session 79 (model), Session 80 (owner-facing CRUD), Sessions 81–82 (FK associations, DONE ✓)
+### StorageLocation  ← Session 79 (model), Session 80 (owner-facing CRUD), Sessions 81–82 (FK associations, DONE ✓), Session 90 (show page), Session 91 (show page reworked)
 - belongs_to :owner
 - name VARCHAR(50) NOT NULL, uniqueness scoped to owner_id (not global —
   two owners may each have a location named "Garage")
 - Private, owner-defined — NOT an admin-managed lookup table (unlike
   ComponentType/SoftwareName/ComponentSuggestion); same per-owner ownership
   pattern as ConnectionGroup.
-- Owner-facing CRUD (Session 80): `StorageLocationsController` — index, new,
-  create, edit, update, destroy, delete_confirm. EVERY action requires login
-  AND is scoped to Current.owner (no public or other-owner-visible view at
-  all — stricter than SoftwareItem's public-index model). No :show action —
-  the index list is the only display surface needed for a name-only record.
-  Reachable via "My Storage Locations" in the username dropdown
+- Owner-facing CRUD (Session 80): `StorageLocationsController` — index,
+  **show (added Session 90, reworked Session 91)**, new, create, edit,
+  update, destroy, delete_confirm. EVERY action requires login AND is
+  scoped to Current.owner (no public or other-owner-visible view at all —
+  stricter than SoftwareItem's public-index model). Reachable via "My
+  Storage Locations" in the username dropdown
   (common/_navigation.html.erb v2.8).
+- **show (Session 90, reworked Session 91):** lists everything currently
+  stored at this location, now split into four fixed-order category
+  sections — Computers, Peripherals, Components, Software — each shown
+  only when it has at least one item, rather than Session 90's original
+  single flat alphabetical list. Within each section, items are sorted
+  case-insensitively by their own Model/Type/Software Name. Each row shows
+  the full identifying-field set: Computer/Peripheral Model or Component
+  Type, DEC Part Number (order_number), DEC Serial Number (serial_number),
+  and Owner Part Number for Computers/Peripherals/Components; Software
+  Name and Version for Software. Each item's name still links to its own
+  show/edit page, same as Session 90. Reachable via a link on the
+  location's name on the index page (`_storage_location.html.erb` v1.2,
+  unchanged since Session 90). See "Storage Locations Feature — Session
+  Plan" below for full detail. Session 91's rework was prompted directly
+  by Ulli reporting that Session 90's flat list wasn't enough to identify
+  an item.
 - delete_confirm (Session 81, v1.1): real affected-record counts warning
   (@computers_count / @components_count / @software_items_count). Tested and
   confirmed working against a migrated database as of Session 82.
@@ -282,14 +304,18 @@ head -3 decor/path/to/file.rb   # version-header comment, mandatory per PROGRAMM
   lint/security-scanned, committed, merged, and DEPLOYED — confirmed by
   Ulli. See SESSION_HISTORY_ARCHIVE.md "Session 81/82 Summary" for the
   complete file list.
+- **Session E (Session 88) is DONE ✓** — filter-sidebar support for all
+  three device types, tested and DEPLOYED — confirmed by Ulli.
 - Privacy (confirmed in design consultation): visible only to the owning
   owner — excluded from every owners_controller read-only view of another
   owner's collection and from all other logged-in owners; included in the
   admin-wide export only (no dedicated admin UI). **Audited and CONFIRMED
-  CLEAN (Sessions 86–87)** — see "Session D" below.
+  CLEAN (Sessions 86–87)** — see "Session D" below. The show page (Session
+  90, reworked Session 91) preserves this: no admin exception,
+  `Current.owner`-scoped like every other action.
 - See "Storage Locations Feature — Session Plan" below for the full
-  confirmed design, Session D/E's current status, and the remaining
-  Session F.
+  confirmed design, Session D/E's completion, the Session 90/91 show-page
+  work, and the remaining Session F.
 
 ---
 
@@ -316,9 +342,7 @@ Admin-managed `component_suggestions` lookup table driving a typeahead on
              paginated/filterable admin index
 
 Schema/validation/scope facts: see "ComponentSuggestion" under Data Model
-Overview above. Design/behaviour decisions (typeahead accept/reject rules,
-the shelved order_number/variant schema-split design, the two route-helper-
-naming mistakes caught before shipping): full detail in
+Overview above. Design/behaviour decisions: full detail in
 SESSION_HISTORY_ARCHIVE.md, Sessions 62–67, and
 `decor/docs/claude/ORDER_NUMBER_VARIANT_DESIGN.md` v1.0 (shelved design,
 reference only). Fully committed/deployed as of Session 72.
@@ -331,11 +355,10 @@ reference only). Fully committed/deployed as of Session 72.
 pure `SiteText::KNOWN_TEXTS` data + routes — no migration. Keys: `help_computers`,
 `help_peripherals`, `help_components`, `help_connections`, `help_software`.
 Two pre-existing single-source-of-truth bugs found and fixed while
-implementing (owner-facing `SiteTextsController` had its own stale
-`title_for_key`; admin `url_for_key` was a hardcoded case statement) — see
-RAILS_SPECIFICS.md "Single Source of Truth Refactors" for the generalized
-rule this produced. Confirmed fully deployed at the start of Session 76.
-Full file list and narrative: SESSION_HISTORY_ARCHIVE.md, Session 73.
+implementing — see RAILS_SPECIFICS.md "Single Source of Truth Refactors"
+for the generalized rule this produced. Confirmed fully deployed at the
+start of Session 76. Full file list and narrative: SESSION_HISTORY_ARCHIVE.md,
+Session 73.
 
 ---
 
@@ -345,14 +368,28 @@ Adds `owner_part_number VARCHAR(20) NOT NULL` (defaulting to `"-"`) to both
 `Computer` and `Component`, alongside a widened uniqueness scope and a
 symmetric `serial_number` presence/defaulting fix. See "Computer" and
 "Component" under Data Model Overview above for the live schema/validation
-facts. Confirmed design answers (uniqueness scope kept at the model/type
-dimension; symmetric defaulting; one-time `"SPARE-#{id}"` backfill for
-colliding pre-existing spares, no ongoing auto-assign; CSV export/import
-updated on `owner_export_service.rb`/`owner_import_service.rb` only) and
-the full incident detail (an unrelated `bundle-audit` CI failure across
-four gems, fixed and confirmed before merge) are in
+facts. Confirmed design answers and the full incident detail are in
 SESSION_HISTORY_ARCHIVE.md, Sessions 69–72. Fully committed, tested,
 migrated, and deployed to `main` as of Session 72.
+
+**Session 89 addendum — display gap found and fixed:** `Component#owner_
+part_number` (v1.6, Session 70) and its strong-params permit
+(`components_controller.rb` v2.1, Session 70) were correctly implemented
+from the start, but `decor/app/views/components/show.html.erb` was never
+updated to display the field — every version between v1.7 (Session 22)
+and v1.9 (Session C) added other fields without ever adding this one.
+Same "single source of truth / touch N places, miss one" shape as the
+`RAILS_SPECIFICS.md` "Single Source of Truth Refactors" rule and this same
+page's own earlier Session 73/75 history. Data was saveable and correct in
+the database the entire time; only the Components show page failed to
+render it. Fixed in `components/show.html.erb` v1.11: Component Owner Part
+Number is now displayed side by side with Trade Status in one row
+(`grid-cols-2` when logged in, `grid-cols-1` alone when logged out, since
+Trade Status remains members-only and must stay completely absent from
+the DOM for logged-out visitors — same guard as before). No controller or
+model change was needed. No new automated test — view-only display change,
+no server-side logic altered. **Not yet placed/tested/committed/deployed
+as of Session 90** — see SESSION_HANDOVER.md "Open Checklists."
 
 ---
 
@@ -393,113 +430,97 @@ and SoftwareItems. Design consultation (Session 79) confirmed:
 A (model) ──> B (CRUD) ──> C (FK + forms) ──┬──> D (privacy audit)
    DONE         DONE          DONE           │       DONE
                                               └──> E (filters)
-                                                  IN PROGRESS, PAUSED
+                                                      DONE
                               A + C ─────────────> F (export/import)
                                                        NOT STARTED
 ```
+
+(Ad-hoc, outside this A-F letter scheme: a Show Page was added in Session
+90 and reworked in Session 91 — see its own subsection at the end of this
+plan.)
 
 ### Session A — Migration + Model + Fixtures + Model Tests — DONE ✓ (Session 79)
 
 Implemented, tested, lint/security-scanned, committed, merged, deployed.
 Schema: `storage_locations` — `owner_id` (FK, NOT NULL), `name`
 VARCHAR(50) NOT NULL, unique index on `(owner_id, name)`. No CHECK
-constraint (matches the actual `component_suggestions` precedent). Deliberately
-NOT included: the `has_many :computers/:components/:software_items`
-associations — those FK columns don't exist until Session C.
+constraint. Deliberately NOT included: the has_many associations — those
+FK columns don't exist until Session C.
 
 ### Session B — Owner-Facing CRUD (dedicated page) — DONE ✓ (Session 80)
 
 Implemented, tested, lint/security-scanned, committed, merged, deployed.
 Access model is stricter than SoftwareItem's precedent: EVERY action
-(including index) requires login and is scoped to `Current.owner` — no
-public or other-owner view. No `:show` action (name-only record; index
-list + edit is the whole surface). The Session B `delete_confirm` shipped
-as a deliberately honest, no-counts confirmation (the counting associations
-don't exist yet) — flagged in both the controller and view as interim,
-Session C's job to upgrade. Nav entry: "My Storage Locations" in the
-existing right-side username dropdown.
+requires login and is scoped to `Current.owner` — no public or
+other-owner view. Originally shipped with no `:show` action (name-only
+record; index list + edit was the whole surface) — **reversed in Session
+90, see below.** The Session B `delete_confirm` shipped as a deliberately
+honest, no-counts confirmation — upgraded in Session C. Nav entry: "My
+Storage Locations" in the existing right-side username dropdown.
 
 ### Session C — FK on Computer, Component, SoftwareItem + Forms + Show Pages — DONE ✓ (Sessions 81–82)
 
 Implemented, tested, lint/security-scanned, committed, merged, and
-DEPLOYED — confirmed by Ulli. Delivered across two sessions: Session 81
-did the bulk of the work (20 files, including the migration, model
-associations, form dropdowns, show/index display, and the real-counts
-`delete_confirm` upgrade) but left two gaps flagged rather than guessed
-through — `components/_component.html.erb`'s own-view-only Storage
-Location column, and `:storage_location_id` missing from strong params on
-all three referencing controllers. Session 82 closed both: strong params
-added to `computers_controller.rb` (v1.24) / `components_controller.rb`
-(v2.2) / `software_items_controller.rb` (v1.4); Components brought to
-parity with Computers/SoftwareItems (`components/index.html.erb` v1.9,
-`components/_component.html.erb` v1.8). Full file-by-file detail:
-SESSION_HISTORY_ARCHIVE.md, "Session 81 Summary" and "Session 82
-Summary." One unrelated `kamal deploy` DNS-timeout incident (resolved by
-plain retry, no code change).
+DEPLOYED — confirmed by Ulli. ("Show Pages" here refers to the Computer/
+Component/SoftwareItem show pages gaining a Storage Location display
+field — not the StorageLocation model's own show page, added later in
+Session 90.) Delivered across two sessions: Session 81 did the bulk of the
+work (20 files, migration, model associations, form dropdowns, show/index
+display, real-counts `delete_confirm`); Session 82 closed two flagged
+gaps (strong params on three controllers; Components index/row Storage
+Location column). Full file-by-file detail: SESSION_HISTORY_ARCHIVE.md,
+"Session 81 Summary" and "Session 82 Summary."
 
 ### Session D — Privacy Audit (dedicated, deliberately separate from Session C) — DONE ✓ (Sessions 86–87)
 
-Depended on C (done). A dedicated pass, not assumed to fall out correctly
-from Session C — this project has hit exactly this class of bug
-repeatedly (Session 73/75 form-vs-show drift). Explicit read-through +
-confirmation that `storage_location` does NOT appear in any of, plus the
-shared partial they all render:
+Depended on C (done). Confirmed `storage_location` does NOT appear in any
+of the six owners/* read-only views or the shared `_profile.html.erb`
+partial they all render. Confirmed no partial is shared between the
+Session B/C owner-CRUD views and these read-only views. A separate
+anomaly found mid-audit (`computers_helper.rb` already at v1.9 with
+unrecorded code) was investigated and resolved Session 87 — an
+uncommitted local draft of Session E's own work, unrelated to Session D's
+own conclusion. Full detail: SESSION_HANDOVER.md, Session 86/87 changelog
+entries.
 
-    decor/app/views/owners/computers.html.erb       — clean
-    decor/app/views/owners/peripherals.html.erb     — clean
-    decor/app/views/owners/components.html.erb      — clean
-    decor/app/views/owners/software.html.erb        — clean
-    decor/app/views/owners/show.html.erb            — clean
-    decor/app/views/owners/_owner.html.erb          — clean
-    decor/app/views/owners/_profile.html.erb        — clean (rendered by all
-      six above; added to scope Session 86)
+### Session E — Filter Sidebar Support — DONE ✓ (Session 88)
 
-Confirmed (Session 86): none of the six share a partial with the Session
-B/C owner-CRUD views — each builds its own inline table, so the
-partial-sharing leak vector this section originally flagged does not
-exist in this codebase. Also confirmed (informational): the three device
-partials that DO carry a Storage Location cell
-(`computers/_computer.html.erb` / `components/_component.html.erb` /
-`software_items/_software_item.html.erb`) already correctly guard that
-cell with a per-row `Current.owner == X.owner` check, falling back to a
-plain em-dash for every other row. A separate anomaly found mid-audit
-(`computers_helper.rb` already at v1.9 with unrecorded code) was
-investigated and resolved Session 87 — it turned out to be an
-uncommitted local draft of Session E's own work (see "Session E" below),
-unrelated to Session D's own conclusion. Full detail: SESSION_HANDOVER.md,
-Session 86/87 changelog entries.
+Depended on C (done). Independent of D (also done). All three device
+types now support the Storage Location filter, using an identical
+two-guard pattern in every controller (`if logged_in?` + an
+ownership-existence check against `Current.owner.storage_locations`,
+closing the crafted cross-owner `storage_location_id` probe) and identical
+UI placement (Storage Location select, positioned after Trade, in each
+`_filters.html.erb`):
 
-### Session E — Filter Sidebar Support — IN PROGRESS, PAUSED (found Session 86, confirmed Session 87)
+    decor/app/helpers/computers_helper.rb              v1.9
+    decor/app/controllers/computers_controller.rb       v1.25
+    decor/app/views/computers/_filters.html.erb          v1.8
+    decor/test/controllers/computers_controller_test.rb v1.13
 
-Depends on C (done). Independent of D. An uncommitted, unreviewed local
-draft already exists for the Computers/Peripherals half only — reviewed
-Session 87 and assessed sound (Storage Location filter gated
-`if logged_in?`, plus an ownership-existence guard against a crafted
-cross-owner `storage_location_id`; 3 new tests covering the happy path,
-the ownership guard, and the logged-out skip). **Paused here at Ulli's
-explicit request — not run, tested, lint/security-scanned, or committed.**
+    decor/app/helpers/components_helper.rb                  v1.5
+    decor/app/controllers/components_controller.rb           v2.3
+    decor/app/views/components/_filters.html.erb              v1.5
+    decor/test/controllers/components_controller_test.rb     v1.4
 
-    decor/app/views/computers/_filters.html.erb   v1.8  (uncommitted) — DONE (draft)
-    decor/app/controllers/computers_controller.rb v1.25 (uncommitted) — DONE (draft)
-    decor/app/helpers/computers_helper.rb         v1.9  (uncommitted) — DONE (draft)
-    + test/controllers/computers_controller_test.rb v1.12 (uncommitted, 3 new tests)
+    decor/app/helpers/software_items_helper.rb                  v1.1
+    decor/app/controllers/software_items_controller.rb          v1.5
+    decor/app/views/software_items/_filters.html.erb              v1.1
+    decor/test/controllers/software_items_controller_test.rb     v1.6
 
-    decor/app/views/components/_filters.html.erb / components_controller.rb /
-      components_helper.rb                        — NOT STARTED
-    decor/app/views/software_items/_filters.html.erb / software_items_controller.rb /
-      software_items_helper.rb                     — NOT STARTED
-    + filter test coverage in each controller test file — Computers done
-      (draft, uncommitted); Components/SoftwareItems NOT STARTED
-
-Remaining steps when this resumes: run the full pre-commit checklist on
-the existing Computers/Peripherals draft; write the matching Components
-and SoftwareItems equivalents following the same pattern; then the git
-workflow for all three device types together.
+Test fixtures for all three device types reference the existing
+storage_locations.yml fixtures (alice_attic, bob_garage) directly — no
+StorageLocation.create! calls anywhere, avoiding a uniqueness collision
+that was caught and fixed in computers_controller_test.rb v1.13 (2 tests
+originally created a duplicate "Attic Shelf 3" for owner one, colliding
+with the alice_attic fixture under the (owner_id, name) uniqueness
+validation). Full pre-commit checklist passed on all three device types
+together; git workflow and kamal deploy confirmed successful by Ulli.
 
 ### Session F — Export/Import (owner-level and admin-level) — NOT STARTED
 
 Depends on A and C (both done). Last, since it's the most cross-cutting
-piece. Unaffected by the Session D/E situation above.
+piece. Unaffected by the Session D/E/Show-Page work above.
 
     decor/app/services/owner_export_service.rb
       new storage_locations CSV section, referenced BY NAME (no synthetic key
@@ -507,32 +528,131 @@ piece. Unaffected by the Session D/E situation above.
       storage_location column added to Computer/Component/SoftwareItem sections
     decor/app/services/owner_import_service.rb
       storage_locations section imported BEFORE the Computer/Component/SoftwareItem
-      sections (dependency ordering, same shape as computer_models needing to exist
-      before computers); a referenced name not yet present for that owner is
-      AUTO-CREATED (confirmed design decision) rather than skipped/rejected
+      sections (dependency ordering); a referenced name not yet present for that
+      owner is AUTO-CREATED (confirmed design decision) rather than skipped/rejected
     decor/app/services/all_owners_export_service.rb
       storage_location included (confirmed: not private from admins — this file
       is exempt from the Session D privacy audit)
     decor/app/views/data_transfers/show.html.erb   (mention new CSV section)
     + test updates: owner_export_service_test.rb, owner_import_service_test.rb
 
+### Show Page (ad-hoc addition, Session 90 — outside the original A-F plan; reworked Session 91)
+
+Ulli asked, independently of the A-F plan above, for a page at
+`/storage_locations/:id` listing everything currently stored at that
+location — Computers, Peripherals, Components, and Software Items.
+Reverses Session B's original "No :show action — the index list is the
+only display surface needed" decision (see "StorageLocation" under Data
+Model Overview above) — that decision predates Session C's has_many
+:computers/:components/:software_items associations, which make this
+straightforward now.
+
+**Session 90 (initial version):** combined everything into one flat list,
+sorted alphabetically by display name, deliberately NOT grouped by type.
+Each item's name linked out to its own show/edit page (`computer_path` /
+`component_path` / `software_item_path`, matching the same conventions
+already used on computers/show.html.erb's own Components and Software
+sub-tables).
+
+**Session 91 (rework):** Ulli reported the Session 90 flat list wasn't
+sufficient to identify an item — a bare Computer Model or Component Type
+name alone doesn't distinguish between two similar units. Reworked into
+four fixed-order category sections, each rendered only when it has at
+least one item:
+
+    Category      Fields displayed
+    ─────────────────────────────────────────────────────────────────
+    Computers     Computer Model, DEC Part Number, DEC Serial Number,
+                  Owner Part Number
+    Peripherals   Peripheral Model, DEC Part Number, DEC Serial Number,
+                  Owner Part Number
+    Components    Component Type, DEC Part Number, DEC Serial Number,
+                  Owner Part Number
+    Software      Software Name, Version
+
+Sections always appear in this fixed order (Computers, Peripherals,
+Components, Software) regardless of item counts. Within each section,
+items are sorted case-insensitively by their own Model/Type/Software
+Name — computed and sorted in the controller, not the view. Each row's
+name still links to the item's own show/edit page, unchanged from
+Session 90. Access model unchanged from every other StorageLocation
+action: private, scoped to `Current.owner`, no admin exception (unlike
+`computers#show`, which is public).
+
+**Implementation notes (Session 91):**
+- `Computer`/`Peripheral` share one table and one `has_many :computers`
+  association on `StorageLocation` (storage_location.rb v1.1, unchanged);
+  the split into two sections uses the `device_type` enum's own generated
+  `device_type_computer`/`device_type_peripheral` scopes
+  (`enum :device_type, { computer: 0, peripheral: 2 }, prefix: true` — see
+  "Computer" under Data Model Overview above), not a new column or
+  association.
+- Three new private controller methods — `build_computer_rows` (shared by
+  both Computers and Peripherals, since the field set is identical),
+  `build_component_rows`, `build_software_rows` — each return an array of
+  plain hashes (model/type/software name, order_number, serial_number,
+  owner_part_number where applicable, and the link path), sorted with
+  `sort_by { |row| row[key].downcase }`.
+- Verified field/association names against the actual uploaded
+  `computer.rb`, `component.rb`, `software_item.rb`, and
+  `storage_location.rb` before writing any code (Pre-Implementation
+  Verification) — not guessed.
+
+    decor/app/controllers/storage_locations_controller.rb   v1.2 → v1.3
+    decor/app/views/storage_locations/show.html.erb           v1.0 → v1.1
+
+Unaffected by this rework (still at their Session 90 versions, pending
+placement per SESSION_HANDOVER.md "Open Checklists"):
+
+    decor/config/routes.rb                                       v3.9
+    decor/app/views/storage_locations/_storage_location.html.erb  v1.2
+
+**Test coverage (Session 91):** the `show` action had zero automated
+tests before this session (flagged as an open item in Session 90's own
+write-up). `decor/test/controllers/storage_locations_controller_test.rb`
+v1.0 → v1.1 adds full coverage: login/ownership guards (matching the
+pattern used by every other action in this file), correct field display
+per category, correct case-insensitive sort within each category (derived
+from the fixtures' actual data, not hardcoded expected strings — per
+PROGRAMMING_GENERAL.md's "Derive Test Assertions from Data, Not
+Constants"), a category section being omitted entirely when empty, and
+cross-owner isolation. Deliberately modifies NO fixture `.yml` file —
+every test assigns `storage_location` via `update!` on existing fixtures,
+or creates a small number of new `Computer` rows for the Peripherals
+tests (since no existing alice/bob fixture has `device_type: peripheral`),
+entirely inside the test itself. This relies on Rails' transactional
+fixture rollback rather than permanent fixture changes, specifically to
+avoid silently affecting other test files not reviewed this session
+(`computers_controller_test.rb`'s own Storage Location filter tests from
+Session 88, `components_controller_test.rb`, `software_items_
+controller_test.rb`).
+
+**Status: code-complete and delivered for both the controller/view
+rework and its test coverage.** Ulli confirmed `bin/rails test`, rubocop,
+brakeman, bundle-audit, and a manual browser check ALL PASSED for the
+controller+view pair (v1.3/v1.1) — but that run predates the test file
+(v1.1), since Ulli asked for tests to be written before the git workflow.
+**The test file's own pass/fail status has NOT yet been confirmed, and
+the git workflow (branch → commit → push → PR → CI → merge → deploy) has
+NOT been started** for any of Session 90's or Session 91's Storage
+Location show-page files. See SESSION_HANDOVER.md "Open Checklists" for
+the full, current checklist.
+
 ---
 
 ## Component/Peripheral Dropdown Enhancements — Session 76 (components/_form.html.erb Row 1)
 
 Four small, successive fixes to the Row 1 "Computer/Peripheral" select in
-`decor/app/views/components/_form.html.erb`: label rename ("Computer
-Model" → "Computer/Peripheral"), Owner Part Number added to the option
-label, column widened 50% (`grid-cols-[3fr_2fr_2fr]`), wording consistency.
-All code-complete and deployed as part of Session 76's confirmed-deployed
-batch. Full narrative: SESSION_HISTORY_ARCHIVE.md, "Session 76 Summary."
+`decor/app/views/components/_form.html.erb`. All code-complete and
+deployed as part of Session 76's confirmed-deployed batch. Full
+narrative: SESSION_HISTORY_ARCHIVE.md, "Session 76 Summary."
 
 ## Tom Select Dropdown Sort Order Bug — Session 76 (tom_select_controller.js, project-wide)
 
 `sortField: false` (present since Session 54) is not a valid Tom Select
-option — it silently sorted every Tom Select dropdown (Computer Model,
-Condition, Run Status) by database id instead of name. Fixed with an
-explicit `sortField: { field: "text", direction: "asc" }`. Full mechanism:
+option — it silently sorted every Tom Select dropdown by database id
+instead of name. Fixed with an explicit
+`sortField: { field: "text", direction: "asc" }`. Full mechanism:
 RAILS_SPECIFICS.md, "Tom Select sortField — Must Be an Explicit Sort Spec."
 
 ---
@@ -594,7 +714,15 @@ Grep `db/schema.rb` for the column name to find all affected tables.
 
 ### Never Guess — Read the File or Ask (Session 39)
 Claude must never invent a path helper, method name, or behaviour without reading
-the actual file.
+the actual file. **Extended in practice Session 90 to rule-document delta
+files** — when a delta referenced other delta content "already in Ulli's
+possession" that had not actually been uploaded, Claude asked for the
+missing files rather than reconstructing them from the summary given.
+**Applied again Session 91:** before writing the show-page rework or its
+tests, exported and read the actual controller/view/model files and, for
+the tests, the actual fixture files and authentication_helper.rb, rather
+than assuming field names, association names, or which fixtures already
+carried a `storage_location_id`.
 
 ### enum hash form required after non-contiguous gap (Session 41)
 `enum :device_type, { computer: 0, peripheral: 2 }, prefix: true`
@@ -620,6 +748,21 @@ Use grid-cols-[auto_1fr_auto] for left/logo/right navbars.
 - Barter offered:      `text-green-700`
 - Barter wanted:       `text-amber-600`
 - Barter no_barter:    `text-stone-400` (em-dash)
+
+**Reinforced (Session 90):** a delivered link used `text-stone-900
+hover:text-indigo-600` — indigo only on hover, not at rest — so it wasn't
+visually recognizable as a link. This convention already existed
+(this section); the miss was applying it incorrectly (hover-only) rather
+than not knowing it. Worth double-checking that the *resting* class,
+not just the hover class, is the indigo one whenever writing a clickable
+value.
+
+**Applied correctly (Session 91):** the reworked StorageLocation show
+page's per-category tables reuse this exact convention
+(`text-indigo-600 hover:text-indigo-900`) for every row's name link, and
+reuse `text-stone-600` for the non-clickable identifying fields (DEC Part
+Number, DEC Serial Number, Owner Part Number, Version) — no new colors
+introduced.
 
 ### Button Labels
 - Primary: descriptive ("Update Computer", "Save Component")
@@ -649,17 +792,20 @@ mapping, abbreviated consistently:
     "Serial" / "Serial No." → "DEC S/N" or "DEC Serial No." (same file-pairing as above)
 
 **Scope confirmed with the user (Session 69):** this includes the Admin >
-Component Suggestions screens and the Components dropdown menu items
-("Re-validate DEC Part Numbers", "Download Unvalidated DEC Part Numbers") —
-i.e. the rename applies project-wide to every place these concepts are
-displayed to a user, not just the primary Computer/Component forms.
+Component Suggestions screens and the Components dropdown menu items — the
+rename applies project-wide to every place these concepts are displayed to
+a user, not just the primary Computer/Component forms.
 
 **Exception noted Session 76:** the Component form's Row 1 selector for
 which Computer/Peripheral a Component belongs to is deliberately labeled
 "Computer/Peripheral", not "Computer Model" — since that field selects a
-*device* (which may be either type), not a *model* the way the Computer
-form's own Model field does. Not a rename of the established "Model" →
-"Computer Model" mapping above; a different field entirely.
+*device* (which may be either type), not a *model*.
+
+**Applied correctly (Session 91):** the reworked StorageLocation show
+page's column headers use "DEC Part Number" and "DEC Serial Number"
+throughout (Computers/Peripherals/Components sections), matching this
+established mapping — not the legacy "Order Number"/"Serial Number"
+labels.
 
 **Explicitly NOT renamed (still say "order_number"/"serial_number"):**
 - CSV column headers and literal field-name references in

@@ -1,5 +1,174 @@
 # decor/docs/claude/SESSION_HANDOVER.md
-# version 88.0
+# version 92.0
+# Session 91 (ad-hoc, direct continuation of Session 90's StorageLocation
+#   show page — same feature, not a new A-F letter): Ulli reported the
+#   Session 90 flat, alphabetical-by-name list wasn't sufficient to
+#   identify an item. Reworked into four fixed-order category sections
+#   (Computers, Peripherals, Components, Software), each shown only when
+#   non-empty, with the full identifying-field set per category:
+#     Computers/Peripherals: Model | DEC Part Number | DEC Serial Number |
+#       Owner Part Number
+#     Components:            Component Type | DEC Part Number | DEC Serial
+#       Number | Owner Part Number
+#     Software:               Software Name | Version
+#   Sort: category first (fixed order), then case-insensitive alphabetical
+#   by Model/Type/Software Name within each category (done in the
+#   controller, not the view).
+#   Implemented via Pre-Implementation Verification: a first export script
+#   pulled storage_locations_controller.rb, storage_locations/show.html.erb,
+#   storage_location.rb, computer.rb, component.rb, software_item.rb, and
+#   two reference views (computers/show.html.erb, components/show.html.erb,
+#   for the established DEC Part Number/DEC Serial Number/Owner Part Number
+#   column-label convention) before any code was written. A second export
+#   script (requested after Ulli asked for tests, before the git workflow)
+#   pulled the fixture files (storage_locations.yml, computers.yml,
+#   components.yml, software_items.yml), authentication_helper.rb, and the
+#   existing storage_locations_controller_test.rb before any test code was
+#   written.
+#   Delivered: storage_locations_controller.rb v1.2 -> v1.3 (show action
+#   rebuilt around three new private builder methods —
+#   build_computer_rows/build_component_rows/build_software_rows — splitting
+#   the single has_many :computers association into Computers vs
+#   Peripherals via the device_type enum's generated device_type_computer/
+#   device_type_peripheral scopes); storage_locations/show.html.erb v1.0 ->
+#   v1.1 (four fixed-order sections replacing the single flat list);
+#   storage_locations_controller_test.rb v1.0 -> v1.1 (full `show` action
+#   test coverage added — access control, per-category field display,
+#   per-category sort order, empty-section omission, cross-owner isolation;
+#   zero fixture .yml files modified — every test assigns storage_location
+#   via update!/create! INSIDE the test itself, relying on Rails'
+#   transactional fixture rollback, specifically to avoid silently changing
+#   shared computers.yml/components.yml/software_items.yml fixture state
+#   that other, not-in-hand test files — e.g. Session 88's
+#   computers_controller_test.rb Storage Location filter tests — may
+#   depend on).
+#   Ulli confirmed bin/rails test, rubocop, brakeman, bundle-audit, and a
+#   manual browser check ALL PASSED for the controller+view pair
+#   (v1.3/v1.1) — but this run predates the test file (v1.1), since Ulli
+#   asked for tests to be written before the git workflow. The new test
+#   file's own pass/fail status has NOT yet been confirmed — the full
+#   checklist needs to be re-run now that it includes the new show-action
+#   tests. Git workflow (branch -> commit -> push -> PR -> CI -> merge ->
+#   deploy) has NOT been started — deferred at Ulli's explicit request to
+#   write tests first; session ended at ~90% token budget, at Ulli's
+#   explicit request for a full (non-delta) wrap-up rather than the usual
+#   90%-budget delta-document handover.
+# Session 90: Ad-hoc feature addition, unrelated to Storage Locations
+#   Sessions D/E/F — Ulli asked for a `show` page on StorageLocation,
+#   reachable via a link on the location's name at /storage_locations,
+#   listing everything stored there (Computers, Peripherals, Components,
+#   Software Items) combined into one flat list, sorted alphabetically,
+#   regardless of category. This reverses Session B's original "no :show
+#   action needed" decision (routes.rb v3.8 / storage_locations_
+#   controller.rb v1.1's own comments) — reasonable at the time, but
+#   Session C's has_many :computers/:components/:software_items
+#   associations make a show page straightforward now.
+#   Implemented via Pre-Implementation Verification: an export script
+#   pulled routes.rb, storage_locations_controller.rb, storage_location.rb,
+#   computer.rb, component.rb, software_item.rb, storage_locations/
+#   index.html.erb, and computers/show.html.erb (as a display-convention
+#   reference) before any code was written. A second, ad-hoc single-file
+#   request followed for storage_locations/_storage_location.html.erb (the
+#   index's row partial), which was not in the original export and turned
+#   out to be the actual file needing the link added — not index.html.erb
+#   itself, which only loops over that partial.
+#   Delivered: config/routes.rb v3.8 → v3.9 (show added, except: [:show]
+#   removed); storage_locations_controller.rb v1.1 → v1.2 (show action
+#   added, scoped to Current.owner like every other action here — no admin
+#   exception, unlike computers#show which is public); storage_locations/
+#   show.html.erb v1.0 (NEW); storage_locations/_storage_location.html.erb
+#   v1.0 → v1.2 (name wrapped in a link to the new show page).
+#   Two corrections mid-session, both self-caught or user-caught quickly:
+#     1. The delivered _storage_location.html.erb was initially named with
+#        the @-encoded flat-file scheme even though it was a genuinely
+#        single-file, ad-hoc delivery — Claude self-caught this before
+#        presenting it (no user prompt needed) and redelivered under the
+#        plain filename. See COMMON_BEHAVIOR.md's Session 90 note under
+#        "Flagging a Guess Does Not Satisfy Never-Guess" / "File Transfer
+#        Protocol" — confirms the Session 89 rule is doing its job.
+#     2. The v1.1 link used `text-stone-900 hover:text-indigo-600`
+#        (indigo only on hover), so it wasn't visually recognizable as a
+#        link at rest — reported by Ulli, fixed in v1.2 to the established
+#        clickable-value convention (DECOR_PROJECT.md "Design Patterns" →
+#        Color Scheme): `text-indigo-600 hover:text-indigo-900`, indigo
+#        from the resting state. Not a new rule — the convention was
+#        already documented; this was a plain miss applying it. Also
+#        flagged (not fixed this session): RAILS_UI.md was not loaded
+#        before this view/CSS work, per RAILS_SPECIFICS.md v4.0's own
+#        topic-index rule ("load for view/CSS/Stimulus/nav work") — worth
+#        a deliberate check at the start of any Tailwind-touching task in
+#        a future session.
+#   No test written this session for the new `show` action — flagged to
+#   Ulli as a pending Test Coverage Check item (needs test/fixtures/
+#   storage_locations.yml, computers.yml, components.yml, software_items.yml,
+#   and any existing storage_locations_controller_test.rb as a pattern,
+#   none of which were requested/provided this session). Deferred, not
+#   forgotten — see "Open Checklists" below. **RESOLVED Session 91** — see
+#   that session's own changelog entry above.
+#   Session ended at Ulli's explicit "wrap up now" request, not a token-
+#   budget trigger this time — estimate was ~72-78% at that point.
+# Session 89: Ad-hoc bug fix, unrelated to the Storage Locations plan —
+#   Ulli reported the Components show page (e.g. /components/397) was
+#   missing the Owner Part Number field. Root cause: Component#owner_
+#   part_number (component.rb v1.6, Session 70) and its strong-params
+#   permit (components_controller.rb v2.1, Session 70) were both correct
+#   from the start; components/show.html.erb was simply never updated to
+#   display it, even though the equivalent field was added to
+#   computers/show.html.erb in Session 75. Same "single source of truth /
+#   touch N places, miss one" shape as RAILS_SPECIFICS.md's own rule.
+#   Fixed via Pre-Implementation Verification: an export script pulled
+#   components/show.html.erb, component.rb, components_controller.rb, and
+#   the known-working computers/show.html.erb for comparison before any
+#   code was written. components/show.html.erb v1.9 -> v1.10 added the
+#   field as a standalone row; revised immediately to v1.11 per Ulli's
+#   follow-up feedback, placing Component Owner Part Number and Trade
+#   Status side by side in one row (grid-cols-2 when logged in,
+#   grid-cols-1 alone when logged out, since Trade Status stays
+#   members-only and fully absent from the DOM for logged-out visitors).
+#   No controller/model change needed; no new test needed (view-only
+#   display change, no server-side logic altered).
+#   Process note: the v1.10 delivery was made using the @-encoded
+#   flat-filename scheme even though it was a single ad-hoc file with no
+#   script involved — a misapplication of the multi-file File Transfer
+#   Protocol to a case the protocol's own "Single ad-hoc file exchanges
+#   don't need a script" line already excludes. Caught immediately by
+#   Ulli; corrected by redelivering with the plain filename. See
+#   COMMON_BEHAVIOR.md's Session 89 reinforcement note for the rule
+#   reinforcement this produced. No new rule was needed — the existing
+#   rule already covered this; the miss was a one-off application error.
+#   Session ended at ~90% token budget (per Ulli's report of the system
+#   warning).
+# Session 88: Resumed the paused Storage Locations Session E. Fixed a
+#   test-data bug in the existing Computers/Peripherals draft: 2 of 3
+#   v1.12 tests called StorageLocation.create! with a name ("Attic Shelf
+#   3") that collided with the alice_attic fixture already defining that
+#   exact (owner_id, name) pair — raised ActiveRecord::RecordInvalid.
+#   Fixed in computers_controller_test.rb v1.13 by referencing the
+#   existing fixtures instead of creating new records. Full pre-commit
+#   checklist (bin/rails test, rubocop, brakeman, bundle-audit, manual
+#   browser check) then passed on the Computers/Peripherals draft. Wrote
+#   the matching Components and SoftwareItems equivalents (8 files:
+#   components_helper.rb v1.5, components_controller.rb v2.3,
+#   components/_filters.html.erb v1.5, components_controller_test.rb v1.4,
+#   software_items_helper.rb v1.1, software_items_controller.rb v1.5,
+#   software_items/_filters.html.erb v1.1, software_items_controller_test.rb
+#   v1.6) from the now-verified Computers pattern — same two-guard filter
+#   logic (if logged_in? + ownership-existence check against a crafted
+#   cross-owner storage_location_id), same UI placement (after Trade), same
+#   3-test shape. Test fixtures deliberately chosen to avoid barter-status
+#   confounds and referenced existing storage_locations fixtures directly
+#   (no create! calls anywhere) — the lesson from the Computers test fix
+#   was applied immediately rather than repeated. Full pre-commit checklist
+#   passed on all three device types together. Git workflow (branch →
+#   commit → push → PR → CI → merge) and kamal deploy — ALL CONFIRMED
+#   SUCCESSFUL by Ulli. **Storage Locations Session E is now COMPLETE.**
+#   Only Session F (export/import) remains open in the Storage Locations
+#   plan.
+#   Process note: Ulli asked that future sessions not generate more than
+#   one export/import/placement script per exchange unless there's a
+#   specific reason — applied for the remainder of this session (a single
+#   placement script covered all 8 delivered files, rather than one per
+#   device type).
 # Session 87: Resolved the Gap Notice opened in Session 86 (the
 #   computers_helper.rb "v1.9" anomaly). session_d_git_archaeology.sh
 #   (generated Session 86) proved no commit on any branch ever produced a
@@ -88,78 +257,83 @@
 #   correct new file. Reorg 4 (COMMON_BEHAVIOR.md/PROGRAMMING_GENERAL.md
 #   trim + final cross-doc dedup) remains NOT STARTED.
 # Session 84 (Reorg Session 1 of 4, plan agreed Session 83): Split this
-#   file. Extracted every "## Session N Summary" block (77, 82, 81, 80,
-#   79, 78, 76, 75, 73, 72, 70, 69, 67, 66, 65, 61, 60, 59), the old
-#   per-session header changelog, and the "Connections Feature — Design
-#   Reference" appendix into a NEW file,
-#   decor/docs/claude/SESSION_HISTORY_ARCHIVE.md v1.0 — verbatim, no
-#   rewording, same relative order. That file is NOT part of the
-#   mandatory session-start read (see the reliability notice below, which
-#   still lists only five files).
-#   This file is rewritten down to: the current Date/Branch/Status block,
-#   the Documentation Reorganization plan/status, the still-open GAP
-#   NOTICE (Session 68), the mandatory session-start reliability notice,
-#   the standing "!!...!!" rule banners (kept unchanged — quick-reference
-#   pointers into RAILS_SPECIFICS.md/COMMON_BEHAVIOR.md, not session
-#   narrative, and out of scope for this pass), the still-open NOT YET
-#   DONE checklists (Session 77, Session 78, Storage Locations D–F), a new
-#   rolling "Session Log" (one line per session, last ~10, pointing to the
-#   archive for full detail — older entries drop off as new ones are
-#   added), and "Priority 1 — Future Sessions".
-#   No rule content, checklist item, or status fact was changed, added, or
-#   reworded during this split — this is a pure structural move. Verified
-#   before finalizing: every "NOT YET DONE" / "NOT STARTED" item present in
-#   v83.1 is still present somewhere in either this file or the archive;
-#   every "!! ... !!" banner from v83.1 is still present verbatim below.
+#   file. Extracted every "## Session N Summary" block, the old per-session
+#   header changelog, and the "Connections Feature — Design Reference"
+#   appendix into a NEW file, decor/docs/claude/SESSION_HISTORY_ARCHIVE.md
+#   v1.0 — verbatim, no rewording, same relative order. That file is NOT
+#   part of the mandatory session-start read.
 # Session 83 (intermediate, no project work): Rule-set documents had grown
-#   too large (~102,000 tokens across all 5 mandatory docs, measured via
-#   wc -c/4), forcing the delta-document workaround at every wrap-up. Full
-#   analysis done this session; agreed a 4-session reorg plan (see below).
-#   No file rewrites done this turn beyond a status-block edit — that was
-#   left for Reorg Session 1 (this session, 84) to do with a full budget.
+#   too large (~102,000 tokens across all 5 mandatory docs), forcing the
+#   delta-document workaround at every wrap-up. Agreed a 4-session reorg
+#   plan.
 # Full changelog for Sessions 65–82 (each session's own entry, written at
 #   the time) is preserved verbatim in
 #   decor/docs/claude/SESSION_HISTORY_ARCHIVE.md's "Original Header
 #   Changelog" section — not repeated here.
 
-**Date:** August 4, 2026 (Sessions 86–87 covered Storage Locations Session D
-  — the Privacy Audit. Session 86 did the six-view + shared-partial audit
-  (clean) and flagged a computers_helper.rb anomaly rather than guess at
-  it. Session 87 resolved that anomaly via a follow-up git-diff capture:
-  it's real, sound, UNCOMMITTED local draft work for the Computers/
-  Peripherals half of Session E, left exactly as found. Session D is now
-  COMPLETE. Session E is IN PROGRESS, PAUSED per Ulli's explicit choice —
-  no code was written in either session; both were audit/investigation/
-  documentation only.)
+**Date:** August 6, 2026 (Session 91: ad-hoc rework of Session 90's
+  StorageLocation show page — Ulli reported the flat, alphabetical-by-name
+  list wasn't enough to identify an item. Reworked into four fixed-order
+  category sections (Computers/Peripherals/Components/Software), each with
+  the full identifying-field set, sorted category-first then
+  alphabetically within category. Full `show` action test coverage was
+  then written (storage_locations_controller_test.rb v1.1). Ulli confirmed
+  the full pre-commit checklist — bin/rails test, rubocop, brakeman,
+  bundle-audit, manual browser check — ALL PASSED for the controller+view
+  pair (v1.3/v1.1) BEFORE the test file existed; the test file's own
+  pass/fail status is NOT yet reconfirmed, and git workflow has not been
+  started. Session ended at ~90% token budget, at Ulli's explicit request
+  for a full, non-delta wrap-up. See this session's own changelog entry
+  above for full detail.)
 **Branch:** main (Sessions 1–76 all committed, pushed, merged, and
   deployed, per Ulli's confirmation at the start of Session 76). Sessions
   77 and 78's own work (11 files — see the archive's "Session 77 Summary"
   and "Session 78 Summary") status is UNCHANGED — no session since has
   confirmed placement/testing/commit for that work, which is a separate,
-  unrelated bug-fix batch. Storage Locations Sessions A, B, and C are ALL
-  committed, pushed, merged, and deployed — confirmed by Ulli. Storage
-  Locations Session E has an UNCOMMITTED, untested local draft sitting in
-  the working tree for the Computers/Peripherals side only (see "Storage
-  Locations Session E" under Open Checklists) — not pushed, not on any
-  branch, not part of `main`.
-**Status:** Sessions 1–76 fully closed out and deployed. Sessions 77 and
-  78's combined checklist (see "Open Checklists" below) remains the open
-  item it was at the end of Session 78 — not addressed since. Storage
-  Locations Sessions A, B, and C are ALL fully closed out and deployed.
-  The Documentation Reorganization plan (Sessions 84–85) is fully complete.
-  **Storage Locations Session D (Privacy Audit) is now COMPLETE** (Session
-  86 views audit + Session 87 anomaly resolution — see the Session 86/87
-  changelog entries above and "Storage Locations Feature — Session Plan"
-  in DECOR_PROJECT.md). **Storage Locations Session E (filter-sidebar
-  support) is IN PROGRESS, PAUSED:** an uncommitted, unreviewed local draft
-  covers the Computers/Peripherals half only (helper, controller, filter
-  view, 3 tests) — not run, tested, lint/security-scanned, or committed;
-  Components and SoftwareItems equivalents are NOT STARTED. Paused here at
-  Ulli's explicit request — see "Open Checklists" below for the concrete
-  remaining steps whenever work resumes. **Session F (export/import)
-  remains genuinely NOT STARTED** and is unaffected by any of this.
-  The GAP NOTICE below (Session 68's missing formal summary) remains open
-  and unaffected by any of this.
+  unrelated bug-fix batch. **Storage Locations Sessions A, B, C, D, and E
+  are ALL committed, pushed, merged, and DEPLOYED** — confirmed by Ulli
+  (Session 88 confirmed the git workflow and kamal deploy for Session E
+  covering all three device types — Computers/Peripherals, Components,
+  SoftwareItems — together in one PR). **Storage Locations Session F
+  (export/import) remains genuinely NOT STARTED** and is the only piece
+  of that feature still open.
+  **Session 89's single file (components/show.html.erb v1.11) has been
+  delivered to Ulli but its own placement/test/commit/deploy status is NOT
+  YET confirmed** — a plain single-file view change, not expected to need
+  the full multi-file checklist treatment, but should still go through
+  bin/rails test / rubocop / manual browser check before committing.
+  **Session 90's original four files (config/routes.rb v3.9,
+  storage_locations/_storage_location.html.erb v1.2) have been delivered
+  to Ulli but placement/test/commit/deploy status is NOT YET confirmed**
+  — the other two files Session 90 delivered (storage_locations_
+  controller.rb, storage_locations/show.html.erb) have since been
+  superseded by Session 91's v1.3/v1.1, below.
+  **Session 91's three files — storage_locations_controller.rb v1.3,
+  storage_locations/show.html.erb v1.1, storage_locations_controller_
+  test.rb v1.1 — have been delivered to Ulli. The controller+view pair
+  (v1.3/v1.1) has been placed and Ulli confirmed the full pre-commit
+  checklist (bin/rails test, rubocop, brakeman, bundle-audit, manual
+  browser check) ALL PASSED — but that run predates the test file. The
+  test file (v1.1) has NOT yet been confirmed to pass, and the git
+  workflow for all three files together has NOT been started.**
+**Status:** Sessions 1–76 fully closed out and deployed. Sessions 77+78's
+  combined checklist remains open (unchanged) — see "Open Checklists"
+  below. **Storage Locations Sessions A through E are ALL fully closed
+  out, tested, and deployed** — confirmed by Ulli. **Storage Locations
+  Session F (export/import) is the only remaining piece of that feature
+  and is genuinely NOT STARTED.** **Session 89's Owner Part Number display
+  fix (components/show.html.erb v1.11) is code-complete and delivered but
+  NOT YET placed/tested/committed/deployed** — a single-file, view-only
+  change; doesn't depend on or block anything else. **The StorageLocation
+  show page (Session 90, reworked Session 91) is code-complete: the
+  controller+view pair (v1.3/v1.1) has passed the full pre-commit
+  checklist per Ulli's confirmation, and a full test file (v1.1) now
+  exists covering the `show` action for the first time — but the test
+  file's own pass/fail status is unconfirmed and git workflow has not
+  started for any of it.** This is an ad-hoc addition outside the original
+  Storage Locations A–F plan and doesn't depend on or block Session F. The
+  GAP NOTICE below (Session 68's missing formal summary) remains open and
+  unaffected by any of this.
 
 ---
 
@@ -167,8 +341,8 @@
 
 The 5 mandatory rule documents had grown to ~102,000 tokens combined
 (measured directly, Session 83), forcing the delta-document workaround at
-every wrap-up. A 4-session reorg plan was agreed; three of the four are
-now DONE, all in Session 84:
+every wrap-up. A 4-session reorg plan was agreed; all four are now DONE
+(Sessions 84–85):
 
     Reorg 1 (DONE, Session 84): Split this file. Extracted every
       "## Session N Summary" block plus the old header changelog into
@@ -179,42 +353,25 @@ now DONE, all in Session 84:
     Reorg 2 (DONE, Session 84): Trimmed DECOR_PROJECT.md (v2.73 → v2.74,
       2,056 lines → 643 lines). Cut the Directory Tree section and the
       "Key file versions" history table; compressed six fully-DONE feature
-      write-ups (Software, Component Suggestions Phases 1-4, Category Help
-      Pages, Owner Part Number, two Session 76 dropdown fixes) to one-line
-      pointers; removed the Session 77/78 sections (now redundant with
-      SESSION_HISTORY_ARCHIVE.md). Data Model Overview, the still-active
-      Storage Locations plan, Known Issues, Design Patterns, and Quick
-      Reference Commands were left untouched (live reference content).
-    Reorg 3 (DONE, Session 84 — completed in one session, no 3a/3b split
-      needed): Topic-split RAILS_SPECIFICS.md (v3.15, ~98,000 chars) into
-      RAILS_SPECIFICS.md v4.0 (core + topic index, ~21,000 chars, still
-      mandatory), RAILS_UI.md v1.0 NEW (~11,900 chars), RAILS_TESTING.md
-      v1.0 NEW (~15,150 chars), RAILS_MISC.md v1.0 NEW (~7,500 chars).
-      Every "why this rule exists" narrative trimmed to one line; rule
-      statements and code examples kept verbatim. Also resolved the
-      Directory-Tree-Maintenance-rule staleness flagged at the end of
-      Reorg 2 (see this file's own top-of-file changelog for detail).
-    Reorg 4 (DONE, Session 85): Trimmed COMMON_BEHAVIOR.md (v3.1 → v4.0,
-      33,291 → 26,401 chars) and PROGRAMMING_GENERAL.md (v2.0 → v3.0,
-      19,993 → 19,623 chars) using the same approach as Reorg 3 — narrative
-      paragraphs condensed to one line, rule statements/checklists/code
-      examples kept verbatim. Ran a cross-doc dedup grep across all 5
-      files; found no unintentional literal duplication beyond the
-      deliberate short cross-reference pointers already established by
-      Reorg 1 and Reorg 3. One small content addition alongside the trim:
-      the Export/Import stable-key rule in PROGRAMMING_GENERAL.md now also
-      lists storage locations' natural key, for Session F's benefit.
+      write-ups to one-line pointers; removed the Session 77/78 sections
+      (now redundant with SESSION_HISTORY_ARCHIVE.md).
+    Reorg 3 (DONE, Session 84): Topic-split RAILS_SPECIFICS.md (v3.15,
+      ~98,000 chars) into RAILS_SPECIFICS.md v4.0 (core + topic index,
+      ~21,000 chars, still mandatory), RAILS_UI.md v1.0 NEW (~11,900
+      chars), RAILS_TESTING.md v1.0 NEW (~15,150 chars), RAILS_MISC.md
+      v1.0 NEW (~7,500 chars).
+    Reorg 4 (DONE, Session 85): Trimmed COMMON_BEHAVIOR.md (v3.1 → v4.0)
+      and PROGRAMMING_GENERAL.md (v2.0 → v3.0) using the same approach as
+      Reorg 3. Ran a cross-doc dedup grep across all 5 files; found no
+      unintentional literal duplication.
 
 **The 4-session Documentation Reorganization plan (agreed Session 83) is
-now FULLY COMPLETE as of this session.** Combined result across all four
-reorg sessions: the 5 mandatory rule documents measured ~102,000 tokens
-at the start of Session 83; the same 5 files now total 134,539 chars
-(~33,635 tokens, ÷4 estimate) — Reorg 4's own contribution was smaller
-than Reorgs 1–3 (COMMON_BEHAVIOR.md/PROGRAMMING_GENERAL.md were already
-comparatively lean), but the combined effect of all four sessions is the
-real win. Storage Locations Session D (Privacy Audit) is no longer
-waiting on anything from this plan and is the clear next priority — see
-"Priority 1 — Future Sessions" below.
+FULLY COMPLETE.** Combined result: the 5 mandatory rule documents measured
+~102,000 tokens at the start of Session 83; the same 5 files totaled
+134,539 chars (~33,635 tokens, ÷4 estimate) after Session 85. (Note:
+COMMON_BEHAVIOR.md has since grown again slightly via the Session 88/89/90
+File Transfer Protocol reinforcements — still well under the pre-reorg
+size.)
 
 ---
 
@@ -239,7 +396,7 @@ cat /mnt/user-data/uploads/SESSION_HANDOVER.md
 ```
 After each: log "Read FILENAME — N lines, complete."
 
-**RAILS_SPECIFICS.md is now the core-only file as of Session 84 (v4.0,
+**RAILS_SPECIFICS.md is the core-only file as of Session 84 (v4.0,
 ~21,000 chars)** — it no longer contains the UI/CSS/Stimulus rules, the
 test/Capybara/CI rules, or the mailer/email rules. Those moved to three
 new files, **none of which are part of this mandatory list**:
@@ -247,11 +404,25 @@ new files, **none of which are part of this mandatory list**:
 - `decor/docs/claude/RAILS_TESTING.md` — read before writing ANY test file.
 - `decor/docs/claude/RAILS_MISC.md` — read before any mailer/email task.
 
+**Reinforced (Session 90):** this rule was itself skipped this session —
+view/CSS work (a Tailwind link-color class) was done without loading
+RAILS_UI.md first, and the result (`text-stone-900 hover:text-indigo-600`,
+indigo only on hover) was a visible bug Ulli had to report. No new rule
+needed — RAILS_SPECIFICS.md v4.0 already says to load RAILS_UI.md for this
+kind of task. Worth a deliberate check at the start of any future
+Tailwind/CSS-touching task: "is RAILS_UI.md loaded yet?"
+
+**Checked, correctly, Session 91:** the show-page rework reused Tailwind
+utility classes already established in computers/show.html.erb's own
+field grid and sub-tables (no new or arbitrary-value classes introduced),
+so RAILS_UI.md's Tailwind-rebuild-reminder rule didn't apply — this was
+confirmed explicitly rather than assumed, addressing the exact gap flagged
+in Session 90's note above.
+
 **decor/docs/claude/SESSION_HISTORY_ARCHIVE.md is also NOT on this list.**
-It holds historical session narrative only (see its own header) and is
-not needed for ordinary session-start compliance. Consult it, and the
-three new topic files above, only when the specific task actually needs
-them.
+It holds historical session narrative only and is not needed for ordinary
+session-start compliance. Consult it, and the three new topic files above,
+only when the specific task actually needs them.
 
 ---
 
@@ -327,87 +498,188 @@ own instruction was to commit both batches together. Combined checklist:
     [x] Confirm storage_location does NOT appear in owners/show.html.erb
     [x] Confirm storage_location does NOT appear in owners/_owner.html.erb
     [x] Confirm storage_location does NOT appear in owners/_profile.html.erb
-        (added to scope Session 86 — rendered by all six views above)
     [x] Confirm no partial is shared between the Session B/C owner-CRUD
-        views and these read-only views (none of the six render the
-        device partials — each builds its own inline table)
+        views and these read-only views
     [x] Reconcile the computers_helper.rb v1.9 anomaly (Session 87 —
         confirmed uncommitted local Session E draft, not phantom/committed
-        history; see the Session 87 changelog entry at the top of this file)
+        history)
 
 No further action needed — Session D is closed out.
 
-### Storage Locations Session E — IN PROGRESS, PAUSED (found Session 86, confirmed Session 87)
+### Storage Locations Session E — COMPLETE (Session 88)
 
-An uncommitted, unreviewed local draft already exists in the working tree,
-covering the Computers/Peripherals half only:
+All three device types now have Storage Location filter-sidebar support,
+tested, lint/security-scanned, committed, merged, and DEPLOYED — confirmed
+by Ulli:
 
-    decor/app/helpers/computers_helper.rb              v1.9  (uncommitted)
-    decor/app/controllers/computers_controller.rb       v1.25 (uncommitted)
-    decor/app/views/computers/_filters.html.erb          v1.8  (uncommitted)
-    decor/test/controllers/computers_controller_test.rb v1.12 (uncommitted)
+    decor/app/helpers/computers_helper.rb              v1.9
+    decor/app/controllers/computers_controller.rb       v1.25
+    decor/app/views/computers/_filters.html.erb          v1.8
+    decor/test/controllers/computers_controller_test.rb v1.13 (fixed a
+      test-data collision bug found in this session's pre-commit run —
+      see the Session 88 changelog entry at the top of this file)
 
-Content reviewed and assessed sound Session 87 (Storage Location filter
-gated `if logged_in?`, plus an ownership-existence guard against a crafted
-cross-owner `storage_location_id`; 3 new tests covering happy path,
-ownership guard, logged-out skip). **Paused here at Ulli's explicit
-request — nothing further done this session.** Remaining steps whenever
-this resumes:
+    decor/app/helpers/components_helper.rb                  v1.5
+    decor/app/controllers/components_controller.rb           v2.3
+    decor/app/views/components/_filters.html.erb              v1.5
+    decor/test/controllers/components_controller_test.rb     v1.4
 
-    [ ] Run the full pre-commit checklist on the existing draft:
-        bin/rails test, rubocop, brakeman, bundle-audit, manual browser check
-    [ ] Write the matching Components equivalent (components_helper.rb,
-        components_controller.rb, components/_filters.html.erb, tests)
-    [ ] Write the matching SoftwareItems equivalent (software_items_helper.rb,
-        software_items_controller.rb, software_items/_filters.html.erb, tests)
-    [ ] git workflow: branch → commit → push → PR → CI → merge → deploy,
-        all three device types together
+    decor/app/helpers/software_items_helper.rb                  v1.1
+    decor/app/controllers/software_items_controller.rb          v1.5
+    decor/app/views/software_items/_filters.html.erb              v1.1
+    decor/test/controllers/software_items_controller_test.rb     v1.6
 
-Full file-by-file breakdown: **DECOR_PROJECT.md, "Storage Locations
-Feature — Session Plan."**
+No further action needed — Session E is closed out. Only Session F
+(export/import) remains for the Storage Locations feature.
 
 ### Storage Locations Session F — NOT STARTED
 
-Depends on A (done) and C (done). Unaffected by the Session D/E situation
+Depends on A (done) and C (done). Unaffected by the Session D/E work
 above. Full breakdown: **DECOR_PROJECT.md, "Storage Locations Feature —
 Session Plan."**
 
+### StorageLocation Show Page (Session 90, reworked Session 91) — pre-commit checklist passed for code, test coverage NOT yet reconfirmed, git workflow NOT started
+
+Not part of the original A-F Session Plan — a direct feature request from
+Ulli, reversing Session B's original "no show page" decision now that
+Session C's associations make it easy. Session 91 reworked Session 90's
+flat alphabetical list into four category-grouped sections with full
+identifying fields, per Ulli's feedback that the flat list wasn't enough
+to identify an item.
+
+**Current file versions (supersedes the Session 90 versions listed in
+earlier revisions of this checklist):**
+
+    decor/app/controllers/storage_locations_controller.rb        v1.3
+    decor/app/views/storage_locations/show.html.erb                v1.1
+    decor/test/controllers/storage_locations_controller_test.rb   v1.1 (NEW
+      show-action coverage — the action had zero tests before this)
+
+Also still pending from Session 90, unaffected by the Session 91 rework:
+
+    decor/config/routes.rb                                         v3.9
+    decor/app/views/storage_locations/_storage_location.html.erb   v1.2
+
+**Checklist:**
+
+    [x] Place storage_locations_controller.rb v1.3 and
+        storage_locations/show.html.erb v1.1 — Ulli confirmed this
+    [x] bin/rails test / rubocop / brakeman / bundle-audit / manual
+        browser check — Ulli confirmed ALL PASSED for the controller+view
+        pair (this run predates the test file below)
+    [ ] Place decor/config/routes.rb (v3.9) and decor/app/views/
+        storage_locations/_storage_location.html.erb (v1.2), if not
+        already done from Session 90
+    [ ] Place decor/test/controllers/storage_locations_controller_test.rb
+        (v1.1) — NEW show-action test coverage, written Session 91.
+        Deliberately does NOT modify any fixture .yml file — every test
+        assigns storage_location via update!/create! inside the test
+        itself (see the file's own v1.1 header comment for the full
+        rationale: avoiding side effects on computers_controller_test.rb/
+        components_controller_test.rb/software_items_controller_test.rb,
+        none of which were reviewed this session).
+    [ ] Re-run bin/rails test now that the new test file is in place —
+        NOT yet confirmed passing
+    [ ] Re-run rubocop (test files are .rb, lint-checkable) — cheap and
+        standard to re-confirm alongside the test run above
+    [ ] bin/rails routes | grep storage_location — confirm the show route
+        shape before relying on storage_location_path elsewhere (carried
+        over from Session 90, still open if not already done)
+    [ ] git workflow: branch → commit → push → PR → CI → merge → deploy
+        (all of the above files together)
+    [ ] Optional follow-up (flagged, not urgent — Session 90): consider
+        loading RAILS_UI.md at the start of a future session before
+        further Tailwind/CSS work on this feature. Note: Session 91's own
+        view changes reused existing utility classes only, so this wasn't
+        triggered again this session — see the "RELIABILITY NOTICE"
+        section above.
+
+### Session 89 — Owner Part Number display fix (components/show.html.erb v1.11) — NOT YET tested/committed
+
+Single-file, view-only change. Independent of everything else in this
+document.
+
+    [ ] Place decor/app/views/components/show.html.erb v1.11
+    [ ] bin/rails test, rubocop, manual browser check (confirm Owner Part
+        Number now displays alongside Trade Status on a Component's show
+        page, and that Trade Status remains fully absent from the DOM for
+        logged-out visitors)
+    [ ] git workflow (can be batched with any other pending work)
+
 ---
 
-## Session Log (rolling — last ~10 sessions; full detail in SESSION_HISTORY_ARCHIVE.md)
+## Session Log (rolling — last ~12 sessions; full detail in SESSION_HISTORY_ARCHIVE.md)
 
 Older entries drop off this list as new ones are added; nothing is lost —
 every session ever logged remains in SESSION_HISTORY_ARCHIVE.md regardless
 of whether it still appears here.
 
+    91  Ad-hoc rework of Session 90's StorageLocation show page: Ulli
+        reported the flat, alphabetical-by-name list wasn't enough to
+        identify an item. Reworked into four fixed-order category
+        sections (Computers/Peripherals/Components/Software), each with
+        the full identifying-field set (Model/Type/Software Name, DEC
+        Part Number, DEC Serial Number, Owner Part Number as applicable),
+        sorted category-first then case-insensitively alphabetical within
+        category. storage_locations_controller.rb v1.3, storage_locations/
+        show.html.erb v1.1 — Ulli confirmed the full pre-commit checklist
+        (test/rubocop/brakeman/bundle-audit/manual browser check) ALL
+        PASSED. Then wrote full `show`-action test coverage
+        (storage_locations_controller_test.rb v1.1, zero fixture .yml
+        files touched — used in-test update!/create! instead, rolled back
+        automatically by transactional fixtures). Test file's own
+        pass/fail status and the git workflow for all three files both
+        still open at wrap-up (~90% budget, Ulli's explicit request for a
+        full, non-delta wrap-up).
+    90  Ad-hoc feature (unrelated to Storage Locations D/E/F): added a
+        StorageLocation show page listing everything stored there across
+        all types, combined and sorted alphabetically, linked from the
+        index. routes.rb v3.9, storage_locations_controller.rb v1.2,
+        _storage_location.html.erb v1.2, show.html.erb v1.0 (NEW).
+        Self-caught an @-encoding-on-single-file near-miss before
+        delivery; user caught a link-color convention miss (fixed,
+        indigo-at-rest not hover-only). No test written yet — pending
+        fixtures. Ended at explicit wrap-up request, ~72-78% budget.
+        **The show-page grouping and test coverage were reworked in
+        Session 91 — see that entry above.**
+    89  Ad-hoc bug fix (unrelated to Storage Locations): Components show
+        page was missing Owner Part Number, present since Session 70 but
+        never added to this view (same single-source-of-truth shape as
+        prior sessions). Fixed via Pre-Implementation Verification export
+        script + comparison against the known-working computers/show.html.erb.
+        components/show.html.erb v1.9 -> v1.11 (v1.10 added the field
+        standalone; v1.11 revised to place it side by side with Trade
+        Status per Ulli's layout feedback). Caught and corrected a
+        misapplied @-encoding on a single-file delivery mid-session.
+        Session ended at ~90% token budget; rule-doc updates delivered as
+        deltas.
+    88  Resumed and COMPLETED Storage Locations Session E. Fixed a test
+        collision bug in the existing Computers/Peripherals draft
+        (computers_controller_test.rb v1.13), passed the full pre-commit
+        checklist, then wrote the matching Components and SoftwareItems
+        equivalents (8 files) from the verified pattern. All three device
+        types tested, lint/security-scanned, committed, merged, and
+        DEPLOYED together — confirmed by Ulli. Session F (export/import)
+        is now the only remaining Storage Locations work.
     87  Resolved the Session 86 computers_helper.rb anomaly: git-diff
-        capture (session_d_uncommitted_diff_report.sh) confirmed it's a
-        real, sound, UNCOMMITTED local draft of Storage Locations Session
-        E's Computers/Peripherals filter code (helper + controller +
-        filter view + 3 tests) — not phantom history, not fabricated. The
-        "Session E" commit hit from the original sweep was unrelated
-        (Software feature's own A–F plan). Storage Locations Session D
+        capture confirmed it's a real, sound, UNCOMMITTED local draft of
+        Storage Locations Session E's Computers/Peripherals filter code —
+        not phantom history, not fabricated. Storage Locations Session D
         marked COMPLETE. Session E marked IN PROGRESS, PAUSED per Ulli's
         explicit choice. No code written this session.
     86  Storage Locations Session D (Privacy Audit): audited all six
         owners/* read-only views + the shared _profile.html.erb partial —
-        ALL CLEAN, no storage_location leak. Confirmed the partial-sharing
-        leak vector DECOR_PROJECT.md flagged doesn't exist here. Found and
-        flagged a computers_helper.rb anomaly (already v1.9, Session
-        E-shaped code, unverified claim) — resolved Session 87. No code
+        ALL CLEAN, no storage_location leak. Found and flagged a
+        computers_helper.rb anomaly (resolved Session 87). No code
         written/tested/committed.
     85  Reorg 4 (final reorg session): trimmed COMMON_BEHAVIOR.md (v3.1 →
-        v4.0) and PROGRAMMING_GENERAL.md (v2.0 → v3.0) — narratives
-        condensed to one-liners, rules/checklists/examples kept verbatim.
-        Cross-doc dedup grep found nothing unintentional. Documentation
-        Reorganization plan (agreed Session 83) now FULLY COMPLETE. No
-        project code work.
+        v4.0) and PROGRAMMING_GENERAL.md (v2.0 → v3.0). Documentation
+        Reorganization plan now FULLY COMPLETE. No project code work.
     84  Reorg Sessions 1-3 (all in one sitting): split SESSION_HANDOVER.md
         into itself + SESSION_HISTORY_ARCHIVE.md; trimmed DECOR_PROJECT.md
         (2,056 → 643 lines); topic-split RAILS_SPECIFICS.md into itself
         (core, v4.0) + new RAILS_UI.md/RAILS_TESTING.md/RAILS_MISC.md. No
-        project code work. See "Documentation Reorganization — Status"
-        above.
+        project code work.
     83  Planning-only: measured rule-doc size (~102k tokens), agreed the
         4-session reorg plan. No project code work.
     82  Storage Locations Session C: both flagged gaps closed (strong params,
@@ -418,27 +690,13 @@ of whether it still appears here.
         fixed. NOT tested/committed this session — closed out in 82.
     80  Storage Locations Session B: owner-facing CRUD. Implemented, tested,
         lint/security-scanned, committed, merged, DEPLOYED.
-    79  Storage Locations: design consultation (7 questions answered) +
-        Session A (migration/model/fixtures/tests). Implemented, tested,
-        DEPLOYED.
-    78  Admin dropdown-siblings fix; Connection form Owner Part Number gap;
-        real nav-logo-centering bug fixed (reported bug was a red herring).
-        Code-complete, NOT YET placed/tested/committed — see Open Checklists.
-    77  Six small UI/search bug fixes + a real nav-dropdown z-index fix.
-        One bug (admin dropdowns not closing siblings) reported but not
-        diagnosed, picked up in 78. Code-complete, NOT YET placed/tested/
-        committed — see Open Checklists.
-    76  Component/Peripheral dropdown fixes (4 rounds), Tom Select sort-order
-        bug fixed project-wide, CI-caught StaleElementReferenceError fixed.
-        Also: Ulli confirmed Sessions 73 and 75 fully deployed.
 
-**Sessions 59–75 and earlier:** one-line log entries have aged off this
-rolling list. Full narrative for every one of them (including 65 Component
-order_number bulk maintenance, 67 Component Suggestions Phase 4, 69 UI
-Terminology Rename, 70 Owner Part Number, 72 CI Security fix, 73 Category
-Help Pages, 75 three UI bug fixes) remains in **SESSION_HISTORY_ARCHIVE.md**,
-unchanged and complete — nothing described in those sessions has been
-lost, only removed from this rolling view.
+**Sessions 59–79 and earlier:** one-line log entries have aged off this
+rolling list. Full narrative for every one of them (including Session 79's
+design consultation + Session A, 76 dropdown fixes, 77/78 UI bug fixes,
+and everything before) remains in **SESSION_HISTORY_ARCHIVE.md**, unchanged
+and complete — nothing described in those sessions has been lost, only
+removed from this rolling view.
 
 ---
 
@@ -546,7 +804,9 @@ See RAILS_SPECIFICS.md (core file, v4.0) for the full rule.
 Writing a file from general convention and labeling it "inferred, please
 verify" is still a Never-Guess violation — it shifts verification burden
 onto the user instead of Claude asking for the real file. See
-COMMON_BEHAVIOR.md v3.0 for the full rule and the real example.
+COMMON_BEHAVIOR.md v4.2 for the full rule and the real examples (now
+including a Session 90 example of applying it correctly to a missing
+rule-document delta file, not just a code file).
 
 ---
 
@@ -627,8 +887,19 @@ generates a shell script to export needed files into `decor/export/` (run from
 inside that directory) and a placement script for delivered files staged in
 `decor/import/`, both using @-encoded flat filenames (full path, `/`→`@`, all
 dots except the true extension→`@`). `decor/export/` and `decor/import/` are
-both gitignored. See COMMON_BEHAVIOR.md v3.0 "File Transfer Protocol —
-Export/Import Scripts" for the full rule.
+both gitignored. See COMMON_BEHAVIOR.md v4.2 "File Transfer Protocol —
+Export/Import Scripts" for the full rule, including the Session 88 (multi-
+target single scripts preferred), Session 89 (single ad-hoc files never
+get @-encoded), and Session 90 (rule confirmed working — a near-miss was
+self-caught before delivery) reinforcements.
+
+**Applied again, Session 91:** two separate export scripts (one for
+source/model/view files, a second — requested after Ulli asked for tests —
+for fixtures/authentication_helper/existing test file); a 2-file
+placement-scripted delivery for the controller+view pair; then a single
+ad-hoc file (storage_locations_controller_test.rb, delivered under its
+plain filename, no @-encoding) once the git workflow hadn't started yet
+and only one file remained to deliver.
 
 ---
 
@@ -654,13 +925,21 @@ RAILS_SPECIFICS.md in the Session 84 topic-split).
 
 ## !! OUTPUT FILE NAMING — NEVER substitute underscores for dots !!
 
-See COMMON_BEHAVIOR.md v2.7 for the full rule.
+See COMMON_BEHAVIOR.md v4.2 for the full rule.
 
 ---
 
 ## !! FIXTURE DELIVERY RULE !!
 
 Whenever a fixture file is modified, upload it to verify before closing the session.
+
+**Note (Session 91):** no fixture .yml file was modified this session —
+the new `show`-action tests deliberately avoid touching computers.yml/
+components.yml/software_items.yml, assigning storage_location via
+update!/create! inside each test instead (rolled back automatically by
+Rails' transactional fixtures). This rule therefore did not apply this
+session; flagged here only so a future session doesn't wonder why no
+fixture file was delivered alongside the test file.
 
 ---
 
@@ -689,10 +968,12 @@ tables that share that enum/column before assuming the migration is complete.
 When a controller has new/create actions alongside show/edit/update/destroy,
 the set_resource before_action MUST be scoped with only: %i[show edit update destroy].
 
-**Applied correctly Session 80:** `storage_locations_controller.rb`'s
-`set_storage_location` and ownership-guard before_actions are both scoped
-`only: %i[edit update destroy delete_confirm]`, excluding `new`/`create`/
-`index` (which have no `:id`).
+**Applied correctly Session 80, extended Session 90:** `storage_locations_
+controller.rb`'s `set_storage_location` and ownership-guard before_actions
+are scoped `only: %i[show edit update destroy delete_confirm]` — `:show`
+was added in Session 90 alongside the new show action, excluding `new`/
+`create`/`index` (which have no `:id`). Unchanged by Session 91's rework —
+only the `show` action's own body and its private builder methods changed.
 
 ---
 
@@ -705,7 +986,7 @@ the set_resource before_action MUST be scoped with only: %i[show edit update des
 ## !! EXPORT/IMPORT — ALWAYS include a stable unique key (learned Session 49) !!
 
 Every exported record type must carry a stable unique field for duplicate detection.
-See PROGRAMMING_GENERAL.md v2.0 for the full rule.
+See PROGRAMMING_GENERAL.md v3.0 for the full rule.
 
 ---
 
@@ -717,10 +998,13 @@ In integration tests, NEVER use `assert_match(text, response.body)` or
 See **RAILS_TESTING.md** for the full rule (moved there from
 RAILS_SPECIFICS.md in the Session 84 topic-split).
 
-**Applied correctly Session 80:** the new
-`storage_locations_controller_test.rb`'s "index shows only the current
-owner's own storage locations" test uses `assert_body_includes` /
-`refute_body_includes`, not `assert_match`/`refute_match`.
+**Applied correctly Session 80, reinforced Session 91:** the
+`storage_locations_controller_test.rb`'s `show`-action tests use
+`assert_body_includes` / `refute_body_includes` throughout, not
+`assert_match`/`refute_match` — including for the "section omitted when
+empty" assertions (`refute_body_includes "Peripherals ("`, matching the
+heading's own parenthesized-count format rather than a bare category word
+that could collide with unrelated nav text).
 
 ---
 
@@ -790,32 +1074,40 @@ Rails fixture loading bypasses model callbacks. Always set html_body explicitly.
 
 ## !! Admin update tests — include admin: "true" when updating self (learned Session 58) !!
 
-See SESSION_HISTORY_ARCHIVE.md for the full incident narrative (previously
-"SESSION_HANDOVER v64.0" — that version is superseded; the underlying rule
-and example now live in **RAILS_TESTING.md**'s "NOT NULL Boolean Columns"
-section, moved there from RAILS_SPECIFICS.md in the Session 84 topic-split).
+See SESSION_HISTORY_ARCHIVE.md for the full incident narrative — the
+underlying rule and example now live in **RAILS_TESTING.md**'s "NOT NULL
+Boolean Columns" section, moved there from RAILS_SPECIFICS.md in the
+Session 84 topic-split.
 
 ---
 
 ## Priority 1 — Future Sessions
 
-1. **Storage Locations Session E** — resume when ready. An uncommitted,
-   unreviewed draft already covers Computers/Peripherals (see "Open
-   Checklists" above for the exact remaining steps: pre-commit checklist
-   on the existing draft, then write the matching Components and
-   SoftwareItems equivalents, then the git workflow for all three
-   together). Session D (Privacy Audit) is now COMPLETE — nothing further
-   needed there. Session F (export/import) remains genuinely NOT STARTED
-   and is unaffected — see DECOR_PROJECT.md "Storage Locations Feature —
-   Session Plan."
-2. **Sessions 77 + 78's combined checklist** — see "Open Checklists" above.
-3. **System tests Track 2** — Tom Select combobox, admin CRUD flows, full auth flow.
-4. **Legal/Compliance** — Impressum, Privacy Policy, GDPR, Cookie Consent, TOS.
-5. **Account deletion + data export** (GDPR).
-6. **Spam / Postmark DNS fix** — awaiting Rob's dashboard findings.
-7. **BulkUploadService stale model references** — low priority.
-8. **Gmail logo fix (long-term)** — set `config.action_mailer.asset_host` in
-   `production.rb` to the app's public hostname.
+1. **Storage Locations Session F (export/import)** — the last remaining
+   piece of the Storage Locations feature. Depends on A and C (both done).
+   See DECOR_PROJECT.md "Storage Locations Feature — Session Plan," Session
+   F, for the full file-by-file breakdown (owner_export_service.rb,
+   owner_import_service.rb, all_owners_export_service.rb,
+   data_transfers/show.html.erb, plus test updates). Sessions D and E are
+   both now COMPLETE — nothing further needed there.
+2. **StorageLocation show page (Session 90, reworked Session 91)** —
+   re-run bin/rails test now that storage_locations_controller_test.rb
+   v1.1 exists (not yet confirmed passing), re-run rubocop, confirm
+   decor/config/routes.rb (v3.9) and storage_locations/
+   _storage_location.html.erb (v1.2) are placed if not already done, then
+   git workflow for all five files together (controller, view, test,
+   routes, row partial).
+3. **Session 89's Owner Part Number display fix** — place
+   components/show.html.erb v1.11, run bin/rails test / rubocop / manual
+   browser check, then git workflow (can batch with other pending work).
+4. **Sessions 77 + 78's combined checklist** — see "Open Checklists" above.
+5. **System tests Track 2** — Tom Select combobox, admin CRUD flows, full auth flow.
+6. **Legal/Compliance** — Impressum, Privacy Policy, GDPR, Cookie Consent, TOS.
+7. **Account deletion + data export** (GDPR).
+8. **Spam / Postmark DNS fix** — awaiting Rob's dashboard findings.
+9. **BulkUploadService stale model references** — low priority.
+10. **Gmail logo fix (long-term)** — set `config.action_mailer.asset_host` in
+    `production.rb` to the app's public hostname.
 
 ---
 

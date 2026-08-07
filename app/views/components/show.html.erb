@@ -1,4 +1,27 @@
-<%# decor/app/views/components/show.html.erb - version 1.9 %>
+<%# decor/app/views/components/show.html.erb - version 1.11 %>
+<%# v1.11 (Session 88, revised per Ulli immediately after v1.10 shipped): %>
+<%#   v1.10 put Component Owner Part Number and Trade Status in two %>
+<%#   separate full-width rows — too wide for fields this short. Combined %>
+<%#   them into one row, side by side, using the same conditional %>
+<%#   grid-cols pattern already established in computers/show.html.erb %>
+<%#   Line 2 (grid-cols-3 vs grid-cols-2 depending on logged_in?): %>
+<%#   grid-cols-2 when logged in (both fields shown), grid-cols-1 when %>
+<%#   logged out (Owner Part Number alone, full width — Trade Status is %>
+<%#   members-only and must be completely absent, not just hidden, for %>
+<%#   unauthenticated requests, same rule as before). %>
+<%# v1.10 (Session 88, bug fix reported by Ulli — /components/397 missing %>
+<%#   Owner Part Number): Component#owner_part_number has existed since %>
+<%#   Session 70 (component.rb v1.6, components_controller.rb v2.1 permits %>
+<%#   it), and computers/show.html.erb got the equivalent field added in %>
+<%#   Session 75 — but this file was never updated. Same "single source of %>
+<%#   truth / touch N places, miss one" shape as RAILS_SPECIFICS.md's %>
+<%#   Session 73 rule and computers/show.html.erb's own Session 75 history. %>
+<%#   Not private data (unlike Trade Status/Storage Location below it) — %>
+<%#   owner_part_number is shown unconditionally on computers/show.html.erb %>
+<%#   too, so no logged_in?/owner guard is applied to that field itself. %>
+<%#   No controller or model change needed: @component.owner_part_number is %>
+<%#   already a plain, always-present NOT NULL column read (defaults to %>
+<%#   "-" server-side, same as order_number/serial_number two lines above). %>
 <%# v1.9 (Session C, Storage Locations feature, Part 3 of 6): Added a %>
 <%#   Storage Location field, same reasoning as computers/show.html.erb %>
 <%#   v2.5 — this page is public, Storage Location is private data, so the %>
@@ -98,25 +121,39 @@
       </div>
     </div>
 
-    <%# Trade Status — visible to logged-in members only. %>
-    <%# Non-logged-in visitors see no barter data anywhere; this block must be %>
-    <%# completely absent (not just hidden) for unauthenticated requests. %>
-    <%# Placed between Line 2 and Description — Line 2 already has 4 columns, %>
-    <%# so a dedicated single-field row is cleaner than a cramped 5th column. %>
-    <% if logged_in? %>
+    <%# Component Owner Part Number + Trade Status — side by side, not %>
+    <%# stacked (Session 88, revised per Ulli: full-width rows were too %>
+    <%# wide for fields this short). Trade Status is logged-in-only, so the %>
+    <%# grid column count is conditional — same pattern already established %>
+    <%# in computers/show.html.erb Line 2 (grid-cols-3 vs grid-cols-2 on %>
+    <%# logged_in?). Owner Part Number alone gets grid-cols-1 (full width, %>
+    <%# same visual weight as the other standalone rows below it) when %>
+    <%# logged out, since there's no second field to pair it with. %>
+    <div class="grid <%= logged_in? ? "grid-cols-2" : "grid-cols-1" %> gap-4">
       <div>
-        <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider mb-1">Trade Status</dt>
-        <dd class="flex items-center w-full h-10 p-3 rounded border border-stone-300 bg-white text-sm">
-          <% if @component.barter_status_offered? %>
-            <span class="text-green-700">Offered</span>
-          <% elsif @component.barter_status_wanted? %>
-            <span class="text-amber-600">Wanted</span>
-          <% else %>
-            <span class="text-stone-400">—</span>
-          <% end %>
+        <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider mb-1">Component Owner Part Number</dt>
+        <dd class="flex items-center w-full h-10 p-3 rounded border border-stone-300 bg-white text-sm text-stone-600">
+          <%= @component.owner_part_number %>
         </dd>
       </div>
-    <% end %>
+      <%# Trade Status — visible to logged-in members only. Non-logged-in %>
+      <%# visitors see no barter data anywhere; this block must be %>
+      <%# completely absent (not just hidden) for unauthenticated requests. %>
+      <% if logged_in? %>
+        <div>
+          <dt class="text-xs font-medium text-stone-500 uppercase tracking-wider mb-1">Trade Status</dt>
+          <dd class="flex items-center w-full h-10 p-3 rounded border border-stone-300 bg-white text-sm">
+            <% if @component.barter_status_offered? %>
+              <span class="text-green-700">Offered</span>
+            <% elsif @component.barter_status_wanted? %>
+              <span class="text-amber-600">Wanted</span>
+            <% else %>
+              <span class="text-stone-400">—</span>
+            <% end %>
+          </dd>
+        </div>
+      <% end %>
+    </div>
 
     <%# Storage Location — Session C. Private field: only the owning owner %>
     <%# or an admin may see it, since this page itself is public. %>
