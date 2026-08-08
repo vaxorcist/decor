@@ -1,5 +1,47 @@
 # decor/app/services/owner_import_service.rb
-# version 1.12
+# version 1.13
+# v1.13 (Storage Locations Session F): Import support for Storage Locations.
+#   New "! --- storage_locations ---" section, parsed in the new-format
+#   dispatcher and processed BEFORE computer/component/software rows (see
+#   dispatch_rows) — matches DECOR_PROJECT.md "Storage Locations Feature —
+#   Session Plan," Session F's confirmed dependency ordering. Each row's
+#   "name" is the natural key: @owner.storage_locations.exists?(name:) skips
+#   an existing location; otherwise a new one is built and saved. A save
+#   failure (e.g. name over 50 characters, or the (owner_id, name)
+#   uniqueness race with a location added elsewhere in the same request) is
+#   a row_error, not a file-level failure — consistent with every other
+#   record type in this file.
+#
+#   process_computer_row, process_component_row, and process_software_row
+#   each now also read a "storage_location" column (no legacy fallback name
+#   — brand new column, same treatment as owner_part_number in v1.12) and
+#   resolve it via the new resolve_storage_location helper:
+#     - blank column  → nil (no location assigned) — no warning, this is
+#       the normal case for the vast majority of pre-Session-F exports.
+#     - name matches an existing location for this owner → that location.
+#     - name does NOT match an existing location for this owner →
+#       AUTO-CREATED (confirmed design decision, DECOR_PROJECT.md Session
+#       F) rather than treated as a lookup failure like
+#       ComputerModel/ComponentType/SoftwareName. This intentionally
+#       differs from those other "must already exist, ask an admin"
+#       lookups: storage locations are private, owner-defined data (not an
+#       admin-managed catalog), so there is no admin to ask — auto-creating
+#       is the only sensible behaviour. The auto-create also means the
+#       dedicated storage_locations section above is a convenience for a
+#       clean/de-duplicated location list, not a strict prerequisite: a CSV
+#       missing that section entirely (e.g. a hand-edited file, or one from
+#       an external tool) still works correctly.
+#     - name present but StorageLocation.new(...).save fails validation
+#       (e.g. over 50 characters) → row_warning (NOT a row_error) and the
+#       computer/component/software_item is still saved, just without a
+#       location. A malformed location name should never block the primary
+#       record it's attached to from being imported.
+#   Not touched: the LEGACY format path (process_csv_legacy_format) — the
+#   storage_locations section and the storage_location column are both
+#   brand new as of this session, so no CSV exported before this version
+#   contains either; legacy files simply never populate storage_location,
+#   exactly like any other new-format-only column.
+#
 # v1.12 (Session 70): Owner Part Number feature.
 #   process_computer_row: reads the new "owner_part_number" column (col(row,
 #     "owner_part_number").presence || "-" — no legacy fallback name exists,
@@ -101,6 +143,7 @@ class OwnerImportService
     @errors                 = []   # file-level failures — abort the whole import
     @row_errors             = []   # per-row failures — row skipped, not saved
     @row_warnings           = []   # per-row non-fatal notes — row saved with caveat
+    @storage_location_count = 0    # Storage Locations Session F
     @computer_count         = 0
     @peripheral_count       = 0
     @component_count        = 0
@@ -126,6 +169,7 @@ class OwnerImportService
 
     {
       success:                true,
+      storage_location_count: @storage_location_count,
       computer_count:         @computer_count,
       peripheral_count:       @peripheral_count,
       component_count:        @component_count,
@@ -179,10 +223,11 @@ class OwnerImportService
   # ── New format: section-aware parsing ───────────────────────────────────────
 
   def process_csv_new_format(content)
-    computer_rows   = []
-    component_rows  = []
-    connection_rows = []
-    software_rows   = []
+    storage_location_rows = []   # Storage Locations Session F
+    computer_rows          = []
+    component_rows         = []
+    connection_rows        = []
+    software_rows          = []
 
     sections      = []
     current       = nil
@@ -215,6 +260,8 @@ class OwnerImportService
         record_type = csv_row["record_type"]&.strip&.downcase
 
         case sentinel
+        when /storage_locations/
+          storage_location_rows << [csv_row, row_num] if record_type == "storage_location"
         when /computers/
           case record_type
           when "computer"   then computer_rows << [csv_row, row_num, :computer]
@@ -239,7 +286,7 @@ class OwnerImportService
       end
     end
 
-    dispatch_rows(computer_rows, component_rows, connection_rows, software_rows)
+    dispatch_rows(storage_location_rows, computer_rows, component_rows, connection_rows, software_rows)
   end
 
   # ── Legacy format: single global header (pre-v1.7 exports) ──────────────────
@@ -294,7 +341,10 @@ class OwnerImportService
       end
     end
 
-    dispatch_rows(computer_rows, component_rows, connection_rows, software_rows)
+    # Storage Locations Session F: legacy-format files predate this feature
+    # entirely — pass an empty array, same treatment as any other brand-new
+    # section that simply cannot appear in a pre-v1.7-exporter file.
+    dispatch_rows([], computer_rows, component_rows, connection_rows, software_rows)
   end
 
   def validate_headers!(headers)
@@ -308,9 +358,16 @@ class OwnerImportService
 
   # ── Shared multi-pass dispatcher ─────────────────────────────────────────────
 
-  # Computers first so components, connections, and software items can reference
-  # computers created within the same import file.
-  def dispatch_rows(computer_rows, component_rows, connection_rows, software_rows)
+  # Storage locations first (Storage Locations Session F) so that any
+  # computer/component/software row below can find an already-created
+  # location by name — though note process_computer_row/process_component_row/
+  # process_software_row's own resolve_storage_location will auto-create a
+  # missing one anyway, so this ordering is a convenience for a clean
+  # dedicated section, not a strict requirement (see the v1.13 header comment
+  # above). Computers next so components, connections, and software items can
+  # reference computers created within the same import file.
+  def dispatch_rows(storage_location_rows, computer_rows, component_rows, connection_rows, software_rows)
+    storage_location_rows.each { |row, row_num| process_storage_location_row(row, row_num) }
     computer_rows.each  { |row, row_num, dt| process_computer_row(row, row_num, dt) }
     component_rows.each { |row, row_num|     process_component_row(row, row_num) }
     process_connection_rows(connection_rows)
@@ -348,17 +405,75 @@ class OwnerImportService
     @row_errors.last&.start_with?("Row #{row_num}:")
   end
 
+  # ── Storage Location row processing (Storage Locations Session F) ───────────
+
+  # New column names: name (no legacy fallback — brand new record type).
+  # Natural key: name, scoped to @owner (the whole file already belongs to
+  # one owner) — matches storage_location.rb's own (owner_id, name)
+  # uniqueness validation exactly.
+  def process_storage_location_row(row, row_num)
+    name = col(row, "name")
+
+    if name.blank?
+      add_row_error(row_num, "name is required for storage_location records")
+      return
+    end
+
+    return if @owner.storage_locations.exists?(name: name)
+
+    location = @owner.storage_locations.build(name: name)
+
+    if location.save
+      @storage_location_count += 1
+    else
+      add_row_error(row_num, location.errors.full_messages.join(", "))
+    end
+  end
+
+  # Resolves a "storage_location" column value into a StorageLocation for
+  # @owner — used by process_computer_row, process_component_row, and
+  # process_software_row. See the v1.13 header comment above for the full
+  # confirmed design: blank → nil (no warning); existing name → that
+  # location; unknown name → AUTO-CREATED (not a lookup failure, unlike
+  # ComputerModel/ComponentType/SoftwareName); a name that fails validation
+  # on creation (e.g. over 50 characters) → row_warning, nil returned, the
+  # calling row's own record is still saved without a location.
+  def resolve_storage_location(name, row_num)
+    return nil if name.blank?
+
+    existing = @owner.storage_locations.find_by(name: name)
+    return existing if existing
+
+    location = @owner.storage_locations.build(name: name)
+    if location.save
+      @storage_location_count += 1
+      location
+    else
+      add_row_warning(row_num,
+        "Storage Location '#{name}' could not be created (#{location.errors.full_messages.join(', ')}) " \
+        "— item imported without a storage location.")
+      nil
+    end
+  end
+
   # ── Computer row processing ──────────────────────────────────────────────────
 
   # New column names: model / order_number / owner_part_number / serial_number /
-  #                   condition / run_status / history / barter_status
+  #                   condition / run_status / history / barter_status /
+  #                   storage_location
   # Legacy fallbacks: computer_model / computer_order_number / etc.
-  # (owner_part_number has no legacy fallback name — it's a brand-new column.)
+  # (owner_part_number and storage_location have no legacy fallback names —
+  # both are brand-new columns, added Session 70 and Storage Locations
+  # Session F respectively.)
   # barter_status defaults to "no_barter" when absent or blank.
   # owner_part_number defaults to "-" when absent or blank (Session 70), matching
   # the model's before_validation default — normalized HERE (not left to the
   # model) so the duplicate exists? check below compares against the same
   # value the record will actually be saved with.
+  # storage_location: resolved via resolve_storage_location — see that method
+  # and the v1.13 header comment for the full auto-create behaviour. NOT part
+  # of the duplicate-detection key below — a device's physical location has
+  # no bearing on whether it's the "same" device on re-import.
   def process_computer_row(row, row_num, device_type = :computer)
     serial_number = col(row, "serial_number", "computer_serial_number")
     model_name    = col(row, "model",         "computer_model")
@@ -396,6 +511,11 @@ class OwnerImportService
 
     barter_status = col(row, "barter_status").presence || "no_barter"
 
+    # Storage Locations Session F: resolve (or auto-create) the named
+    # location, if any. Never a row_error — at worst a row_warning, with the
+    # computer still saved unassigned.
+    storage_location = resolve_storage_location(col(row, "storage_location"), row_num)
+
     computer = @owner.computers.build(
       serial_number:      serial_number,
       owner_part_number:  owner_part_number,
@@ -405,7 +525,8 @@ class OwnerImportService
       computer_condition: condition,
       run_status:         run_status,
       device_type:        device_type,
-      barter_status:      barter_status
+      barter_status:      barter_status,
+      storage_location:   storage_location
     )
 
     if computer.save
@@ -422,9 +543,9 @@ class OwnerImportService
 
   # New column names: installed_on_model / installed_on_serial / type / category /
   #                   order_number / owner_part_number / serial_number / condition /
-  #                   description / barter_status
+  #                   description / barter_status / storage_location
   # Legacy fallbacks: (no installed_on_model) / computer_serial_number / component_type / etc.
-  # (owner_part_number has no legacy fallback name — it's a brand-new column.)
+  # (owner_part_number and storage_location have no legacy fallback names.)
   # component_category defaults to "integral" when absent or blank.
   # barter_status defaults to "no_barter" when absent or blank.
   #
@@ -433,6 +554,8 @@ class OwnerImportService
   # it is never actually blank in the DB anymore). The duplicate exists? check
   # is now UNCONDITIONAL and includes owner_part_number — see the v1.12 header
   # comment above for the resulting behaviour change on repeated spare imports.
+  # storage_location (Session F): resolved via resolve_storage_location, same
+  # auto-create behaviour as computers; NOT part of the duplicate-detection key.
   def process_component_row(row, row_num)
     type_name = col(row, "type", "component_type")
 
@@ -478,6 +601,11 @@ class OwnerImportService
     category         = col(row, "category").presence || "integral"
     barter_status    = col(row, "barter_status").presence || "no_barter"
 
+    # Storage Locations Session F: resolve (or auto-create) the named
+    # location, if any. Never a row_error — at worst a row_warning, with the
+    # component still saved unassigned.
+    storage_location = resolve_storage_location(col(row, "storage_location"), row_num)
+
     component = @owner.components.build(
       component_type:      component_type,
       component_condition: condition,
@@ -487,7 +615,8 @@ class OwnerImportService
       owner_part_number:    owner_part_number,
       order_number:        col(row, "order_number", "component_order_number").presence,
       description:         col(row, "description",  "component_description").presence,
-      barter_status:       barter_status
+      barter_status:       barter_status,
+      storage_location:    storage_location
     )
 
     if component.save
@@ -500,10 +629,14 @@ class OwnerImportService
   # ── Software item row processing ─────────────────────────────────────────────
 
   # New column names: installed_on_model / installed_on_serial / name / version /
-  #                   condition / description / history / barter_status
+  #                   condition / description / history / barter_status /
+  #                   storage_location
   # Legacy fallbacks: computer_model / computer_serial_number / software_name / etc.
   # barter_status defaults to "no_barter" when absent or blank.
   # Duplicate: same software_name + computer + version → silently skipped.
+  # storage_location (Session F): resolved via resolve_storage_location, same
+  # auto-create behaviour as computers/components; NOT part of the
+  # duplicate-detection key.
   def process_software_row(row, row_num)
     name_value = col(row, "name", "software_name")
 
@@ -537,6 +670,11 @@ class OwnerImportService
 
     barter_status = col(row, "barter_status", "software_barter_status").presence || "no_barter"
 
+    # Storage Locations Session F: resolve (or auto-create) the named
+    # location, if any. Never a row_error — at worst a row_warning, with the
+    # software item still saved unassigned.
+    storage_location = resolve_storage_location(col(row, "storage_location"), row_num)
+
     item = @owner.software_items.build(
       software_name:      software_name,
       software_condition: software_condition,
@@ -544,7 +682,8 @@ class OwnerImportService
       version:            version,
       description:        col(row, "description", "software_description").presence,
       history:            col(row, "history",      "software_history").presence,
-      barter_status:      barter_status
+      barter_status:      barter_status,
+      storage_location:   storage_location
     )
 
     if item.save

@@ -1,5 +1,11 @@
 # decor/docs/claude/RAILS_SPECIFICS.md
-# version 4.0
+# version 4.1
+# Session 93: Added a one-paragraph reinforcement to "Single Source of
+#   Truth Refactors" — data_transfers_controller.rb and
+#   admin/data_transfers_controller.rb independently missed the same new
+#   OwnerImportService counter (storage_location_count) a second time,
+#   the first being Session 48's connection_group_count/software_item_count
+#   omission. No new rule; existing rule reinforced.
 # Session 84 (Reorg Session 3 of 4, plan agreed Session 83): Topic-split
 #   this file. It had grown to ~54,000 tokens on its own and mixed core
 #   Rails/ActiveRecord rules with view/CSS/Stimulus rules, test/Capybara/CI
@@ -291,6 +297,19 @@ controller, leaving the owner-facing controller's stale private copy
 undetected for 53 sessions (Session 73); the same shape recurred when
 `computers/show.html.erb` was never updated alongside three sessions' worth
 of `_form.html.erb`-only fixes (Session 75).
+
+**Reinforced (Session 93):** `data_transfers_controller.rb` and
+`admin/data_transfers_controller.rb` both hardcode their own copy of
+`build_success_message`'s count-field list (owner-facing vs. admin-facing
+flash text, intentionally separate views of the same data). This is the
+SECOND time a new `OwnerImportService` counter was added to one copy's
+logic without the other — Session 48 (`connection_group_count`/
+`software_item_count`) and now Session 93 (`storage_location_count`,
+caught only via a manual browser check, not by any automated test). When a
+piece of duplicated logic has recurred a second time in the same two
+files, treat it as a standing project-specific risk, not a one-off miss:
+grep both files by name whenever `OwnerImportService`'s result hash gains
+a new key, rather than relying on remembering the duplication exists.
 
 ---
 

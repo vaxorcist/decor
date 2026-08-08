@@ -1,5 +1,26 @@
 # decor/app/controllers/data_transfers_controller.rb
-# version 1.6
+# version 1.7
+# v1.7 (Storage Locations Session F — bug fix found via manual browser
+#   check): build_success_message never included storage_location_count in
+#   its `parts` list. OwnerImportService v1.13 added storage_location_count
+#   to its result hash (Session F), but this method's hardcoded list of
+#   count fields was never updated to match — same "single source of
+#   truth / touch N places, miss one" shape as this session's earlier
+#   all_owners_export_service.rb owner_part_number bug (see that file's
+#   v1.2 header comment). Symptom: importing a CSV containing ONLY new
+#   storage_location rows (or only computer/component/software rows whose
+#   storage_location column auto-created a new location, with nothing else
+#   new) silently fell through every `if count > 0` check to the final
+#   "Nothing to import — all records already exist." branch, even though
+#   OwnerImportService HAD created and saved the location(s).
+#   Fixed by adding a storage_location_count line to `parts`, in the same
+#   position OwnerExportService's own section ordering uses it (before
+#   computer_count) — purely a display-order choice, no functional
+#   significance. The exact same gap was found duplicated in
+#   admin/data_transfers_controller.rb#build_success_message's
+#   "owner_collection" case and fixed there in the same session (v1.4 ->
+#   v1.5) — see that file's own changelog for detail.
+#
 # v1.6 (Session 49 — Session G): Partial-success support aligned with OwnerImportService v1.8.
 #   Added software_item_count to the import result handling — was silently omitted in v1.5,
 #   matching the same gap that existed in admin/data_transfers_controller v1.2 (fixed there
@@ -24,8 +45,9 @@ class DataTransfersController < ApplicationController
   def show
   end
 
-  # export — generate a CSV of all the current owner's data (computers, peripherals,
-  # components, connections, and software items) and stream it as a file attachment.
+  # export — generate a CSV of all the current owner's data (storage locations,
+  # computers, peripherals, components, connections, and software items) and
+  # stream it as a file attachment.
   def export
     csv      = OwnerExportService.export(Current.owner)
     filename = "decor_export_#{Current.owner.user_name}_#{Date.today}.csv"
@@ -72,15 +94,23 @@ class DataTransfersController < ApplicationController
   # Lists non-zero counts per record type. When some rows were skipped (partial
   # success), the notice lists what WAS saved; flash[:row_errors] carries the
   # per-row detail separately for display in the view.
+  #
+  # IMPORTANT: every count field OwnerImportService's result hash can return
+  # MUST have a corresponding line here — see the v1.7 header comment above
+  # for what happens when one is missed (a real import silently reports
+  # "Nothing to import"). If OwnerImportService ever gains another counter,
+  # add it here in the SAME change, not as a follow-up.
   def build_success_message(result)
-    computer_count         = result[:computer_count].to_i
-    peripheral_count       = result[:peripheral_count].to_i
-    component_count        = result[:component_count].to_i
-    connection_group_count = result[:connection_group_count].to_i
-    software_item_count    = result[:software_item_count].to_i
-    skipped                = result[:row_errors]&.size.to_i
+    storage_location_count = result[:storage_location_count].to_i
+    computer_count          = result[:computer_count].to_i
+    peripheral_count        = result[:peripheral_count].to_i
+    component_count         = result[:component_count].to_i
+    connection_group_count  = result[:connection_group_count].to_i
+    software_item_count     = result[:software_item_count].to_i
+    skipped                 = result[:row_errors]&.size.to_i
 
     parts = []
+    parts << "#{storage_location_count} storage location(s)" if storage_location_count > 0
     parts << "#{computer_count} computer(s)"                if computer_count         > 0
     parts << "#{peripheral_count} peripheral(s)"            if peripheral_count       > 0
     parts << "#{component_count} component(s)"              if component_count        > 0

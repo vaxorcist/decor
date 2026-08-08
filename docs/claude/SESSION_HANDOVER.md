@@ -1,5 +1,128 @@
 # decor/docs/claude/SESSION_HANDOVER.md
-# version 92.0
+# version 94.0
+# Session 93: Two pieces of work.
+#   (1) Ulli declared all other open work "finished" at session start —
+#   Sessions 77+78's combined checklist, Session 89's Owner Part Number
+#   display fix, and the Session 68 GAP NOTICE are all closed per this
+#   explicit instruction, NOT because the underlying placement/testing/
+#   deploy work was newly verified this session. If any of them resurface
+#   later, they'll be dealt with fresh rather than treated as carried-over
+#   unfinished business — see "Open Checklists" below, which now reflects
+#   this closure.
+#   (2) Implemented Storage Locations Session F (export/import) — the last
+#   remaining piece of the Storage Locations feature. Delivered via
+#   Pre-Implementation Verification: an export script pulled
+#   owner_export_service.rb, owner_import_service.rb,
+#   all_owners_export_service.rb, data_transfers/show.html.erb,
+#   owner_export_service_test.rb, owner_import_service_test.rb,
+#   storage_location.rb, computer.rb, component.rb, software_item.rb,
+#   owner.rb, and storage_locations.yml before any code was written.
+#   New "! --- storage_locations ---" CSV section (natural key: name,
+#   per PROGRAMMING_GENERAL.md's stable-unique-key rule — no synthetic ID),
+#   exported first and imported first (dependency ordering). New
+#   "storage_location" column appended as the LAST column on the
+#   computers/peripherals, components, and software CSV sections. Import
+#   auto-creates an unrecognized storage_location name on any referencing
+#   row (confirmed design decision, DECOR_PROJECT.md Session F) — never a
+#   row error, at worst a row_warning if the name itself fails validation
+#   (e.g. over 50 characters), with the parent record still saved without
+#   a location in that case.
+#     decor/app/services/owner_export_service.rb           v1.11 -> v1.12
+#     decor/app/services/owner_import_service.rb            v1.12 -> v1.13
+#     decor/app/services/all_owners_export_service.rb        v1.1 -> v1.2
+#     decor/app/views/data_transfers/show.html.erb            v1.9 -> v1.10
+#     decor/test/services/owner_export_service_test.rb        v2.0 -> v2.1
+#     decor/test/services/owner_import_service_test.rb        v1.9 -> v1.10
+#
+#   BUG FOUND AND FIXED (pre-existing, unrelated to Storage Locations
+#   itself — discovered opportunistically while touching
+#   all_owners_export_service.rb for the storage_location column):
+#   CSV_HEADERS in that file derives from
+#   OwnerExportService::COMPUTER_SECTION_HEADERS, which Session 70 widened
+#   to add owner_part_number. CSV_HEADERS grew to match automatically at
+#   that time, but the to_csv row-building array was NEVER updated to
+#   match — it kept pushing only 9 values with no owner_part_number. Every
+#   row in the admin-wide "All Owners" export has been silently misaligned
+#   since Session 70: the header promised owner_part_number in column 5,
+#   but the actual value there was serial_number's, shifting every
+#   subsequent column by one. Same "single source of truth / touch N
+#   places, miss one" shape as the Session 89 components/show.html.erb gap.
+#   Fixed in the same v1.2 change as the storage_location column addition.
+#     decor/app/services/all_owners_export_service.rb  (fix included in
+#       the v1.1 -> v1.2 bump above)
+#
+#   SECOND BUG FOUND AND FIXED (found via Ulli's manual browser check after
+#   the pre-commit checklist passed): importing a CSV containing ONLY new
+#   storage_location rows (or only a new storage_location reference on an
+#   otherwise-unchanged computer/component/software row) produced the
+#   flash message "Nothing to import — all records already exist.", even
+#   though OwnerImportService had created and saved the location(s).
+#   Root cause: build_success_message in BOTH
+#   decor/app/controllers/data_transfers_controller.rb AND
+#   decor/app/controllers/admin/data_transfers_controller.rb (the
+#   owner_collection branch) hardcode a fixed list of count fields to
+#   check, and storage_location_count was never added to either list —
+#   same "touch N places, miss one" shape as the bug above, and the SECOND
+#   time this exact pair of files has independently missed the same new
+#   count field (v1.3 of the admin controller already fixed an identical
+#   omission of connection_group_count/software_item_count, Session 48).
+#   Fixed by adding a storage_location_count line to both files' `parts`
+#   list, with an explicit "every new count field needs a line in BOTH
+#   copies, same change" comment added to each to make the next recurrence
+#   less likely.
+#     decor/app/controllers/data_transfers_controller.rb          v1.6 -> v1.7
+#     decor/app/controllers/admin/data_transfers_controller.rb    v1.4 -> v1.5
+#
+#   Pre-commit checklist (bin/rails test, rubocop -A + rubocop, brakeman,
+#   bundle-audit) confirmed passing by Ulli for the six Session F files.
+#   Manual browser check surfaced the flash-message bug above; the two
+#   controller fixes were delivered and Ulli confirmed "all fine now" —
+#   but the RE-RUN of the full pre-commit checklist against the two
+#   controller fixes, and the full git workflow (branch → commit → push →
+#   PR → CI → merge) plus kamal deploy for all eight files together, were
+#   NOT explicitly confirmed step-by-step in this session and remain open
+#   checklist items below (flagged rather than assumed, per Never-Guess).
+#   Test coverage for the two controller fixes (build_success_message) was
+#   offered but not completed this session — Ulli moved straight to
+#   wrap-up; flagged as a pending Test Coverage Check item below.
+# Session 92 (ad-hoc, closes out the StorageLocation Show Page work from
+#   Sessions 90-91): Ulli ran the full test suite after Session 91's
+#   wrap-up and hit one failure: StorageLocationsControllerTest's "show
+#   displays the Components section..." test raised
+#   `TypeError: no implicit conversion of nil into String` inside
+#   `response_helpers.rb`'s `assert_body_includes`. Diagnosed via
+#   Pre-Implementation Verification (export script pulling the test file,
+#   controller, view, response_helpers.rb, all four fixture files, and
+#   authentication_helper.rb before proposing any fix) rather than
+#   guessing from the stack trace alone. Root cause: decor/test/fixtures/
+#   components.yml v1.5 never sets `order_number` on ANY component
+#   fixture (unlike computers.yml, where every fixture sets it
+#   explicitly) — so `components(:pdp11_memory).order_number` was `nil`,
+#   and `assert_body_includes(nil)` called `response.body.include?(nil)`,
+#   which raises this exact TypeError (the `nil` is the argument to
+#   `include?`, not `response.body` itself — worth noting since the
+#   surface symptom looks like a nil response body). Fixed with a single
+#   line in the test's own `update!` call, adding
+#   `order_number: "ORD-COMPONENT-1"` alongside the `owner_part_number`
+#   override already there — consistent with the test file's own stated
+#   v1.1 design of never touching shared fixture `.yml` files. No
+#   controller/view/model change needed; no fixture file modified.
+#   decor/test/controllers/storage_locations_controller_test.rb v1.1 ->
+#   v1.2. Ulli then confirmed `bin/rails test` passing, confirmed the
+#   `show` route shape via `bin/rails routes | grep storage_location`
+#   (plain RESTful member route, no namespace-prefix quirks — the
+#   remaining open item from Session 91's checklist), confirmed
+#   routes.rb v3.9 and _storage_location.html.erb v1.2 placement via a
+#   manual browser check, and completed the FULL git workflow (branch ->
+#   commit -> push -> PR -> CI -> merge) plus `kamal deploy` for all five
+#   files together. **The StorageLocation Show Page feature (Sessions
+#   90-91-92) is now FULLY COMPLETE: committed, tested, lint/
+#   security-scanned, merged, and DEPLOYED.** No new rule-document content
+#   needed — the diagnosis and fix both followed existing rules
+#   (Pre-Implementation Verification / Never-Guess for the diagnosis;
+#   PROGRAMMING_GENERAL.md's "Derive Test Assertions from Data" pattern
+#   already justified fixing it in-test rather than touching the shared
+#   fixture).
 # Session 91 (ad-hoc, direct continuation of Session 90's StorageLocation
 #   show page — same feature, not a new A-F letter): Ulli reported the
 #   Session 90 flat, alphabetical-by-name list wasn't sufficient to
@@ -271,69 +394,46 @@
 #   decor/docs/claude/SESSION_HISTORY_ARCHIVE.md's "Original Header
 #   Changelog" section — not repeated here.
 
-**Date:** August 6, 2026 (Session 91: ad-hoc rework of Session 90's
-  StorageLocation show page — Ulli reported the flat, alphabetical-by-name
-  list wasn't enough to identify an item. Reworked into four fixed-order
-  category sections (Computers/Peripherals/Components/Software), each with
-  the full identifying-field set, sorted category-first then
-  alphabetically within category. Full `show` action test coverage was
-  then written (storage_locations_controller_test.rb v1.1). Ulli confirmed
-  the full pre-commit checklist — bin/rails test, rubocop, brakeman,
-  bundle-audit, manual browser check — ALL PASSED for the controller+view
-  pair (v1.3/v1.1) BEFORE the test file existed; the test file's own
-  pass/fail status is NOT yet reconfirmed, and git workflow has not been
-  started. Session ended at ~90% token budget, at Ulli's explicit request
-  for a full, non-delta wrap-up. See this session's own changelog entry
-  above for full detail.)
-**Branch:** main (Sessions 1–76 all committed, pushed, merged, and
-  deployed, per Ulli's confirmation at the start of Session 76). Sessions
-  77 and 78's own work (11 files — see the archive's "Session 77 Summary"
-  and "Session 78 Summary") status is UNCHANGED — no session since has
-  confirmed placement/testing/commit for that work, which is a separate,
-  unrelated bug-fix batch. **Storage Locations Sessions A, B, C, D, and E
-  are ALL committed, pushed, merged, and DEPLOYED** — confirmed by Ulli
-  (Session 88 confirmed the git workflow and kamal deploy for Session E
-  covering all three device types — Computers/Peripherals, Components,
-  SoftwareItems — together in one PR). **Storage Locations Session F
-  (export/import) remains genuinely NOT STARTED** and is the only piece
-  of that feature still open.
-  **Session 89's single file (components/show.html.erb v1.11) has been
-  delivered to Ulli but its own placement/test/commit/deploy status is NOT
-  YET confirmed** — a plain single-file view change, not expected to need
-  the full multi-file checklist treatment, but should still go through
-  bin/rails test / rubocop / manual browser check before committing.
-  **Session 90's original four files (config/routes.rb v3.9,
-  storage_locations/_storage_location.html.erb v1.2) have been delivered
-  to Ulli but placement/test/commit/deploy status is NOT YET confirmed**
-  — the other two files Session 90 delivered (storage_locations_
-  controller.rb, storage_locations/show.html.erb) have since been
-  superseded by Session 91's v1.3/v1.1, below.
-  **Session 91's three files — storage_locations_controller.rb v1.3,
-  storage_locations/show.html.erb v1.1, storage_locations_controller_
-  test.rb v1.1 — have been delivered to Ulli. The controller+view pair
-  (v1.3/v1.1) has been placed and Ulli confirmed the full pre-commit
-  checklist (bin/rails test, rubocop, brakeman, bundle-audit, manual
-  browser check) ALL PASSED — but that run predates the test file. The
-  test file (v1.1) has NOT yet been confirmed to pass, and the git
-  workflow for all three files together has NOT been started.**
-**Status:** Sessions 1–76 fully closed out and deployed. Sessions 77+78's
-  combined checklist remains open (unchanged) — see "Open Checklists"
-  below. **Storage Locations Sessions A through E are ALL fully closed
-  out, tested, and deployed** — confirmed by Ulli. **Storage Locations
-  Session F (export/import) is the only remaining piece of that feature
-  and is genuinely NOT STARTED.** **Session 89's Owner Part Number display
-  fix (components/show.html.erb v1.11) is code-complete and delivered but
-  NOT YET placed/tested/committed/deployed** — a single-file, view-only
-  change; doesn't depend on or block anything else. **The StorageLocation
-  show page (Session 90, reworked Session 91) is code-complete: the
-  controller+view pair (v1.3/v1.1) has passed the full pre-commit
-  checklist per Ulli's confirmation, and a full test file (v1.1) now
-  exists covering the `show` action for the first time — but the test
-  file's own pass/fail status is unconfirmed and git workflow has not
-  started for any of it.** This is an ad-hoc addition outside the original
-  Storage Locations A–F plan and doesn't depend on or block Session F. The
-  GAP NOTICE below (Session 68's missing formal summary) remains open and
-  unaffected by any of this.
+**Date:** August 8, 2026 (Session 93: implemented Storage Locations
+  Session F — export/import, the last remaining piece of the Storage
+  Locations feature. Found and fixed two pre-existing bugs opportunistically
+  while implementing it: a column-misalignment bug in
+  all_owners_export_service.rb dating to Session 70, and a duplicated
+  missing-count-field bug in both data_transfers_controller.rb and
+  admin/data_transfers_controller.rb's success-message builders, found via
+  Ulli's manual browser check. Ulli confirmed the pre-commit checklist
+  passed for the six Session F files and confirmed "all fine now" after
+  the two controller fixes. Also: Ulli declared Sessions 77+78's combined
+  checklist, Session 89's Owner Part Number display fix, and the Session
+  68 GAP NOTICE all "finished" at session start — closed per that explicit
+  instruction, not because the underlying work was newly verified. See
+  this session's own changelog entry above for full detail.)
+**Branch:** main (Sessions 1–76, Storage Locations A–E, and the
+  StorageLocation Show Page are all previously confirmed committed, pushed,
+  merged, and DEPLOYED.) **Storage Locations Session F — six files
+  delivered and pre-commit-checklist-passed
+  (owner_export_service.rb v1.12, owner_import_service.rb v1.13,
+  all_owners_export_service.rb v1.2, data_transfers/show.html.erb v1.10,
+  owner_export_service_test.rb v2.1, owner_import_service_test.rb v1.10)
+  plus two controller bug-fix files delivered after a manual-browser-check
+  finding (data_transfers_controller.rb v1.7,
+  admin/data_transfers_controller.rb v1.5) — but the git workflow (branch →
+  commit → push → PR → CI → merge) and kamal deploy for all eight files
+  together have NOT been explicitly confirmed as of this wrap-up.** Per
+  Ulli's Session 93 declaration, Sessions 77+78's combined checklist,
+  Session 89's Owner Part Number display fix, and the Session 68 GAP
+  NOTICE are all now CLOSED (declared finished, not independently
+  re-verified) — see "Open Checklists" below.
+**Status:** **The Storage Locations feature (Sessions A through F plus the
+  ad-hoc Show Page) is now CODE-COMPLETE across all planned pieces** — only
+  Session F's final git workflow/deploy confirmation remains open (see
+  "Open Checklists" below). Two bugs found and fixed during Session F's
+  implementation (see this session's changelog entry) are both part of the
+  same not-yet-deployed batch. Test coverage for the two controller
+  build_success_message fixes is a pending item (see "Open Checklists").
+  Per Ulli's Session 93 declaration, all previously-open items EXCEPT
+  Storage Locations Session F are now closed — see "Open Checklists" below
+  for the updated record.
 
 ---
 
@@ -446,6 +546,13 @@ exists outside this project and simply wasn't the version uploaded here,
 or Session 68's rule-doc updates were never actually produced/delivered
 despite the code changes shipping.
 
+**Closed (Session 93):** Ulli declared this notice "finished" alongside
+all other open work at the start of Session 93. The underlying documentation
+gap itself has NOT been reconstructed or resolved — this closure means the
+gap is no longer tracked as open business, not that a "Session 68 Summary"
+was found or written. If it needs revisiting later, treat it as a fresh
+request.
+
 **Update (Session 72):** Ulli confirmed the underlying code for Sessions
 67–70 has all been committed, pushed, merged, and deployed to `main` —
 this documentation gap does not block or affect the code, which is live —
@@ -456,38 +563,50 @@ history.
 
 ## Open Checklists
 
-### Session 77 + 78 — combined NOT YET DONE (still open, no session since has addressed this)
+### Storage Locations Session F — CODE COMPLETE, deploy status open
 
-Full narrative for both sessions is in SESSION_HISTORY_ARCHIVE.md
-("Session 77 Summary", "Session 78 Summary"). The two sessions' file
-deliveries were never confirmed placed/tested/committed, and Session 78's
-own instruction was to commit both batches together. Combined checklist:
+    decor/app/services/owner_export_service.rb                  v1.12
+    decor/app/services/owner_import_service.rb                   v1.13
+    decor/app/services/all_owners_export_service.rb               v1.2
+    decor/app/views/data_transfers/show.html.erb                    v1.10
+    decor/test/services/owner_export_service_test.rb                v2.1
+    decor/test/services/owner_import_service_test.rb                v1.10
+    decor/app/controllers/data_transfers_controller.rb                v1.7
+    decor/app/controllers/admin/data_transfers_controller.rb           v1.5
 
-    [ ] Place all of Session 77's files: computers/_form.html.erb,
-        owners/peripherals.html.erb, computers/show.html.erb,
-        components/_filters.html.erb, component.rb, component_test.rb,
-        components/_form.html.erb, common/_navigation.html.erb
-        (8 files total — NOTE: computers/_form.html.erb and
-        components/_form.html.erb are DIFFERENT files, both touched)
-    [ ] Place all of Session 78's files: dropdown_controller.js,
-        connection_groups/_form.html.erb, common/_navigation.html.erb
-        (common/_navigation.html.erb is the SAME file touched by both
-        sessions — Session 78's v2.6 → v2.7 edit is the one to place,
-        it supersedes Session 77's v2.5 → v2.6)
-    [ ] bin/rails test (including the 3 new component_test.rb search-scope
-        tests from Session 77)
-    [ ] bundle exec rubocop -A / bundle exec rubocop
-    [ ] bin/brakeman --no-pager
-    [ ] bundle exec bundle-audit check --update
-    [ ] Manual browser check — confirm the Info dropdown z-index fix
-        (Session 77) on ALL FIVE affected pages (Owners, Computers,
-        Peripherals, Components, Software); confirm admin dropdowns close
-        their siblings (Session 78); confirm Connection form Device
-        dropdown shows Owner Part Number for both existing and newly-added
-        rows (Session 78); confirm nav logo now sits at true page-center
-        on every page (Session 78)
-    [ ] git workflow: branch → commit → push → PR → CI → merge → deploy
-        (both sessions' work together, per Session 78's own instruction)
+    [x] Place all eight files
+    [x] bin/rails test / rubocop -A + rubocop / brakeman / bundle-audit —
+        confirmed passing by Ulli for the first six files
+    [x] Manual browser check — surfaced the "Nothing to import" flash-
+        message bug (see Session 93's changelog entry); fixed by the two
+        controller files above; Ulli confirmed "all fine now" after the fix
+    [ ] Re-run bin/rails test / rubocop / brakeman / bundle-audit against
+        the two controller fixes specifically (not explicitly re-confirmed
+        this session)
+    [ ] Test coverage for build_success_message's storage_location_count
+        fix in BOTH controllers — offered, not yet written (needs
+        decor/test/controllers/data_transfers_controller_test.rb and
+        decor/test/controllers/admin/data_transfers_controller_test.rb;
+        neither was uploaded this session)
+    [ ] git workflow: branch → commit → push → PR → CI → merge (all eight
+        files together)
+    [ ] kamal deploy
+
+**This closes out the Storage Locations Feature — Session Plan A-F.** Once
+the checklist above is complete, DECOR_PROJECT.md's Session F section
+should be updated from "code-complete, pending deploy" to "DONE ✓."
+
+### Sessions 77 + 78 — CLOSED (declared finished, Session 93, per Ulli's
+    explicit instruction — NOT independently re-verified)
+
+Full narrative for both sessions remains in SESSION_HISTORY_ARCHIVE.md
+("Session 77 Summary", "Session 78 Summary"). The file-placement/test/
+commit/deploy status documented in prior versions of this section was
+never independently confirmed — Ulli chose to close this out at the start
+of Session 93 rather than have it carried forward indefinitely. If any of
+the specific fixes described in those two sessions turn out to be missing
+in a future session, treat it as a fresh bug report, not as "Session 77/78
+was never finished."
 
 ### Storage Locations Session D — COMPLETE (Sessions 86–87)
 
@@ -529,82 +648,51 @@ by Ulli:
     decor/app/views/software_items/_filters.html.erb              v1.1
     decor/test/controllers/software_items_controller_test.rb     v1.6
 
-No further action needed — Session E is closed out. Only Session F
-(export/import) remains for the Storage Locations feature.
+No further action needed — Session E is closed out.
 
-### Storage Locations Session F — NOT STARTED
-
-Depends on A (done) and C (done). Unaffected by the Session D/E work
-above. Full breakdown: **DECOR_PROJECT.md, "Storage Locations Feature —
-Session Plan."**
-
-### StorageLocation Show Page (Session 90, reworked Session 91) — pre-commit checklist passed for code, test coverage NOT yet reconfirmed, git workflow NOT started
+### StorageLocation Show Page (Sessions 90-91-92) — COMPLETE
 
 Not part of the original A-F Session Plan — a direct feature request from
 Ulli, reversing Session B's original "no show page" decision now that
 Session C's associations make it easy. Session 91 reworked Session 90's
 flat alphabetical list into four category-grouped sections with full
 identifying fields, per Ulli's feedback that the flat list wasn't enough
-to identify an item.
+to identify an item. Session 92 fixed a test-fixture-data bug found when
+Ulli ran the full suite and completed the full git workflow and deploy.
 
-**Current file versions (supersedes the Session 90 versions listed in
-earlier revisions of this checklist):**
+**Final file versions, all committed/pushed/merged/DEPLOYED (Session 92,
+confirmed by Ulli):**
 
-    decor/app/controllers/storage_locations_controller.rb        v1.3
-    decor/app/views/storage_locations/show.html.erb                v1.1
-    decor/test/controllers/storage_locations_controller_test.rb   v1.1 (NEW
-      show-action coverage — the action had zero tests before this)
+    decor/config/routes.rb                                          v3.9
+    decor/app/controllers/storage_locations_controller.rb           v1.3
+    decor/app/views/storage_locations/show.html.erb                   v1.1
+    decor/app/views/storage_locations/_storage_location.html.erb      v1.2
+    decor/test/controllers/storage_locations_controller_test.rb      v1.2
+      (v1.1 -> v1.2, Session 92: fixed a nil order_number bug in the
+      Components-section test)
 
-Also still pending from Session 90, unaffected by the Session 91 rework:
-
-    decor/config/routes.rb                                         v3.9
-    decor/app/views/storage_locations/_storage_location.html.erb   v1.2
-
-**Checklist:**
-
-    [x] Place storage_locations_controller.rb v1.3 and
-        storage_locations/show.html.erb v1.1 — Ulli confirmed this
+    [x] Place all five files
     [x] bin/rails test / rubocop / brakeman / bundle-audit / manual
-        browser check — Ulli confirmed ALL PASSED for the controller+view
-        pair (this run predates the test file below)
-    [ ] Place decor/config/routes.rb (v3.9) and decor/app/views/
-        storage_locations/_storage_location.html.erb (v1.2), if not
-        already done from Session 90
-    [ ] Place decor/test/controllers/storage_locations_controller_test.rb
-        (v1.1) — NEW show-action test coverage, written Session 91.
-        Deliberately does NOT modify any fixture .yml file — every test
-        assigns storage_location via update!/create! inside the test
-        itself (see the file's own v1.1 header comment for the full
-        rationale: avoiding side effects on computers_controller_test.rb/
-        components_controller_test.rb/software_items_controller_test.rb,
-        none of which were reviewed this session).
-    [ ] Re-run bin/rails test now that the new test file is in place —
-        NOT yet confirmed passing
-    [ ] Re-run rubocop (test files are .rb, lint-checkable) — cheap and
-        standard to re-confirm alongside the test run above
-    [ ] bin/rails routes | grep storage_location — confirm the show route
-        shape before relying on storage_location_path elsewhere (carried
-        over from Session 90, still open if not already done)
-    [ ] git workflow: branch → commit → push → PR → CI → merge → deploy
-        (all of the above files together)
-    [ ] Optional follow-up (flagged, not urgent — Session 90): consider
-        loading RAILS_UI.md at the start of a future session before
-        further Tailwind/CSS work on this feature. Note: Session 91's own
-        view changes reused existing utility classes only, so this wasn't
-        triggered again this session — see the "RELIABILITY NOTICE"
-        section above.
+        browser check — ALL PASSED (test file's own bug fixed Session 92)
+    [x] bin/rails routes | grep storage_location — confirmed plain
+        RESTful member route shape, no namespace-prefix quirks
+    [x] git workflow: branch → commit → push → PR → CI → merge — DONE
+    [x] kamal deploy — DONE
 
-### Session 89 — Owner Part Number display fix (components/show.html.erb v1.11) — NOT YET tested/committed
+No further action needed — this feature is closed out. (Optional,
+not-urgent follow-up noted Session 90 — loading RAILS_UI.md before future
+Tailwind/CSS work on this feature — remains just a general habit reminder,
+not a per-feature open item; see the "RELIABILITY NOTICE" section above.)
 
-Single-file, view-only change. Independent of everything else in this
-document.
+### Session 89 — Owner Part Number display fix — CLOSED (declared
+    finished, Session 93, per Ulli's explicit instruction — NOT
+    independently re-verified)
 
-    [ ] Place decor/app/views/components/show.html.erb v1.11
-    [ ] bin/rails test, rubocop, manual browser check (confirm Owner Part
-        Number now displays alongside Trade Status on a Component's show
-        page, and that Trade Status remains fully absent from the DOM for
-        logged-out visitors)
-    [ ] git workflow (can be batched with any other pending work)
+`decor/app/views/components/show.html.erb` v1.11 was delivered in Session
+89 with its own placement/test/commit/deploy status left open. Closed per
+Ulli's Session 93 declaration. If the Owner Part Number field turns out to
+still be missing from a Component's show page in a future session, treat
+it as a fresh bug report.
 
 ---
 
@@ -614,6 +702,38 @@ Older entries drop off this list as new ones are added; nothing is lost —
 every session ever logged remains in SESSION_HISTORY_ARCHIVE.md regardless
 of whether it still appears here.
 
+    93  Ulli declared all other open work "finished" at session start
+        (Sessions 77+78, Session 89's display fix, Session 68 GAP NOTICE —
+        all closed per explicit instruction, not re-verified). Implemented
+        Storage Locations Session F (export/import): new
+        storage_locations CSV section (natural key: name, exported/
+        imported first) and a storage_location column appended to
+        computers/peripherals/components/software sections; import
+        auto-creates an unrecognized referenced name. Found and fixed two
+        pre-existing bugs opportunistically: a Session-70-dating column-
+        misalignment bug in all_owners_export_service.rb (owner_part_number
+        was in CSV_HEADERS but never in the row-building array), and a
+        duplicated missing-count-field bug in both
+        data_transfers_controller.rb and admin/data_transfers_
+        controller.rb's build_success_message (storage_location_count
+        omitted from both, found via Ulli's manual browser check — a CSV
+        containing only new storage locations reported "Nothing to
+        import"). Six Session F files passed the full pre-commit checklist;
+        two controller fixes delivered after the browser-check finding,
+        Ulli confirmed "all fine now." git workflow and kamal deploy for
+        all eight files, plus a re-run of the checklist against the two
+        controller fixes and new test coverage for
+        build_success_message, remain open.
+    92  Ad-hoc bug fix closing out the StorageLocation Show Page feature:
+        Ulli's full test run hit a TypeError in the Components-section
+        test caused by components.yml never setting order_number on any
+        fixture. Fixed with a one-line in-test update! addition
+        (storage_locations_controller_test.rb v1.1 -> v1.2), no fixture
+        or app code touched. Ulli then confirmed tests passing, confirmed
+        the show route's plain shape via bin/rails routes, confirmed
+        routes.rb/_storage_location.html.erb placement via manual browser
+        check, and completed the full git workflow + kamal deploy for all
+        five files. StorageLocation Show Page feature now FULLY COMPLETE.
     91  Ad-hoc rework of Session 90's StorageLocation show page: Ulli
         reported the flat, alphabetical-by-name list wasn't enough to
         identify an item. Reworked into four fixed-order category
@@ -688,13 +808,12 @@ of whether it still appears here.
     81  Storage Locations Session C: FK + forms + show/index pages
         implemented (20 files), two gaps flagged, migration-timestamp bug
         fixed. NOT tested/committed this session — closed out in 82.
-    80  Storage Locations Session B: owner-facing CRUD. Implemented, tested,
-        lint/security-scanned, committed, merged, DEPLOYED.
 
-**Sessions 59–79 and earlier:** one-line log entries have aged off this
-rolling list. Full narrative for every one of them (including Session 79's
-design consultation + Session A, 76 dropdown fixes, 77/78 UI bug fixes,
-and everything before) remains in **SESSION_HISTORY_ARCHIVE.md**, unchanged
+**Sessions 59–80 and earlier:** one-line log entries have aged off this
+rolling list. Full narrative for every one of them (including Session 80's
+owner-facing CRUD, Session 79's design consultation + Session A, 76
+dropdown fixes, 77/78 UI bug fixes, and everything before) remains in
+**SESSION_HISTORY_ARCHIVE.md**, unchanged
 and complete — nothing described in those sessions has been lost, only
 removed from this rolling view.
 
@@ -1083,31 +1202,27 @@ Session 84 topic-split.
 
 ## Priority 1 — Future Sessions
 
-1. **Storage Locations Session F (export/import)** — the last remaining
-   piece of the Storage Locations feature. Depends on A and C (both done).
-   See DECOR_PROJECT.md "Storage Locations Feature — Session Plan," Session
-   F, for the full file-by-file breakdown (owner_export_service.rb,
-   owner_import_service.rb, all_owners_export_service.rb,
-   data_transfers/show.html.erb, plus test updates). Sessions D and E are
-   both now COMPLETE — nothing further needed there.
-2. **StorageLocation show page (Session 90, reworked Session 91)** —
-   re-run bin/rails test now that storage_locations_controller_test.rb
-   v1.1 exists (not yet confirmed passing), re-run rubocop, confirm
-   decor/config/routes.rb (v3.9) and storage_locations/
-   _storage_location.html.erb (v1.2) are placed if not already done, then
-   git workflow for all five files together (controller, view, test,
-   routes, row partial).
-3. **Session 89's Owner Part Number display fix** — place
-   components/show.html.erb v1.11, run bin/rails test / rubocop / manual
-   browser check, then git workflow (can batch with other pending work).
-4. **Sessions 77 + 78's combined checklist** — see "Open Checklists" above.
-5. **System tests Track 2** — Tom Select combobox, admin CRUD flows, full auth flow.
-6. **Legal/Compliance** — Impressum, Privacy Policy, GDPR, Cookie Consent, TOS.
-7. **Account deletion + data export** (GDPR).
-8. **Spam / Postmark DNS fix** — awaiting Rob's dashboard findings.
-9. **BulkUploadService stale model references** — low priority.
-10. **Gmail logo fix (long-term)** — set `config.action_mailer.asset_host` in
-    `production.rb` to the app's public hostname.
+1. **Storage Locations Session F — finish the deploy checklist.** Code is
+   complete and the six-file pre-commit checklist passed; two controller
+   bug fixes were added after a manual-browser-check finding. Remaining:
+   re-run the checklist against the two controller fixes, write test
+   coverage for build_success_message's storage_location_count handling in
+   both controllers, then the full git workflow and kamal deploy for all
+   eight files together. See "Open Checklists" above for the itemized list.
+2. **System tests Track 2** — Tom Select combobox, admin CRUD flows, full auth flow.
+3. **Legal/Compliance** — Impressum, Privacy Policy, GDPR, Cookie Consent, TOS.
+4. **Account deletion + data export** (GDPR).
+5. **Spam / Postmark DNS fix** — awaiting Rob's dashboard findings.
+6. **BulkUploadService stale model references** — low priority.
+7. **Gmail logo fix (long-term)** — set `config.action_mailer.asset_host` in
+   `production.rb` to the app's public hostname.
+
+(Sessions 77+78's combined checklist and Session 89's Owner Part Number
+display fix are REMOVED from this list — both closed per Ulli's Session 93
+declaration; see "Open Checklists" above. **StorageLocation show page
+(Sessions 90-91-92) is now FULLY COMPLETE** — removed from this list; see
+"Open Checklists" above for the closed-out
+record.)
 
 ---
 

@@ -1,5 +1,22 @@
 # decor/test/services/owner_export_service_test.rb
-# version 2.0
+# version 2.1
+# v2.1 (Storage Locations Session F): Added coverage for the new
+#   "! --- storage_locations ---" section and the new "storage_location"
+#   column on computer/component/software_item rows.
+#   Deliberately does NOT modify test/fixtures/storage_locations.yml,
+#   computers.yml, components.yml, or software_items.yml — alice (owners:one)
+#   already owns the alice_attic storage_locations.yml fixture with no setup
+#   needed, which covers "section present" and "row has correct name" for
+#   free. Tests that need a computer/component/software_item ACTUALLY
+#   assigned to a location do so via an in-test update! on an existing
+#   fixture record, then re-export locally (the module-level @csv_string
+#   set up in `setup` predates any such assignment, so those tests build
+#   their own local export rather than relying on it) — same pattern
+#   Session 91 established for storage_locations_controller_test.rb, kept
+#   here for consistency and to avoid touching shared fixture state that
+#   other test files may depend on (per RAILS_TESTING.md fixture-ownership
+#   guidance and PROGRAMMING_GENERAL.md "Derive Test Assertions from Data").
+#
 # v2.0 (Session 49 — Session G): Complete rewrite for per-section CSV format (v1.7+).
 #   Dropped all OwnerExportService::CSV_HEADERS and flat CSV.parse(headers: true) usage —
 #   there is no longer a global header row; each section has its own column-declaration row.
@@ -19,6 +36,10 @@
 #   Components: pdp11_memory + pdp11_cpu (attached to alice_pdp11), spare_disk (spare)
 #   Connections: alice_pdp11_vax (no type, label "Lab setup"; members: SN12345 + VAX-780-001)
 #   Software:   alice_vms (on alice_pdp11), alice_rt11_spare (unattached)
+#   Storage Locations: alice_attic (owner: one, name "Attic Shelf 3") — Session F baseline.
+#     None of alice's computers/components/software_items are pre-assigned to a
+#     storage location in the fixtures; tests needing an assignment set it via
+#     update! inside the test itself (see v2.1 note above).
 
 require "test_helper"
 require "csv"
@@ -73,6 +94,82 @@ class OwnerExportServiceTest < ActiveSupport::TestCase
     refute @sections.key?("! --- peripherals ---")
   end
 
+  # ── Storage Locations section (Storage Locations Session F) ──────────────
+
+  test "storage_locations section present when owner has storage locations" do
+    # alice_attic (owners:one) is a Session A fixture — no setup needed.
+    assert @sections.key?("! --- storage_locations ---")
+  end
+
+  test "storage_locations section headers match STORAGE_LOCATION_SECTION_HEADERS constant" do
+    assert_equal OwnerExportService::STORAGE_LOCATION_SECTION_HEADERS,
+                 @sections["! --- storage_locations ---"][:headers]
+  end
+
+  test "storage_location row has correct record_type" do
+    row = section_rows("! --- storage_locations ---").find { |r| r["name"] == "Attic Shelf 3" }
+    assert row, "Expected a storage_location row named 'Attic Shelf 3'"
+    assert_equal "storage_location", row["record_type"]
+  end
+
+  test "storage_location row has correct name" do
+    location = storage_locations(:alice_attic)
+    row = section_rows("! --- storage_locations ---").find { |r| r["name"] == location.name }
+    assert row, "Expected a storage_location row matching the alice_attic fixture's name"
+  end
+
+  test "no storage_locations section when owner has no storage locations" do
+    empty = Owner.create!(user_name: "nostorloc1", email: "nsl1@e.com", password: "ValidTest2026!")
+    refute sections_from(OwnerExportService.export(empty)).key?("! --- storage_locations ---")
+  end
+
+  test "storage_locations section appears before computers section" do
+    keys       = @sections.keys
+    stor_idx   = keys.index("! --- storage_locations ---")
+    comp_idx   = keys.index("! --- computers ---")
+    assert stor_idx < comp_idx, "storage_locations must precede computers" if stor_idx && comp_idx
+  end
+
+  test "computer row has blank storage_location when unassigned" do
+    # alice_pdp11 carries no storage_location_id in the fixture (v2.1 baseline note above).
+    assert_nil find_computer("SN12345")["storage_location"].presence
+  end
+
+  test "computer row has correct storage_location name when assigned" do
+    computer = computers(:alice_pdp11)
+    location = storage_locations(:alice_attic)
+    computer.update!(storage_location: location)
+
+    secs = sections_from(OwnerExportService.export(@alice))
+    row  = secs["! --- computers ---"][:rows].find { |r| r["serial_number"] == "SN12345" }
+    assert_equal location.name, row["storage_location"]
+  end
+
+  test "component row has blank storage_location when unassigned" do
+    # pdp11_memory carries no storage_location_id in the fixture (v2.1 baseline note above).
+    assert_nil find_component("Memory Board")["storage_location"].presence
+  end
+
+  test "component row has correct storage_location name when assigned" do
+    component = components(:pdp11_memory)
+    location  = storage_locations(:alice_attic)
+    component.update!(storage_location: location)
+
+    secs = sections_from(OwnerExportService.export(@alice))
+    row  = secs["! --- components ---"][:rows].find { |r| r["type"] == "Memory Board" }
+    assert_equal location.name, row["storage_location"]
+  end
+
+  test "software_item row has correct storage_location name when assigned" do
+    item     = software_items(:alice_vms)
+    location = storage_locations(:alice_attic)
+    item.update!(storage_location: location)
+
+    secs = sections_from(OwnerExportService.export(@alice))
+    row  = secs["! --- software ---"][:rows].find { |r| r["name"] == item.software_name.name }
+    assert_equal location.name, row["storage_location"]
+  end
+
   # ── Row counts ────────────────────────────────────────────────────────────
 
   test "device row count equals owner computer count" do
@@ -86,6 +183,10 @@ class OwnerExportServiceTest < ActiveSupport::TestCase
 
   test "software_item row count equals owner software_items count" do
     assert_equal @alice.software_items.count, section_rows("! --- software ---").size
+  end
+
+  test "storage_location row count equals owner storage_locations count" do
+    assert_equal @alice.storage_locations.count, section_rows("! --- storage_locations ---").size
   end
 
   # ── Computers section content ─────────────────────────────────────────────
