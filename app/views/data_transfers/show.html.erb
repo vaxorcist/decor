@@ -1,5 +1,18 @@
 <%# decor/app/views/data_transfers/show.html.erb %>
-<%# version 1.9 %>
+<%# version 1.10 %>
+<%# v1.10 (Storage Locations Session F): CSV Format section updated for the %>
+<%#   new storage_locations section and the new storage_location column on %>
+<%#   Computers/Peripherals, Components, and Software. Added a new %>
+<%#   "Storage Locations" column-reference table (mirroring the existing %>
+<%#   per-section table pattern), added a storage_location row to each of %>
+<%#   the three existing device/component/software tables, and rewrote the %>
+<%#   Example CSV block to include a "! --- storage_locations ---" section %>
+<%#   plus storage_location values on the example computer/peripheral/ %>
+<%#   component/software rows. No change to the Export or Import sections %>
+<%#   above — storage locations are included automatically in both %>
+<%#   directions with no new UI control needed (export always includes %>
+<%#   everything; import auto-creates unknown location names, so there is %>
+<%#   nothing for the user to configure). %>
 <%# v1.9 (Session 49 — Session G): Complete rewrite for OwnerImportService v1.8 and %>
 <%#   OwnerExportService v1.8 (per-section CSV format). %>
 <%#   Import notes: removed "all rows succeed or none are saved" (atomicity) bullet; %>
@@ -22,7 +35,8 @@
   <h1 class="text-2xl font-semibold mb-6">Export / Import Your Data</h1>
 
   <%# ── Row warnings — rows saved with a caveat (e.g. software imported as %>
-  <%# unattached because the specified computer was not found). %>
+  <%# unattached because the specified computer was not found, or an item's %>
+  <%# storage_location column named a location that couldn't be created). %>
   <%# Rendered here rather than by the layout because these are custom flash keys. %>
   <% if flash[:row_warnings].present? %>
     <div class="mb-4 p-4 rounded border border-amber-300 bg-amber-50 text-amber-800 text-sm">
@@ -53,8 +67,9 @@
   <div class="bg-white border border-stone-200 rounded p-6 mb-6">
     <h2 class="text-lg font-semibold mb-3">Export</h2>
     <p class="text-sm text-stone-600 mb-4">
-      Download all of your computers, peripherals, components, connections, and
-      software items as a CSV file. The file can be re-imported here or used as a backup.
+      Download all of your computers, peripherals, components, connections,
+      software items, and storage locations as a CSV file. The file can be
+      re-imported here or used as a backup.
     </p>
     <%# inline-flex items-center w-fit: constrains width to text and vertically centres %>
     <%# the label the same way flex does on a submit element. %>
@@ -70,7 +85,8 @@
     <h2 class="text-lg font-semibold mb-3">Import</h2>
     <p class="text-sm text-stone-600 mb-1">
       Upload a CSV file in the format described below to add computers,
-      peripherals, components, connections, and software items to your account.
+      peripherals, components, connections, software items, and storage
+      locations to your account.
     </p>
     <ul class="text-sm text-stone-600 mb-4 list-disc list-inside space-y-1">
       <li>Records that already exist (matched by serial number) are skipped — safe to re-import.</li>
@@ -78,6 +94,7 @@
       <li>If a required lookup fails (model, condition, etc.), that row is skipped and listed below after import.</li>
       <li>A software item whose computer is not found is saved as unattached (a warning, not an error).</li>
       <li>A component whose parent computer is not found is imported as a spare (not an error).</li>
+      <li>A storage location named in a computer/component/software row that doesn't already exist for you is created automatically — you don't need a separate storage_locations section for this to work.</li>
     </ul>
 
     <%# multipart: true is required for file uploads %>
@@ -112,6 +129,29 @@
       Empty sections are omitted. Blank cells are allowed for optional columns.
     </p>
 
+    <%# ── Storage Locations (Session F, appears first in an export) ── %>
+    <h3 class="text-sm font-semibold text-stone-700 mt-4 mb-1">Storage Locations</h3>
+    <p class="text-sm text-stone-600 mb-2">
+      Section sentinel: <code class="font-mono bg-stone-100 px-1 rounded">! --- storage_locations ---</code>.
+      This section is a convenience for a clean list of your locations — you don't
+      need it for the storage_location column below to work, since an unrecognized
+      name there is created automatically.
+    </p>
+    <div class="overflow-x-auto mb-3">
+      <table class="min-w-full text-xs">
+        <thead class="bg-stone-50">
+          <tr>
+            <th class="px-3 py-2 text-left font-medium text-stone-500 uppercase tracking-wider">Column</th>
+            <th class="px-3 py-2 text-left font-medium text-stone-500 uppercase tracking-wider">Notes</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-stone-100 text-stone-700">
+          <tr class="bg-white"><td class="px-3 py-2 font-mono">record_type</td><td class="px-3 py-2"><span class="font-medium">Required.</span> Value: <code class="font-mono bg-stone-100 px-1 rounded">storage_location</code>.</td></tr>
+          <tr class="bg-stone-50"><td class="px-3 py-2 font-mono">name</td><td class="px-3 py-2"><span class="font-medium">Required.</span> Max 50 characters. Used to detect duplicates (unique per owner).</td></tr>
+        </tbody>
+      </table>
+    </div>
+
     <%# ── Computers / Peripherals ── %>
     <h3 class="text-sm font-semibold text-stone-700 mt-4 mb-1">Computers &amp; Peripherals</h3>
     <p class="text-sm text-stone-600 mb-2">
@@ -131,11 +171,13 @@
           <tr class="bg-white"><td class="px-3 py-2 font-mono">record_type</td><td class="px-3 py-2"><span class="font-medium">Required.</span> <code class="font-mono bg-stone-100 px-1 rounded">computer</code> or <code class="font-mono bg-stone-100 px-1 rounded">peripheral</code>.</td></tr>
           <tr class="bg-stone-50"><td class="px-3 py-2 font-mono">model</td><td class="px-3 py-2"><span class="font-medium">Required.</span> Must match an existing computer or peripheral model.</td></tr>
           <tr class="bg-white"><td class="px-3 py-2 font-mono">order_number</td><td class="px-3 py-2">Optional. Max 20 characters.</td></tr>
-          <tr class="bg-stone-50"><td class="px-3 py-2 font-mono">serial_number</td><td class="px-3 py-2"><span class="font-medium">Required.</span> Max 20 characters. Used to detect duplicates.</td></tr>
-          <tr class="bg-white"><td class="px-3 py-2 font-mono">condition</td><td class="px-3 py-2">Optional. Must match an existing condition.</td></tr>
-          <tr class="bg-stone-50"><td class="px-3 py-2 font-mono">run_status</td><td class="px-3 py-2">Optional. Must match an existing run status.</td></tr>
-          <tr class="bg-white"><td class="px-3 py-2 font-mono">history</td><td class="px-3 py-2">Optional. Free text.</td></tr>
-          <tr class="bg-stone-50"><td class="px-3 py-2 font-mono">barter_status</td><td class="px-3 py-2">Optional. <code class="font-mono bg-stone-100 px-1 rounded">no_barter</code>, <code class="font-mono bg-stone-100 px-1 rounded">offered</code>, or <code class="font-mono bg-stone-100 px-1 rounded">wanted</code>. Defaults to <code class="font-mono bg-stone-100 px-1 rounded">no_barter</code>.</td></tr>
+          <tr class="bg-stone-50"><td class="px-3 py-2 font-mono">owner_part_number</td><td class="px-3 py-2">Optional. Max 20 characters. Defaults to <code class="font-mono bg-stone-100 px-1 rounded">-</code> when blank.</td></tr>
+          <tr class="bg-white"><td class="px-3 py-2 font-mono">serial_number</td><td class="px-3 py-2"><span class="font-medium">Required.</span> Max 20 characters. Used to detect duplicates.</td></tr>
+          <tr class="bg-stone-50"><td class="px-3 py-2 font-mono">condition</td><td class="px-3 py-2">Optional. Must match an existing condition.</td></tr>
+          <tr class="bg-white"><td class="px-3 py-2 font-mono">run_status</td><td class="px-3 py-2">Optional. Must match an existing run status.</td></tr>
+          <tr class="bg-stone-50"><td class="px-3 py-2 font-mono">history</td><td class="px-3 py-2">Optional. Free text.</td></tr>
+          <tr class="bg-white"><td class="px-3 py-2 font-mono">barter_status</td><td class="px-3 py-2">Optional. <code class="font-mono bg-stone-100 px-1 rounded">no_barter</code>, <code class="font-mono bg-stone-100 px-1 rounded">offered</code>, or <code class="font-mono bg-stone-100 px-1 rounded">wanted</code>. Defaults to <code class="font-mono bg-stone-100 px-1 rounded">no_barter</code>.</td></tr>
+          <tr class="bg-stone-50"><td class="px-3 py-2 font-mono">storage_location</td><td class="px-3 py-2">Optional. Name of one of your storage locations. Created automatically if it doesn't already exist.</td></tr>
         </tbody>
       </table>
     </div>
@@ -159,10 +201,12 @@
           <tr class="bg-white"><td class="px-3 py-2 font-mono">type</td><td class="px-3 py-2"><span class="font-medium">Required.</span> Must match an existing component type.</td></tr>
           <tr class="bg-stone-50"><td class="px-3 py-2 font-mono">category</td><td class="px-3 py-2">Optional. <code class="font-mono bg-stone-100 px-1 rounded">integral</code> or <code class="font-mono bg-stone-100 px-1 rounded">peripheral</code>. Defaults to <code class="font-mono bg-stone-100 px-1 rounded">integral</code>.</td></tr>
           <tr class="bg-white"><td class="px-3 py-2 font-mono">order_number</td><td class="px-3 py-2">Optional. Max 20 characters.</td></tr>
-          <tr class="bg-stone-50"><td class="px-3 py-2 font-mono">serial_number</td><td class="px-3 py-2">Optional. Max 20 characters. Used to detect duplicates.</td></tr>
-          <tr class="bg-white"><td class="px-3 py-2 font-mono">condition</td><td class="px-3 py-2">Optional. Must match an existing Run Status.</td></tr>
-          <tr class="bg-stone-50"><td class="px-3 py-2 font-mono">description</td><td class="px-3 py-2">Optional. Free text.</td></tr>
-          <tr class="bg-white"><td class="px-3 py-2 font-mono">barter_status</td><td class="px-3 py-2">Optional. Defaults to <code class="font-mono bg-stone-100 px-1 rounded">no_barter</code>.</td></tr>
+          <tr class="bg-stone-50"><td class="px-3 py-2 font-mono">owner_part_number</td><td class="px-3 py-2">Optional. Max 20 characters. Defaults to <code class="font-mono bg-stone-100 px-1 rounded">-</code> when blank.</td></tr>
+          <tr class="bg-white"><td class="px-3 py-2 font-mono">serial_number</td><td class="px-3 py-2">Optional. Max 20 characters. Used to detect duplicates. Defaults to <code class="font-mono bg-stone-100 px-1 rounded">-</code> when blank.</td></tr>
+          <tr class="bg-stone-50"><td class="px-3 py-2 font-mono">condition</td><td class="px-3 py-2">Optional. Must match an existing Run Status.</td></tr>
+          <tr class="bg-white"><td class="px-3 py-2 font-mono">description</td><td class="px-3 py-2">Optional. Free text.</td></tr>
+          <tr class="bg-stone-50"><td class="px-3 py-2 font-mono">barter_status</td><td class="px-3 py-2">Optional. Defaults to <code class="font-mono bg-stone-100 px-1 rounded">no_barter</code>.</td></tr>
+          <tr class="bg-white"><td class="px-3 py-2 font-mono">storage_location</td><td class="px-3 py-2">Optional. Name of one of your storage locations. Created automatically if it doesn't already exist.</td></tr>
         </tbody>
       </table>
     </div>
@@ -171,7 +215,9 @@
     <h3 class="text-sm font-semibold text-stone-700 mt-4 mb-1">Connections</h3>
     <p class="text-sm text-stone-600 mb-2">
       Section sentinel: <code class="font-mono bg-stone-100 px-1 rounded">! --- connections ---</code>.
-      Each group row is followed immediately by its member rows.
+      Each group row is followed immediately by its member rows. Connections have
+      no storage_location column of their own — a connection's physical location
+      is implied by its member computers' own locations.
     </p>
     <div class="overflow-x-auto mb-3">
       <table class="min-w-full text-xs">
@@ -214,6 +260,7 @@
           <tr class="bg-white"><td class="px-3 py-2 font-mono">description</td><td class="px-3 py-2">Optional. Max 100 characters.</td></tr>
           <tr class="bg-stone-50"><td class="px-3 py-2 font-mono">history</td><td class="px-3 py-2">Optional. Max 200 characters.</td></tr>
           <tr class="bg-white"><td class="px-3 py-2 font-mono">barter_status</td><td class="px-3 py-2">Optional. Defaults to <code class="font-mono bg-stone-100 px-1 rounded">no_barter</code>.</td></tr>
+          <tr class="bg-stone-50"><td class="px-3 py-2 font-mono">storage_location</td><td class="px-3 py-2">Optional. Name of one of your storage locations. Created automatically if it doesn't already exist.</td></tr>
         </tbody>
       </table>
     </div>
@@ -221,34 +268,43 @@
     <%# ── Example CSV ── %>
     <h3 class="text-sm font-semibold text-stone-700 mt-4 mb-2">Example</h3>
     <pre class="text-xs bg-stone-50 border border-stone-200 rounded p-3 overflow-x-auto text-stone-700"># Owner: alice — exported 2026-04-06
+! --- storage_locations ---
+record_type,name
+storage_location,Attic Shelf 3
+storage_location,Workbench
 ! --- computers ---
-record_type,model,order_number,serial_number,condition,run_status,history,barter_status
-computer,PDP-11/70,ORD-1985-001,SN12345,Completely original,Working,Lab system,no_barter
+record_type,model,order_number,owner_part_number,serial_number,condition,run_status,history,barter_status,storage_location
+computer,PDP-11/70,ORD-1985-001,-,SN12345,Completely original,Working,Lab system,no_barter,Attic Shelf 3
 ! --- peripherals ---
-record_type,model,order_number,serial_number,condition,run_status,history,barter_status
-peripheral,DEC VT278,,,VT-001,,,no_barter
+record_type,model,order_number,owner_part_number,serial_number,condition,run_status,history,barter_status,storage_location
+peripheral,DEC VT278,,-,VT-001,,,,no_barter,
 ! --- components ---
-record_type,installed_on_serial,type,category,order_number,serial_number,condition,description,barter_status
-component,SN12345,Memory Board,integral,MB-001,MB-SN-01,Working,256KB core memory,no_barter
-component,,Memory Board,integral,,,,,no_barter
+record_type,installed_on_serial,type,category,order_number,owner_part_number,serial_number,condition,description,barter_status,storage_location
+component,SN12345,Memory Board,integral,MB-001,-,MB-SN-01,Working,256KB core memory,no_barter,
+component,,Memory Board,integral,,-,-,,,no_barter,Workbench
 ! --- connections ---
 record_type,connection_type_or_model,label,serial_number
 connection_group,RS-232 Serial,Lab link,
 connection_member,PDP-11/70,,SN12345
 connection_member,VAX-11/780,,VAX-001
 ! --- software ---
-record_type,installed_on_model,installed_on_serial,name,version,condition,description,history,barter_status
-software_item,PDP-11/70,SN12345,TOPS-20,V7.0,Complete,,Production system,no_barter
-software_item,,,RT-11,V5.3,Complete,Unattached copy,,no_barter</pre>
+record_type,installed_on_model,installed_on_serial,name,version,condition,description,history,barter_status,storage_location
+software_item,PDP-11/70,SN12345,TOPS-20,V7.0,Complete,,Production system,no_barter,
+software_item,,,RT-11,V5.3,Complete,Unattached copy,,no_barter,Workbench</pre>
     <p class="mt-2 text-xs text-stone-500">
       The spare component row has no <code class="font-mono">installed_on_serial</code> — imported unattached.
       The second software row has no <code class="font-mono">installed_on_serial</code> — imported as unattached software.
+      Both spare rows above still carry a <code class="font-mono">storage_location</code> value — a spare or
+      unattached item can still have a physical location.
     </p>
     <p class="mt-2 text-xs text-stone-500">
       <strong>Backward compatibility:</strong> CSVs exported before v1.7 use a single global header row
       instead of per-section sentinels. The importer accepts both formats.
       The legacy record_type value <code class="font-mono">appliance</code> is also accepted
-      and treated as <code class="font-mono">peripheral</code>.
+      and treated as <code class="font-mono">peripheral</code>. CSVs exported before this feature
+      have no storage_locations section and no storage_location column at all — the importer
+      treats every item from such a file as having no storage location, exactly as if the
+      column were present but blank.
     </p>
   </div>
 

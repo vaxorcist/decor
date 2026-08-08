@@ -1,5 +1,23 @@
 # decor/app/controllers/admin/data_transfers_controller.rb
-# version 1.4
+# version 1.5
+# v1.5 (Storage Locations Session F — bug fix found via manual browser
+#   check, same session as the owner-facing controller's v1.7 fix):
+#   build_success_message's "owner_collection" case never included
+#   storage_location_count in its `parts` list — same gap, same root
+#   cause, and same fix as decor/app/controllers/
+#   data_transfers_controller.rb v1.7 (see that file's header comment for
+#   the full symptom description and diagnosis). This is the SECOND time
+#   this exact pattern has recurred between these two files specifically —
+#   v1.3 of this file already fixed a duplicated omission of
+#   connection_group_count/software_item_count for the identical reason
+#   (Session 48). Two recurrences of the same duplication-across-two-files
+#   shape are worth a standing note (see RAILS_SPECIFICS.md "Single Source
+#   of Truth Refactors" — added a project-specific mention there this
+#   session): whenever OwnerImportService's result hash gains a new count
+#   field, BOTH this file's owner_collection branch AND
+#   data_transfers_controller.rb#build_success_message need the matching
+#   line added in the SAME change.
+#
 # v1.4 (Session 63): Component Suggestions Phase 1.
 #   Added component_suggestions data_type to build_export, process_import,
 #   and build_success_message. No owner selection required (it is reference data,
@@ -172,6 +190,16 @@ module Admin
     # For owner_collection, lists non-zero counts per record type.
     # When some rows were skipped (partial success), the notice still lists what
     # WAS saved; flash[:row_errors] carries the per-row detail separately.
+    #
+    # IMPORTANT (owner_collection branch only — the other data_types each have
+    # their own single :count field and aren't affected): every count field
+    # OwnerImportService's result hash can return MUST have a corresponding
+    # line here — see the v1.5 header comment above for what happens when one
+    # is missed. This branch's logic is intentionally duplicated from
+    # decor/app/controllers/data_transfers_controller.rb#build_success_message
+    # (different flash-message audience: admin vs. owner) — when
+    # OwnerImportService gains a new counter, BOTH copies need the same line
+    # added in the SAME change.
     def build_success_message(data_type, result)
       case data_type
       when "computer_models"
@@ -184,6 +212,7 @@ module Admin
         "Successfully imported #{result[:count]} component suggestion(s)."
       when "owner_collection"
         parts = []
+        parts << "#{result[:storage_location_count]} storage location(s)" if result[:storage_location_count].to_i > 0
         parts << "#{result[:computer_count]} computer(s)"           if result[:computer_count].to_i         > 0
         parts << "#{result[:peripheral_count]} peripheral(s)"       if result[:peripheral_count].to_i       > 0
         parts << "#{result[:component_count]} component(s)"         if result[:component_count].to_i        > 0

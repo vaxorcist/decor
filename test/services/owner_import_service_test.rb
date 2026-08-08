@@ -1,5 +1,28 @@
 # decor/test/services/owner_import_service_test.rb
-# version 1.9
+# version 1.10
+# v1.10 (Storage Locations Session F): Added coverage for the new
+#   "! --- storage_locations ---" section and the new "storage_location"
+#   column on computer/component/software_item rows.
+#   New stor() builder helper (mirrors comp()/cmp()'s runtime header-mapping
+#   approach from v1.8, applied to the new
+#   OwnerExportService::STORAGE_LOCATION_SECTION_HEADERS constant).
+#   build_csv() gained an optional storage_location_rows: [] parameter,
+#   writing that section FIRST when present (matches the confirmed import
+#   dependency ordering — see owner_import_service.rb v1.13's own header
+#   comment). comp() and cmp() both gained a new optional trailing
+#   storage_location parameter, following the same values_by_header pattern
+#   already used for owner_part_number — no existing call site needed to
+#   change. build_csv_with_software()'s hardcoded per-row array gained a
+#   trailing storage_location entry to match SOFTWARE_SECTION_HEADERS'
+#   new last column; existing calls that don't pass :storage_location in
+#   their data hash simply get nil there, unaffected.
+#   Deliberately does NOT modify test/fixtures/storage_locations.yml — new
+#   storage_location fixtures needed by these tests are referenced directly
+#   (alice_attic) or created fresh inside the relevant test via the CSV
+#   import path itself (the feature under test), consistent with this
+#   file's existing "no Model.create! shortcuts around the code path being
+#   tested" style.
+#
 # v1.9 (Session 71 — test repair, round 2): "component can reference a
 #   computer created in the same import" built its component row via cmp()
 #   with no explicit serial_number. Under the new unconditional duplicate
@@ -273,6 +296,98 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
     assert @alice.computers.exists?(serial_number: "COMMENT-SKIP-SN")
   end
 
+  # ── Storage Locations (Storage Locations Session F) ───────────────────────
+
+  test "imports a storage_location row successfully" do
+    assert_difference "@alice.storage_locations.count", 1 do
+      result = import(build_csv(storage_location_rows: [stor("Basement Rack")]))
+      assert result[:success], result[:error]
+      assert_equal 1, result[:storage_location_count]
+    end
+    assert @alice.storage_locations.exists?(name: "Basement Rack")
+  end
+
+  test "storage_location row without name produces a row_error" do
+    result = import(build_csv(storage_location_rows: [stor(nil)]))
+    assert result[:success]
+    assert result[:row_errors].any?
+    assert_match "name", result[:row_errors].first
+  end
+
+  test "existing storage_location name is silently skipped (matches alice_attic fixture)" do
+    location_name = storage_locations(:alice_attic).name
+    assert_no_difference "@alice.storage_locations.count" do
+      result = import(build_csv(storage_location_rows: [stor(location_name)]))
+      assert result[:success]
+      assert_equal 0, result[:storage_location_count]
+    end
+  end
+
+  test "computer row with a storage_location matching an existing location is assigned to it" do
+    location = storage_locations(:alice_attic)
+    import(build_csv(computer_rows: [
+      comp("computer", "PDP-11/70", nil, "STORLOC-EXIST-SN", nil, nil, nil, nil, nil, location.name)
+    ]))
+    c = @alice.computers.find_by!(serial_number: "STORLOC-EXIST-SN")
+    assert_equal location, c.storage_location
+  end
+
+  test "computer row with an unrecognized storage_location name auto-creates it" do
+    assert_difference "@alice.storage_locations.count", 1 do
+      import(build_csv(computer_rows: [
+        comp("computer", "PDP-11/70", nil, "STORLOC-NEW-SN", nil, nil, nil, nil, nil, "Brand New Shelf")
+      ]))
+    end
+    c = @alice.computers.find_by!(serial_number: "STORLOC-NEW-SN")
+    assert_equal "Brand New Shelf", c.storage_location&.name
+  end
+
+  test "computer row with a blank storage_location column is imported with no location assigned" do
+    result = import(build_csv(computer_rows: [
+      comp("computer", "PDP-11/70", nil, "STORLOC-BLANK-SN")
+    ]))
+    assert result[:success], result[:error]
+    assert result[:row_warnings].empty?, "A blank storage_location column must never produce a warning"
+    c = @alice.computers.find_by!(serial_number: "STORLOC-BLANK-SN")
+    assert_nil c.storage_location
+  end
+
+  test "component row with an unrecognized storage_location name auto-creates it" do
+    assert_difference "@alice.storage_locations.count", 1 do
+      import(build_csv(component_rows: [
+        cmp(nil, nil, "Memory Board", "integral", nil, "STORLOC-CMP-SN", nil,
+            "Component with new location", "no_barter", nil, "Component Bin 4")
+      ]))
+    end
+    c = @alice.components.find_by!(serial_number: "STORLOC-CMP-SN")
+    assert_equal "Component Bin 4", c.storage_location&.name
+  end
+
+  test "software_item row with an unrecognized storage_location name auto-creates it" do
+    sw_name = software_names(:tops20).name
+    assert_difference "@alice.storage_locations.count", 1 do
+      import(build_csv_with_software([], [
+        { software_name: sw_name, barter_status: "no_barter", storage_location: "Media Cabinet" }
+      ]))
+    end
+    item = @alice.software_items.find_by!(software_name: software_names(:tops20))
+    assert_equal "Media Cabinet", item.storage_location&.name
+  end
+
+  test "storage_locations section is processed before computer rows reference it (single pass, same file)" do
+    # The referencing computer row uses a name that ALSO appears as its own
+    # dedicated storage_locations row in the same file — must resolve to the
+    # SAME record (not create two), regardless of processing order guarantees.
+    result = import(build_csv(
+      storage_location_rows: [stor("Shared Shelf")],
+      computer_rows: [comp("computer", "PDP-11/70", nil, "STORLOC-SHARED-SN", nil, nil, nil, nil, nil, "Shared Shelf")]
+    ))
+    assert result[:success], result[:error]
+    assert_equal 1, @alice.storage_locations.where(name: "Shared Shelf").count
+    c = @alice.computers.find_by!(serial_number: "STORLOC-SHARED-SN")
+    assert_equal "Shared Shelf", c.storage_location&.name
+  end
+
   # ── Connections ───────────────────────────────────────────────────────────
 
   test "imports a connection group successfully" do
@@ -490,18 +605,46 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
     end
   end
 
+  test "legacy format CSV imports with no storage_location assigned (column doesn't exist)" do
+    legacy_headers = %w[record_type computer_model computer_order_number
+                        computer_serial_number computer_condition computer_run_status
+                        computer_history component_type component_order_number
+                        component_serial_number component_condition component_description]
+    csv = CSV.generate(headers: true, force_quotes: true) do |c|
+      c << legacy_headers
+      c << ["computer", "PDP-11/70", nil, "LEGACY-STORLOC-SN",
+            nil, nil, nil, nil, nil, nil, nil, nil]
+    end
+    result = import(csv)
+    assert result[:success], result[:error]
+    assert result[:row_warnings].empty?
+    c = @alice.computers.find_by!(serial_number: "LEGACY-STORLOC-SN")
+    assert_nil c.storage_location
+  end
+
   private
 
   # ── CSV builder helpers ───────────────────────────────────────────────────
 
-  # Builds a new-format CSV with optional computers, peripherals, components sections.
+  # Builds a new-format CSV with optional storage_locations, computers,
+  # peripherals, components sections. storage_location_rows added Session F —
+  # written FIRST when present, matching the confirmed import dependency
+  # ordering (owner_import_service.rb v1.13 processes this section before
+  # computer/component/software rows).
   # comment_rows: array of strings (each becomes a row with the string as first cell).
   # computer_rows / peripheral_rows: arrays of row arrays matching COMPUTER_SECTION_HEADERS.
   # component_rows: arrays of row arrays matching COMPONENT_SECTION_HEADERS.
-  def build_csv(computer_rows: [], peripheral_rows: [], component_rows: [], comment_rows: [])
+  # storage_location_rows: arrays of row arrays matching STORAGE_LOCATION_SECTION_HEADERS.
+  def build_csv(computer_rows: [], peripheral_rows: [], component_rows: [],
+                 comment_rows: [], storage_location_rows: [])
     CSV.generate(force_quotes: true) do |csv|
       csv << ["# test import"]
       comment_rows.each { |c| csv << [c] }
+      unless storage_location_rows.empty?
+        csv << ["! --- storage_locations ---"]
+        csv << OwnerExportService::STORAGE_LOCATION_SECTION_HEADERS
+        storage_location_rows.each { |r| csv << r }
+      end
       unless computer_rows.empty?
         csv << ["! --- computers ---"]
         csv << OwnerExportService::COMPUTER_SECTION_HEADERS
@@ -544,7 +687,7 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
   # Builds a new-format CSV with device rows and a software section.
   # software_items_data: array of hashes. Keys: :software_name (req), :software_version,
   #   :software_condition, :software_description, :software_history, :barter_status,
-  #   :computer_serial_number, :installed_on_model.
+  #   :computer_serial_number, :installed_on_model, :storage_location (Session F).
   def build_csv_with_software(computer_rows, software_items_data)
     CSV.generate(force_quotes: true) do |csv|
       csv << ["# test import"]
@@ -565,7 +708,8 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
           s[:software_condition],
           s[:software_description],
           s[:software_history],
-          s[:barter_status]
+          s[:barter_status],
+          s[:storage_location]  # Session F — last column, matches SOFTWARE_SECTION_HEADERS
         ]
       end
     end
@@ -575,11 +719,12 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
   # OwnerExportService::COMPUTER_SECTION_HEADERS column order at runtime,
   # rather than hardcoding a fixed position list (see v1.8 header comment —
   # a hardcoded list silently goes out of sync the moment a new column is
-  # inserted into the real header constant). owner_part_number is a new
-  # optional trailing argument; existing call sites are unaffected.
+  # inserted into the real header constant). owner_part_number and
+  # storage_location (Session F) are both new optional trailing arguments;
+  # existing call sites are unaffected.
   def comp(record_type, model, order_number = nil, serial_number = nil,
            condition = nil, run_status = nil, history = nil, barter_status = nil,
-           owner_part_number = nil)
+           owner_part_number = nil, storage_location = nil)
     values_by_header = {
       "record_type"       => record_type,
       "model"             => model,
@@ -589,17 +734,20 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
       "condition"         => condition,
       "run_status"        => run_status,
       "history"           => history,
-      "barter_status"     => barter_status
+      "barter_status"     => barter_status,
+      "storage_location"  => storage_location
     }
     OwnerExportService::COMPUTER_SECTION_HEADERS.map { |header| values_by_header[header] }
   end
 
   # Same runtime header-mapping approach as comp() above, applied to
-  # OwnerExportService::COMPONENT_SECTION_HEADERS. owner_part_number is a new
-  # optional trailing argument; existing call sites are unaffected.
+  # OwnerExportService::COMPONENT_SECTION_HEADERS. owner_part_number and
+  # storage_location (Session F) are both new optional trailing arguments;
+  # existing call sites are unaffected.
   def cmp(installed_on_model, installed_on_serial, type_name, category = "integral",
           order_number = nil, serial_number = nil, condition = nil,
-          description = nil, barter_status = nil, owner_part_number = nil)
+          description = nil, barter_status = nil, owner_part_number = nil,
+          storage_location = nil)
     values_by_header = {
       "record_type"         => "component",
       "installed_on_model"  => installed_on_model,
@@ -611,9 +759,21 @@ class OwnerImportServiceTest < ActiveSupport::TestCase
       "serial_number"       => serial_number,
       "condition"           => condition,
       "description"         => description,
-      "barter_status"       => barter_status
+      "barter_status"       => barter_status,
+      "storage_location"    => storage_location
     }
     OwnerExportService::COMPONENT_SECTION_HEADERS.map { |header| values_by_header[header] }
+  end
+
+  # Builds a storage_location row by mapping onto
+  # OwnerExportService::STORAGE_LOCATION_SECTION_HEADERS at runtime, same
+  # pattern as comp()/cmp() above (Storage Locations Session F).
+  def stor(name)
+    values_by_header = {
+      "record_type" => "storage_location",
+      "name"        => name
+    }
+    OwnerExportService::STORAGE_LOCATION_SECTION_HEADERS.map { |header| values_by_header[header] }
   end
 
   def import(csv_content)
